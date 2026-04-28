@@ -6,7 +6,7 @@ import type { CapperRow } from "@/lib/types";
 const row: CapperRow = {
   capper_id: "x", handle: "lineupwins", display_name: "Lineups Winning",
   tier: null, activity_status: "active", is_claimed: false,
-  follower_count: 1400, profile_image_url: null,
+  follower_count: 1400, profile_image_url: null, has_paid_program: false,
   picks_count: 67, wins: 36, losses: 29, pushes: 2,
   win_rate: 0.55, units_profit: 5.2, roi_pct: 7.7, clv_avg: null,
   current_streak: 4,

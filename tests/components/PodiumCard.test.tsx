@@ -12,6 +12,7 @@ const sample: CapperRow = {
   is_claimed: false,
   follower_count: 2100,
   profile_image_url: null,
+  has_paid_program: false,
   picks_count: 87,
   wins: 47, losses: 39, pushes: 1,
   win_rate: 0.547,
@@ -36,7 +37,7 @@ describe("PodiumCard", () => {
     expect(screen.getByText("FADE AI")).toBeInTheDocument();
     expect(screen.getByText("@fadeai_")).toBeInTheDocument();
     expect(screen.getByText("87")).toBeInTheDocument();
-    expect(screen.getByText("55")).toBeInTheDocument();
+    expect(screen.getByText("55%")).toBeInTheDocument();
     expect(screen.getByText("+12.4")).toBeInTheDocument();
     expect(screen.getByText("+14.2%")).toBeInTheDocument();
   });
@@ -53,10 +54,10 @@ describe("PodiumCard", () => {
 
   it("shows variant-specific rank label", () => {
     const { rerender } = render(<PodiumCard rank={1} variant="gold" capper={sample} />);
-    expect(screen.getByText(/1st Place/i)).toBeInTheDocument();
+    expect(screen.getByText(/Champion/i)).toBeInTheDocument();
     rerender(<PodiumCard rank={2} variant="silver" capper={sample} />);
-    expect(screen.getByText(/2nd Place/i)).toBeInTheDocument();
+    expect(screen.getByText(/Runner-up/i)).toBeInTheDocument();
     rerender(<PodiumCard rank={3} variant="bronze" capper={sample} />);
-    expect(screen.getByText(/3rd Place/i)).toBeInTheDocument();
+    expect(screen.getByText(/Third/i)).toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { CapperAvatar } from "./CapperAvatar";
 import { FormDots } from "./FormDots";
 import { StatusPill } from "./StatusPill";
+import { PaidProgramPill } from "./PaidProgramPill";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import type { CapperRow } from "@/lib/types";
@@ -23,6 +24,7 @@ export function StandingsRow({ rank, capper }: Props) {
           <div className="text-xs text-[var(--color-text-muted)] font-medium flex items-center gap-1.5">
             {capper.handle ? formatHandle(capper.handle) : ""}
             {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
+            {capper.has_paid_program && <PaidProgramPill />}
           </div>
         </div>
       </div>

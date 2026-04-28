@@ -22,6 +22,7 @@ export interface CapperRow {
   is_claimed: boolean;
   follower_count: number | null;
   profile_image_url: string | null;
+  has_paid_program: boolean;
   picks_count: number;
   wins: number;
   losses: number;
