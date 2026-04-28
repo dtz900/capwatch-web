@@ -9,9 +9,26 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://capwatch.fadeai.bet"),
   title: "MLB Twitter Capper Rankings · Capwatch",
   description:
     "Verified MLB picks from tracked Twitter cappers, parsed live and graded against final game outcomes.",
+  openGraph: {
+    title: "MLB Twitter Capper Rankings · Capwatch",
+    description:
+      "Every public MLB pick from a tracked Twitter capper, parsed within seconds and graded against the final game outcome.",
+    url: "/",
+    siteName: "Capwatch",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MLB Twitter Capper Rankings · Capwatch",
+    description:
+      "Verified MLB picks. Every public capper, parsed and graded against final outcomes.",
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({
