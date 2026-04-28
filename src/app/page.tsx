@@ -7,18 +7,19 @@ import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
 import type { Window, Sort } from "@/lib/types";
 
 interface PageProps {
-  searchParams: Promise<{ window?: string; sort?: string; min_picks?: string; active_only?: string }>;
+  searchParams: Promise<{ window?: string; sort?: string; active_only?: string }>;
 }
 
 const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
 const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count"];
+const MIN_PICKS = 10;
 
 export default async function Home({ searchParams }: PageProps) {
   const sp = await searchParams;
   const filters: LeaderboardFilters = {
     window: VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30",
     sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
-    min_picks: sp.min_picks ? parseInt(sp.min_picks, 10) : 10,
+    min_picks: MIN_PICKS,
     active_only: sp.active_only !== "false",
   };
 
@@ -39,7 +40,7 @@ export default async function Home({ searchParams }: PageProps) {
         {top3.length === 3 && <Podium rows={top3} />}
         {rest.length > 0 && <StandingsTable rows={rest} startRank={4} />}
         <footer className="flex items-center justify-between py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
-          <div>Default: last 30 days, ranked by units profit, min 10 graded picks. Aggregates refresh daily 6:00 AM PT.</div>
+          <div>Min {MIN_PICKS} graded picks · refreshed daily 6:00 AM PT.</div>
           <div>Operated by FADE AI · The model entry is graded identically</div>
         </footer>
       </main>

@@ -14,10 +14,10 @@ describe("FilterBar", () => {
     active_only: true,
   };
 
-  it("renders all four filter groups", () => {
+  it("renders window, sort, and active toggle", () => {
     render(<FilterBar filters={defaults} />);
     expect(screen.getByRole("toolbar", { name: /Filter leaderboard/i })).toBeInTheDocument();
-    expect(screen.getAllByRole("radiogroup")).toHaveLength(3);
+    expect(screen.getAllByRole("radiogroup")).toHaveLength(2);
     expect(screen.getByRole("switch", { name: /Active only/i })).toBeInTheDocument();
   });
 
@@ -25,14 +25,14 @@ describe("FilterBar", () => {
     render(<FilterBar filters={defaults} />);
     expect(screen.getByRole("radio", { name: "30d" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("radio", { name: "Units" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("radio", { name: "10" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
   });
 
-  it("allows clicking other window options", () => {
+  it("optimistically updates selection on click", () => {
     render(<FilterBar filters={defaults} />);
     const sevenDay = screen.getByRole("radio", { name: "7d" });
     expect(sevenDay).toHaveAttribute("aria-checked", "false");
     fireEvent.click(sevenDay);
+    expect(screen.getByRole("radio", { name: "7d" })).toHaveAttribute("aria-checked", "true");
   });
 });

@@ -1,4 +1,5 @@
 "use client";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LeaderboardFilters } from "@/lib/api";
 
@@ -21,65 +22,59 @@ const SORTS: SegmentItem<LeaderboardFilters["sort"]>[] = [
   { value: "picks_count",  label: "Volume" },
 ];
 
-const MIN_PICKS: SegmentItem<number>[] = [
-  { value: 5, label: "5" },
-  { value: 10, label: "10" },
-  { value: 20, label: "20" },
-  { value: 50, label: "50" },
-];
-
 interface Props {
   filters: LeaderboardFilters;
 }
 
 export function FilterBar({ filters }: Props) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [optimistic, setOptimistic] = useState(filters);
+
   const apply = (next: LeaderboardFilters) => {
+    setOptimistic(next);
     const params = new URLSearchParams({
       window: next.window,
       sort: next.sort,
-      min_picks: String(next.min_picks),
       active_only: String(next.active_only),
     });
-    router.push(`/?${params}`);
+    startTransition(() => {
+      router.push(`/?${params}`);
+    });
   };
+
+  const view = optimistic;
 
   return (
     <div
-      className="w-full rounded-xl border border-[var(--color-border)]
-                 bg-[rgba(255,255,255,0.015)]
-                 px-2.5 py-2 flex items-center gap-2 flex-wrap"
+      className={`w-full rounded-xl border border-[var(--color-border)]
+                  bg-[rgba(255,255,255,0.015)]
+                  px-2.5 py-2 flex items-center gap-3 flex-wrap
+                  transition-opacity duration-150 ${isPending ? "opacity-70" : "opacity-100"}`}
       role="toolbar"
       aria-label="Filter leaderboard"
+      aria-busy={isPending}
     >
       <Group label="Window">
         <SegmentedControl
           items={WINDOWS}
-          value={filters.window}
-          onChange={(v) => apply({ ...filters, window: v })}
+          value={view.window}
+          onChange={(v) => apply({ ...view, window: v })}
         />
       </Group>
       <Divider />
       <Group label="Sort">
         <SegmentedControl
           items={SORTS}
-          value={filters.sort}
-          onChange={(v) => apply({ ...filters, sort: v })}
-        />
-      </Group>
-      <Divider />
-      <Group label="Min">
-        <SegmentedControl
-          items={MIN_PICKS}
-          value={filters.min_picks}
-          onChange={(v) => apply({ ...filters, min_picks: v })}
+          value={view.sort}
+          onChange={(v) => apply({ ...view, sort: v })}
         />
       </Group>
       <Divider />
       <Toggle
         label="Active only"
-        value={filters.active_only}
-        onChange={(v) => apply({ ...filters, active_only: v })}
+        value={view.active_only}
+        onChange={(v) => apply({ ...view, active_only: v })}
       />
     </div>
   );
@@ -97,7 +92,7 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Divider() {
-  return <span aria-hidden="true" className="hidden md:block w-px h-5 bg-[var(--color-border)] mx-0.5" />;
+  return <span aria-hidden="true" className="hidden md:block w-px h-5 bg-[var(--color-border)]" />;
 }
 
 function SegmentedControl<T extends string | number>({
@@ -154,22 +149,22 @@ function Toggle({
       aria-checked={value}
       aria-label={label}
       onClick={() => onChange(!value)}
-      className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[rgba(255,255,255,0.04)]
+      className="flex items-center gap-2.5 px-2 py-1 rounded-md hover:bg-[rgba(255,255,255,0.04)]
                  transition-colors duration-150 cursor-pointer"
     >
+      <span className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--color-text-soft)]">
+        {label}
+      </span>
       <span
-        className={`relative w-8 h-[18px] rounded-full transition-colors duration-200 ${
-          value ? "bg-[var(--color-gold)]" : "bg-[rgba(255,255,255,0.12)]"
+        className={`relative inline-block w-7 h-[14px] rounded-full transition-colors duration-200 ${
+          value ? "bg-[var(--color-gold)]" : "bg-[rgba(255,255,255,0.15)]"
         }`}
       >
         <span
-          className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 shadow-md ${
-            value ? "translate-x-[18px]" : "translate-x-0.5"
+          className={`absolute top-[2px] w-[10px] h-[10px] rounded-full bg-white transition-transform duration-200 ${
+            value ? "translate-x-[16px]" : "translate-x-[2px]"
           }`}
         />
-      </span>
-      <span className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--color-text-soft)]">
-        {label}
       </span>
     </button>
   );
