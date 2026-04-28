@@ -16,9 +16,9 @@ const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count
 export default async function Home({ searchParams }: PageProps) {
   const sp = await searchParams;
   const filters: LeaderboardFilters = {
-    window: VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "all_time",
-    sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "roi_pct",
-    min_picks: sp.min_picks ? parseInt(sp.min_picks, 10) : 5,
+    window: VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30",
+    sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
+    min_picks: sp.min_picks ? parseInt(sp.min_picks, 10) : 10,
     active_only: sp.active_only !== "false",
   };
 
@@ -39,7 +39,7 @@ export default async function Home({ searchParams }: PageProps) {
         {top3.length === 3 && <Podium rows={top3} />}
         {rest.length > 0 && <StandingsTable rows={rest} startRank={4} />}
         <footer className="flex items-center justify-between py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
-          <div>Min 5 graded picks. Aggregates refresh daily 6:00 AM PT.</div>
+          <div>Default: last 30 days, ranked by units profit, min 10 graded picks. Aggregates refresh daily 6:00 AM PT.</div>
           <div>Operated by FADE AI · The model entry is graded identically</div>
         </footer>
       </main>
