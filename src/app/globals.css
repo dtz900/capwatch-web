@@ -31,3 +31,9 @@ html, body {
   letter-spacing: -0.005em;
   font-family: var(--font-sans);
 }
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(25, 245, 124, 0.6); }
+  70%  { box-shadow: 0 0 0 6px rgba(25, 245, 124, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(25, 245, 124, 0); }
+}
