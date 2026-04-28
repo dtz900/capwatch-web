@@ -1,6 +1,6 @@
 import { TopNav } from "@/components/nav/TopNav";
 import { Hero } from "@/components/leaderboard/Hero";
-import { FilterBarClient } from "@/components/leaderboard/FilterBarClient";
+import { FilterBar } from "@/components/leaderboard/FilterBar";
 import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
@@ -32,9 +32,9 @@ export default async function Home({ searchParams }: PageProps) {
     <>
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-7">
-        <div className="flex items-end justify-between gap-5 flex-wrap pt-14 pb-8">
-          <Hero totalCappers={rows.length} totalPicks={totalPicks} />
-          <FilterBarClient initial={filters} />
+        <Hero totalCappers={rows.length} totalPicks={totalPicks} />
+        <div className="mb-8">
+          <FilterBar filters={filters} />
         </div>
         {top3.length === 3 && <Podium rows={top3} />}
         {rest.length > 0 && <StandingsTable rows={rest} startRank={4} />}
