@@ -35,6 +35,7 @@ export interface CapperRow {
   biggest_win: BiggestWin | null;
   tracked_since: string | null;
   tweets_parsed: number;
+  parlay_share: number;
   last_10_outcomes: FormOutcome[];
 }
 

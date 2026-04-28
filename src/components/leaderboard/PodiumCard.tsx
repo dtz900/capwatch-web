@@ -3,6 +3,7 @@ import { FormDots } from "./FormDots";
 import { SpecialtyPills } from "./SpecialtyPills";
 import { BiggestWin } from "./BiggestWin";
 import { MetaLine } from "./MetaLine";
+import { MixBar } from "./MixBar";
 import { ModelTag } from "./ModelTag";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
@@ -82,6 +83,9 @@ export function PodiumCard({ rank, variant, capper }: Props) {
       </div>
 
       <div className="flex flex-col gap-3">
+        <DetailRow label="Mix">
+          <MixBar parlayShare={capper.parlay_share ?? 0} />
+        </DetailRow>
         {Object.keys(capper.bet_type_breakdown).length > 0 && (
           <DetailRow label="Specialty">
             <SpecialtyPills breakdown={capper.bet_type_breakdown} />

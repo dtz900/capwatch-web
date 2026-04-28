@@ -11,7 +11,7 @@ const row: CapperRow = {
   win_rate: 0.55, units_profit: 5.2, roi_pct: 7.7, clv_avg: null,
   current_streak: 4,
   bet_type_breakdown: {},
-  biggest_win: null, tracked_since: null, tweets_parsed: 0,
+  biggest_win: null, tracked_since: null, tweets_parsed: 0, parlay_share: 0,
   last_10_outcomes: ["W","W","W","L","W","L","W","W","W","L"],
 };
 
