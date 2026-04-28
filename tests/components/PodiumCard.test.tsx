@@ -28,6 +28,7 @@ const sample: CapperRow = {
   tracked_since: "2026-03-01T00:00:00Z",
   tweets_parsed: 87,
   parlay_share: 0,
+  deleted_picks_count: 0,
   last_10_outcomes: ["W","L","W","W","W","W","L","W","W","L"],
 };
 

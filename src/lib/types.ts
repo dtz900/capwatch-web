@@ -37,6 +37,7 @@ export interface CapperRow {
   tracked_since: string | null;
   tweets_parsed: number;
   parlay_share: number;
+  deleted_picks_count: number;
   last_10_outcomes: FormOutcome[];
 }
 

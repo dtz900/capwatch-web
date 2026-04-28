@@ -2,6 +2,7 @@ import { CapperAvatar } from "./CapperAvatar";
 import { FormDots } from "./FormDots";
 import { StatusPill } from "./StatusPill";
 import { PaidProgramPill } from "./PaidProgramPill";
+import { DeletedPicksPill } from "./DeletedPicksPill";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import type { CapperRow } from "@/lib/types";
@@ -25,6 +26,7 @@ export function StandingsRow({ rank, capper }: Props) {
             {capper.handle ? formatHandle(capper.handle) : ""}
             {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
             {capper.has_paid_program && <PaidProgramPill />}
+            <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
           </div>
         </div>
       </div>

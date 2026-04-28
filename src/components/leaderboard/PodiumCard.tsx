@@ -6,6 +6,7 @@ import { MetaLine } from "./MetaLine";
 import { MixBar } from "./MixBar";
 import { ModelTag } from "./ModelTag";
 import { PaidProgramPill } from "./PaidProgramPill";
+import { DeletedPicksPill } from "./DeletedPicksPill";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import type { CapperRow } from "@/lib/types";
@@ -102,6 +103,7 @@ export function PodiumCard({ rank, variant, capper }: Props) {
             {capper.display_name ?? capper.handle}
             {isModel && <ModelTag />}
             {capper.has_paid_program && <PaidProgramPill />}
+            <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
           </div>
           <div className="text-[var(--color-text-muted)] text-sm font-medium">
             {capper.handle ? formatHandle(capper.handle) : ""}
