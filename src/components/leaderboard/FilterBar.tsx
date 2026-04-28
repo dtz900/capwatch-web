@@ -3,7 +3,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LeaderboardFilters } from "@/lib/api";
 
-interface SegmentItem<T extends string | number> {
+interface SegmentItem<T extends string | number | boolean> {
   value: T;
   label: string;
 }
@@ -20,6 +20,11 @@ const SORTS: SegmentItem<LeaderboardFilters["sort"]>[] = [
   { value: "roi_pct",      label: "ROI" },
   { value: "win_rate",     label: "Win %" },
   { value: "picks_count",  label: "Volume" },
+];
+
+const SHOW: SegmentItem<boolean>[] = [
+  { value: true, label: "Active" },
+  { value: false, label: "All" },
 ];
 
 interface Props {
@@ -71,11 +76,13 @@ export function FilterBar({ filters }: Props) {
         />
       </Group>
       <Divider />
-      <Toggle
-        label="Active only"
-        value={view.active_only}
-        onChange={(v) => apply({ ...view, active_only: v })}
-      />
+      <Group label="Show">
+        <SegmentedControl
+          items={SHOW}
+          value={view.active_only}
+          onChange={(v) => apply({ ...view, active_only: v })}
+        />
+      </Group>
     </div>
   );
 }
@@ -95,7 +102,7 @@ function Divider() {
   return <span aria-hidden="true" className="hidden md:block w-px h-5 bg-[var(--color-border)]" />;
 }
 
-function SegmentedControl<T extends string | number>({
+function SegmentedControl<T extends string | number | boolean>({
   items,
   value,
   onChange,
@@ -133,39 +140,3 @@ function SegmentedControl<T extends string | number>({
   );
 }
 
-function Toggle({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={value}
-      aria-label={label}
-      onClick={() => onChange(!value)}
-      className="flex items-center gap-2.5 px-2 py-1 rounded-md hover:bg-[rgba(255,255,255,0.04)]
-                 transition-colors duration-150 cursor-pointer"
-    >
-      <span className="text-[11px] font-bold uppercase tracking-[0.10em] text-[var(--color-text-soft)]">
-        {label}
-      </span>
-      <span
-        className={`relative inline-block w-7 h-[14px] rounded-full transition-colors duration-200 ${
-          value ? "bg-[var(--color-gold)]" : "bg-[rgba(255,255,255,0.15)]"
-        }`}
-      >
-        <span
-          className={`absolute top-[2px] w-[10px] h-[10px] rounded-full bg-white transition-transform duration-200 ${
-            value ? "translate-x-[16px]" : "translate-x-[2px]"
-          }`}
-        />
-      </span>
-    </button>
-  );
-}

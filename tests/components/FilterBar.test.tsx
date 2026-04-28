@@ -14,25 +14,25 @@ describe("FilterBar", () => {
     active_only: true,
   };
 
-  it("renders window, sort, and active toggle", () => {
+  it("renders three radiogroups (window, sort, show)", () => {
     render(<FilterBar filters={defaults} />);
     expect(screen.getByRole("toolbar", { name: /Filter leaderboard/i })).toBeInTheDocument();
-    expect(screen.getAllByRole("radiogroup")).toHaveLength(2);
-    expect(screen.getByRole("switch", { name: /Active only/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("radiogroup")).toHaveLength(3);
   });
 
   it("marks the current selections as checked", () => {
     render(<FilterBar filters={defaults} />);
     expect(screen.getByRole("radio", { name: "30d" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("radio", { name: "Units" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Active" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "false");
   });
 
-  it("optimistically updates selection on click", () => {
+  it("optimistically updates show selection on click", () => {
     render(<FilterBar filters={defaults} />);
-    const sevenDay = screen.getByRole("radio", { name: "7d" });
-    expect(sevenDay).toHaveAttribute("aria-checked", "false");
-    fireEvent.click(sevenDay);
-    expect(screen.getByRole("radio", { name: "7d" })).toHaveAttribute("aria-checked", "true");
+    const allBtn = screen.getByRole("radio", { name: "All" });
+    fireEvent.click(allBtn);
+    expect(screen.getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Active" })).toHaveAttribute("aria-checked", "false");
   });
 });
