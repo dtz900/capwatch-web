@@ -106,59 +106,53 @@ function Tile({ pick, open, onToggle }: { pick: LastPick; open: boolean; onToggl
       {/* Reserve the tile footprint so siblings don't reflow when expanded. */}
       <div className="invisible h-10" aria-hidden="true" />
 
-      <div className={`absolute inset-0 ${open ? "z-50" : "z-0"}`}>
-        {!open ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={false}
-            aria-haspopup="dialog"
-            className={`w-full h-10 pl-2.5 pr-2 rounded-md border
-                        ${palette.bg} ${palette.border}
-                        ${palette.hoverBg} ${palette.hoverBorder}
-                        flex items-center gap-2 text-left
-                        transition-all duration-150 cursor-pointer overflow-hidden`}
-          >
-            <span aria-hidden="true" className={`shrink-0 w-[3px] h-5 rounded-full ${palette.rail}`} />
-            <span className="flex-1 min-w-0 leading-tight">
-              <span className={`block text-[10px] font-extrabold uppercase tracking-[0.04em] truncate ${palette.text}`}>
-                {compactLabel(pick)}
-              </span>
-              <span className="block text-[9px] font-semibold text-[var(--color-text-muted)] truncate">
-                {compactSubLabel(pick)}
-              </span>
+      {/* Closed-state tile sits in the reserved footprint */}
+      {!open && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={false}
+          aria-haspopup="dialog"
+          className={`absolute inset-0 w-full h-10 pl-2.5 pr-2 rounded-md border
+                      ${palette.bg} ${palette.border}
+                      ${palette.hoverBg} ${palette.hoverBorder}
+                      flex items-center gap-2 text-left
+                      transition-all duration-150 cursor-pointer overflow-hidden`}
+        >
+          <span aria-hidden="true" className={`shrink-0 w-[3px] h-5 rounded-full ${palette.rail}`} />
+          <span className="flex-1 min-w-0 leading-tight">
+            <span className={`block text-[10px] font-extrabold uppercase tracking-[0.04em] truncate ${palette.text}`}>
+              {compactLabel(pick)}
             </span>
-            <span className={`shrink-0 text-[10px] font-extrabold ${palette.text}`}>
-              {pick.outcome}
+            <span className="block text-[9px] font-semibold text-[var(--color-text-muted)] truncate">
+              {compactSubLabel(pick)}
             </span>
-          </button>
-        ) : (
-          <div
-            role="dialog"
-            aria-label="Pick details"
-            className={`relative min-w-[280px] rounded-lg border-2 overflow-hidden
-                        ${palette.expandedBorder}
-                        shadow-[0_16px_48px_-8px_rgba(0,0,0,0.8)]
-                        animate-[tile-expand_140ms_ease-out]`}
-          >
-            <div aria-hidden="true" className="absolute inset-0 bg-[#13131a]" />
-            <div aria-hidden="true" className={`absolute inset-0 ${palette.expandedBg}`} />
-            <button
-              type="button"
-              onClick={onToggle}
-              aria-label="Close pick details"
-              className="absolute top-2 right-2 z-10 w-5 h-5 flex items-center justify-center rounded
-                         text-[var(--color-text-muted)] hover:text-[var(--color-text)]
-                         hover:bg-[rgba(255,255,255,0.10)]"
-            >
-              <span className="text-[14px] leading-none">×</span>
-            </button>
-            <div className="relative p-3.5 text-[12px] leading-relaxed">
-              <PickDetails pick={pick} />
-            </div>
+          </span>
+          <span className={`shrink-0 text-[10px] font-extrabold ${palette.text}`}>
+            {pick.outcome}
+          </span>
+        </button>
+      )}
+
+      {/* Expanded popover: horizontally centered on the tile, scales from center */}
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Pick details"
+          className={`absolute top-0 left-1/2 -translate-x-1/2 z-50
+                      w-[280px] rounded-lg border-2 overflow-hidden
+                      ${palette.expandedBorder}
+                      shadow-[0_16px_48px_-8px_rgba(0,0,0,0.8)]
+                      animate-[tile-expand_140ms_ease-out]`}
+          style={{ transformOrigin: "center" }}
+        >
+          <div aria-hidden="true" className="absolute inset-0 bg-[#13131a]" />
+          <div aria-hidden="true" className={`absolute inset-0 ${palette.expandedBg}`} />
+          <div className="relative p-3.5 text-[12px] leading-relaxed">
+            <PickDetails pick={pick} />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
