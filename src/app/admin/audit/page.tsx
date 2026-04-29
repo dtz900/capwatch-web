@@ -308,6 +308,7 @@ function ProblemRow({ p }: { p: AuditProblem }) {
       </div>
       <FixPanel
         pickId={p.pick_id}
+        reason={p.reason}
         market={p.market}
         selection={p.selection}
         line={p.line}
