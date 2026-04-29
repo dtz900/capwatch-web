@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import { fetchAudit, type AuditProblem } from "@/lib/api";
+import { FixPanel } from "./FixPanel";
 
 interface PageProps {
   searchParams: Promise<{
@@ -8,6 +9,7 @@ interface PageProps {
     capper?: string;
     kind?: "void" | "ungraded";
     offset?: string;
+    sort?: "oldest" | "newest";
   }>;
 }
 
@@ -34,11 +36,13 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   const reason = (sp.reason ?? "").trim() || undefined;
   const capper = (sp.capper ?? "").trim() || undefined;
   const kind = sp.kind === "void" || sp.kind === "ungraded" ? sp.kind : undefined;
+  const sort: "oldest" | "newest" = sp.sort === "newest" ? "newest" : "oldest";
 
   const data = await fetchAudit({
     reason,
     capper,
     kind,
+    sort,
     limit: PAGE_SIZE,
     offset,
   });
@@ -46,16 +50,20 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   const showingFrom = offset + 1;
   const showingTo = Math.min(offset + data.problems.length, data.total_problems);
 
-  const buildHref = (overrides: Partial<{ reason: string; capper: string; kind: string; offset: string }>) => {
+  const buildHref = (
+    overrides: Partial<{ reason: string; capper: string; kind: string; offset: string; sort: string }>,
+  ) => {
     const params = new URLSearchParams();
     const r = overrides.reason ?? reason ?? "";
     const c = overrides.capper ?? capper ?? "";
     const k = overrides.kind ?? kind ?? "";
     const o = overrides.offset ?? "";
+    const s = overrides.sort ?? (sort === "oldest" ? "" : sort);
     if (r) params.set("reason", r);
     if (c) params.set("capper", c);
     if (k) params.set("kind", k);
     if (o) params.set("offset", o);
+    if (s) params.set("sort", s);
     const qs = params.toString();
     return qs ? `/admin/audit?${qs}` : "/admin/audit";
   };
@@ -130,6 +138,22 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
                 }`}
               >
                 {k || "All"}
+              </Link>
+            ))}
+            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
+              Sort
+            </span>
+            {(["oldest", "newest"] as const).map((s) => (
+              <Link
+                key={s}
+                href={buildHref({ sort: s })}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
+                  sort === s
+                    ? "bg-[rgba(255,255,255,0.08)] text-[var(--color-text)]"
+                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                }`}
+              >
+                {s === "oldest" ? "Oldest first" : "Newest first"}
               </Link>
             ))}
           </div>
@@ -230,59 +254,69 @@ function ProblemRow({ p }: { p: AuditProblem }) {
       ? "bg-[var(--color-neg-soft)] text-[var(--color-neg)]"
       : "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]";
   return (
-    <div
-      className="grid grid-cols-[80px_120px_140px_1fr_60px_30px] gap-3 items-start px-4 py-3
-                    border-b border-[rgba(255,255,255,0.03)] last:border-b-0 text-[12px]"
-    >
-      <div className="text-[var(--color-text-muted)] font-medium tabular-nums">{date}</div>
-      <div className="min-w-0">
-        <Link
-          href={p.capper_handle ? `/cappers/${p.capper_handle}` : "#"}
-          className="font-semibold truncate text-[var(--color-text)] hover:underline block"
-        >
-          {p.capper_display_name ?? p.capper_handle ?? "—"}
-        </Link>
-        <div className="text-[10px] text-[var(--color-text-muted)]">
-          @{p.capper_handle ?? "—"}
-        </div>
-      </div>
-      <div>
-        <span
-          className={`inline-block px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-[0.10em] ${reasonColor}`}
-        >
-          {reasonLabel}
-        </span>
-        <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
-          pid={p.pick_id}
-          {p.parlay_id != null && <span className="ml-1">· parlay {p.parlay_id}</span>}
-        </div>
-      </div>
-      <div className="min-w-0">
-        <div className="font-semibold text-[var(--color-text)] truncate">
-          {p.selection ?? p.market ?? "—"}
-        </div>
-        {p.tweet_text && (
-          <div className="text-[10px] text-[var(--color-text-muted)] mt-1 leading-snug line-clamp-2">
-            {p.tweet_text}
-          </div>
-        )}
-      </div>
-      <div className="text-right text-[var(--color-text-soft)] font-medium">
-        {p.market ?? "—"}
-      </div>
-      <div className="text-right">
-        {p.tweet_url && (
-          <a
-            href={p.tweet_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-[12px] font-bold"
-            aria-label="Open tweet"
+    <div className="border-b border-[rgba(255,255,255,0.03)] last:border-b-0 px-4 py-3">
+      <div className="grid grid-cols-[80px_120px_140px_1fr_60px_50px] gap-3 items-start text-[12px]">
+        <div className="text-[var(--color-text-muted)] font-medium tabular-nums">{date}</div>
+        <div className="min-w-0">
+          <Link
+            href={p.capper_handle ? `/cappers/${p.capper_handle}` : "#"}
+            className="font-semibold truncate text-[var(--color-text)] hover:underline block"
           >
-            ↗
-          </a>
-        )}
+            {p.capper_display_name ?? p.capper_handle ?? "—"}
+          </Link>
+          <div className="text-[10px] text-[var(--color-text-muted)]">
+            @{p.capper_handle ?? "—"}
+          </div>
+        </div>
+        <div>
+          <span
+            className={`inline-block px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-[0.10em] ${reasonColor}`}
+          >
+            {reasonLabel}
+          </span>
+          <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
+            pid={p.pick_id}
+            {p.parlay_id != null && <span className="ml-1">· parlay {p.parlay_id}</span>}
+          </div>
+        </div>
+        <div className="min-w-0">
+          <div className="font-semibold text-[var(--color-text)] truncate">
+            {p.selection ?? p.market ?? "—"}
+          </div>
+          {p.tweet_text && (
+            <div className="text-[10px] text-[var(--color-text-muted)] mt-1 leading-snug line-clamp-2">
+              {p.tweet_text}
+            </div>
+          )}
+        </div>
+        <div className="text-right text-[var(--color-text-soft)] font-medium">
+          {p.market ?? "—"}
+        </div>
+        <div className="text-right flex flex-col gap-1.5 items-end">
+          {p.tweet_url && (
+            <a
+              href={p.tweet_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-[12px] font-bold"
+              aria-label="Open tweet"
+            >
+              ↗
+            </a>
+          )}
+        </div>
       </div>
+      <FixPanel
+        pickId={p.pick_id}
+        market={p.market}
+        selection={p.selection}
+        line={p.line}
+        oddsTaken={p.odds_taken}
+        units={p.units}
+        playerId={p.player_id}
+        gameId={p.game_id}
+        postedAt={p.posted_at}
+      />
     </div>
   );
 }

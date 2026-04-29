@@ -64,6 +64,7 @@ export interface AuditFilters {
   reason?: string;
   capper?: string;
   kind?: "void" | "ungraded";
+  sort?: "oldest" | "newest";
   limit?: number;
   offset?: number;
 }
@@ -106,6 +107,7 @@ export async function fetchAudit(filters: AuditFilters = {}): Promise<AuditRespo
   if (filters.reason) params.set("reason", filters.reason);
   if (filters.capper) params.set("capper", filters.capper);
   if (filters.kind) params.set("kind", filters.kind);
+  if (filters.sort) params.set("sort", filters.sort);
   if (filters.limit != null) params.set("limit", String(filters.limit));
   if (filters.offset != null) params.set("offset", String(filters.offset));
   const qs = params.toString();
