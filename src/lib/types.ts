@@ -107,8 +107,9 @@ export interface SlateResponse {
 
 export interface HistoryPick {
   id: number;
-  kind: "straight" | "parlay_leg";
+  kind: "straight" | "parlay";
   parlay_id: number | null;
+  leg_count?: number | null;
   game_label: string | null;
   market: string | null;
   selection: string | null;

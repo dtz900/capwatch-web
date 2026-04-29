@@ -98,7 +98,7 @@ export function HistoryTable({
 
 function HistoryRow({ pick }: { pick: HistoryPick }) {
   const date = formatDate(pick.posted_at);
-  const isParlay = pick.kind === "parlay_leg";
+  const isParlay = pick.kind === "parlay";
   const oddsText =
     pick.odds_taken == null
       ? "—"
@@ -133,7 +133,7 @@ function HistoryRow({ pick }: { pick: HistoryPick }) {
         <span className="font-semibold text-[var(--color-text)]">
           {formatBetDescriptor({
             kind: isParlay ? "parlay" : "straight",
-            leg_count: null,
+            leg_count: pick.leg_count ?? null,
             market: pick.market,
             selection: pick.selection,
             line: pick.line,

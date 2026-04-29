@@ -32,7 +32,7 @@ export function PendingBlock({ picks }: { picks: HistoryPick[] }) {
       </div>
       <div className="flex flex-col">
         {picks.map((p) => {
-          const isParlay = p.kind === "parlay_leg";
+          const isParlay = p.kind === "parlay";
           const posted = formatPostedAt(p.posted_at);
           const stake = formatStakeUnits(p.units);
           return (
@@ -49,7 +49,7 @@ export function PendingBlock({ picks }: { picks: HistoryPick[] }) {
                   )}
                   {formatBetDescriptor({
                     kind: isParlay ? "parlay" : "straight",
-                    leg_count: null,
+                    leg_count: p.leg_count ?? null,
                     market: p.market,
                     selection: p.selection,
                     line: p.line,
@@ -59,11 +59,6 @@ export function PendingBlock({ picks }: { picks: HistoryPick[] }) {
                 <div className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5">
                   {stake && <span className="mr-1.5">{stake}</span>}
                   {posted && <span className="opacity-80">{posted}</span>}
-                  {isParlay && (
-                    <span className="ml-1.5 text-[var(--color-gold)] opacity-80">
-                      · in parlay
-                    </span>
-                  )}
                 </div>
               </div>
               {p.tweet_url && (
