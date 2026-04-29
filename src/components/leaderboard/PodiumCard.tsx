@@ -1,5 +1,5 @@
 import { CapperAvatar } from "./CapperAvatar";
-import { FormDots } from "./FormDots";
+import { RecentPicks } from "./RecentPicks";
 import { SpecialtyPills } from "./SpecialtyPills";
 import { BiggestWin } from "./BiggestWin";
 import { MetaLine } from "./MetaLine";
@@ -131,10 +131,13 @@ export function PodiumCard({ rank, variant, capper }: Props) {
             <SpecialtyPills breakdown={capper.bet_type_breakdown} />
           </DetailRow>
         )}
-        {capper.last_10_outcomes.length > 0 && (
-          <DetailRow label="Last 10">
-            <FormDots outcomes={capper.last_10_outcomes} />
-          </DetailRow>
+        {capper.last_picks.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
+              Last picks
+            </span>
+            <RecentPicks picks={capper.last_picks} limit={5} size={isGold ? "md" : "sm"} />
+          </div>
         )}
       </div>
 

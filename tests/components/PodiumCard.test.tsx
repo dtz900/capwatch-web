@@ -29,7 +29,10 @@ const sample: CapperRow = {
   tweets_parsed: 87,
   parlay_share: 0,
   deleted_picks_count: 0,
-  last_10_outcomes: ["W","L","W","W","W","W","L","W","W","L"],
+  last_picks: [
+    { kind: "straight", game_label: "NYY @ BOS", market: "ML", selection: "NYY", line: null, odds_taken: -135, outcome: "W", posted_at: "2026-04-15T00:00:00Z", profit_units: null, leg_count: null },
+    { kind: "straight", game_label: "HOU @ SEA", market: "Total", selection: "Over 8.5", line: 8.5, odds_taken: -110, outcome: "L", posted_at: "2026-04-14T00:00:00Z", profit_units: null, leg_count: null },
+  ],
 };
 
 describe("PodiumCard", () => {

@@ -13,6 +13,19 @@ export interface BiggestWin {
   game_date: string | null;
 }
 
+export interface LastPick {
+  kind: "straight" | "parlay";
+  game_label: string | null;
+  market: string | null;
+  selection: string | null;
+  line: number | null;
+  odds_taken: number | null;
+  outcome: FormOutcome;
+  posted_at: string | null;
+  profit_units: number | null;
+  leg_count: number | null;
+}
+
 export interface CapperRow {
   capper_id: string;
   handle: string | null;
@@ -38,7 +51,7 @@ export interface CapperRow {
   tweets_parsed: number;
   parlay_share: number;
   deleted_picks_count: number;
-  last_10_outcomes: FormOutcome[];
+  last_picks: LastPick[];
 }
 
 export interface LeaderboardResponse {
