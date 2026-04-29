@@ -208,56 +208,29 @@ function PickDetails({ pick }: { pick: LastPick }) {
 }
 
 /**
- * Two-piece compact label: bold primary + muted secondary.
- * Aims to be readable instead of just slicing 4 chars off the selection.
+ * Pill content: the market type as the bold label, odds (or units for parlays)
+ * as the muted secondary. The full selection lives in the click-expanded popover.
  */
 function compactContent(pick: LastPick): { primary: string; secondary: string } {
   if (pick.kind === "parlay") {
     return {
-      primary: pick.leg_count ? `${pick.leg_count}-leg` : "Parlay",
+      primary: "Parlay",
       secondary: pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : "",
     };
   }
 
   const bucket = pick.market ? normalizeMarket(pick.market) : "";
-
-  if (bucket === "Total") {
-    const sel = (pick.selection ?? "").toLowerCase();
-    const lineStr = pick.line != null ? String(pick.line) : "";
-    if (sel.startsWith("over"))  return { primary: `O ${lineStr}`.trim(), secondary: oddsText(pick) };
-    if (sel.startsWith("under")) return { primary: `U ${lineStr}`.trim(), secondary: oddsText(pick) };
-    return { primary: lineStr || "Total", secondary: oddsText(pick) };
-  }
-
-  if (bucket === "Spread") {
-    const team = teamAbbr(pick.selection);
-    const line = pick.line != null
-      ? (pick.line > 0 ? `+${pick.line}` : String(pick.line))
-      : "";
-    return { primary: [team, line].filter(Boolean).join(" "), secondary: oddsText(pick) };
-  }
-
-  if (bucket === "Player prop") {
-    return { primary: "Prop", secondary: oddsText(pick) || (pick.line != null ? String(pick.line) : "") };
-  }
-
-  if (bucket === "Game prop") {
-    return { primary: "Game prop", secondary: oddsText(pick) };
-  }
-
-  // Default = Moneyline / unknown
-  const team = teamAbbr(pick.selection);
-  return { primary: team || (bucket || "Pick"), secondary: oddsText(pick) || "ML" };
+  const label = MARKET_LABEL[bucket] ?? bucket ?? "Pick";
+  return { primary: label, secondary: oddsText(pick) };
 }
 
-function teamAbbr(selection: string | null): string {
-  if (!selection) return "";
-  // Strip embedded odds like "Cleveland Guardians -136" → "Cleveland Guardians"
-  const cleaned = selection.replace(/\s*[+-]?\d+(?:\.\d+)?\s*$/, "").trim();
-  // Take the first word, slice 3 chars uppercase. "Cleveland" → "CLE", "NYY" → "NYY".
-  const first = cleaned.split(/\s+/)[0] ?? "";
-  return first.slice(0, 3).toUpperCase();
-}
+const MARKET_LABEL: Record<string, string> = {
+  Moneyline: "ML",
+  Spread: "Spread",
+  Total: "Total",
+  "Player prop": "Prop",
+  "Game prop": "Game",
+};
 
 function oddsText(pick: LastPick): string {
   if (pick.odds_taken == null) return "";
