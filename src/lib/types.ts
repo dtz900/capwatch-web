@@ -11,6 +11,7 @@ export interface BiggestWin {
   odds_taken: number | null;
   game_label: string | null;
   game_date: string | null;
+  tweet_url: string | null;
 }
 
 export interface LastPick {

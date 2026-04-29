@@ -1,5 +1,6 @@
 import { formatUnits } from "@/lib/formatters";
 import type { BiggestWin as BWType } from "@/lib/types";
+import { XIcon } from "@/components/icons/XIcon";
 
 interface Props {
   win: BWType | null;
@@ -14,8 +15,23 @@ export function BiggestWin({ win }: Props) {
   return (
     <div className="bg-[var(--color-pos-soft)] border border-[rgba(25,245,124,0.18)]
                     rounded-lg px-3 py-2.5 flex flex-col gap-0.5">
-      <div className="text-[11px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
-        Biggest win
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
+          Biggest win
+        </div>
+        {win.tweet_url && (
+          <a
+            href={win.tweet_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View original tweet"
+            className="shrink-0 w-5 h-5 flex items-center justify-center rounded
+                       text-[var(--color-text-muted)] hover:text-[var(--color-text)]
+                       hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+          >
+            <XIcon size={10} />
+          </a>
+        )}
       </div>
       <div className="text-[13px] font-bold">
         <span className="text-[var(--color-pos)] font-extrabold mr-1.5">
