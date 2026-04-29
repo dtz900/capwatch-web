@@ -31,7 +31,7 @@ export function StandingsRow({ rank, capper }: Props) {
         </div>
       </div>
       <div className="min-w-0">
-        <PickTiles picks={capper.last_picks} limit={5} />
+        <PickTiles picks={capper.last_picks} limit={4} />
       </div>
       <div className="text-right">{capper.picks_count}</div>
       <div className="text-right">{formatWinRate(capper.win_rate)}</div>

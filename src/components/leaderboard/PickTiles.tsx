@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { LastPick } from "@/lib/types";
-import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
+import { formatBetDescriptor, formatMarketLabel, normalizeMarket } from "@/lib/markets";
 import { XIcon } from "@/components/icons/XIcon";
 
 interface Props {
@@ -11,60 +11,54 @@ interface Props {
 
 interface Palette {
   bg: string;
-  border: string;
-  hoverBg: string;
-  hoverBorder: string;
+  bgHover: string;
+  text: string;
+  dot: string;
   expandedBg: string;
   expandedBorder: string;
-  text: string;
-  rail: string;
 }
 
-const TILE_OUTCOME: Record<"W" | "L" | "P", Palette> = {
-  W: {
-    bg: "bg-[rgba(25,245,124,0.10)]",
-    border: "border-[rgba(25,245,124,0.32)]",
-    hoverBg: "hover:bg-[rgba(25,245,124,0.16)]",
-    hoverBorder: "hover:border-[rgba(25,245,124,0.55)]",
-    expandedBg: "bg-[rgba(25,245,124,0.14)]",
-    expandedBorder: "border-[rgba(25,245,124,0.65)]",
-    text: "text-[var(--color-pos)]",
-    rail: "bg-[var(--color-pos)]",
-  },
-  L: {
-    bg: "bg-[rgba(239,68,68,0.10)]",
-    border: "border-[rgba(239,68,68,0.32)]",
-    hoverBg: "hover:bg-[rgba(239,68,68,0.16)]",
-    hoverBorder: "hover:border-[rgba(239,68,68,0.55)]",
-    expandedBg: "bg-[rgba(239,68,68,0.14)]",
-    expandedBorder: "border-[rgba(239,68,68,0.65)]",
-    text: "text-[var(--color-neg)]",
-    rail: "bg-[var(--color-neg)]",
-  },
-  P: {
-    bg: "bg-[rgba(255,255,255,0.04)]",
-    border: "border-[rgba(255,255,255,0.12)]",
-    hoverBg: "hover:bg-[rgba(255,255,255,0.06)]",
-    hoverBorder: "hover:border-[rgba(255,255,255,0.20)]",
-    expandedBg: "bg-[rgba(255,255,255,0.06)]",
-    expandedBorder: "border-[rgba(255,255,255,0.30)]",
-    text: "text-[var(--color-text-muted)]",
-    rail: "bg-[var(--color-text-muted)]",
-  },
+const PALETTE_W: Palette = {
+  bg: "bg-[rgba(25,245,124,0.10)]",
+  bgHover: "hover:bg-[rgba(25,245,124,0.18)]",
+  text: "text-[var(--color-pos)]",
+  dot: "bg-[var(--color-pos)]",
+  expandedBg: "bg-[rgba(25,245,124,0.14)]",
+  expandedBorder: "border-[rgba(25,245,124,0.65)]",
 };
-
-const PARLAY_OVERRIDE: Palette = {
-  bg: "bg-[rgba(245,197,74,0.08)]",
-  border: "border-[rgba(245,197,74,0.30)]",
-  hoverBg: "hover:bg-[rgba(245,197,74,0.14)]",
-  hoverBorder: "hover:border-[rgba(245,197,74,0.55)]",
-  expandedBg: "bg-[rgba(245,197,74,0.12)]",
-  expandedBorder: "border-[rgba(245,197,74,0.65)]",
+const PALETTE_L: Palette = {
+  bg: "bg-[rgba(239,68,68,0.10)]",
+  bgHover: "hover:bg-[rgba(239,68,68,0.18)]",
+  text: "text-[var(--color-neg)]",
+  dot: "bg-[var(--color-neg)]",
+  expandedBg: "bg-[rgba(239,68,68,0.14)]",
+  expandedBorder: "border-[rgba(239,68,68,0.65)]",
+};
+const PALETTE_P: Palette = {
+  bg: "bg-[rgba(255,255,255,0.05)]",
+  bgHover: "hover:bg-[rgba(255,255,255,0.10)]",
+  text: "text-[var(--color-text-muted)]",
+  dot: "bg-[var(--color-text-muted)]",
+  expandedBg: "bg-[rgba(255,255,255,0.06)]",
+  expandedBorder: "border-[rgba(255,255,255,0.30)]",
+};
+const PALETTE_PARLAY: Palette = {
+  bg: "bg-[rgba(245,197,74,0.10)]",
+  bgHover: "hover:bg-[rgba(245,197,74,0.18)]",
   text: "text-[var(--color-gold)]",
-  rail: "bg-[var(--color-gold)]",
+  dot: "bg-[var(--color-gold)]",
+  expandedBg: "bg-[rgba(245,197,74,0.14)]",
+  expandedBorder: "border-[rgba(245,197,74,0.65)]",
 };
 
-export function PickTiles({ picks, limit = 5 }: Props) {
+function paletteFor(pick: LastPick): Palette {
+  if (pick.kind === "parlay") return PALETTE_PARLAY;
+  if (pick.outcome === "W") return PALETTE_W;
+  if (pick.outcome === "L") return PALETTE_L;
+  return PALETTE_P;
+}
+
+export function PickTiles({ picks, limit = 4 }: Props) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const visible = picks.slice(0, limit);
@@ -87,7 +81,7 @@ export function PickTiles({ picks, limit = 5 }: Props) {
   return (
     <div ref={wrapRef} className="flex gap-1.5 w-full">
       {visible.map((pick, i) => (
-        <Tile
+        <Pill
           key={i}
           pick={pick}
           open={openIdx === i}
@@ -98,49 +92,43 @@ export function PickTiles({ picks, limit = 5 }: Props) {
   );
 }
 
-function Tile({ pick, open, onToggle }: { pick: LastPick; open: boolean; onToggle: () => void }) {
-  const palette = pick.kind === "parlay" ? PARLAY_OVERRIDE : TILE_OUTCOME[pick.outcome];
+function Pill({ pick, open, onToggle }: { pick: LastPick; open: boolean; onToggle: () => void }) {
+  const palette = paletteFor(pick);
+  const { primary, secondary } = compactContent(pick);
 
   return (
     <div className="relative flex-1 min-w-0">
-      {/* Reserve the tile footprint so siblings don't reflow when expanded. */}
-      <div className="invisible h-10" aria-hidden="true" />
+      <div className="invisible h-8" aria-hidden="true" />
 
-      {/* Closed-state tile sits in the reserved footprint */}
       {!open && (
         <button
           type="button"
           onClick={onToggle}
-          aria-expanded={false}
           aria-haspopup="dialog"
-          className={`absolute inset-0 w-full h-10 pl-2.5 pr-2 rounded-md border
-                      ${palette.bg} ${palette.border}
-                      ${palette.hoverBg} ${palette.hoverBorder}
-                      flex items-center gap-2 text-left
-                      transition-all duration-150 cursor-pointer overflow-hidden`}
+          aria-expanded={false}
+          className={`absolute inset-0 w-full h-8 px-2.5 rounded-full
+                      ${palette.bg} ${palette.bgHover}
+                      flex items-center gap-1.5 text-left
+                      transition-colors duration-150 cursor-pointer overflow-hidden`}
         >
-          <span aria-hidden="true" className={`shrink-0 w-[3px] h-5 rounded-full ${palette.rail}`} />
-          <span className="flex-1 min-w-0 leading-tight">
-            <span className={`block text-[10px] font-extrabold uppercase tracking-[0.04em] truncate ${palette.text}`}>
-              {compactLabel(pick)}
+          <span aria-hidden="true" className={`shrink-0 w-1.5 h-1.5 rounded-full ${palette.dot}`} />
+          <span className="flex-1 min-w-0 leading-tight flex items-baseline gap-1">
+            <span className={`text-[11px] font-extrabold tracking-[-0.005em] truncate ${palette.text}`}>
+              {primary}
             </span>
-            <span className="block text-[9px] font-semibold text-[var(--color-text-muted)] truncate">
-              {compactSubLabel(pick)}
+            <span className="text-[10px] font-medium text-[var(--color-text-muted)] truncate">
+              {secondary}
             </span>
-          </span>
-          <span className={`shrink-0 text-[10px] font-extrabold ${palette.text}`}>
-            {pick.outcome}
           </span>
         </button>
       )}
 
-      {/* Expanded popover: horizontally centered on the tile, scales from center */}
       {open && (
         <div
           role="dialog"
           aria-label="Pick details"
           className={`absolute top-0 left-1/2 -translate-x-1/2 z-50
-                      w-[280px] rounded-lg border-2 overflow-hidden
+                      w-[280px] rounded-xl border-2 overflow-hidden
                       ${palette.expandedBorder}
                       shadow-[0_16px_48px_-8px_rgba(0,0,0,0.8)]
                       animate-[tile-expand_140ms_ease-out]`}
@@ -164,6 +152,7 @@ function PickDetails({ pick }: { pick: LastPick }) {
   const outcomeBg = pick.outcome === "W" ? "bg-[var(--color-pos-soft)] text-[var(--color-pos)]" :
                     pick.outcome === "L" ? "bg-[var(--color-neg-soft)] text-[var(--color-neg)]" :
                     "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)]";
+  const noOdds = pick.kind !== "parlay" && pick.odds_taken == null;
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-2">
@@ -186,6 +175,9 @@ function PickDetails({ pick }: { pick: LastPick }) {
           <span className={`text-[13px] font-bold tabular-nums ${pick.profit_units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}>
             {pick.profit_units >= 0 ? "+" : ""}{pick.profit_units.toFixed(1)} units
           </span>
+        )}
+        {noOdds && (
+          <span className="text-[10px] italic text-[var(--color-text-muted)]">Odds not provided</span>
         )}
       </div>
 
@@ -214,27 +206,61 @@ function PickDetails({ pick }: { pick: LastPick }) {
   );
 }
 
-function compactLabel(pick: LastPick): string {
-  if (pick.kind === "parlay") return pick.leg_count ? `${pick.leg_count}-LEG` : "PARLAY";
-  if (pick.selection) {
-    const first = pick.selection.split(/\s+/)[0];
-    return first.slice(0, 4).toUpperCase();
+/**
+ * Two-piece compact label: bold primary + muted secondary.
+ * Aims to be readable instead of just slicing 4 chars off the selection.
+ */
+function compactContent(pick: LastPick): { primary: string; secondary: string } {
+  if (pick.kind === "parlay") {
+    return {
+      primary: pick.leg_count ? `${pick.leg_count}-leg` : "Parlay",
+      secondary: pick.profit_units != null
+        ? `${pick.profit_units >= 0 ? "+" : ""}${pick.profit_units.toFixed(1)}u`
+        : "",
+    };
   }
-  return pick.market?.toUpperCase() ?? "PICK";
+
+  const bucket = pick.market ? normalizeMarket(pick.market) : "";
+
+  if (bucket === "Total") {
+    const sel = (pick.selection ?? "").toLowerCase();
+    const lineStr = pick.line != null ? String(pick.line) : "";
+    if (sel.startsWith("over"))  return { primary: `O ${lineStr}`.trim(), secondary: oddsText(pick) };
+    if (sel.startsWith("under")) return { primary: `U ${lineStr}`.trim(), secondary: oddsText(pick) };
+    return { primary: lineStr || "Total", secondary: oddsText(pick) };
+  }
+
+  if (bucket === "Spread") {
+    const team = teamAbbr(pick.selection);
+    const line = pick.line != null
+      ? (pick.line > 0 ? `+${pick.line}` : String(pick.line))
+      : "";
+    return { primary: [team, line].filter(Boolean).join(" "), secondary: oddsText(pick) };
+  }
+
+  if (bucket === "Player prop") {
+    return { primary: "Prop", secondary: oddsText(pick) || (pick.line != null ? String(pick.line) : "") };
+  }
+
+  if (bucket === "Game prop") {
+    return { primary: "Game prop", secondary: oddsText(pick) };
+  }
+
+  // Default = Moneyline / unknown
+  const team = teamAbbr(pick.selection);
+  return { primary: team || (bucket || "Pick"), secondary: oddsText(pick) || "ML" };
 }
 
-function compactSubLabel(pick: LastPick): string {
-  if (pick.kind === "parlay") {
-    if (pick.profit_units != null) {
-      const sign = pick.profit_units >= 0 ? "+" : "";
-      return `${sign}${pick.profit_units.toFixed(1)}u`;
-    }
-    return "";
-  }
-  if (pick.odds_taken != null) {
-    const sign = pick.odds_taken > 0 ? "+" : "";
-    return `${sign}${pick.odds_taken}`;
-  }
-  if (pick.line != null) return String(pick.line);
-  return "";
+function teamAbbr(selection: string | null): string {
+  if (!selection) return "";
+  // Strip embedded odds like "Cleveland Guardians -136" → "Cleveland Guardians"
+  const cleaned = selection.replace(/\s*[+-]?\d+(?:\.\d+)?\s*$/, "").trim();
+  // Take the first word, slice 3 chars uppercase. "Cleveland" → "CLE", "NYY" → "NYY".
+  const first = cleaned.split(/\s+/)[0] ?? "";
+  return first.slice(0, 3).toUpperCase();
+}
+
+function oddsText(pick: LastPick): string {
+  if (pick.odds_taken == null) return "";
+  return `${pick.odds_taken > 0 ? "+" : ""}${pick.odds_taken}`;
 }
