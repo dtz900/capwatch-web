@@ -60,6 +60,64 @@ export interface CapperProfileFilters {
   outcome?: string;
 }
 
+export interface AuditFilters {
+  reason?: string;
+  capper?: string;
+  kind?: "void" | "ungraded";
+  limit?: number;
+  offset?: number;
+}
+
+export interface AuditProblem {
+  pick_id: number;
+  capper_id: number;
+  capper_handle: string | null;
+  capper_display_name: string | null;
+  kind: "void" | "ungraded";
+  reason: string;
+  market: string | null;
+  selection: string | null;
+  line: number | null;
+  odds_taken: number | null;
+  units: number | null;
+  player_id: number | null;
+  game_id: string | null;
+  parlay_id: number | null;
+  posted_at: string | null;
+  raw_id: number | null;
+  tweet_text: string | null;
+  tweet_url: string | null;
+}
+
+export interface AuditResponse {
+  summary: { total: number; graded: number; void: number; ungraded: number };
+  by_reason: Record<string, number>;
+  total_problems: number;
+  limit: number;
+  offset: number;
+  problems: AuditProblem[];
+}
+
+/** Server-only. Requires CRON_SECRET in env to authenticate. */
+export async function fetchAudit(filters: AuditFilters = {}): Promise<AuditResponse> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error("CRON_SECRET not set on server");
+  const params = new URLSearchParams();
+  if (filters.reason) params.set("reason", filters.reason);
+  if (filters.capper) params.set("capper", filters.capper);
+  if (filters.kind) params.set("kind", filters.kind);
+  if (filters.limit != null) params.set("limit", String(filters.limit));
+  if (filters.offset != null) params.set("offset", String(filters.offset));
+  const qs = params.toString();
+  const url = `${API_BASE}/api/admin/audit${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${secret}` },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Audit fetch failed: ${res.status}`);
+  return res.json() as Promise<AuditResponse>;
+}
+
 export async function fetchCapperProfile(
   handle: string,
   filters: CapperProfileFilters = {},
