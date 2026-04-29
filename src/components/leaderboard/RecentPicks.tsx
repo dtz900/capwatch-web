@@ -1,21 +1,20 @@
 import type { LastPick } from "@/lib/types";
-import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
+import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import { XIcon } from "@/components/icons/XIcon";
 
 interface Props {
   picks: LastPick[];
   limit?: number;
-  size?: "sm" | "md";
 }
 
-const OUTCOME_TEXT = {
-  W: "text-[var(--color-pos)]",
-  L: "text-[var(--color-neg)]",
-  P: "text-[var(--color-text-muted)]",
+const BAR_COLOR = {
+  W: "bg-[var(--color-pos)]",
+  L: "bg-[var(--color-neg)]",
+  P: "bg-[var(--color-text-muted)]",
 } as const;
 
-export function RecentPicks({ picks, limit = 5, size = "sm" }: Props) {
+export function RecentPicks({ picks, limit = 5 }: Props) {
   const visible = picks.slice(0, limit);
   if (visible.length === 0) {
     return (
@@ -23,43 +22,48 @@ export function RecentPicks({ picks, limit = 5, size = "sm" }: Props) {
     );
   }
 
-  const textSize = size === "md" ? "text-[12px]" : "text-[11px]";
-  const rowGap = size === "md" ? "gap-1.5" : "gap-1";
-
   return (
-    <ul className={`flex flex-col ${rowGap} w-full`}>
+    <ul className="flex flex-col gap-1 w-full">
       {visible.map((pick, i) => {
         const isParlay = pick.kind === "parlay";
-        const descriptorColor = isParlay
-          ? "text-[var(--color-gold)] font-semibold"
-          : `${OUTCOME_TEXT[pick.outcome]} font-semibold`;
+        const barColor = isParlay ? "bg-[var(--color-gold)]" : BAR_COLOR[pick.outcome];
+        const date = pick.posted_at
+          ? new Date(pick.posted_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          : null;
+        const betColor = isParlay
+          ? "text-[var(--color-gold)]"
+          : pick.outcome === "W" ? "text-[var(--color-pos)]"
+          : pick.outcome === "L" ? "text-[var(--color-neg)]"
+          : "text-[var(--color-text-soft)]";
 
         return (
           <li
             key={i}
-            className={`flex items-center gap-2.5 ${textSize} font-medium`}
+            className="flex items-stretch gap-2.5 py-1.5 group"
           >
-            <span className="flex-1 min-w-0 flex items-baseline gap-1.5 truncate">
-              <span className="text-[var(--color-text-muted)] truncate">
-                {formatMarketLabel(pick)}
-              </span>
-              <span className="opacity-30 shrink-0">·</span>
-              <span className={`truncate ${descriptorColor}`}>
+            <span
+              aria-hidden="true"
+              className={`shrink-0 w-[3px] rounded-full ${barColor}`}
+            />
+            <div className="flex-1 min-w-0 flex items-center gap-2 text-[11px]">
+              <span className={`flex-1 min-w-0 truncate font-semibold ${betColor}`}>
                 {formatBetDescriptor(pick)}
               </span>
               {isParlay && pick.profit_units != null && (
-                <>
-                  <span className="opacity-30 shrink-0">·</span>
-                  <span
-                    className={`tabular-nums font-semibold shrink-0 ${
-                      pick.profit_units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
-                    }`}
-                  >
-                    {formatUnitsSmart(pick.profit_units)}u
-                  </span>
-                </>
+                <span
+                  className={`shrink-0 tabular-nums font-bold ${
+                    pick.profit_units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+                  }`}
+                >
+                  {formatUnitsSmart(pick.profit_units)}u
+                </span>
               )}
-            </span>
+              {date && (
+                <span className="shrink-0 text-[10px] text-[var(--color-text-muted)] font-medium tabular-nums">
+                  {date}
+                </span>
+              )}
+            </div>
             {pick.tweet_url ? (
               <a
                 href={pick.tweet_url}
