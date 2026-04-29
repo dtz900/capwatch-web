@@ -23,7 +23,7 @@ const sample: CapperRow = {
   bet_type_breakdown: { ML: 1.0 },
   biggest_win: {
     units: 5.2, market: "ML", selection: "OAK", line: null, odds_taken: 210,
-    game_label: "OAK @ LAA", game_date: "2026-04-08",
+    game_label: "OAK @ LAA", game_date: "2026-04-08", tweet_url: null,
   },
   tracked_since: "2026-03-01T00:00:00Z",
   tweets_parsed: 87,
@@ -36,14 +36,15 @@ const sample: CapperRow = {
 };
 
 describe("PodiumCard", () => {
-  it("renders display name, handle, key stats for gold variant", () => {
+  it("renders display name, handle, hero stat and supporting line", () => {
     render(<PodiumCard rank={1} variant="gold" capper={sample} />);
     expect(screen.getByText("FADE AI")).toBeInTheDocument();
     expect(screen.getByText("@fadeai_")).toBeInTheDocument();
-    expect(screen.getByText("87")).toBeInTheDocument();
-    expect(screen.getByText("55%")).toBeInTheDocument();
+    // Hero number = +12.4 (units), supporting line includes ROI and Win
     expect(screen.getByText("+12.4")).toBeInTheDocument();
-    expect(screen.getByText("+14.2%")).toBeInTheDocument();
+    expect(screen.getByText(/\+14\.2% ROI/)).toBeInTheDocument();
+    expect(screen.getByText(/55% win/)).toBeInTheDocument();
+    expect(screen.getByText(/87 picks/)).toBeInTheDocument();
   });
 
   it("shows the Model tag when capper is fadeai_", () => {
@@ -56,12 +57,12 @@ describe("PodiumCard", () => {
     expect(screen.queryByText("Model")).not.toBeInTheDocument();
   });
 
-  it("shows variant-specific rank label", () => {
+  it("shows rank label for current standing (not crowned)", () => {
     const { rerender } = render(<PodiumCard rank={1} variant="gold" capper={sample} />);
-    expect(screen.getByText(/Champion/i)).toBeInTheDocument();
+    expect(screen.getByText(/Leader/i)).toBeInTheDocument();
     rerender(<PodiumCard rank={2} variant="silver" capper={sample} />);
-    expect(screen.getByText(/Runner-up/i)).toBeInTheDocument();
+    expect(screen.getByText(/2nd/i)).toBeInTheDocument();
     rerender(<PodiumCard rank={3} variant="bronze" capper={sample} />);
-    expect(screen.getByText(/Third/i)).toBeInTheDocument();
+    expect(screen.getByText(/3rd/i)).toBeInTheDocument();
   });
 });
