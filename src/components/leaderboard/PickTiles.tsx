@@ -9,30 +9,57 @@ interface Props {
   limit?: number;
 }
 
-const TILE_OUTCOME = {
+interface Palette {
+  bg: string;
+  border: string;
+  hoverBg: string;
+  hoverBorder: string;
+  expandedBg: string;
+  expandedBorder: string;
+  text: string;
+  rail: string;
+}
+
+const TILE_OUTCOME: Record<"W" | "L" | "P", Palette> = {
   W: {
-    bg: "bg-[rgba(25,245,124,0.10)] border-[rgba(25,245,124,0.32)]",
-    bgHover: "hover:bg-[rgba(25,245,124,0.16)] hover:border-[rgba(25,245,124,0.55)]",
+    bg: "bg-[rgba(25,245,124,0.10)]",
+    border: "border-[rgba(25,245,124,0.32)]",
+    hoverBg: "hover:bg-[rgba(25,245,124,0.16)]",
+    hoverBorder: "hover:border-[rgba(25,245,124,0.55)]",
+    expandedBg: "bg-[rgba(25,245,124,0.14)]",
+    expandedBorder: "border-[rgba(25,245,124,0.65)]",
     text: "text-[var(--color-pos)]",
     rail: "bg-[var(--color-pos)]",
   },
   L: {
-    bg: "bg-[rgba(239,68,68,0.10)] border-[rgba(239,68,68,0.32)]",
-    bgHover: "hover:bg-[rgba(239,68,68,0.16)] hover:border-[rgba(239,68,68,0.55)]",
+    bg: "bg-[rgba(239,68,68,0.10)]",
+    border: "border-[rgba(239,68,68,0.32)]",
+    hoverBg: "hover:bg-[rgba(239,68,68,0.16)]",
+    hoverBorder: "hover:border-[rgba(239,68,68,0.55)]",
+    expandedBg: "bg-[rgba(239,68,68,0.14)]",
+    expandedBorder: "border-[rgba(239,68,68,0.65)]",
     text: "text-[var(--color-neg)]",
     rail: "bg-[var(--color-neg)]",
   },
   P: {
-    bg: "bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.12)]",
-    bgHover: "hover:bg-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.20)]",
+    bg: "bg-[rgba(255,255,255,0.04)]",
+    border: "border-[rgba(255,255,255,0.12)]",
+    hoverBg: "hover:bg-[rgba(255,255,255,0.06)]",
+    hoverBorder: "hover:border-[rgba(255,255,255,0.20)]",
+    expandedBg: "bg-[rgba(255,255,255,0.06)]",
+    expandedBorder: "border-[rgba(255,255,255,0.30)]",
     text: "text-[var(--color-text-muted)]",
     rail: "bg-[var(--color-text-muted)]",
   },
-} as const;
+};
 
-const PARLAY_OVERRIDE = {
-  bg: "bg-[rgba(245,197,74,0.08)] border-[rgba(245,197,74,0.30)]",
-  bgHover: "hover:bg-[rgba(245,197,74,0.14)] hover:border-[rgba(245,197,74,0.55)]",
+const PARLAY_OVERRIDE: Palette = {
+  bg: "bg-[rgba(245,197,74,0.08)]",
+  border: "border-[rgba(245,197,74,0.30)]",
+  hoverBg: "hover:bg-[rgba(245,197,74,0.14)]",
+  hoverBorder: "hover:border-[rgba(245,197,74,0.55)]",
+  expandedBg: "bg-[rgba(245,197,74,0.12)]",
+  expandedBorder: "border-[rgba(245,197,74,0.65)]",
   text: "text-[var(--color-gold)]",
   rail: "bg-[var(--color-gold)]",
 };
@@ -76,42 +103,62 @@ function Tile({ pick, open, onToggle }: { pick: LastPick; open: boolean; onToggl
 
   return (
     <div className="relative flex-1 min-w-0">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        className={`w-full h-10 pl-2.5 pr-2 rounded-md border
-                    ${palette.bg} ${palette.bgHover}
-                    flex items-center gap-2 text-left
-                    transition-colors duration-150 cursor-pointer overflow-hidden`}
-      >
-        <span aria-hidden="true" className={`shrink-0 w-[3px] h-5 rounded-full ${palette.rail}`} />
-        <span className="flex-1 min-w-0 leading-tight">
-          <span className={`block text-[10px] font-extrabold uppercase tracking-[0.04em] truncate ${palette.text}`}>
-            {compactLabel(pick)}
-          </span>
-          <span className="block text-[9px] font-semibold text-[var(--color-text-muted)] truncate">
-            {compactSubLabel(pick)}
-          </span>
-        </span>
-        <span className={`shrink-0 text-[10px] font-extrabold ${palette.text}`}>
-          {pick.outcome}
-        </span>
-      </button>
+      {/* Reserve the tile footprint so siblings don't reflow when expanded. */}
+      <div className="invisible h-10" aria-hidden="true" />
 
-      {open && (
-        <div
-          role="dialog"
-          aria-label="Pick details"
-          className="absolute top-full left-0 mt-2 z-40 w-[280px] p-3.5
-                     rounded-lg border border-[var(--color-border)]
-                     bg-[#13131a] shadow-[0_12px_40px_-8px_rgba(0,0,0,0.7)]
-                     text-[12px] leading-relaxed"
-        >
-          <PickDetails pick={pick} />
-        </div>
-      )}
+      <div className={`absolute inset-0 ${open ? "z-50" : "z-0"}`}>
+        {!open ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={false}
+            aria-haspopup="dialog"
+            className={`w-full h-10 pl-2.5 pr-2 rounded-md border
+                        ${palette.bg} ${palette.border}
+                        ${palette.hoverBg} ${palette.hoverBorder}
+                        flex items-center gap-2 text-left
+                        transition-all duration-150 cursor-pointer overflow-hidden`}
+          >
+            <span aria-hidden="true" className={`shrink-0 w-[3px] h-5 rounded-full ${palette.rail}`} />
+            <span className="flex-1 min-w-0 leading-tight">
+              <span className={`block text-[10px] font-extrabold uppercase tracking-[0.04em] truncate ${palette.text}`}>
+                {compactLabel(pick)}
+              </span>
+              <span className="block text-[9px] font-semibold text-[var(--color-text-muted)] truncate">
+                {compactSubLabel(pick)}
+              </span>
+            </span>
+            <span className={`shrink-0 text-[10px] font-extrabold ${palette.text}`}>
+              {pick.outcome}
+            </span>
+          </button>
+        ) : (
+          <div
+            role="dialog"
+            aria-label="Pick details"
+            className={`relative min-w-[280px] rounded-lg border-2 overflow-hidden
+                        ${palette.expandedBorder}
+                        shadow-[0_16px_48px_-8px_rgba(0,0,0,0.8)]
+                        animate-[tile-expand_140ms_ease-out]`}
+          >
+            <div aria-hidden="true" className="absolute inset-0 bg-[#13131a]" />
+            <div aria-hidden="true" className={`absolute inset-0 ${palette.expandedBg}`} />
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label="Close pick details"
+              className="absolute top-2 right-2 z-10 w-5 h-5 flex items-center justify-center rounded
+                         text-[var(--color-text-muted)] hover:text-[var(--color-text)]
+                         hover:bg-[rgba(255,255,255,0.10)]"
+            >
+              <span className="text-[14px] leading-none">×</span>
+            </button>
+            <div className="relative p-3.5 text-[12px] leading-relaxed">
+              <PickDetails pick={pick} />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
