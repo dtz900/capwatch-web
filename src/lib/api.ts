@@ -8,6 +8,21 @@ export interface LeaderboardFilters {
   active_only: boolean;
 }
 
+export type SuggestionStatus = "queued" | "already_tracked" | "duplicate" | "invalid";
+
+export async function suggestCapper(input: { handle: string; reason?: string }): Promise<SuggestionStatus> {
+  const res = await fetch(`${API_BASE}/api/public/capper-suggestions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Suggestion failed: ${res.status}`);
+  }
+  const body = (await res.json()) as { status: SuggestionStatus };
+  return body.status;
+}
+
 export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<LeaderboardResponse> {
   const params = new URLSearchParams({
     window: filters.window,

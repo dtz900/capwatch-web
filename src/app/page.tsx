@@ -3,6 +3,7 @@ import { Hero } from "@/components/leaderboard/Hero";
 import { FilterBar } from "@/components/leaderboard/FilterBar";
 import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
+import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
 import type { Window, Sort } from "@/lib/types";
 
@@ -38,6 +39,7 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
         {top3.length === 3 && <Podium rows={top3} />}
         {rest.length > 0 && <StandingsTable rows={rest} startRank={4} />}
+        <SuggestCapperSection />
         <footer className="flex items-center justify-between py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
           <div>Min {MIN_PICKS} graded picks · refreshed daily 6:00 AM PT.</div>
           <div>Operated by FADE AI · The model entry is graded identically</div>
