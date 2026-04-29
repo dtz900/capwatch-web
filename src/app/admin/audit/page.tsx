@@ -27,8 +27,13 @@ const REASON_LABEL: Record<string, string> = {
   missing_game_id: "Game not resolved",
   game_pending: "Game pending",
   no_grade_row: "Grader hasn't run",
-  boxscore_or_data_gap: "Player not in boxscore",
+  player_did_not_play: "Player didn't play",
+  data_gap: "Game data gap",
 };
+
+// Reasons that are book-rules-correct voids (no human triage needed).
+// Render muted on the audit page so they don't compete with real bugs.
+const BENIGN_REASONS = new Set(["player_did_not_play", "game_pending"]);
 
 export default async function AdminAuditPage({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -249,8 +254,10 @@ function ProblemRow({ p }: { p: AuditProblem }) {
     ? new Date(p.posted_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : "—";
   const reasonLabel = REASON_LABEL[p.reason] ?? p.reason;
-  const reasonColor =
-    p.kind === "void"
+  const benign = BENIGN_REASONS.has(p.reason);
+  const reasonColor = benign
+    ? "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)]"
+    : p.kind === "void"
       ? "bg-[var(--color-neg-soft)] text-[var(--color-neg)]"
       : "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]";
   return (
