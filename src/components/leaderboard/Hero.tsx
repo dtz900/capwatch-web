@@ -16,7 +16,7 @@ export function Hero() {
         MLB Twitter Capper Rankings
       </h1>
       <p className="text-sm text-[var(--color-text-muted)] max-w-[640px] leading-relaxed">
-        Every <span className="text-[var(--color-text-soft)] font-semibold">public</span> MLB pick from a tracked Twitter capper, parsed within seconds and graded against the final outcome. Picks posted behind paywalls are not tracked.
+        Every public MLB pick from a tracked Twitter capper, parsed within seconds and graded against the final outcome. Picks posted behind paywalls are not tracked.
       </p>
     </header>
   );
