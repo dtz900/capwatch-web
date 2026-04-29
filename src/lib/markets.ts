@@ -8,7 +8,7 @@ export function normalizeMarket(raw: string): string {
   if (r === "ml" || r === "f5_ml") return "Moneyline";
   if (r === "spread" || r === "f5_spread" || r === "run_line" || r === "runline") return "Spread";
   if (r === "total" || r === "f5_total" || r === "team_total") return "Total";
-  if (r.startsWith("prop_pitcher") || r.startsWith("prop_batter") || r === "player_prop") return "Player prop";
+  if (r.startsWith("prop_pitcher") || r.startsWith("prop_batter") || r === "player_prop" || r === "prop") return "Player prop";
   if (r === "nrfi" || r === "yrfi" || r === "game_prop" || r.startsWith("inning_") || r === "first_5") return "Game prop";
   if (r === "parlay") return "Parlay";
   return raw;
