@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LastPick } from "@/lib/types";
 import { formatBetDescriptor, formatMarketLabel, normalizeMarket } from "@/lib/markets";
+import { formatUnitsSmart } from "@/lib/formatters";
 import { XIcon } from "@/components/icons/XIcon";
 
 interface Props {
@@ -173,7 +174,7 @@ function PickDetails({ pick }: { pick: LastPick }) {
         </span>
         {pick.kind === "parlay" && pick.profit_units != null && (
           <span className={`text-[13px] font-bold tabular-nums ${pick.profit_units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}>
-            {pick.profit_units >= 0 ? "+" : ""}{pick.profit_units.toFixed(1)} units
+            {formatUnitsSmart(pick.profit_units)} units
           </span>
         )}
         {noOdds && (
@@ -214,9 +215,7 @@ function compactContent(pick: LastPick): { primary: string; secondary: string } 
   if (pick.kind === "parlay") {
     return {
       primary: pick.leg_count ? `${pick.leg_count}-leg` : "Parlay",
-      secondary: pick.profit_units != null
-        ? `${pick.profit_units >= 0 ? "+" : ""}${pick.profit_units.toFixed(1)}u`
-        : "",
+      secondary: pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : "",
     };
   }
 

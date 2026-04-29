@@ -1,5 +1,6 @@
 import type { LastPick } from "@/lib/types";
 import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
+import { formatUnitsSmart } from "@/lib/formatters";
 import { XIcon } from "@/components/icons/XIcon";
 
 interface Props {
@@ -54,7 +55,7 @@ export function RecentPicks({ picks, limit = 5, size = "sm" }: Props) {
                       pick.profit_units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
                     }`}
                   >
-                    {pick.profit_units >= 0 ? "+" : ""}{pick.profit_units.toFixed(1)}u
+                    {formatUnitsSmart(pick.profit_units)}u
                   </span>
                 </>
               )}
