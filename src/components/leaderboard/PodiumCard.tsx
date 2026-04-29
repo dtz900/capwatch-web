@@ -112,9 +112,10 @@ export function PodiumCard({ rank, variant, capper }: Props) {
           rel="noopener"
           href={capper.handle ? `https://x.com/${capper.handle}` : "#"}
           className="w-8 h-8 flex items-center justify-center bg-[rgba(255,255,255,0.04)]
-                     rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                     rounded-lg text-[var(--color-text-soft)] hover:text-white
+                     hover:bg-[rgba(255,255,255,0.10)] transition-colors"
         >
-          <XIcon size={12} />
+          <XIcon size={13} glow />
         </a>
       </div>
 
@@ -148,19 +149,16 @@ export function PodiumCard({ rank, variant, capper }: Props) {
 
       {/* Hero stat + supporting line */}
       <div className="relative border-y border-[var(--color-border)] py-4 mb-4">
-        <div className="flex items-baseline gap-3">
-          <div
-            className={`font-extrabold tabular-nums leading-none tracking-[-0.03em] ${heroSize}
-                        ${heroPositive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}
-          >
-            {formatUnits(capper.units_profit)}
-            <span className="text-[var(--color-text-muted)] text-[14px] font-bold ml-1">u</span>
-          </div>
-          <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
-            Net units
-          </div>
+        <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-2">
+          Net profit
         </div>
-        <div className="text-[12px] font-semibold mt-2.5 flex items-center gap-2 flex-wrap">
+        <div
+          className={`font-extrabold tabular-nums leading-none tracking-[-0.03em] ${heroSize}
+                      ${heroPositive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}
+        >
+          {formatUnits(capper.units_profit)}
+        </div>
+        <div className="text-[12px] font-semibold mt-3 flex items-center gap-2 flex-wrap">
           <span className={capper.roi_pct >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}>
             {formatRoi(capper.roi_pct)} ROI
           </span>
@@ -186,7 +184,7 @@ export function PodiumCard({ rank, variant, capper }: Props) {
 
       {/* Biggest win + meta */}
       <div className="relative mt-auto pt-3 flex flex-col gap-2.5">
-        <BiggestWin win={capper.biggest_win} />
+        <BiggestWin win={capper.biggest_win} accent={variant} />
         <div className="text-[10px] text-[var(--color-text-muted)] font-medium flex flex-wrap gap-x-2 gap-y-1">
           {capper.tracked_since && <span>Tracked since {formatMonth(capper.tracked_since)}</span>}
           {capper.tracked_since && capper.follower_count != null && <span className="opacity-30">·</span>}
