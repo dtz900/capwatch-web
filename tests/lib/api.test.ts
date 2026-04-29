@@ -20,7 +20,7 @@ describe("fetchLeaderboard", () => {
     expect(out).toEqual(sample);
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringMatching(/\/api\/public\/cappers\?window=all_time&sort=roi_pct&min_picks=5&active_only=true/),
-      expect.objectContaining({ next: { revalidate: 600 } }),
+      expect.objectContaining({ next: { revalidate: 60 } }),
     );
   });
 
