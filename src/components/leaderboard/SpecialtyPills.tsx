@@ -1,11 +1,14 @@
+import { normalizeBreakdown } from "@/lib/markets";
+
 interface Props {
   breakdown: Record<string, number>;
   maxPills?: number;
   minShare?: number;
 }
 
-export function SpecialtyPills({ breakdown, maxPills = 4, minShare = 0.05 }: Props) {
-  const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+export function SpecialtyPills({ breakdown, maxPills = 5, minShare = 0.05 }: Props) {
+  const normalized = normalizeBreakdown(breakdown);
+  const sorted = Object.entries(normalized).sort((a, b) => b[1] - a[1]);
   const visible = sorted.filter(([, share]) => share >= minShare).slice(0, maxPills);
   const hiddenCount = sorted.length - visible.length;
   if (visible.length === 0) return null;

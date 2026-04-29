@@ -1,16 +1,14 @@
 interface Props {
   followerCount?: number | null;
   trackedSince?: string | null;
-  tweetsParsed?: number | null;
   tagline?: string;
 }
 
-export function MetaLine({ followerCount, trackedSince, tweetsParsed, tagline }: Props) {
+export function MetaLine({ followerCount, trackedSince, tagline }: Props) {
   const parts: string[] = [];
   if (followerCount != null) parts.push(`${formatFollowers(followerCount)} followers`);
   if (tagline) parts.push(tagline);
   if (trackedSince) parts.push(`Tracked since ${formatMonth(trackedSince)}`);
-  if (tweetsParsed != null) parts.push(`${tweetsParsed} tweets parsed`);
 
   return (
     <div className="text-[11px] text-[var(--color-text-muted)] font-medium leading-relaxed

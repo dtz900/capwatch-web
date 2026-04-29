@@ -143,7 +143,6 @@ export function PodiumCard({ rank, variant, capper }: Props) {
         <MetaLine
           followerCount={capper.follower_count}
           trackedSince={capper.tracked_since}
-          tweetsParsed={capper.tweets_parsed}
           tagline={isModel ? "LightGBM hybrid · same parser, same grader as every other entry" : undefined}
         />
       </div>
