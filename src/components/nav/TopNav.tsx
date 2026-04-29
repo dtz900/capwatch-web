@@ -1,18 +1,29 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogoMark } from "./LogoMark";
 import { SearchIcon } from "@/components/icons/SearchIcon";
 
 const LINKS = [
-  { href: "/slate", label: "Slate", disabled: true },
-  { href: "/", label: "Leaderboard", active: true },
-  { href: "/cappers", label: "Cappers", disabled: true },
+  { href: "/slate", label: "Slate" },
+  { href: "/", label: "Leaderboard" },
+  { href: "/cappers", label: "Cappers" },
   { href: "/methodology", label: "Methodology" },
 ];
 
+function isActive(href: string, pathname: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function TopNav() {
+  const pathname = usePathname() || "/";
   return (
-    <nav className="sticky top-0 z-30 backdrop-blur-md bg-[rgba(10,10,12,0.85)]
-                    border-b border-[rgba(255,255,255,0.06)]">
+    <nav
+      className="sticky top-0 z-30 backdrop-blur-md bg-[rgba(10,10,12,0.85)]
+                    border-b border-[rgba(255,255,255,0.06)]"
+    >
       <div className="max-w-[1240px] mx-auto px-7 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-[11px] text-[var(--color-text)]">
           <LogoMark />
@@ -20,23 +31,29 @@ export function TopNav() {
         </Link>
         <div className="flex gap-1 mx-6">
           {LINKS.map((l) => {
-            const cls = l.active
+            const active = isActive(l.href, pathname);
+            const cls = active
               ? "text-[var(--color-text)] bg-[rgba(255,255,255,0.05)]"
               : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
             return (
-              <Link key={l.label} href={l.disabled ? "#" : l.href}
-                    className={`px-3.5 py-2 rounded-lg text-sm font-semibold ${cls}`}
-                    aria-disabled={l.disabled}>
+              <Link
+                key={l.label}
+                href={l.href}
+                className={`px-3.5 py-2 rounded-lg text-sm font-semibold ${cls}`}
+                aria-current={active ? "page" : undefined}
+              >
                 {l.label}
               </Link>
             );
           })}
         </div>
         <div className="flex items-center gap-2">
-          <button className="w-9 h-9 flex items-center justify-center
+          <button
+            className="w-9 h-9 flex items-center justify-center
                              border border-[rgba(255,255,255,0.06)] rounded-lg
                              text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                  aria-label="Search">
+            aria-label="Search"
+          >
             <SearchIcon />
           </button>
         </div>
