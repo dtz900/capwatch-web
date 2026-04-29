@@ -26,3 +26,55 @@ export function normalizeBreakdown(breakdown: Record<string, number>): Record<st
   }
   return out;
 }
+
+interface PickLike {
+  kind?: "straight" | "parlay";
+  market?: string | null;
+  selection?: string | null;
+  line?: number | null;
+  odds_taken?: number | null;
+  leg_count?: number | null;
+}
+
+/**
+ * Reader-friendly market label for a single pick.
+ * Parlays return "Parlay"; everything else goes through normalizeMarket.
+ */
+export function formatMarketLabel(pick: PickLike): string {
+  if (pick.kind === "parlay") return "Parlay";
+  if (!pick.market) return "Pick";
+  return normalizeMarket(pick.market);
+}
+
+/**
+ * Build a clean "{selection} {line} {odds}" string, skipping any value the
+ * parser already baked into the selection. Handles cases like:
+ *   selection="Cleveland Guardians -136"  → "Cleveland Guardians -136"
+ *   selection="Yankees", odds=-135        → "Yankees -135"
+ *   selection="Under 8", line=8           → "Under 8"
+ *   selection="Rangers +1.5", line=1.5    → "Rangers +1.5"
+ */
+export function formatBetDescriptor(pick: PickLike): string {
+  if (pick.kind === "parlay") {
+    return pick.leg_count ? `${pick.leg_count}-leg parlay` : "Parlay";
+  }
+
+  const sel = (pick.selection ?? "").trim();
+  const out: string[] = [];
+  if (sel) out.push(sel);
+
+  if (pick.line != null) {
+    const lineStr = String(pick.line);
+    const escaped = lineStr.replace(/\./g, "\\.");
+    const lineIn = new RegExp(`(?:^|\\s)[+-]?${escaped}(?:\\s|$)`).test(sel);
+    if (!lineIn) out.push(lineStr);
+  }
+
+  if (pick.odds_taken != null) {
+    const sign = pick.odds_taken > 0 ? "+" : "";
+    const oddsStr = `${sign}${pick.odds_taken}`;
+    if (!sel.includes(oddsStr)) out.push(oddsStr);
+  }
+
+  return out.join(" ").replace(/\s+/g, " ").trim() || pick.market || "Pick";
+}

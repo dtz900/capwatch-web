@@ -24,6 +24,7 @@ export interface LastPick {
   posted_at: string | null;
   profit_units: number | null;
   leg_count: number | null;
+  tweet_url: string | null;
 }
 
 export interface CapperRow {

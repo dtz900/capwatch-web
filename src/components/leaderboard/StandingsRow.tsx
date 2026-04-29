@@ -1,5 +1,5 @@
 import { CapperAvatar } from "./CapperAvatar";
-import { RecentPicks } from "./RecentPicks";
+import { PickTiles } from "./PickTiles";
 import { StatusPill } from "./StatusPill";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
@@ -10,7 +10,7 @@ import type { CapperRow } from "@/lib/types";
 interface Props { rank: number; capper: CapperRow }
 
 const COLS =
-  "grid grid-cols-[40px_minmax(180px,1.1fr)_minmax(220px,1.4fr)_64px_64px_70px_80px_44px] items-center gap-3 px-[22px] py-3.5 border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)]";
+  "grid grid-cols-[40px_minmax(180px,1fr)_minmax(280px,1.6fr)_64px_64px_70px_80px_44px] items-center gap-3 px-[22px] py-3.5 border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
 
 export function StandingsRow({ rank, capper }: Props) {
   const unitsCls = capper.units_profit >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
@@ -31,7 +31,7 @@ export function StandingsRow({ rank, capper }: Props) {
         </div>
       </div>
       <div className="min-w-0">
-        <RecentPicks picks={capper.last_picks} limit={3} size="sm" />
+        <PickTiles picks={capper.last_picks} limit={5} />
       </div>
       <div className="text-right">{capper.picks_count}</div>
       <div className="text-right">{formatWinRate(capper.win_rate)}</div>

@@ -13,7 +13,7 @@ const row: CapperRow = {
   bet_type_breakdown: {},
   biggest_win: null, tracked_since: null, tweets_parsed: 0, parlay_share: 0, deleted_picks_count: 0,
   last_picks: [
-    { kind: "straight", game_label: "NYY @ BOS", market: "ML", selection: "NYY", line: null, odds_taken: -135, outcome: "W", posted_at: "2026-04-15T00:00:00Z", profit_units: null, leg_count: null },
+    { kind: "straight", game_label: "NYY @ BOS", market: "ML", selection: "NYY", line: null, odds_taken: -135, outcome: "W", posted_at: "2026-04-15T00:00:00Z", profit_units: null, leg_count: null, tweet_url: null },
   ],
 };
 
