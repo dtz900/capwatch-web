@@ -320,7 +320,7 @@ export function FixPanel(props: Props) {
           )}
 
           {lane === "more" && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <Field label="Market" value={marketEdit} onChange={setMarketEdit} />
                 <Field label="Line" value={lineEdit} onChange={setLineEdit} />
@@ -329,6 +329,56 @@ export function FixPanel(props: Props) {
                 <Field label="player_id" value={playerIdEdit} onChange={setPlayerIdEdit} />
                 <Field label="game_id" value={gameIdEdit} onChange={setGameIdEdit} />
               </div>
+
+              <div className="border-t border-[rgba(255,255,255,0.06)] pt-3">
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold mb-1.5">
+                  Find player by name
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={playerQuery}
+                    onChange={(e) => setPlayerQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && doSearchPlayer()}
+                    placeholder="e.g. Framber Valdez"
+                    className="flex-1 px-2.5 py-1.5 text-[12px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
+                  />
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={doSearchPlayer}
+                    className="px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
+                  >
+                    Search
+                  </button>
+                </div>
+                {playerResults.length > 0 && (
+                  <div className="flex flex-col gap-1 mt-2">
+                    {playerResults.map((p) => (
+                      <button
+                        key={p.player_id}
+                        type="button"
+                        onClick={() => setPlayerIdEdit(String(p.player_id))}
+                        className="text-left px-2.5 py-1 rounded text-[11px] bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)] flex items-center gap-2"
+                      >
+                        <span className="font-semibold text-[var(--color-text)]">
+                          {p.full_name}
+                        </span>
+                        <span className="text-[var(--color-text-muted)]">
+                          {p.team_abbreviation ?? "?"}
+                        </span>
+                        <span className="text-[var(--color-text-muted)] ml-auto">
+                          id {p.player_id}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="text-[9px] text-[var(--color-text-muted)] mt-1.5">
+                  Click a result to populate player_id, then Save changes.
+                </div>
+              </div>
+
               <button
                 type="button"
                 disabled={pending}
