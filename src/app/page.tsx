@@ -25,7 +25,6 @@ export default async function Home({ searchParams }: PageProps) {
 
   const data = await fetchLeaderboard(filters);
   const rows = data.leaderboard;
-  const totalPicks = rows.reduce((s, r) => s + r.picks_count, 0);
   const top3 = rows.slice(0, 3);
   const rest = rows.slice(3, 50);
 
@@ -33,7 +32,7 @@ export default async function Home({ searchParams }: PageProps) {
     <>
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-7">
-        <Hero totalCappers={rows.length} totalPicks={totalPicks} />
+        <Hero />
         <div className="mb-8">
           <FilterBar filters={filters} />
         </div>
