@@ -21,11 +21,13 @@ export function StandingsRow({ rank, capper }: Props) {
       <div className="flex items-center gap-3 min-w-0">
         <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={32} />
         <div className="leading-[1.2] min-w-0">
-          <div className="font-bold truncate">{capper.display_name ?? capper.handle}</div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-bold truncate">{capper.display_name ?? capper.handle}</span>
+            {capper.has_paid_program && <PaidProgramPill />}
+          </div>
           <div className="text-xs text-[var(--color-text-muted)] font-medium flex items-center gap-1.5 flex-wrap">
             {capper.handle ? formatHandle(capper.handle) : ""}
             {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
-            {capper.has_paid_program && <PaidProgramPill />}
             <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
           </div>
         </div>
