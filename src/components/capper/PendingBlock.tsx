@@ -15,6 +15,12 @@ function formatPostedAt(iso: string | null): string | null {
 
 function formatStakeUnits(u: number | null): string | null {
   if (u == null || u <= 0) return null;
+  // Defensive display clamp. Vision parser sometimes misreads a dollar
+  // figure ("$1,000.00") as a 1000-unit bet, and the backend's
+  // MAX_REASONABLE_UNITS clamp only catches >10. We don't know the
+  // capper's per-unit dollar baseline, so showing anything above ~5u
+  // as "1u" is the conservative default until the parser distinguishes
+  // dollars from units.
   const clamped = u > 5 ? 1 : u;
   return `${clamped.toFixed(clamped % 1 === 0 ? 0 : 1)}u`;
 }
