@@ -121,6 +121,7 @@ export interface HistoryPick {
   posted_at: string | null;
   tweet_url: string | null;
   source: string | null;
+  player_name?: string | null;
 }
 
 export interface CapperAggregate {

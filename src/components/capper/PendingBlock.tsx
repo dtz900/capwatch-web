@@ -1,5 +1,5 @@
 import { XIcon } from "@/components/icons/XIcon";
-import { formatBetDescriptor } from "@/lib/markets";
+import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
 import type { HistoryPick } from "@/lib/types";
 
 function formatPostedAt(iso: string | null): string | null {
@@ -41,12 +41,26 @@ export function PendingBlock({ picks }: { picks: HistoryPick[] }) {
               className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-[rgba(255,255,255,0.03)] transition-colors"
             >
               <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold text-[var(--color-text)] truncate">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span
+                    className="text-[9px] uppercase tracking-[0.14em] font-bold px-1.5 py-0.5 rounded
+                               bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]"
+                  >
+                    {formatMarketLabel({
+                      kind: isParlay ? "parlay" : "straight",
+                      market: p.market,
+                      selection: p.selection,
+                      line: p.line,
+                      odds_taken: p.odds_taken,
+                    })}
+                  </span>
                   {p.game_label && (
-                    <span className="text-[var(--color-text-muted)] font-medium mr-2">
+                    <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
                       {p.game_label}
                     </span>
                   )}
+                </div>
+                <div className="text-[12px] font-semibold text-[var(--color-text)] truncate">
                   {formatBetDescriptor({
                     kind: isParlay ? "parlay" : "straight",
                     leg_count: p.leg_count ?? null,
