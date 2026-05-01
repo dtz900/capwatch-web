@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CapperAvatar } from "./CapperAvatar";
 import { PickTiles } from "./PickTiles";
 import { StatusPill } from "./StatusPill";
@@ -15,11 +16,20 @@ const COLS =
 export function StandingsRow({ rank, capper }: Props) {
   const unitsCls = capper.units_profit >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
   const roiCls   = capper.roi_pct      >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
+  const isModel = capper.handle === "fadeai_";
+  const profileHref = capper.handle ? `/cappers/${capper.handle}` : null;
   return (
     <div className={COLS}>
+      {profileHref && (
+        <Link
+          href={profileHref}
+          aria-label={`View ${capper.display_name ?? capper.handle}'s profile`}
+          className="absolute inset-0"
+        />
+      )}
       <div className="text-[var(--color-text-muted)] font-bold">{String(rank).padStart(2, "0")}</div>
       <div className="flex items-center gap-3 min-w-0">
-        <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={32} />
+        <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={32} apiIntegrated={isModel} />
         <div className="leading-[1.2] min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-bold truncate">{capper.display_name ?? capper.handle}</span>
@@ -32,14 +42,14 @@ export function StandingsRow({ rank, capper }: Props) {
           </div>
         </div>
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 relative z-10">
         <PickTiles picks={capper.last_picks} limit={4} />
       </div>
       <div className="text-right">{capper.picks_count}</div>
       <div className="text-right">{formatWinRate(capper.win_rate)}</div>
       <div className={`text-right ${unitsCls}`}>{formatUnits(capper.units_profit)}</div>
       <div className={`text-right ${roiCls}`}>{formatRoi(capper.roi_pct)}</div>
-      <div className="text-right">
+      <div className="text-right relative z-10">
         <a aria-label="View on X" target="_blank" rel="noopener"
            href={capper.handle ? `https://x.com/${capper.handle}` : "#"}
            className="inline-flex w-7 h-7 rounded-md bg-[rgba(255,255,255,0.04)] items-center justify-center text-[var(--color-text-muted)]">

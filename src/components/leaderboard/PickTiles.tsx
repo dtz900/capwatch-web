@@ -220,7 +220,7 @@ function compactContent(pick: LastPick): { primary: string; secondary: string } 
   }
 
   const bucket = pick.market ? normalizeMarket(pick.market) : "";
-  const label = MARKET_LABEL[bucket] ?? bucket ?? "Pick";
+  const label = MARKET_LABEL[bucket] || bucket || "Pick";
   return { primary: label, secondary: oddsText(pick) };
 }
 
