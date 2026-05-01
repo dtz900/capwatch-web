@@ -128,16 +128,13 @@ function Pill({ pick, open, onToggle }: { pick: LastPick; open: boolean; onToggl
         <div
           role="dialog"
           aria-label="Pick details"
-          className={`absolute top-0 left-1/2 -translate-x-1/2 z-50
-                      w-[280px] rounded-xl border-2 overflow-hidden
-                      ${palette.expandedBorder}
-                      shadow-[0_16px_48px_-8px_rgba(0,0,0,0.8)]
-                      animate-[tile-expand_140ms_ease-out]`}
-          style={{ transformOrigin: "center" }}
+          className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50
+                      w-[260px] rounded-lg border border-[var(--color-border)]
+                      bg-[#13131a]
+                      shadow-[0_8px_24px_-4px_rgba(0,0,0,0.7)]
+                      animate-[popover-fade_120ms_ease-out]`}
         >
-          <div aria-hidden="true" className="absolute inset-0 bg-[#13131a]" />
-          <div aria-hidden="true" className={`absolute inset-0 ${palette.expandedBg}`} />
-          <div className="relative p-3.5 text-[12px] leading-relaxed">
+          <div className="p-3 text-[12px] leading-relaxed">
             <PickDetails pick={pick} />
           </div>
         </div>

@@ -42,14 +42,14 @@ export function StandingsRow({ rank, capper }: Props) {
           </div>
         </div>
       </div>
-      <div className="min-w-0 relative z-10">
+      <div className="min-w-0 relative">
         <PickTiles picks={capper.last_picks} limit={4} />
       </div>
       <div className="text-right">{capper.picks_count}</div>
       <div className="text-right">{formatWinRate(capper.win_rate)}</div>
       <div className={`text-right ${unitsCls}`}>{formatUnits(capper.units_profit)}</div>
       <div className={`text-right ${roiCls}`}>{formatRoi(capper.roi_pct)}</div>
-      <div className="text-right relative z-10">
+      <div className="text-right relative">
         <a aria-label="View on X" target="_blank" rel="noopener"
            href={capper.handle ? `https://x.com/${capper.handle}` : "#"}
            className="inline-flex w-7 h-7 rounded-md bg-[rgba(255,255,255,0.04)] items-center justify-center text-[var(--color-text-muted)]">
