@@ -84,3 +84,33 @@ export async function fetchPipelineRecent(
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+export type CronTaskName =
+  | "parse-capper-picks"
+  | "grade-capper-picks"
+  | "refresh-capper-aggregates";
+
+export type CronTriggerResult =
+  | { ok: true; task: CronTaskName; raw: unknown }
+  | { ok: false; task: CronTaskName; error: string };
+
+export async function triggerCronTask(task: CronTaskName): Promise<CronTriggerResult> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return { ok: false, task, error: "CRON_SECRET not set on server" };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/cron/${task}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, task, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const raw = await res.json().catch(() => ({}));
+    return { ok: true, task, raw };
+  } catch (err: unknown) {
+    return { ok: false, task, error: err instanceof Error ? err.message : String(err) };
+  }
+}

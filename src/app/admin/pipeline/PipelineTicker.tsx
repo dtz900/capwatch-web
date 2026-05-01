@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchPipelineRecent, type PipelineEvent, type PipelineResponse } from "./actions";
+import {
+  fetchPipelineRecent,
+  triggerCronTask,
+  type CronTaskName,
+  type CronTriggerResult,
+  type PipelineEvent,
+  type PipelineResponse,
+} from "./actions";
 
 const POLL_MS = 15_000;
 
@@ -73,6 +80,8 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
   const [loading, setLoading] = useState(false);
   const [paused, setPaused] = useState(false);
   const [lastFetched, setLastFetched] = useState<number | null>(null);
+  const [runningTask, setRunningTask] = useState<CronTaskName | null>(null);
+  const [lastTrigger, setLastTrigger] = useState<CronTriggerResult | null>(null);
   const handleRef = useRef(handle);
   const minutesRef = useRef(minutes);
 
@@ -112,6 +121,19 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
     e.preventDefault();
     void refresh();
   };
+
+  const onRunTask = useCallback(
+    async (task: CronTaskName) => {
+      setRunningTask(task);
+      setLastTrigger(null);
+      const res = await triggerCronTask(task);
+      setLastTrigger(res);
+      setRunningTask(null);
+      // Pull fresh ticker state after the task lands
+      void refresh();
+    },
+    [refresh],
+  );
 
   const ageLabel = lastFetched ? `${Math.max(0, Math.floor((Date.now() - lastFetched) / 1000))}s ago` : "never";
 
@@ -171,6 +193,45 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
         </div>
       </form>
 
+      <div className="rounded-xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-4 py-3 flex items-center gap-2 flex-wrap">
+        <span className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold mr-1">
+          Force run
+        </span>
+        <RunTaskButton
+          task="parse-capper-picks"
+          label="Parser"
+          running={runningTask === "parse-capper-picks"}
+          disabled={runningTask !== null}
+          onClick={() => onRunTask("parse-capper-picks")}
+        />
+        <RunTaskButton
+          task="grade-capper-picks"
+          label="Grader"
+          running={runningTask === "grade-capper-picks"}
+          disabled={runningTask !== null}
+          onClick={() => onRunTask("grade-capper-picks")}
+        />
+        <RunTaskButton
+          task="refresh-capper-aggregates"
+          label="Aggregates"
+          running={runningTask === "refresh-capper-aggregates"}
+          disabled={runningTask !== null}
+          onClick={() => onRunTask("refresh-capper-aggregates")}
+        />
+        {lastTrigger && (
+          <span className="text-[11px] font-medium ml-1.5">
+            <span className="text-[var(--color-text-muted)] mr-1.5 uppercase tracking-[0.10em] font-bold text-[10px]">
+              {lastTrigger.task}:
+            </span>
+            {lastTrigger.ok ? (
+              <span className="text-[var(--color-pos)] font-bold">ok</span>
+            ) : (
+              <span className="text-[var(--color-neg)] font-bold">{lastTrigger.error}</span>
+            )}
+          </span>
+        )}
+      </div>
+
       {data && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <CountTile label="Captured" value={data.counts.captured} kind="captured" />
@@ -224,6 +285,34 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
         )}
       </section>
     </div>
+  );
+}
+
+function RunTaskButton({
+  label,
+  running,
+  disabled,
+  onClick,
+}: {
+  task: CronTaskName;
+  label: string;
+  running: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`px-3 py-1.5 rounded-md text-[12px] font-bold transition-colors disabled:cursor-not-allowed ${
+        running
+          ? "bg-[rgba(96,165,250,0.18)] text-[#93c5fd] border border-[rgba(96,165,250,0.40)]"
+          : "bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.12)] text-[var(--color-text-soft)] hover:text-[var(--color-text)] disabled:opacity-40 disabled:hover:bg-[rgba(255,255,255,0.06)]"
+      }`}
+    >
+      {running ? `${label}...` : label}
+    </button>
   );
 }
 
