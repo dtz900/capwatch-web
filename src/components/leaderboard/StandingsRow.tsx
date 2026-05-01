@@ -18,30 +18,35 @@ export function StandingsRow({ rank, capper }: Props) {
   const roiCls   = capper.roi_pct      >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
   const isModel = capper.handle === "fadeai_";
   const profileHref = capper.handle ? `/cappers/${capper.handle}` : null;
-  return (
-    <div className={COLS}>
-      {profileHref && (
-        <Link
-          href={profileHref}
-          aria-label={`View ${capper.display_name ?? capper.handle}'s profile`}
-          className="absolute inset-0"
-        />
-      )}
-      <div className="text-[var(--color-text-muted)] font-bold">{String(rank).padStart(2, "0")}</div>
-      <div className="flex items-center gap-3 min-w-0">
-        <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={32} apiIntegrated={isModel} />
-        <div className="leading-[1.2] min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold truncate">{capper.display_name ?? capper.handle}</span>
-            {capper.has_paid_program && <PaidProgramPill />}
-          </div>
-          <div className="text-xs text-[var(--color-text-muted)] font-medium flex items-center gap-1.5 flex-wrap">
-            {capper.handle ? formatHandle(capper.handle) : ""}
-            {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
-            <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
-          </div>
+  const capperBody = (
+    <>
+      <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={32} apiIntegrated={isModel} />
+      <div className="leading-[1.2] min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-bold truncate">{capper.display_name ?? capper.handle}</span>
+          {capper.has_paid_program && <PaidProgramPill />}
+        </div>
+        <div className="text-xs text-[var(--color-text-muted)] font-medium flex items-center gap-1.5 flex-wrap">
+          {capper.handle ? formatHandle(capper.handle) : ""}
+          {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
+          <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
         </div>
       </div>
+    </>
+  );
+  return (
+    <div className={COLS}>
+      <div className="text-[var(--color-text-muted)] font-bold">{String(rank).padStart(2, "0")}</div>
+      {profileHref ? (
+        <Link
+          href={profileHref}
+          className="inline-flex items-center gap-3 min-w-0 max-w-full w-fit hover:[&_span:first-child]:text-[var(--color-text)] transition-colors"
+        >
+          {capperBody}
+        </Link>
+      ) : (
+        <div className="flex items-center gap-3 min-w-0">{capperBody}</div>
+      )}
       <div className="min-w-0 relative">
         <PickTiles picks={capper.last_picks} limit={4} />
       </div>

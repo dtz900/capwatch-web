@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CapperAvatar } from "./CapperAvatar";
 import { RecentPicks } from "./RecentPicks";
 import { BiggestWin } from "./BiggestWin";
@@ -119,25 +120,47 @@ export function PodiumCard({ rank, variant, capper }: Props) {
       </div>
 
       {/* Avatar + name + status pills */}
-      <div className="relative flex items-center gap-3.5 mb-3">
-        <CapperAvatar
-          url={capper.profile_image_url}
-          handle={capper.handle}
-          size={avatarSize}
-          className={accent.avatarRing}
-          apiIntegrated={isModel}
-        />
-        <div className="flex-1 min-w-0">
-          <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 flex-wrap tracking-[-0.02em] ${nameSize}`}>
-            {capper.display_name ?? capper.handle}
-            {capper.has_paid_program && <PaidProgramPill />}
-            <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
+      {capper.handle ? (
+        <Link
+          href={`/cappers/${capper.handle}`}
+          className="relative inline-flex items-center gap-3.5 mb-3 max-w-full hover:opacity-95 transition-opacity"
+        >
+          <CapperAvatar
+            url={capper.profile_image_url}
+            handle={capper.handle}
+            size={avatarSize}
+            className={accent.avatarRing}
+            apiIntegrated={isModel}
+          />
+          <div className="flex-1 min-w-0">
+            <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 flex-wrap tracking-[-0.02em] ${nameSize}`}>
+              {capper.display_name ?? capper.handle}
+              {capper.has_paid_program && <PaidProgramPill />}
+              <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
+            </div>
+            <div className="text-[var(--color-text-muted)] text-sm font-medium">
+              {formatHandle(capper.handle)}
+            </div>
           </div>
-          <div className="text-[var(--color-text-muted)] text-sm font-medium">
-            {capper.handle ? formatHandle(capper.handle) : ""}
+        </Link>
+      ) : (
+        <div className="relative flex items-center gap-3.5 mb-3">
+          <CapperAvatar
+            url={capper.profile_image_url}
+            handle={capper.handle}
+            size={avatarSize}
+            className={accent.avatarRing}
+            apiIntegrated={isModel}
+          />
+          <div className="flex-1 min-w-0">
+            <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 flex-wrap tracking-[-0.02em] ${nameSize}`}>
+              {capper.display_name ?? capper.handle}
+              {capper.has_paid_program && <PaidProgramPill />}
+              <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Identity tagline */}
       {tagline && (
