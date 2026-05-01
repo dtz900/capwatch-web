@@ -18,6 +18,12 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
+// Audit endpoint scans every pick to compute summary + by_reason buckets and
+// gets slower as the dataset grows. As of 2026-05-01 it sits at ~4.5s
+// locally (2957 picks); the Vercel default 10s timeout was tripping
+// intermittently with cold starts and network. Bump to 30s.
+export const maxDuration = 30;
+
 const PAGE_SIZE = 50;
 
 const REASON_LABEL: Record<string, string> = {
