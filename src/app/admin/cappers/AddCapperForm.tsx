@@ -33,6 +33,7 @@ export function AddCapperForm() {
   const [paidServiceName, setPaidServiceName] = useState("");
   const [paidServiceUrl, setPaidServiceUrl] = useState("");
   const [paidServicePrice, setPaidServicePrice] = useState("");
+  const [backfillDays, setBackfillDays] = useState<number>(30);
   const [result, setResult] = useState<AddCapperResult | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -60,6 +61,7 @@ export function AddCapperForm() {
           hasPaidService && priceNum !== undefined && Number.isFinite(priceNum) && priceNum > 0
             ? priceNum
             : undefined,
+        backfill_days: backfillDays > 0 ? backfillDays : undefined,
       });
       setResult(res);
       if (res.ok) {
@@ -164,6 +166,29 @@ export function AddCapperForm() {
       </div>
 
       <div className="mt-5 rounded-md border border-[rgba(255,255,255,0.06)] bg-[rgba(0,0,0,0.18)] px-4 py-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <span className={LABEL}>Backfill history</span>
+            <div className="text-[11px] text-[var(--color-text-muted)] font-medium mt-0.5">
+              Pulls past tweets via the X user-timeline API so the parser has rows to chew on immediately.
+            </div>
+          </div>
+          <select
+            value={backfillDays}
+            onChange={(e) => setBackfillDays(Number(e.target.value))}
+            disabled={pending}
+            className="rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-2 text-sm text-[var(--color-text)] outline-none"
+          >
+            <option value={0}>Skip</option>
+            <option value={7}>Last 7 days</option>
+            <option value={30}>Last 30 days</option>
+            <option value={90}>Last 90 days</option>
+            <option value={365}>To opening day (~365)</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-md border border-[rgba(255,255,255,0.06)] bg-[rgba(0,0,0,0.18)] px-4 py-3">
         <label className="flex items-center gap-2.5 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -262,6 +287,28 @@ export function AddCapperForm() {
               {result.status === "added" && !result.capper.twitter_user_id && (
                 <div className="text-[11px] text-[var(--color-neg)] font-medium">
                   Handle did not resolve on X. Row inserted but no tweets will ingest until corrected.
+                </div>
+              )}
+              {result.backfill && (
+                <div className="text-[11px] text-[var(--color-text-muted)] font-medium border-t border-[rgba(255,255,255,0.06)] pt-1.5 mt-0.5">
+                  <span className="font-bold uppercase tracking-[0.10em] text-[10px] mr-2">backfill</span>
+                  {result.backfill.ok ? (
+                    <span>
+                      <span className="text-[var(--color-pos)]">ok</span> · fetched=
+                      {result.backfill.fetched ?? 0} · upserted=
+                      {result.backfill.upserted ?? 0} · pages=
+                      {result.backfill.pages ?? 0}
+                      {typeof result.backfill.final_mtd_usd === "number" && (
+                        <> · MTD=${result.backfill.final_mtd_usd.toFixed(2)}</>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-[var(--color-neg)]">
+                      {result.backfill.reason ?? "failed"}
+                      {result.backfill.error ? `: ${result.backfill.error}` : ""}
+                      {result.backfill.note ? ` (${result.backfill.note})` : ""}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

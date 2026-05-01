@@ -13,6 +13,7 @@ export interface AddCapperInput {
   paid_service_name?: string;
   paid_service_url?: string;
   paid_service_price_per_month?: number;
+  backfill_days?: number;
 }
 
 export interface AddedCapper {
@@ -24,8 +25,25 @@ export interface AddedCapper {
   status: string | null;
 }
 
+export interface BackfillSummary {
+  ok: boolean;
+  reason?: string | null;
+  fetched?: number;
+  upserted?: number;
+  pages?: number;
+  days_requested?: number;
+  final_mtd_usd?: number | null;
+  note?: string | null;
+  error?: string | null;
+}
+
 export type AddCapperResult =
-  | { ok: true; status: "added" | "reactivated" | "already_tracking"; capper: AddedCapper }
+  | {
+      ok: true;
+      status: "added" | "reactivated" | "already_tracking";
+      capper: AddedCapper;
+      backfill: BackfillSummary | null;
+    }
   | { ok: false; error: string };
 
 export async function addCapperAction(input: AddCapperInput): Promise<AddCapperResult> {
@@ -53,6 +71,13 @@ export async function addCapperAction(input: AddCapperInput): Promise<AddCapperR
       body.paid_service_price_per_month = input.paid_service_price_per_month;
     }
   }
+  if (
+    typeof input.backfill_days === "number" &&
+    Number.isFinite(input.backfill_days) &&
+    input.backfill_days > 0
+  ) {
+    body.backfill_days = Math.min(365, Math.max(0, Math.floor(input.backfill_days)));
+  }
 
   try {
     const res = await fetch(`${API_BASE}/api/admin/cappers/add`, {
@@ -71,9 +96,15 @@ export async function addCapperAction(input: AddCapperInput): Promise<AddCapperR
     const data = (await res.json()) as {
       status: "added" | "reactivated" | "already_tracking";
       capper: AddedCapper;
+      backfill?: BackfillSummary | null;
     };
     revalidatePath("/admin/cappers");
-    return { ok: true, status: data.status, capper: data.capper };
+    return {
+      ok: true,
+      status: data.status,
+      capper: data.capper,
+      backfill: data.backfill ?? null,
+    };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
