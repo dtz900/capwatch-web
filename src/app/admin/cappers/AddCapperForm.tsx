@@ -183,7 +183,7 @@ export function AddCapperForm() {
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
             <option value={90}>Last 90 days</option>
-            <option value={365}>To opening day (~365)</option>
+            <option value={365}>All season (since 3/27)</option>
           </select>
         </div>
       </div>
