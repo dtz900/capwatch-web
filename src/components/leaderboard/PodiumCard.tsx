@@ -1,7 +1,6 @@
 import { CapperAvatar } from "./CapperAvatar";
 import { RecentPicks } from "./RecentPicks";
 import { BiggestWin } from "./BiggestWin";
-import { ModelTag } from "./ModelTag";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LogoMark } from "@/components/nav/LogoMark";
@@ -126,11 +125,11 @@ export function PodiumCard({ rank, variant, capper }: Props) {
           handle={capper.handle}
           size={avatarSize}
           className={accent.avatarRing}
+          apiIntegrated={isModel}
         />
         <div className="flex-1 min-w-0">
           <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 flex-wrap tracking-[-0.02em] ${nameSize}`}>
             {capper.display_name ?? capper.handle}
-            {isModel && <ModelTag />}
             {capper.has_paid_program && <PaidProgramPill />}
             <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
           </div>

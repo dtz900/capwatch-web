@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
-import { ModelTag } from "@/components/leaderboard/ModelTag";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatHandle } from "@/lib/formatters";
 import { formatBetDescriptor } from "@/lib/markets";
@@ -35,7 +34,7 @@ export function SlatePickRow({ pick }: { pick: SlatePick }) {
         className="shrink-0"
         aria-label={`View ${pick.handle ?? "capper"} profile`}
       >
-        <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={32} />
+        <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={32} apiIntegrated={isModel} />
       </Link>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -45,7 +44,6 @@ export function SlatePickRow({ pick }: { pick: SlatePick }) {
           >
             {pick.display_name ?? pick.handle}
           </Link>
-          {isModel && <ModelTag />}
           {pick.has_paid_program && <PaidProgramPill />}
         </div>
         <div className="text-[11px] text-[var(--color-text-muted)] font-medium truncate">

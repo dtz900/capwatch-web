@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
-import { ModelTag } from "@/components/leaderboard/ModelTag";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
+import { ChevronIcon } from "@/components/icons/ChevronIcon";
 import { fetchLeaderboard } from "@/lib/api";
 import {
   formatHandle,
@@ -17,6 +17,9 @@ export const metadata = {
   description:
     "Every tracked capper on Capwatch. Click a row for the full pick history and audit trail.",
 };
+
+const GRID =
+  "grid grid-cols-[44px_minmax(220px,1fr)_72px_84px_72px_72px_20px] items-center gap-4";
 
 export default async function CappersIndexPage() {
   const data = await fetchLeaderboard({
@@ -33,70 +36,112 @@ export default async function CappersIndexPage() {
     <>
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-7 pb-16">
-        <header className="pt-10 pb-7">
-          <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2">
+        <header className="pt-12 pb-8">
+          <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2.5">
             Capper index
           </div>
           <h1 className="text-[36px] font-extrabold tracking-[-0.025em] leading-none">
             All tracked cappers
           </h1>
-          <p className="text-[13px] text-[var(--color-text-soft)] font-medium mt-2">
+          <p className="text-[13px] text-[var(--color-text-soft)] font-medium mt-3 max-w-[560px] leading-relaxed">
             {cappers.length} capper{cappers.length === 1 ? "" : "s"} tracked.
             Click any row for the full pick history.
           </p>
         </header>
 
-        <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden">
+        <section className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl">
+          <div
+            className={`${GRID} px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.16em]
+                       text-[var(--color-text-muted)] border-b border-[var(--color-border)]`}
+          >
+            <div></div>
+            <div>Capper</div>
+            <div className="text-right">Picks</div>
+            <div className="text-right">Units</div>
+            <div className="text-right">ROI</div>
+            <div className="text-right">Win&nbsp;%</div>
+            <div></div>
+          </div>
           {cappers.map((c, i) => (
-            <CapperIndexRow key={c.capper_id} capper={c} isLast={i === cappers.length - 1} />
+            <CapperIndexRow
+              key={c.capper_id}
+              capper={c}
+              isLast={i === cappers.length - 1}
+            />
           ))}
-        </div>
+        </section>
 
-        <footer className="flex items-center justify-between py-7 pb-2 mt-6 text-xs text-[var(--color-text-muted)] font-medium">
+        <footer className="flex items-center justify-between py-7 pb-2 mt-6 text-xs text-[var(--color-text-muted)] font-medium flex-wrap gap-3">
           <div>All-time stats. Daily refresh at 6:00 AM PT.</div>
+          <div className="inline-flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="inline-block rounded-full"
+              style={{
+                width: 12,
+                height: 12,
+                background:
+                  "linear-gradient(135deg, #60a5fa 0%, #2563eb 50%, #1e40af 100%)",
+                padding: 1.5,
+                boxShadow: "0 0 6px rgba(37, 99, 235, 0.45)",
+              }}
+            >
+              <span className="block w-full h-full rounded-full bg-[#0a0a0c]" />
+            </span>
+            <span>Gradient ring marks API-integrated cappers</span>
+          </div>
         </footer>
       </main>
     </>
   );
 }
 
-function CapperIndexRow({ capper: c, isLast }: { capper: CapperRow; isLast: boolean }) {
+function CapperIndexRow({
+  capper: c,
+  isLast,
+}: {
+  capper: CapperRow;
+  isLast: boolean;
+}) {
   const isModel = c.handle === "fadeai_";
   const unitsCls =
     c.units_profit >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
-  const roiCls = c.roi_pct >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
+  const roiCls =
+    c.roi_pct >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
 
   return (
     <Link
       href={c.handle ? `/cappers/${c.handle}` : "#"}
-      className={`grid grid-cols-[40px_minmax(220px,1fr)_80px_80px_70px_70px] items-center gap-3 px-5 py-3.5
-                  hover:bg-[rgba(255,255,255,0.025)] transition-colors
-                  ${isLast ? "" : "border-b border-[rgba(255,255,255,0.04)]"}`}
+      className={`group/row ${GRID} px-6 py-[18px]
+                  hover:bg-[rgba(255,255,255,0.022)] transition-colors duration-150
+                  ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
     >
-      <CapperAvatar url={c.profile_image_url} handle={c.handle} size={36} />
+      <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} />
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-bold text-[14px] truncate text-[var(--color-text)]">
+          <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
             {c.display_name ?? c.handle}
           </span>
-          {isModel && <ModelTag />}
           {c.has_paid_program && <PaidProgramPill />}
         </div>
-        <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate">
+        <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate mt-[3px]">
           {c.handle ? formatHandle(c.handle) : ""}
         </div>
       </div>
-      <div className="text-right text-[12px] text-[var(--color-text-soft)] font-semibold tabular-nums">
-        {c.picks_count} picks
+      <div className="text-right text-[13px] text-[var(--color-text-soft)] font-semibold tabular-nums">
+        {c.picks_count}
       </div>
-      <div className={`text-right text-[12px] font-bold tabular-nums ${unitsCls}`}>
+      <div className={`text-right text-[13px] font-bold tabular-nums ${unitsCls}`}>
         {formatUnits(c.units_profit)}u
       </div>
-      <div className={`text-right text-[12px] font-bold tabular-nums ${roiCls}`}>
+      <div className={`text-right text-[13px] font-bold tabular-nums ${roiCls}`}>
         {formatRoi(c.roi_pct)}
       </div>
-      <div className="text-right text-[12px] text-[var(--color-text-soft)] font-semibold tabular-nums">
+      <div className="text-right text-[13px] text-[var(--color-text-soft)] font-semibold tabular-nums">
         {formatWinRate(c.win_rate)}
+      </div>
+      <div className="flex justify-end text-[var(--color-text-muted)] opacity-0 -translate-x-1 group-hover/row:opacity-100 group-hover/row:translate-x-0 transition-all duration-150">
+        <ChevronIcon size={14} className="-rotate-90" />
       </div>
     </Link>
   );

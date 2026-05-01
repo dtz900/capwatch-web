@@ -1,11 +1,11 @@
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
-import { ModelTag } from "@/components/leaderboard/ModelTag";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { DeletedPicksPill } from "@/components/leaderboard/DeletedPicksPill";
 import { XIcon } from "@/components/icons/XIcon";
+import { RecentTrajectory } from "@/components/capper/RecentTrajectory";
 import { formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
-import type { CapperProfile, CapperAggregate } from "@/lib/types";
+import type { CapperProfile, CapperAggregate, HistoryPick } from "@/lib/types";
 
 function formatMonth(iso: string | null): string | null {
   if (!iso) return null;
@@ -35,9 +35,11 @@ function identityTagline(agg: CapperAggregate | undefined): string | null {
 export function CapperHero({
   profile,
   windowAgg,
+  recentHistory = [],
 }: {
   profile: CapperProfile;
   windowAgg: CapperAggregate | undefined;
+  recentHistory?: HistoryPick[];
 }) {
   const c = profile.capper;
   const isModel = c.handle === "fadeai_";
@@ -47,13 +49,12 @@ export function CapperHero({
 
   return (
     <header className="flex items-start gap-5 flex-wrap mb-6">
-      <CapperAvatar url={c.profile_image_url} handle={c.handle} size={72} />
+      <CapperAvatar url={c.profile_image_url} handle={c.handle} size={72} apiIntegrated={isModel} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <h1 className="text-[32px] font-extrabold tracking-[-0.02em] leading-none">
             {c.display_name ?? c.handle}
           </h1>
-          {isModel && <ModelTag />}
           {c.has_paid_program && <PaidProgramPill />}
           <DeletedPicksPill count={windowAgg?.deleted_picks_count ?? 0} />
         </div>
@@ -73,16 +74,51 @@ export function CapperHero({
           )}
         </div>
         {tagline && (
-          <div className="text-[12px] italic text-[var(--color-text-soft)] font-semibold mt-2">
+          <span className="inline-flex items-center mt-2.5 px-2.5 py-1 rounded-full
+                          bg-[rgba(255,255,255,0.04)] border border-[var(--color-border)]
+                          text-[11px] font-bold text-[var(--color-text-soft)] tracking-[0.01em]">
             {tagline}
-          </div>
+          </span>
         )}
         <div className="text-[11px] text-[var(--color-text-muted)] font-medium mt-2 flex items-center gap-2 flex-wrap">
           {trackedSince && <span>Tracked since {trackedSince}</span>}
           {trackedSince && followers && <span className="opacity-30">·</span>}
           {followers && <span>{followers} followers</span>}
+          {isModel && (
+            <>
+              <span className="opacity-30">·</span>
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)",
+                    animation: "pulse-blue 1.6s ease-out infinite",
+                  }}
+                />
+                <span
+                  className="font-bold tracking-[0.02em]"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  API integrated
+                </span>
+              </span>
+            </>
+          )}
         </div>
       </div>
+      {recentHistory.length >= 2 && (
+        <div className="shrink-0 hidden md:block">
+          <RecentTrajectory history={recentHistory} />
+        </div>
+      )}
     </header>
   );
 }

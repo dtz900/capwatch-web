@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { XIcon } from "@/components/icons/XIcon";
+import { ChevronIcon } from "@/components/icons/ChevronIcon";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import type { HistoryPick } from "@/lib/types";
 
 const PAGE_SIZE = 25;
+
+const GRID =
+  "grid grid-cols-[64px_minmax(220px,1fr)_56px_72px_64px_80px_28px] gap-3 items-center";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -26,7 +30,7 @@ export function HistoryTable({
 }) {
   if (total === 0) {
     return (
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-6 py-10 text-center text-[13px] text-[var(--color-text-muted)] italic">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-6 py-10 text-center text-[13px] text-[var(--color-text-muted)] italic">
         No picks match these filters.
       </div>
     );
@@ -46,28 +50,25 @@ export function HistoryTable({
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] overflow-hidden">
       <div
-        className="grid grid-cols-[60px_1fr_50px_70px_70px_60px_70px_30px] gap-3 items-center px-4 py-2.5
-                      bg-[rgba(255,255,255,0.02)] border-b border-[var(--color-border)]
-                      text-[10px] uppercase tracking-[0.14em] font-bold text-[var(--color-text-muted)]"
+        className={`${GRID} pl-[19px] pr-5 py-3
+                    border-b border-[var(--color-border)]
+                    text-[10px] uppercase tracking-[0.16em] font-bold text-[var(--color-text-muted)]`}
       >
         <div>Date</div>
         <div>Selection</div>
         <div className="text-right">Line</div>
         <div className="text-right">Odds</div>
         <div className="text-right">Units</div>
-        <div className="text-center">Result</div>
         <div className="text-right">Profit</div>
-        <div />
+        <div></div>
       </div>
-      {history.map((p) => (
-        <HistoryRow key={p.id} pick={p} />
+      {history.map((p, i) => (
+        <HistoryRow key={p.id} pick={p} isLast={i === history.length - 1} />
       ))}
-      <div
-        className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]
-                      text-[11px] text-[var(--color-text-muted)] font-medium"
-      >
+      <div className="flex items-center justify-between px-5 py-3.5 border-t border-[var(--color-border)]
+                      text-[11px] text-[var(--color-text-muted)] font-medium">
         <div>
           Showing {showingFrom}-{showingTo} of {total}
         </div>
@@ -75,19 +76,25 @@ export function HistoryTable({
           {offset > 0 && (
             <Link
               href={pageQuery(prevOffset)}
-              className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
-                         text-[var(--color-text-soft)] text-[11px] font-bold"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md
+                         bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
+                         text-[var(--color-text-soft)] hover:text-[var(--color-text)]
+                         text-[11px] font-bold tracking-[0.02em] transition-colors"
             >
-              ← Newer
+              <ChevronIcon size={11} className="rotate-90" />
+              Newer
             </Link>
           )}
           {nextOffset < total && (
             <Link
               href={pageQuery(nextOffset)}
-              className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
-                         text-[var(--color-text-soft)] text-[11px] font-bold"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md
+                         bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
+                         text-[var(--color-text-soft)] hover:text-[var(--color-text)]
+                         text-[11px] font-bold tracking-[0.02em] transition-colors"
             >
-              Older →
+              Older
+              <ChevronIcon size={11} className="-rotate-90" />
             </Link>
           )}
         </div>
@@ -96,12 +103,12 @@ export function HistoryTable({
   );
 }
 
-function HistoryRow({ pick }: { pick: HistoryPick }) {
+function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
   const date = formatDate(pick.posted_at);
   const isParlay = pick.kind === "parlay";
   const oddsText =
     pick.odds_taken == null
-      ? "—"
+      ? ""
       : pick.odds_taken > 0
         ? `+${pick.odds_taken}`
         : String(pick.odds_taken);
@@ -113,24 +120,34 @@ function HistoryRow({ pick }: { pick: HistoryPick }) {
         : pick.profit_units < 0
           ? "text-[var(--color-neg)]"
           : "text-[var(--color-text-muted)]";
-  const outcomeBg =
+  const barColor =
     pick.outcome === "W"
-      ? "bg-[var(--color-pos-soft)] text-[var(--color-pos)]"
+      ? "bg-[var(--color-pos)]"
       : pick.outcome === "L"
-        ? "bg-[var(--color-neg-soft)] text-[var(--color-neg)]"
-        : "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-muted)]";
+        ? "bg-[var(--color-neg)]"
+        : pick.outcome === "P"
+          ? "bg-[rgba(255,255,255,0.28)]"
+          : "bg-[rgba(255,255,255,0.06)]";
+  const unitsValue =
+    pick.units != null && pick.units > 0 ? (pick.units > 5 ? 1 : pick.units) : 1;
 
   return (
     <div
-      className="grid grid-cols-[60px_1fr_50px_70px_70px_60px_70px_30px] gap-3 items-center px-4 py-2.5
-                    border-b border-[rgba(255,255,255,0.03)] last:border-b-0 text-[12px]"
+      className={`group/row relative ${GRID} pl-[19px] pr-5 py-3.5
+                  hover:bg-[rgba(255,255,255,0.02)] transition-colors duration-150
+                  ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
     >
-      <div className="text-[var(--color-text-muted)] font-medium tabular-nums">{date ?? "—"}</div>
-      <div className="min-w-0 truncate">
+      <span aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
+      <div className="text-[12px] text-[var(--color-text-muted)] font-medium tabular-nums">
+        {date ?? ""}
+      </div>
+      <div className="min-w-0 truncate text-[13px]">
         {pick.game_label && (
-          <span className="text-[var(--color-text-muted)] mr-2">{pick.game_label}</span>
+          <span className="text-[var(--color-text-muted)] mr-2 font-medium">
+            {pick.game_label}
+          </span>
         )}
-        <span className="font-semibold text-[var(--color-text)]">
+        <span className={`font-bold ${isParlay ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"}`}>
           {formatBetDescriptor({
             kind: isParlay ? "parlay" : "straight",
             leg_count: pick.leg_count ?? null,
@@ -141,34 +158,32 @@ function HistoryRow({ pick }: { pick: HistoryPick }) {
           })}
         </span>
       </div>
-      <div className="text-right tabular-nums text-[var(--color-text-soft)]">
-        {pick.line != null ? pick.line : "—"}
+      <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
+        {pick.line != null ? pick.line : ""}
       </div>
-      <div className="text-right tabular-nums text-[var(--color-text-soft)]">{oddsText}</div>
-      <div className="text-right tabular-nums text-[var(--color-text-soft)]">
-        {pick.units != null && pick.units > 0 ? `${pick.units > 5 ? 1 : pick.units}u` : "1u"}
+      <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
+        {oddsText}
       </div>
-      <div className="text-center">
-        <span
-          className={`inline-flex items-center justify-center w-6 h-[18px] rounded text-[10px] font-extrabold uppercase ${outcomeBg}`}
-        >
-          {pick.outcome ?? "—"}
-        </span>
+      <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)] font-medium">
+        {unitsValue}u
       </div>
-      <div className={`text-right tabular-nums font-bold ${profitColor}`}>
-        {pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : "—"}
+      <div className={`text-right tabular-nums text-[13px] font-extrabold ${profitColor}`}>
+        {pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : ""}
       </div>
-      <div className="text-right">
+      <div className="flex justify-end">
         {pick.tweet_url ? (
           <a
             href={pick.tweet_url}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="View tweet"
-            className="inline-flex w-6 h-6 items-center justify-center rounded text-[var(--color-text-soft)]
-                       hover:text-white hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+            className="inline-flex w-7 h-7 items-center justify-center rounded-md
+                       text-[var(--color-text-muted)]
+                       opacity-0 group-hover/row:opacity-100
+                       hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--color-text)]
+                       transition-all duration-150"
           >
-            <XIcon size={10} glow />
+            <XIcon size={11} />
           </a>
         ) : (
           <span aria-hidden="true" />
