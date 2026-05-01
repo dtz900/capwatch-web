@@ -22,7 +22,9 @@ export interface PickPatchInput {
   game_id?: string | null;
 }
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ActionResult =
+  | { ok: true; capper_handle?: string | null }
+  | { ok: false; error: string };
 
 async function call(path: string, init: RequestInit): Promise<ActionResult> {
   try {
@@ -31,8 +33,20 @@ async function call(path: string, init: RequestInit): Promise<ActionResult> {
       const body = await res.text().catch(() => "");
       return { ok: false, error: `${res.status}: ${body || res.statusText}` };
     }
+    let capperHandle: string | null = null;
+    try {
+      const body = (await res.json()) as { capper_handle?: string | null };
+      capperHandle = body.capper_handle ?? null;
+    } catch {
+      // Some endpoints may return non-JSON or empty bodies; not an error.
+    }
     revalidatePath("/admin/audit");
-    return { ok: true };
+    revalidatePath("/");
+    revalidatePath("/cappers");
+    if (capperHandle) {
+      revalidatePath(`/cappers/${capperHandle}`);
+    }
+    return { ok: true, capper_handle: capperHandle };
   } catch (err: unknown) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
