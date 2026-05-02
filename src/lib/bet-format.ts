@@ -161,8 +161,6 @@ export function pickMlSide(
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
 ): "away" | "home" | null {
-  // Parlay legs are intentionally excluded from the ML versus columns.
-  if (pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1) return null;
   if (inferMarketBucket(pick.market, pick.selection) !== "Moneyline") return null;
   const team = resolveTeam(pick.selection ?? "", awayTeam, homeTeam);
   if (team && awayTeam && team === awayTeam) return "away";

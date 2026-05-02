@@ -28,6 +28,7 @@ function isF5(market: string | null): boolean {
 export function VersusPickRow({ pick }: { pick: SlatePick }) {
   const isModel = pick.handle === "fadeai_";
   const isHeavy = pick.stake_units >= 2;
+  const isParlayLeg = pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1;
   const handleStr = pick.handle ? `@${pick.handle}` : "";
   const rankStr = pick.capper_rank != null && pick.capper_rank <= 99 ? `#${pick.capper_rank}` : null;
   const odds = formatOdds(pick.odds_taken);
@@ -69,6 +70,11 @@ export function VersusPickRow({ pick }: { pick: SlatePick }) {
         <span className={isHeavy ? "text-[var(--color-gold)] font-extrabold" : "text-[var(--color-text-muted)] font-medium"}>
           {formatStakeUnits(pick.stake_units)}
         </span>
+        {isParlayLeg && (
+          <span className="ml-1.5 text-[10px] text-[var(--color-text-muted)] opacity-80">
+            in {pick.leg_count}-leg
+          </span>
+        )}
       </div>
       <div className="shrink-0 w-4 flex justify-end">
         {isModel ? (
