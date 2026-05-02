@@ -2,12 +2,11 @@
  * Canonical bet-line formatter for the slate page.
  *
  * The parser stores capper picks in whatever shape the tweet had: "Brewers ML",
- * "MIL -133", "Brewers/Nationals o7.5 7.5 -115", "Giants ML -115", etc. This
- * module normalizes those into a consistent rendering using the game's team
- * abbreviations as context.
+ * "MIL -133", "Brewers/Nationals o7.5 7.5 -115", "Cade Povisch 5+ Strikeouts
+ * Thrown", "Cam Schlittler over 4.5 strikeouts", etc. Most rows have
+ * market=null; we infer the bucket from the selection text and re-render
+ * canonically using the game's team abbreviations.
  */
-
-import { normalizeMarket } from "./markets";
 
 interface PickInput {
   kind?: "straight" | "parlay_leg" | "parlay" | null;
@@ -24,8 +23,16 @@ interface FormatContext {
   homeTeam?: string | null;
 }
 
-// Full team name to abbreviation. Sorted so longest-first matching can be done
-// without ambiguity (e.g. "Red Sox" before "Sox", "White Sox" before "Sox").
+export type MarketBucket =
+  | "Moneyline"
+  | "Spread"
+  | "Total"
+  | "Player prop"
+  | "Game prop"
+  | "Parlay";
+
+// Full-name -> abbr aliases. Sorted longest-first so "Red Sox" wins before "Sox"
+// can match anything ambiguous.
 const TEAM_ALIASES: Array<[string, string]> = [
   ["Diamondbacks", "AZ"],
   ["D-backs", "AZ"],
@@ -67,39 +74,106 @@ const ALL_ABBRS = new Set([
   "PHI", "PIT", "SD", "SEA", "SF", "STL", "TB", "TEX", "TOR", "WSH",
 ]);
 
+// Player-prop stat words — used to disambiguate over/under in totals vs props.
+const STAT_KEYWORDS = /\b(hit|hits|run|runs|rbi|rbis|strikeout|strikeouts|so|ks?|home\s*run|hrs?|tb|total\s*bases|walk|walks|bb|er|earned\s*runs?|outs?|po|pitches|pitch|stolen|sb)\b/i;
+
 function fmtOdds(odds: number | null | undefined): string {
   if (odds == null) return "";
   return odds > 0 ? `+${odds}` : `${odds}`;
 }
 
+function countWords(s: string): number {
+  return s.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function shortPlayerName(text: string): string {
+  const parts = text.trim().split(/\s+/);
+  if (parts.length < 2) return text.trim();
+  return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
+}
+
+function isF5(pick: PickInput): boolean {
+  const market = (pick.market ?? "").toLowerCase();
+  if (market.startsWith("f5_") || market === "first_5") return true;
+  return /\bf5\b/i.test(pick.selection ?? "");
+}
+
 /**
- * Try to resolve the team being bet on from `selection`. Prefer matching against
- * the away/home abbrs the slate already knows; fall back to scanning aliases.
+ * Map raw market or selection text to a canonical bucket.
+ * Returns null when neither yields a confident classification.
  */
+export function inferMarketBucket(
+  rawMarket: string | null | undefined,
+  selection: string | null | undefined,
+): MarketBucket | null {
+  // 1. Trust the parser's market field if it's set.
+  if (rawMarket) {
+    const m = rawMarket.trim().toLowerCase();
+    if (m === "ml" || m === "f5_ml") return "Moneyline";
+    if (m === "spread" || m === "f5_spread" || m === "run_line" || m === "runline") return "Spread";
+    if (m === "total" || m === "f5_total" || m === "team_total") return "Total";
+    if (m.startsWith("prop_pitcher") || m.startsWith("prop_batter") || m === "player_prop" || m === "prop") return "Player prop";
+    if (m === "nrfi" || m === "yrfi" || m === "game_prop") return "Game prop";
+    if (m === "parlay") return "Parlay";
+  }
+
+  const sel = (selection ?? "").trim();
+  if (!sel) return null;
+  const lower = sel.toLowerCase();
+  const hasStat = STAT_KEYWORDS.test(sel);
+
+  // 2. Game prop signals.
+  if (/\b(nrfi|yrfi)\b/i.test(sel)) return "Game prop";
+  if (/\bmost\b.*\b(home\s*runs?|hits|strikeouts)\b/i.test(sel)) return "Game prop";
+
+  // 3. Player prop heuristics.
+  //    - "X+ <stat>"     e.g. "5+ Strikeouts Thrown", "1+ Hit"
+  //    - "over/under N <stat>" with multi-word prefix (player name)
+  //    - "oN.N <stat>" or "uN.N <stat>" with multi-word prefix
+  if (/\b\d+\+/.test(sel) && hasStat) return "Player prop";
+  if (/\b(over|under)\s+\d/i.test(lower) && hasStat && countWords(sel) >= 4) return "Player prop";
+  if (/\b[oOuU]\d/.test(sel) && hasStat && countWords(sel) >= 4) return "Player prop";
+
+  // 4. Total: starts with over/under, OR has team-slash-team pattern + o/over/u/under,
+  //    OR plain "o<num>"/"u<num>" without a stat keyword.
+  if (/^(over|under)\b/i.test(lower)) return "Total";
+  if (/\/\s*\S+/.test(sel) && /\b(over|under|[oOuU]\d)/i.test(sel)) return "Total";
+  if (/\b[oOuU]\d/.test(sel) && !hasStat) return "Total";
+
+  // 5. Spread / Run line: contains a signed half-point line.
+  if (/[+-]\d+(\.\d+)?\b/.test(sel) && !/\bml\b/i.test(lower) && !/\bmoneyline\b/i.test(lower)) {
+    return "Spread";
+  }
+
+  // 6. ML: "TEAM ML" or "TEAM Moneyline".
+  if (/\b(ml|moneyline)\b/i.test(sel)) return "Moneyline";
+
+  return null;
+}
+
 function resolveTeam(
   selection: string,
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
 ): string | null {
-  const sel = ` ${selection.toLowerCase()} `;
-
-  // Match the game's known abbrs first (word-boundary aware).
+  // Match the game's known abbrs first.
   for (const abbr of [awayTeam, homeTeam]) {
     if (!abbr) continue;
-    const lower = abbr.toLowerCase();
-    const re = new RegExp(`\\b${lower}\\b`, "i");
+    const re = new RegExp(`\\b${abbr}\\b`, "i");
     if (re.test(selection)) return abbr;
   }
 
-  // Then any other abbr.
+  // Then any standard MLB abbr.
   for (const abbr of ALL_ABBRS) {
     const re = new RegExp(`\\b${abbr}\\b`, "i");
     if (re.test(selection)) return abbr;
   }
 
-  // Then full-name aliases (longest-first — TEAM_ALIASES is pre-sorted).
+  // Then full-name aliases (longest-first).
+  const lower = ` ${selection.toLowerCase()} `;
   for (const [name, abbr] of TEAM_ALIASES) {
-    if (sel.includes(` ${name.toLowerCase()} `) || sel.includes(`${name.toLowerCase()} `) || sel.includes(` ${name.toLowerCase()}`)) {
+    const n = name.toLowerCase();
+    if (lower.includes(` ${n} `) || lower.includes(` ${n}/`) || lower.includes(`/${n} `) || lower.includes(`/${n}/`)) {
       return abbr;
     }
   }
@@ -107,59 +181,66 @@ function resolveTeam(
   return null;
 }
 
-function detectTotalSide(selection: string): "Over" | "Under" | null {
-  const s = selection.trim().toLowerCase();
-  if (s.startsWith("over") || /^o[\s.]/.test(s) || s === "o") return "Over";
-  if (s.startsWith("under") || /^u[\s.]/.test(s) || s === "u") return "Under";
-  return null;
+function formatTotal(selection: string, line: number | null, odds: string): string | null {
+  // Match "over N.N" / "under N.N" / "o N.N" / "u N.N" / "oN.N" / "uN.N" anywhere.
+  let m = selection.match(/\b(over|under)\b\s*(\d+(?:\.\d+)?)?/i);
+  let side: "Over" | "Under" | null = null;
+  let lineFromText: number | null = null;
+  if (m) {
+    side = m[1].toLowerCase().startsWith("o") ? "Over" : "Under";
+    if (m[2]) lineFromText = parseFloat(m[2]);
+  } else {
+    m = selection.match(/\b([oOuU])(\d+(?:\.\d+)?)\b/);
+    if (m) {
+      side = m[1].toLowerCase() === "o" ? "Over" : "Under";
+      lineFromText = parseFloat(m[2]);
+    }
+  }
+  if (!side) return null;
+  const finalLine = lineFromText ?? line;
+  if (finalLine == null) return side + (odds ? ` ${odds}` : "");
+  return [side, finalLine, odds].filter(Boolean).join(" ");
 }
 
-function shortPlayerName(text: string): string {
-  // "Foster Griffin" -> "F. Griffin". Leaves single tokens alone.
-  const parts = text.trim().split(/\s+/);
-  if (parts.length < 2) return text.trim();
-  return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
-}
-
-/**
- * Player prop normalizer. The selection often looks like:
- *   "Foster Griffin under 17.5 PO"
- *   "Aaron Judge over 1.5 hits"
- *   "Cole o5.5 K"
- * Strategy: find the over/under token, split the string, render canonically.
- */
 function formatProp(selection: string, line: number | null, odds: string): string {
   const trimmed = selection.trim();
-  // eslint-disable-next-line prefer-const
-  let [head, tail] = splitOnOverUnder(trimmed);
-  if (head == null || tail == null) {
-    return [trimmed, line, odds].filter((v) => v != null && v !== "").join(" ");
+
+  // Pattern A: "<player> over|under N.N <stat>"
+  let m = trimmed.match(/^(.+?)\s+\b(over|under|o[.\s]|u[.\s])\s*(\d+(?:\.\d+)?)\s*(.*)$/i);
+  if (m) {
+    const player = shortPlayerName(m[1].trim());
+    const side = m[2].toLowerCase().startsWith("o") ? "o" : "u";
+    const num = m[3];
+    const stat = m[4].trim();
+    return [`${player} ${side}${num}${stat ? " " + stat : ""}`.trim(), odds].filter(Boolean).join(" ");
   }
-  const player = shortPlayerName(head);
-  const sideMatch = trimmed.match(/\b(over|under|o\.?|u\.?)\b/i);
-  const sideRaw = sideMatch?.[1]?.toLowerCase() ?? "";
-  const side = sideRaw.startsWith("o") ? "o" : "u";
 
-  // tail looks like "17.5 PO" or "5.5 K" or just "17.5".
-  const tailParts = tail.trim().split(/\s+/);
-  const numToken = tailParts.find((t) => /^[+-]?\d+(\.\d+)?$/.test(t));
-  const numStr = numToken ?? (line != null ? String(line) : "");
-  const stat = tailParts.filter((t) => t !== numToken).join(" ").trim();
+  // Pattern B: "<player> N+ <stat>"  e.g. "Cade Povisch 5+ Strikeouts Thrown"
+  m = trimmed.match(/^(.+?)\s+(\d+\+)\s+(.+)$/);
+  if (m) {
+    const player = shortPlayerName(m[1].trim());
+    const numPlus = m[2];
+    const stat = m[3].trim();
+    return [`${player} ${numPlus} ${stat}`, odds].filter(Boolean).join(" ");
+  }
 
-  const core = `${player} ${side}${numStr}${stat ? ` ${stat}` : ""}`.trim();
-  return [core, odds].filter(Boolean).join(" ");
+  // Pattern C: "<player> oN.N <stat>" e.g. "Cole o5.5 K"
+  m = trimmed.match(/^(.+?)\s+([oOuU])(\d+(?:\.\d+)?)\s*(.*)$/);
+  if (m) {
+    const player = shortPlayerName(m[1].trim());
+    const side = m[2].toLowerCase();
+    const num = m[3];
+    const stat = m[4].trim();
+    return [`${player} ${side}${num}${stat ? " " + stat : ""}`.trim(), odds].filter(Boolean).join(" ");
+  }
+
+  // Fallback: shorten any leading player name + tack on line/odds.
+  if (line != null) {
+    return [shortPlayerName(trimmed), line, odds].filter(Boolean).join(" ");
+  }
+  return [shortPlayerName(trimmed), odds].filter(Boolean).join(" ");
 }
 
-function splitOnOverUnder(text: string): [string | null, string | null] {
-  const m = text.match(/(.*?)\b(over|under|o\.?|u\.?)\b(.*)/i);
-  if (!m) return [null, null];
-  return [m[1].trim(), m[3].trim()];
-}
-
-/**
- * Strip a previously-baked `[+\-]?\b<line>\b` from the end/middle of a string so
- * we don't double-render it.
- */
 function stripEmbeddedLine(text: string, line: number | null): string {
   if (line == null) return text.trim();
   const lineStr = String(line).replace(/\./g, "\\.");
@@ -187,26 +268,18 @@ export function formatPickText(ctx: FormatContext): string {
   if (!selection && !pick.market) return "Pick";
 
   const odds = fmtOdds(pick.odds_taken);
-  const bucket = normalizeMarket(pick.market ?? "");
-
-  // First-five prefix. The market label "F5_ML" / "F5_TOTAL" is normalized into
-  // its bucket, so we re-detect the prefix from the raw market string.
-  const isF5 = (pick.market ?? "").toLowerCase().startsWith("f5_") ||
-               (pick.market ?? "").toLowerCase() === "first_5";
-  const prefix = isF5 ? "F5 " : "";
+  const bucket = inferMarketBucket(pick.market, selection);
+  const prefix = isF5(pick) ? "F5 " : "";
 
   if (bucket === "Moneyline") {
     const team = resolveTeam(selection, awayTeam, homeTeam);
-    return [`${prefix}${team ?? selection}`.trim(), "ML", odds].filter(Boolean).join(" ");
+    const label = team ?? selection.replace(/\b(ml|moneyline)\b/gi, "").trim();
+    return [`${prefix}${label}`.trim(), "ML", odds].filter(Boolean).join(" ");
   }
 
   if (bucket === "Total") {
-    const side = detectTotalSide(selection);
-    const lineStr = pick.line != null ? String(pick.line) : null;
-    if (side && lineStr) {
-      return [`${prefix}${side}`, lineStr, odds].filter(Boolean).join(" ");
-    }
-    // Fall through to fallback if we couldn't parse a side.
+    const out = formatTotal(selection, pick.line ?? null, odds);
+    if (out) return `${prefix}${out}`.trim();
   }
 
   if (bucket === "Spread") {
@@ -215,13 +288,18 @@ export function formatPickText(ctx: FormatContext): string {
       const lineStr = pick.line > 0 ? `+${pick.line}` : `${pick.line}`;
       return [`${prefix}${team}`, lineStr, odds].filter(Boolean).join(" ");
     }
+    // Selection might already have the line baked in; try extracting it.
+    const m = selection.match(/([+-]\d+(\.\d+)?)/);
+    if (team && m) {
+      return [`${prefix}${team}`, m[1], odds].filter(Boolean).join(" ");
+    }
   }
 
   if (bucket === "Player prop") {
     return formatProp(selection, pick.line ?? null, odds);
   }
 
-  // Default: take selection, strip duplicates of line/odds, append clean line+odds.
+  // Default fallback: clean selection, dedupe line/odds, append.
   let cleaned = selection;
   cleaned = stripEmbeddedOdds(cleaned, pick.odds_taken);
   cleaned = stripEmbeddedLine(cleaned, pick.line ?? null);

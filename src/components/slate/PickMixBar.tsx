@@ -1,4 +1,4 @@
-import { normalizeMarket } from "@/lib/markets";
+import { inferMarketBucket } from "@/lib/bet-format";
 import type { SlatePick } from "@/lib/types";
 
 interface ChipStyle {
@@ -27,8 +27,8 @@ export function PickMixBar({ picks }: { picks: SlatePick[] }) {
       counts.Parlay = (counts.Parlay ?? 0) + 1;
       continue;
     }
-    if (!p.market) continue;
-    const bucket = normalizeMarket(p.market);
+    const bucket = inferMarketBucket(p.market, p.selection);
+    if (!bucket) continue;
     counts[bucket] = (counts[bucket] ?? 0) + 1;
   }
 

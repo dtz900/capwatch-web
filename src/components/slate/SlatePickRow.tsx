@@ -4,8 +4,7 @@ import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { XIcon } from "@/components/icons/XIcon";
 import { SignalsIcon } from "@/components/icons/SignalsIcon";
 import { formatHandle } from "@/lib/formatters";
-import { normalizeMarket } from "@/lib/markets";
-import { formatPickText } from "@/lib/bet-format";
+import { formatPickText, inferMarketBucket } from "@/lib/bet-format";
 import type { SlatePick } from "@/lib/types";
 
 const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
@@ -32,12 +31,16 @@ interface MarketChipStyle {
   fg: string;
 }
 
-function marketChipStyle(rawMarket: string | null, kind: SlatePick["kind"], legCount: number | null): MarketChipStyle | null {
+function marketChipStyle(
+  rawMarket: string | null,
+  selection: string | null,
+  kind: SlatePick["kind"],
+  legCount: number | null,
+): MarketChipStyle | null {
   if (kind === "parlay_leg" && (legCount ?? 0) > 1) {
     return { label: `${legCount}-LEG`, bg: "rgba(212,168,83,0.14)", fg: "var(--color-gold)" };
   }
-  if (!rawMarket) return null;
-  const bucket = normalizeMarket(rawMarket);
+  const bucket = inferMarketBucket(rawMarket, selection);
   switch (bucket) {
     case "Moneyline":
       return { label: "ML", bg: "rgba(96,165,250,0.14)", fg: "#7eb0ff" };
@@ -67,7 +70,7 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
   const isParlayLeg = pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1;
   const posted = formatPostedAt(pick.posted_at);
   const isHeavy = pick.stake_units >= 2;
-  const chip = marketChipStyle(pick.market, pick.kind, pick.leg_count);
+  const chip = marketChipStyle(pick.market, pick.selection, pick.kind, pick.leg_count);
   const betText = formatPickText({ pick, awayTeam, homeTeam });
 
   return (
