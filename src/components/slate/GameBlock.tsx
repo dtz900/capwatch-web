@@ -72,7 +72,12 @@ export function GameBlock({ game }: { game: SlateGame }) {
       ) : (
         <div className="flex flex-col">
           {game.picks.map((pick, i) => (
-            <SlatePickRow key={`${pick.capper_id}-${i}`} pick={pick} />
+            <SlatePickRow
+              key={`${pick.capper_id}-${i}`}
+              pick={pick}
+              awayTeam={game.away_team}
+              homeTeam={game.home_team}
+            />
           ))}
         </div>
       )}

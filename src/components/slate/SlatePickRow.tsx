@@ -2,9 +2,13 @@ import Link from "next/link";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { XIcon } from "@/components/icons/XIcon";
+import { SignalsIcon } from "@/components/icons/SignalsIcon";
 import { formatHandle } from "@/lib/formatters";
-import { formatBetDescriptor, normalizeMarket } from "@/lib/markets";
+import { normalizeMarket } from "@/lib/markets";
+import { formatPickText } from "@/lib/bet-format";
 import type { SlatePick } from "@/lib/types";
+
+const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
 
 function formatPostedAt(iso: string | null): string | null {
   if (!iso) return null;
@@ -52,12 +56,19 @@ function marketChipStyle(rawMarket: string | null, kind: SlatePick["kind"], legC
   }
 }
 
-export function SlatePickRow({ pick }: { pick: SlatePick }) {
+interface Props {
+  pick: SlatePick;
+  awayTeam?: string | null;
+  homeTeam?: string | null;
+}
+
+export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
   const isModel = pick.handle === "fadeai_";
   const isParlayLeg = pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1;
   const posted = formatPostedAt(pick.posted_at);
   const isHeavy = pick.stake_units >= 2;
   const chip = marketChipStyle(pick.market, pick.kind, pick.leg_count);
+  const betText = formatPickText({ pick, awayTeam, homeTeam });
 
   return (
     <div className="flex items-center gap-3 py-2.5 px-3 -mx-3 rounded-lg hover:bg-[rgba(255,255,255,0.025)] transition-colors">
@@ -105,14 +116,7 @@ export function SlatePickRow({ pick }: { pick: SlatePick }) {
         )}
         <div className="text-right">
           <div className={`text-[12px] tabular-nums ${isHeavy ? "font-extrabold text-[var(--color-text)]" : "font-semibold text-[var(--color-text)]"}`}>
-            {formatBetDescriptor({
-              kind: isParlayLeg ? "parlay" : "straight",
-              leg_count: pick.leg_count,
-              market: pick.market,
-              selection: pick.selection,
-              line: pick.line,
-              odds_taken: pick.odds_taken,
-            })}
+            {betText}
           </div>
           <div className="text-[10px] font-medium tabular-nums mt-0.5">
             <span className={isHeavy ? "text-[var(--color-gold)] font-extrabold" : "text-[var(--color-text-muted)]"}>
@@ -126,7 +130,19 @@ export function SlatePickRow({ pick }: { pick: SlatePick }) {
           </div>
         </div>
       </div>
-      {pick.tweet_url && (
+      {isModel ? (
+        <a
+          href={FADEAI_SIGNALS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="View FADE AI signals"
+          title="View this signal on FADE AI"
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-[rgba(94,234,212,0.10)]
+                     text-[#5eead4] hover:bg-[rgba(94,234,212,0.20)] hover:text-white transition-colors"
+        >
+          <SignalsIcon size={11} glow />
+        </a>
+      ) : pick.tweet_url ? (
         <a
           href={pick.tweet_url}
           target="_blank"
@@ -137,7 +153,7 @@ export function SlatePickRow({ pick }: { pick: SlatePick }) {
         >
           <XIcon size={11} glow />
         </a>
-      )}
+      ) : null}
     </div>
   );
 }
