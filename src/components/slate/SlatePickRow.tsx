@@ -4,7 +4,7 @@ import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { XIcon } from "@/components/icons/XIcon";
 import { SignalsIcon } from "@/components/icons/SignalsIcon";
 import { formatHandle } from "@/lib/formatters";
-import { formatPickText, inferMarketBucket } from "@/lib/bet-format";
+import { formatPickText } from "@/lib/bet-format";
 import type { SlatePick } from "@/lib/types";
 
 const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
@@ -25,40 +25,6 @@ function formatStakeUnits(u: number): string {
   return `${u.toFixed(2)}u`;
 }
 
-interface MarketChipStyle {
-  label: string;
-  bg: string;
-  fg: string;
-}
-
-function marketChipStyle(
-  rawMarket: string | null,
-  selection: string | null,
-  kind: SlatePick["kind"],
-  legCount: number | null,
-): MarketChipStyle | null {
-  if (kind === "parlay_leg" && (legCount ?? 0) > 1) {
-    return { label: `${legCount}-LEG`, bg: "rgba(212,168,83,0.14)", fg: "var(--color-gold)" };
-  }
-  const bucket = inferMarketBucket(rawMarket, selection);
-  switch (bucket) {
-    case "Moneyline":
-      return { label: "ML", bg: "rgba(96,165,250,0.14)", fg: "#7eb0ff" };
-    case "Spread":
-      return { label: "RL", bg: "rgba(244,114,182,0.14)", fg: "#f472b6" };
-    case "Total":
-      return { label: "TOT", bg: "rgba(168,139,250,0.14)", fg: "#c4b5fd" };
-    case "Player prop":
-      return { label: "PROP", bg: "rgba(212,168,83,0.14)", fg: "var(--color-gold)" };
-    case "Game prop":
-      return { label: "GP", bg: "rgba(74,222,128,0.14)", fg: "#86efac" };
-    case "Parlay":
-      return { label: "PAR", bg: "rgba(212,168,83,0.14)", fg: "var(--color-gold)" };
-    default:
-      return null;
-  }
-}
-
 interface Props {
   pick: SlatePick;
   awayTeam?: string | null;
@@ -70,7 +36,6 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
   const isParlayLeg = pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1;
   const posted = formatPostedAt(pick.posted_at);
   const isHeavy = pick.stake_units >= 2;
-  const chip = marketChipStyle(pick.market, pick.selection, pick.kind, pick.leg_count);
   const betText = formatPickText({ pick, awayTeam, homeTeam });
 
   return (
@@ -108,29 +73,19 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
           {posted && <span className="ml-1.5 opacity-70">· {posted}</span>}
         </div>
       </div>
-      <div className="shrink-0 flex items-center gap-2">
-        {chip && (
-          <span
-            className="px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-[0.06em] tabular-nums"
-            style={{ backgroundColor: chip.bg, color: chip.fg }}
-          >
-            {chip.label}
+      <div className="shrink-0 text-right">
+        <div className={`text-[12px] tabular-nums ${isHeavy ? "font-extrabold text-[var(--color-text)]" : "font-semibold text-[var(--color-text)]"}`}>
+          {betText}
+        </div>
+        <div className="text-[10px] font-medium tabular-nums mt-0.5">
+          <span className={isHeavy ? "text-[var(--color-gold)] font-extrabold" : "text-[var(--color-text-muted)]"}>
+            {formatStakeUnits(pick.stake_units)}
           </span>
-        )}
-        <div className="text-right">
-          <div className={`text-[12px] tabular-nums ${isHeavy ? "font-extrabold text-[var(--color-text)]" : "font-semibold text-[var(--color-text)]"}`}>
-            {betText}
-          </div>
-          <div className="text-[10px] font-medium tabular-nums mt-0.5">
-            <span className={isHeavy ? "text-[var(--color-gold)] font-extrabold" : "text-[var(--color-text-muted)]"}>
-              {formatStakeUnits(pick.stake_units)}
+          {isParlayLeg && (
+            <span className="ml-1.5 text-[var(--color-text-muted)] opacity-80">
+              · in {pick.leg_count}-leg parlay
             </span>
-            {isParlayLeg && (
-              <span className="ml-1.5 text-[var(--color-gold)] opacity-80">
-                · in {pick.leg_count}-leg parlay
-              </span>
-            )}
-          </div>
+          )}
         </div>
       </div>
       {isModel ? (
