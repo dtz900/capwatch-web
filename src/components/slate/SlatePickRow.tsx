@@ -3,7 +3,7 @@ import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatHandle } from "@/lib/formatters";
-import { formatBetDescriptor } from "@/lib/markets";
+import { formatBetDescriptor, normalizeMarket } from "@/lib/markets";
 import type { SlatePick } from "@/lib/types";
 
 function formatPostedAt(iso: string | null): string | null {
@@ -22,13 +22,56 @@ function formatStakeUnits(u: number): string {
   return `${u.toFixed(2)}u`;
 }
 
+interface MarketChipStyle {
+  label: string;
+  bg: string;
+  fg: string;
+}
+
+function marketChipStyle(rawMarket: string | null, kind: SlatePick["kind"], legCount: number | null): MarketChipStyle | null {
+  if (kind === "parlay_leg" && (legCount ?? 0) > 1) {
+    return { label: `${legCount}-LEG`, bg: "rgba(212,168,83,0.14)", fg: "var(--color-gold)" };
+  }
+  if (!rawMarket) return null;
+  const bucket = normalizeMarket(rawMarket);
+  switch (bucket) {
+    case "Moneyline":
+      return { label: "ML", bg: "rgba(96,165,250,0.14)", fg: "#7eb0ff" };
+    case "Spread":
+      return { label: "RL", bg: "rgba(244,114,182,0.14)", fg: "#f472b6" };
+    case "Total":
+      return { label: "TOT", bg: "rgba(168,139,250,0.14)", fg: "#c4b5fd" };
+    case "Player prop":
+      return { label: "PROP", bg: "rgba(212,168,83,0.14)", fg: "var(--color-gold)" };
+    case "Game prop":
+      return { label: "GP", bg: "rgba(74,222,128,0.14)", fg: "#86efac" };
+    case "Parlay":
+      return { label: "PAR", bg: "rgba(212,168,83,0.14)", fg: "var(--color-gold)" };
+    default:
+      return null;
+  }
+}
+
 export function SlatePickRow({ pick }: { pick: SlatePick }) {
   const isModel = pick.handle === "fadeai_";
   const isParlayLeg = pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1;
   const posted = formatPostedAt(pick.posted_at);
+  const isHeavy = pick.stake_units >= 2;
+  const chip = marketChipStyle(pick.market, pick.kind, pick.leg_count);
 
   return (
-    <div className="flex items-center gap-3 py-2.5 px-3 -mx-3 rounded-lg hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+    <div className="flex items-center gap-3 py-2.5 px-3 -mx-3 rounded-lg hover:bg-[rgba(255,255,255,0.025)] transition-colors">
+      {pick.capper_rank != null && pick.capper_rank <= 99 && (
+        <div
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md
+                     text-[10px] font-extrabold tabular-nums
+                     bg-[rgba(255,255,255,0.04)] text-[var(--color-text-soft)]"
+          aria-label={`Leaderboard rank ${pick.capper_rank}`}
+          title={`Leaderboard rank #${pick.capper_rank} (last 30d)`}
+        >
+          #{pick.capper_rank}
+        </div>
+      )}
       <Link
         href={pick.handle ? `/cappers/${pick.handle}` : "#"}
         className="shrink-0"
@@ -51,24 +94,36 @@ export function SlatePickRow({ pick }: { pick: SlatePick }) {
           {posted && <span className="ml-1.5 opacity-70">· {posted}</span>}
         </div>
       </div>
-      <div className="shrink-0 text-right">
-        <div className="text-[12px] font-semibold text-[var(--color-text)] tabular-nums">
-          {formatBetDescriptor({
-            kind: isParlayLeg ? "parlay" : "straight",
-            leg_count: pick.leg_count,
-            market: pick.market,
-            selection: pick.selection,
-            line: pick.line,
-            odds_taken: pick.odds_taken,
-          })}
-        </div>
-        <div className="text-[10px] text-[var(--color-text-muted)] font-medium tabular-nums mt-0.5">
-          {formatStakeUnits(pick.stake_units)}
-          {isParlayLeg && (
-            <span className="ml-1.5 text-[var(--color-gold)] opacity-80">
-              · in {pick.leg_count}-leg parlay
+      <div className="shrink-0 flex items-center gap-2">
+        {chip && (
+          <span
+            className="px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-[0.06em] tabular-nums"
+            style={{ backgroundColor: chip.bg, color: chip.fg }}
+          >
+            {chip.label}
+          </span>
+        )}
+        <div className="text-right">
+          <div className={`text-[12px] tabular-nums ${isHeavy ? "font-extrabold text-[var(--color-text)]" : "font-semibold text-[var(--color-text)]"}`}>
+            {formatBetDescriptor({
+              kind: isParlayLeg ? "parlay" : "straight",
+              leg_count: pick.leg_count,
+              market: pick.market,
+              selection: pick.selection,
+              line: pick.line,
+              odds_taken: pick.odds_taken,
+            })}
+          </div>
+          <div className="text-[10px] font-medium tabular-nums mt-0.5">
+            <span className={isHeavy ? "text-[var(--color-gold)] font-extrabold" : "text-[var(--color-text-muted)]"}>
+              {formatStakeUnits(pick.stake_units)}
             </span>
-          )}
+            {isParlayLeg && (
+              <span className="ml-1.5 text-[var(--color-gold)] opacity-80">
+                · in {pick.leg_count}-leg parlay
+              </span>
+            )}
+          </div>
         </div>
       </div>
       {pick.tweet_url && (

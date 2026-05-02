@@ -66,6 +66,7 @@ export interface LeaderboardResponse {
 
 export interface SlatePick {
   capper_id: number;
+  capper_rank: number | null;
   handle: string | null;
   display_name: string | null;
   profile_image_url: string | null;
@@ -87,6 +88,8 @@ export interface SlateGame {
   game_id: number;
   away_team: string | null;
   home_team: string | null;
+  away_starter: string | null;
+  home_starter: string | null;
   game_date: string | null;
   game_time: string | null;
   picks: SlatePick[];
