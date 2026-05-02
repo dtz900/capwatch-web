@@ -100,28 +100,28 @@ export function GameBlock({ game }: { game: SlateGame }) {
     <section id={`game-${game.game_id}`} className="py-10 border-t border-[rgba(255,255,255,0.07)]">
       {/* Hero matchup */}
       <div className="text-center">
-        <div className="text-[11px] tabular-nums font-semibold text-[var(--color-text-muted)] mb-3">
+        <div className="text-[11px] tabular-nums font-semibold text-[var(--color-text-muted)] mb-4">
           {time}
         </div>
-        <div className="flex items-center justify-center gap-5 sm:gap-7">
-          <div className="flex flex-col items-center gap-2">
-            <TeamLogo abbr={game.away_team} size={56} />
-            <span className="text-[28px] font-extrabold tracking-[-0.025em] leading-none">
+        <div className="flex items-center justify-center gap-6 sm:gap-10">
+          <div className="flex flex-col items-center gap-3">
+            <TeamLogo abbr={game.away_team} size={88} />
+            <span className="text-[30px] font-extrabold tracking-[-0.03em] leading-none">
               {game.away_team}
             </span>
           </div>
-          <span className="text-[14px] uppercase tracking-[0.18em] font-bold text-[var(--color-text-muted)] mt-6">
+          <span className="text-[12px] uppercase tracking-[0.22em] font-bold text-[var(--color-text-muted)] mt-10">
             vs
           </span>
-          <div className="flex flex-col items-center gap-2">
-            <TeamLogo abbr={game.home_team} size={56} />
-            <span className="text-[28px] font-extrabold tracking-[-0.025em] leading-none">
+          <div className="flex flex-col items-center gap-3">
+            <TeamLogo abbr={game.home_team} size={88} />
+            <span className="text-[30px] font-extrabold tracking-[-0.03em] leading-none">
               {game.home_team}
             </span>
           </div>
         </div>
         {pitchers && (
-          <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-3">{pitchers}</div>
+          <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-4">{pitchers}</div>
         )}
       </div>
 
