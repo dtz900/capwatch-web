@@ -27,13 +27,12 @@ export function TopNav() {
       <div className="max-w-[1240px] mx-auto px-7 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center text-[var(--color-text)]" aria-label="TailSlips home">
           <Image
-            src="/logo-horizontal.jpg"
+            src="/logo-horizontal.png"
             alt="TailSlips"
             width={400}
             height={100}
             priority
             className="h-12 w-auto"
-            style={{ mixBlendMode: "screen" }}
           />
         </Link>
         <div className="flex gap-1 mx-6">
