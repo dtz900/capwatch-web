@@ -24,15 +24,15 @@ export function TopNav() {
       className="sticky top-0 z-30 backdrop-blur-md bg-[rgba(10,10,12,0.85)]
                     border-b border-[rgba(255,255,255,0.06)]"
     >
-      <div className="max-w-[1240px] mx-auto px-7 h-24 flex items-center justify-between">
+      <div className="max-w-[1240px] mx-auto px-7 h-20 flex items-center justify-between">
         <Link href="/" className="flex items-center text-[var(--color-text)]" aria-label="TailSlips home">
           <Image
-            src="/logo-horizontal.png"
+            src="/logo-wordmark.png"
             alt="TailSlips"
-            width={500}
-            height={125}
+            width={1090}
+            height={187}
             priority
-            className="h-20 w-auto"
+            className="h-12 w-auto"
           />
         </Link>
         <div className="flex gap-1 mx-6">
