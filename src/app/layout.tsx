@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
+import { BrandFooter } from "@/components/nav/BrandFooter";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -36,7 +37,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={manrope.variable}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <BrandFooter />
+      </body>
     </html>
   );
 }

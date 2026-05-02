@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LogoMark } from "./LogoMark";
 import { SearchIcon } from "@/components/icons/SearchIcon";
 
 const LINKS = [
@@ -25,9 +25,15 @@ export function TopNav() {
                     border-b border-[rgba(255,255,255,0.06)]"
     >
       <div className="max-w-[1240px] mx-auto px-7 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-[11px] text-[var(--color-text)]">
-          <LogoMark />
-          <span className="font-extrabold text-[15px] tracking-[0.20em]">CAPWATCH</span>
+        <Link href="/" className="flex items-center text-[var(--color-text)]" aria-label="TailSlips home">
+          <Image
+            src="/logo-horizontal.jpg"
+            alt="TailSlips"
+            width={320}
+            height={80}
+            priority
+            className="h-9 w-auto"
+          />
         </Link>
         <div className="flex gap-1 mx-6">
           {LINKS.map((l) => {
