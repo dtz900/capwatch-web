@@ -1,6 +1,8 @@
 import { SlatePickRow } from "./SlatePickRow";
+import { VersusPickRow } from "./VersusPickRow";
 import { TeamLogo } from "./TeamLogo";
-import { inferMarketBucket } from "@/lib/bet-format";
+import { pickMlSide } from "@/lib/bet-format";
+import { teamColor } from "@/lib/mlb-teams";
 import type { SlateGame, SlatePick } from "@/lib/types";
 
 function shortPitcher(name: string | null): string | null {
@@ -23,43 +25,64 @@ function formatGameTime(iso: string | null): string | null {
   }
 }
 
-interface SideSummary {
-  awayLabel: string;
-  homeLabel: string;
-  awayCount: number;
-  homeCount: number;
-  market: string;
+interface BucketedPicks {
+  awayMl: SlatePick[];
+  homeMl: SlatePick[];
+  other: SlatePick[];
 }
 
-function classifyMlSide(selection: string | null, away: string | null, home: string | null): "away" | "home" | null {
-  if (!selection) return null;
-  const s = selection.toLowerCase();
-  if (away && new RegExp(`\\b${away.toLowerCase()}\\b`).test(s)) return "away";
-  if (home && new RegExp(`\\b${home.toLowerCase()}\\b`).test(s)) return "home";
-  return null;
-}
-
-function sideSummary(picks: SlatePick[], awayTeam: string | null, homeTeam: string | null): SideSummary | null {
-  const ml: SlatePick[] = [];
+function bucketPicks(picks: SlatePick[], awayTeam: string | null, homeTeam: string | null): BucketedPicks {
+  const awayMl: SlatePick[] = [];
+  const homeMl: SlatePick[] = [];
+  const other: SlatePick[] = [];
   for (const p of picks) {
-    if (inferMarketBucket(p.market, p.selection) === "Moneyline") ml.push(p);
+    const side = pickMlSide(p, awayTeam, homeTeam);
+    if (side === "away") awayMl.push(p);
+    else if (side === "home") homeMl.push(p);
+    else other.push(p);
   }
-  if (ml.length < 2) return null;
-  let a = 0;
-  let h = 0;
-  for (const p of ml) {
-    const side = classifyMlSide(p.selection, awayTeam, homeTeam);
-    if (side === "away") a++;
-    else if (side === "home") h++;
-  }
-  if (a + h < 2) return null;
-  return {
-    awayLabel: awayTeam ?? "Away",
-    homeLabel: homeTeam ?? "Home",
-    awayCount: a,
-    homeCount: h,
-    market: "ML",
-  };
+  return { awayMl, homeMl, other };
+}
+
+function Side({
+  team,
+  picks,
+}: {
+  team: string | null;
+  picks: SlatePick[];
+}) {
+  const color = teamColor(team);
+  return (
+    <div>
+      <div
+        className="flex items-baseline justify-between pb-2 mb-1 border-b-2"
+        style={{ borderColor: color }}
+      >
+        <div className="flex items-baseline gap-2">
+          <span className="text-[10px] uppercase tracking-[0.16em] font-bold text-[var(--color-text-muted)]">
+            On
+          </span>
+          <span className="text-[14px] font-extrabold tracking-tight" style={{ color }}>
+            {team ?? "—"}
+          </span>
+        </div>
+        <span className="text-[11px] tabular-nums font-bold text-[var(--color-text-muted)]">
+          {picks.length}
+        </span>
+      </div>
+      {picks.length === 0 ? (
+        <div className="text-[11px] italic text-[var(--color-text-muted)] py-2">
+          No sharps on {team ?? "this side"}
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {picks.map((pick, i) => (
+            <VersusPickRow key={`${pick.capper_id}-${i}`} pick={pick} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function GameBlock({ game }: { game: SlateGame }) {
@@ -68,69 +91,70 @@ export function GameBlock({ game }: { game: SlateGame }) {
     game.away_starter && game.home_starter
       ? `${shortPitcher(game.away_starter)} vs ${shortPitcher(game.home_starter)}`
       : null;
-  const n = game.picks.length;
-  const split = sideSummary(game.picks, game.away_team, game.home_team);
+  const buckets = bucketPicks(game.picks, game.away_team, game.home_team);
+  const hasMlAction = buckets.awayMl.length + buckets.homeMl.length > 0;
+  const hasOther = buckets.other.length > 0;
+  const isSilent = game.picks.length === 0;
 
   return (
-    <section id={`game-${game.game_id}`} className="py-7 border-t border-[rgba(255,255,255,0.06)]">
-      <header className="flex items-baseline justify-between gap-6 mb-1">
-        <div className="flex items-center gap-3 min-w-0">
-          <TeamLogo abbr={game.away_team} size={26} />
-          <span className="text-[26px] font-extrabold tracking-[-0.02em] leading-none">
-            {game.away_team}
-          </span>
-          <span className="text-[18px] font-bold text-[var(--color-text-muted)] mx-0.5 leading-none">@</span>
-          <TeamLogo abbr={game.home_team} size={26} />
-          <span className="text-[26px] font-extrabold tracking-[-0.02em] leading-none">
-            {game.home_team}
-          </span>
+    <section id={`game-${game.game_id}`} className="py-10 border-t border-[rgba(255,255,255,0.07)]">
+      {/* Hero matchup */}
+      <div className="text-center">
+        <div className="text-[11px] tabular-nums font-semibold text-[var(--color-text-muted)] mb-3">
+          {time}
         </div>
-        {time && (
-          <div className="text-[12px] font-semibold text-[var(--color-text-soft)] tabular-nums whitespace-nowrap">
-            {time}
-          </div>
-        )}
-      </header>
-
-      <div className="text-[12px] text-[var(--color-text-muted)] font-medium tabular-nums">
-        {pitchers && <span>{pitchers}</span>}
-        {pitchers && (n > 0 || split) && <span className="opacity-60"> · </span>}
-        {n > 0 && (
-          <span>
-            {n} {n === 1 ? "pick" : "picks"}
-          </span>
-        )}
-        {split && (
-          <>
-            <span className="opacity-60"> · </span>
-            <span>
-              ML split{" "}
-              <span className="text-[var(--color-text-soft)] font-semibold">
-                {split.awayCount} {split.awayLabel}
-              </span>{" "}
-              /{" "}
-              <span className="text-[var(--color-text-soft)] font-semibold">
-                {split.homeCount} {split.homeLabel}
-              </span>
+        <div className="flex items-center justify-center gap-5 sm:gap-7">
+          <div className="flex flex-col items-center gap-2">
+            <TeamLogo abbr={game.away_team} size={56} />
+            <span className="text-[28px] font-extrabold tracking-[-0.025em] leading-none">
+              {game.away_team}
             </span>
-          </>
+          </div>
+          <span className="text-[14px] uppercase tracking-[0.18em] font-bold text-[var(--color-text-muted)] mt-6">
+            vs
+          </span>
+          <div className="flex flex-col items-center gap-2">
+            <TeamLogo abbr={game.home_team} size={56} />
+            <span className="text-[28px] font-extrabold tracking-[-0.025em] leading-none">
+              {game.home_team}
+            </span>
+          </div>
+        </div>
+        {pitchers && (
+          <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-3">{pitchers}</div>
         )}
       </div>
 
-      {n === 0 ? (
-        <div className="text-[12px] italic text-[var(--color-text-muted)] mt-3">
-          Quiet. No one has tweeted on this one yet.
+      {/* Versus: cappers face off on either side */}
+      {hasMlAction && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6 mt-8 max-w-[640px] mx-auto">
+          <Side team={game.away_team} picks={buckets.awayMl} />
+          <Side team={game.home_team} picks={buckets.homeMl} />
         </div>
-      ) : (
-        <div className="mt-3 flex flex-col">
-          {game.picks.map((pick, i) => (
-            <SlatePickRow
-              key={`${pick.capper_id}-${i}`}
-              pick={pick}
-              awayTeam={game.away_team}
-              homeTeam={game.home_team}
-            />
-          ))}
+      )}
+
+      {/* Other markets: totals, props, parlay legs, etc. */}
+      {hasOther && (
+        <div className="mt-8 max-w-[640px] mx-auto">
+          <div className="text-[10px] uppercase tracking-[0.16em] font-bold text-[var(--color-text-muted)] mb-2 pb-2 border-b border-[rgba(255,255,255,0.06)]">
+            Other markets · {buckets.other.length}
+          </div>
+          <div className="flex flex-col">
+            {buckets.other.map((pick, i) => (
+              <SlatePickRow
+                key={`${pick.capper_id}-${i}`}
+                pick={pick}
+                awayTeam={game.away_team}
+                homeTeam={game.home_team}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isSilent && (
+        <div className="text-[12px] italic text-[var(--color-text-muted)] mt-6 text-center">
+          Quiet. No one has tweeted on this one yet.
         </div>
       )}
     </section>

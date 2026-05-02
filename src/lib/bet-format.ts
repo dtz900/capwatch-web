@@ -151,6 +151,25 @@ export function inferMarketBucket(
   return null;
 }
 
+/**
+ * For a Moneyline-bucketed pick, return whether the bet is on AWAY or HOME
+ * (matching by abbr or full-team-name alias). Returns null if not ML or if
+ * the side can't be resolved.
+ */
+export function pickMlSide(
+  pick: PickInput,
+  awayTeam: string | null | undefined,
+  homeTeam: string | null | undefined,
+): "away" | "home" | null {
+  // Parlay legs are intentionally excluded from the ML versus columns.
+  if (pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1) return null;
+  if (inferMarketBucket(pick.market, pick.selection) !== "Moneyline") return null;
+  const team = resolveTeam(pick.selection ?? "", awayTeam, homeTeam);
+  if (team && awayTeam && team === awayTeam) return "away";
+  if (team && homeTeam && team === homeTeam) return "home";
+  return null;
+}
+
 function resolveTeam(
   selection: string,
   awayTeam: string | null | undefined,
