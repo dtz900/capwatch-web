@@ -29,10 +29,11 @@ export function TopNav() {
           <Image
             src="/logo-horizontal.jpg"
             alt="TailSlips"
-            width={320}
-            height={80}
+            width={400}
+            height={100}
             priority
-            className="h-9 w-auto"
+            className="h-12 w-auto"
+            style={{ mixBlendMode: "screen" }}
           />
         </Link>
         <div className="flex gap-1 mx-6">

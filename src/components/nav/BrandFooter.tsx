@@ -14,10 +14,11 @@ export function BrandFooter() {
         <Image
           src="/logo-stacked.jpg"
           alt="TailSlips"
-          width={200}
-          height={200}
+          width={240}
+          height={240}
           priority={false}
-          className="h-20 w-auto opacity-90"
+          className="h-28 w-auto"
+          style={{ mixBlendMode: "screen" }}
         />
         <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
           Operated by FADE AI
