@@ -4,8 +4,8 @@ import Image from "next/image";
  * Site-wide brand footer. Renders the stacked TailSlips logo as the final
  * mark on every page, below whatever per-page footer content exists.
  *
- * Sized at 112px height so the wordmark is legible without dominating
- * the page. Image must exist at /public/logo-stacked.png (transparent).
+ * Sized at 176px height for a strong end-of-page brand stamp. Image
+ * must exist at /public/logo-stacked.png (transparent).
  */
 export function BrandFooter() {
   return (
@@ -14,10 +14,10 @@ export function BrandFooter() {
         <Image
           src="/logo-stacked.png"
           alt="TailSlips"
-          width={240}
-          height={240}
+          width={320}
+          height={320}
           priority={false}
-          className="h-28 w-auto"
+          className="h-44 w-auto"
         />
         <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
           Operated by FADE AI
