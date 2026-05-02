@@ -1,6 +1,18 @@
 import { TeamLogo } from "./TeamLogo";
-import { LiveCountdown } from "./LiveCountdown";
 import type { SlateGame } from "@/lib/types";
+
+function formatGameTime(iso: string | null): string | null {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    });
+  } catch {
+    return null;
+  }
+}
 
 function shortPitcher(name: string | null): string | null {
   if (!name) return null;
@@ -10,6 +22,7 @@ function shortPitcher(name: string | null): string | null {
 }
 
 export function QuietGameStrip({ game }: { game: SlateGame }) {
+  const time = formatGameTime(game.game_time);
   const pitchers =
     game.away_starter && game.home_starter
       ? `${shortPitcher(game.away_starter)} vs ${shortPitcher(game.home_starter)}`
@@ -18,30 +31,19 @@ export function QuietGameStrip({ game }: { game: SlateGame }) {
   return (
     <div
       id={`game-${game.game_id}`}
-      className="flex items-center justify-between gap-3 rounded-xl px-4 py-2.5
-                 border border-[rgba(255,255,255,0.04)] bg-[rgba(255,255,255,0.008)]
-                 hover:border-[rgba(255,255,255,0.08)] transition-colors"
+      className="flex items-center justify-between gap-3 py-2 text-[12px]"
     >
-      <div className="min-w-0 flex items-center gap-2 flex-wrap">
-        <TeamLogo abbr={game.away_team} size={20} />
-        <span className="text-[13px] font-bold tracking-tight text-[var(--color-text)]">
-          {game.away_team}
-        </span>
-        <span className="text-[11px] font-bold text-[var(--color-text-muted)] mx-0.5">@</span>
-        <TeamLogo abbr={game.home_team} size={20} />
-        <span className="text-[13px] font-bold tracking-tight text-[var(--color-text)]">
-          {game.home_team}
-        </span>
-        {pitchers && (
-          <span className="text-[11px] text-[var(--color-text-muted)] font-medium truncate ml-1.5">
-            {pitchers}
-          </span>
-        )}
-        <LiveCountdown iso={game.game_time} className="text-[11px] ml-1" />
+      <div className="flex items-center gap-2 min-w-0 text-[var(--color-text-muted)]">
+        <TeamLogo abbr={game.away_team} size={16} />
+        <span className="font-bold text-[13px] text-[var(--color-text-soft)]">{game.away_team}</span>
+        <span className="opacity-50 mx-0.5">@</span>
+        <TeamLogo abbr={game.home_team} size={16} />
+        <span className="font-bold text-[13px] text-[var(--color-text-soft)]">{game.home_team}</span>
+        {pitchers && <span className="ml-2 truncate font-medium">{pitchers}</span>}
       </div>
-      <span className="shrink-0 text-[10px] uppercase tracking-[0.12em] font-bold text-[var(--color-text-muted)] opacity-70">
-        Quiet
-      </span>
+      <div className="shrink-0 text-[var(--color-text-muted)] tabular-nums font-medium">
+        {time}
+      </div>
     </div>
   );
 }
