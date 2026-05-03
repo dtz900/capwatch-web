@@ -14,9 +14,9 @@ describe("FilterBar", () => {
     active_only: true,
   };
 
-  it("renders three radiogroups (window, sort, show)", () => {
+  it("renders both mobile and desktop toolbars with three radiogroups on desktop", () => {
     render(<FilterBar filters={defaults} />);
-    expect(screen.getByRole("toolbar", { name: /Filter leaderboard/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("toolbar", { name: /Filter leaderboard/i })).toHaveLength(2);
     expect(screen.getAllByRole("radiogroup")).toHaveLength(3);
   });
 
