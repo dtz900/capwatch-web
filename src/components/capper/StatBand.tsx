@@ -37,7 +37,7 @@ export function StatBand({ agg, recentHistory = [] }: Props) {
   const win = agg.biggest_win;
 
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-7 py-7">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-6 sm:px-7 sm:py-7">
       <div className="grid grid-cols-1 md:grid-cols-[minmax(160px,1.1fr)_minmax(160px,1.1fr)_minmax(180px,1fr)] gap-x-9 gap-y-7 items-end">
         <Headline label="Net profit" value={`${formatUnits(agg.units_profit)}u`} positive={unitsPositive} />
         <Headline label="ROI" value={formatRoi(agg.roi_pct)} positive={roiPositive} />
@@ -106,7 +106,7 @@ function Headline({
     <div>
       <Eyebrow className="mb-2.5">{label}</Eyebrow>
       <div
-        className={`text-[44px] font-extrabold tabular-nums leading-none tracking-[-0.025em]
+        className={`text-[36px] sm:text-[44px] font-extrabold tabular-nums leading-none tracking-[-0.025em]
                    ${positive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}
       >
         {value}
