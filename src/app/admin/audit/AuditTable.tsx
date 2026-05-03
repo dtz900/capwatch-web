@@ -222,9 +222,22 @@ function ProblemRow({
   checked: boolean;
   onToggle: () => void;
 }) {
-  const date = p.posted_at
+  const postedDate = p.posted_at
     ? new Date(p.posted_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : "—";
+    : null;
+  const gameDate = p.game_date
+    ? new Date(p.game_date + "T12:00:00Z").toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+  // Flag a mismatch when the linked game's date is more than 1 day off from
+  // the tweet date. Doubleheader misattribution typically shows here.
+  const dateMismatch = (() => {
+    if (!p.posted_at || !p.game_date) return false;
+    const postedDay = p.posted_at.slice(0, 10);
+    return p.game_date < postedDay;
+  })();
   const reasonLabel = REASON_LABEL[p.reason] ?? p.reason;
   const benign = BENIGN_REASONS.has(p.reason);
   const reasonColor = benign
@@ -248,7 +261,28 @@ function ProblemRow({
             className="cursor-pointer accent-[var(--color-neg)]"
           />
         </div>
-        <div className="text-[var(--color-text-muted)] font-medium tabular-nums">{date}</div>
+        <div className="font-medium tabular-nums">
+          {gameDate ? (
+            <div
+              className={dateMismatch ? "text-[var(--color-gold)]" : "text-[var(--color-text-soft)]"}
+              title={
+                dateMismatch
+                  ? `Game date (${gameDate}) is earlier than tweet date (${postedDate}). Likely parser misattributed the game — common for doubleheaders. Use the FIX panel to repick the game.`
+                  : "Date of the linked game"
+              }
+            >
+              {gameDate}
+              {dateMismatch && <span className="ml-1" aria-hidden="true">⚠</span>}
+            </div>
+          ) : (
+            <div className="text-[var(--color-text-muted)]">—</div>
+          )}
+          {postedDate && (
+            <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5" title="Tweet posted date">
+              tw {postedDate}
+            </div>
+          )}
+        </div>
         <div className="min-w-0">
           <Link
             href={p.capper_handle ? `/cappers/${p.capper_handle}` : "#"}

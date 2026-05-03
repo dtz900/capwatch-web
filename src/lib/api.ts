@@ -83,6 +83,9 @@ export interface AuditProblem {
   units: number | null;
   player_id: number | null;
   game_id: string | null;
+  /** Date of the linked game (from mlb_predictions). May differ from posted_at
+   * when the parser misattributed the game (e.g. doubleheader G1 vs G2). */
+  game_date: string | null;
   parlay_id: number | null;
   posted_at: string | null;
   raw_id: number | null;
