@@ -23,8 +23,8 @@ export const metadata = {
 // idle Supabase HTTP/2 connection drops; we don't want a build to fail on it.
 export const dynamic = "force-dynamic";
 
-const GRID =
-  "grid grid-cols-[44px_minmax(220px,1fr)_72px_84px_72px_72px_20px] items-center gap-4";
+const DESKTOP_GRID =
+  "hidden sm:grid grid-cols-[44px_minmax(220px,1fr)_72px_84px_72px_72px_20px] items-center gap-4";
 
 export default async function CappersIndexPage() {
   let cappers: CapperRow[] = [];
@@ -76,7 +76,7 @@ export default async function CappersIndexPage() {
 
         <section className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl">
           <div
-            className={`${GRID} px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.16em]
+            className={`${DESKTOP_GRID} px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.16em]
                        text-[var(--color-text-muted)] border-b border-[var(--color-border)]`}
           >
             <div></div>
@@ -137,36 +137,72 @@ function CapperIndexRow({
   return (
     <Link
       href={c.handle ? `/cappers/${c.handle}` : "#"}
-      className={`group/row ${GRID} px-6 py-[18px]
-                  hover:bg-[rgba(255,255,255,0.022)] transition-colors duration-150
+      className={`group/row block hover:bg-[rgba(255,255,255,0.022)] transition-colors duration-150
                   ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
     >
-      <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} />
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
-            {c.display_name ?? c.handle}
-          </span>
-          {c.has_paid_program && <PaidProgramPill />}
+      <div className={`${DESKTOP_GRID} px-6 py-[18px]`}>
+        <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} />
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
+              {c.display_name ?? c.handle}
+            </span>
+            {c.has_paid_program && <PaidProgramPill />}
+          </div>
+          <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate mt-[3px]">
+            {c.handle ? formatHandle(c.handle) : ""}
+          </div>
         </div>
-        <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate mt-[3px]">
-          {c.handle ? formatHandle(c.handle) : ""}
+        <div className="text-right text-[13px] text-[var(--color-text-soft)] font-semibold tabular-nums">
+          {c.picks_count}
+        </div>
+        <div className={`text-right text-[13px] font-bold tabular-nums ${unitsCls}`}>
+          {formatUnits(c.units_profit)}u
+        </div>
+        <div className={`text-right text-[13px] font-bold tabular-nums ${roiCls}`}>
+          {formatRoi(c.roi_pct)}
+        </div>
+        <div className="text-right text-[13px] text-[var(--color-text-soft)] font-semibold tabular-nums">
+          {formatWinRate(c.win_rate)}
+        </div>
+        <div className="flex justify-end text-[var(--color-text-muted)] opacity-0 -translate-x-1 group-hover/row:opacity-100 group-hover/row:translate-x-0 transition-all duration-150">
+          <ChevronIcon size={14} className="-rotate-90" />
         </div>
       </div>
-      <div className="text-right text-[13px] text-[var(--color-text-soft)] font-semibold tabular-nums">
-        {c.picks_count}
-      </div>
-      <div className={`text-right text-[13px] font-bold tabular-nums ${unitsCls}`}>
-        {formatUnits(c.units_profit)}u
-      </div>
-      <div className={`text-right text-[13px] font-bold tabular-nums ${roiCls}`}>
-        {formatRoi(c.roi_pct)}
-      </div>
-      <div className="text-right text-[13px] text-[var(--color-text-soft)] font-semibold tabular-nums">
-        {formatWinRate(c.win_rate)}
-      </div>
-      <div className="flex justify-end text-[var(--color-text-muted)] opacity-0 -translate-x-1 group-hover/row:opacity-100 group-hover/row:translate-x-0 transition-all duration-150">
-        <ChevronIcon size={14} className="-rotate-90" />
+
+      <div className="sm:hidden block px-4 py-3.5">
+        <div className="flex items-center gap-3 min-w-0">
+          <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
+                {c.display_name ?? c.handle}
+              </span>
+              {c.has_paid_program && <PaidProgramPill />}
+            </div>
+            <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate mt-[2px]">
+              {c.handle ? formatHandle(c.handle) : ""}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-4 gap-2 mt-3 text-center">
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] font-bold">Picks</div>
+            <div className="text-sm font-bold tabular-nums mt-0.5">{c.picks_count}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] font-bold">Win</div>
+            <div className="text-sm font-bold tabular-nums mt-0.5">{formatWinRate(c.win_rate)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] font-bold">Units</div>
+            <div className={`text-sm font-bold tabular-nums mt-0.5 ${unitsCls}`}>{formatUnits(c.units_profit)}u</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] font-bold">ROI</div>
+            <div className={`text-sm font-bold tabular-nums mt-0.5 ${roiCls}`}>{formatRoi(c.roi_pct)}</div>
+          </div>
+        </div>
       </div>
     </Link>
   );
