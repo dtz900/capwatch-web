@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import { BrandFooter } from "@/components/nav/BrandFooter";
+import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body>
         {children}
         <BrandFooter />
+        <MobileTabBar />
       </body>
     </html>
   );
