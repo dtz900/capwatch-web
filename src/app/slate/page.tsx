@@ -9,7 +9,7 @@ interface PageProps {
 }
 
 export const metadata = {
-  title: "Slate · Capwatch",
+  title: "Slate · TailSlips",
   description:
     "Tonight's MLB slate. What every tracked sharp is betting, ranked by leaderboard, grouped by game.",
 };

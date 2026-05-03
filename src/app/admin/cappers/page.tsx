@@ -2,7 +2,7 @@ import { TopNav } from "@/components/nav/TopNav";
 import { AddCapperForm } from "./AddCapperForm";
 
 export const metadata = {
-  title: "Add capper · Capwatch Admin",
+  title: "Add capper · TailSlips Admin",
   robots: { index: false, follow: false },
 };
 

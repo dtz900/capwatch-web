@@ -26,8 +26,8 @@ const PAGE_SIZE = 25;
 export async function generateMetadata({ params }: PageProps) {
   const { handle } = await params;
   return {
-    title: `@${handle} · Capwatch`,
-    description: `Pick history and audit trail for @${handle} on Capwatch.`,
+    title: `@${handle} · TailSlips`,
+    description: `Pick history and audit trail for @${handle} on TailSlips.`,
   };
 }
 

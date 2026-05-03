@@ -13,9 +13,9 @@ import {
 import type { CapperRow } from "@/lib/types";
 
 export const metadata = {
-  title: "Cappers · Capwatch",
+  title: "Cappers · TailSlips",
   description:
-    "Every tracked capper on Capwatch. Click a row for the full pick history and audit trail.",
+    "Every tracked capper on TailSlips. Click a row for the full pick history and audit trail.",
 };
 
 const GRID =

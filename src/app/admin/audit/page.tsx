@@ -14,7 +14,7 @@ interface PageProps {
 }
 
 export const metadata = {
-  title: "Audit · Capwatch Admin",
+  title: "Audit · TailSlips Admin",
   robots: { index: false, follow: false },
 };
 

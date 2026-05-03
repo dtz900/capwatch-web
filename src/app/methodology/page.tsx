@@ -1,8 +1,8 @@
 import { TopNav } from "@/components/nav/TopNav";
 
 export const metadata = {
-  title: "Methodology · Capwatch",
-  description: "How Capwatch ingests, parses, and grades public capper picks.",
+  title: "Methodology · TailSlips",
+  description: "How TailSlips ingests, parses, and grades public capper picks.",
 };
 
 export default function Methodology() {
@@ -12,13 +12,13 @@ export default function Methodology() {
       <main className="max-w-[760px] mx-auto px-7 pt-14 pb-16">
         <h1 className="text-[36px] font-extrabold tracking-[-0.025em] mb-4">Methodology</h1>
         <p className="text-[var(--color-text-soft)] mb-4">
-          Capwatch ingests every tweet from a curated list of public sports-betting accounts via the X Filtered Stream.
+          TailSlips ingests every tweet from a curated list of public sports-betting accounts via the X Filtered Stream.
           A language model parses each tweet into a structured pick. After the game finalizes, the pick is graded against
           the final box score using the closing line. Every account on the leaderboard is graded by the same code path.
         </p>
         <h2 className="text-[20px] font-bold mt-8 mb-3">Disclosure</h2>
         <p className="text-[var(--color-text-soft)] mb-4">
-          Capwatch is operated by FADE AI. The @fadeai_ entry on the leaderboard is the FADE AI model. It is parsed and
+          TailSlips is operated by FADE AI. The @fadeai_ entry on the leaderboard is the FADE AI model. It is parsed and
           graded identically to every other tracked capper. The model has no informational advantage on this surface.
         </p>
         <h2 className="text-[20px] font-bold mt-8 mb-3">Data sources</h2>

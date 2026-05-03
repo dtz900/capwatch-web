@@ -2,7 +2,7 @@ import { TopNav } from "@/components/nav/TopNav";
 import { PipelineTicker } from "./PipelineTicker";
 
 export const metadata = {
-  title: "Pipeline ticker · Capwatch Admin",
+  title: "Pipeline ticker · TailSlips Admin",
   robots: { index: false, follow: false },
 };
 

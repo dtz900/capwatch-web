@@ -32,7 +32,7 @@ export function middleware(req: NextRequest) {
 
   return new NextResponse("Authentication required", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Capwatch Admin"' },
+    headers: { "WWW-Authenticate": 'Basic realm="TailSlips Admin"' },
   });
 }
 
