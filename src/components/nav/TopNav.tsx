@@ -35,7 +35,7 @@ export function TopNav() {
             className="h-9 w-auto"
           />
         </Link>
-        <div className="flex gap-1 mx-6">
+        <div className="hidden sm:flex gap-1 mx-6">
           {LINKS.map((l) => {
             const active = isActive(l.href, pathname);
             const cls = active
