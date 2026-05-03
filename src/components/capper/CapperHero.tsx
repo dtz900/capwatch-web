@@ -52,7 +52,7 @@ export function CapperHero({
       <CapperAvatar url={c.profile_image_url} handle={c.handle} size={72} apiIntegrated={isModel} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap mb-1">
-          <h1 className="text-[32px] font-extrabold tracking-[-0.02em] leading-none">
+          <h1 className="text-[24px] sm:text-[32px] font-extrabold tracking-[-0.02em] leading-none">
             {c.display_name ?? c.handle}
           </h1>
           {c.has_paid_program && <PaidProgramPill />}
