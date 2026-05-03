@@ -47,37 +47,50 @@ function bucketPicks(picks: SlatePick[], awayTeam: string | null, homeTeam: stri
 function Side({
   team,
   picks,
+  awayTeam,
+  homeTeam,
 }: {
   team: string | null;
   picks: SlatePick[];
+  awayTeam: string | null;
+  homeTeam: string | null;
 }) {
   const color = teamColor(team);
+  const label = `Backing ${team ?? "this side"} on the moneyline`;
   return (
     <div>
       <div
         className="flex items-baseline justify-between pb-2 mb-1 border-b-2"
         style={{ borderColor: color }}
       >
-        <div className="flex items-baseline gap-2">
-          <span className="text-[10px] uppercase tracking-[0.16em] font-bold text-[var(--color-text-muted)]">
-            On
+        <div className="flex items-baseline gap-1.5 min-w-0">
+          <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-[var(--color-text-muted)]">
+            Backing
           </span>
-          <span className="text-[14px] font-extrabold tracking-tight" style={{ color }}>
+          <span className="text-[15px] font-extrabold tracking-tight" style={{ color }}>
             {team ?? "—"}
           </span>
+          <span className="text-[10px] uppercase tracking-[0.10em] font-semibold text-[var(--color-text-muted)] truncate">
+            moneyline
+          </span>
         </div>
-        <span className="text-[11px] tabular-nums font-bold text-[var(--color-text-muted)]">
-          {picks.length}
+        <span className="text-[11px] tabular-nums font-bold text-[var(--color-text-muted)] whitespace-nowrap">
+          {picks.length} {picks.length === 1 ? "sharp" : "sharps"}
         </span>
       </div>
       {picks.length === 0 ? (
         <div className="text-[11px] italic text-[var(--color-text-muted)] py-2">
-          No sharps on {team ?? "this side"}
+          No sharps {label.toLowerCase()}.
         </div>
       ) : (
         <div className="flex flex-col">
           {picks.map((pick, i) => (
-            <VersusPickRow key={`${pick.capper_id}-${i}`} pick={pick} />
+            <VersusPickRow
+              key={`${pick.capper_id}-${i}`}
+              pick={pick}
+              awayTeam={awayTeam}
+              homeTeam={homeTeam}
+            />
           ))}
         </div>
       )}
@@ -127,17 +140,32 @@ export function GameBlock({ game }: { game: SlateGame }) {
 
       {/* Versus: cappers face off on either side */}
       {hasMlAction && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6 mt-8 max-w-[640px] mx-auto">
-          <Side team={game.away_team} picks={buckets.awayMl} />
-          <Side team={game.home_team} picks={buckets.homeMl} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
+          <Side
+            team={game.away_team}
+            picks={buckets.awayMl}
+            awayTeam={game.away_team}
+            homeTeam={game.home_team}
+          />
+          <Side
+            team={game.home_team}
+            picks={buckets.homeMl}
+            awayTeam={game.away_team}
+            homeTeam={game.home_team}
+          />
         </div>
       )}
 
-      {/* Other markets: totals, props, parlay legs, etc. */}
+      {/* Other markets: totals, props, non-ML parlay legs, etc. */}
       {hasOther && (
-        <div className="mt-8 max-w-[640px] mx-auto">
-          <div className="text-[10px] uppercase tracking-[0.16em] font-bold text-[var(--color-text-muted)] mb-2 pb-2 border-b border-[rgba(255,255,255,0.06)]">
-            Other markets · {buckets.other.length}
+        <div className="mt-8 max-w-[680px] mx-auto">
+          <div className="flex items-baseline justify-between pb-2 mb-1 border-b border-[rgba(255,255,255,0.10)]">
+            <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-[var(--color-text-muted)]">
+              Totals, props & parlays
+            </span>
+            <span className="text-[11px] tabular-nums font-bold text-[var(--color-text-muted)]">
+              {buckets.other.length} {buckets.other.length === 1 ? "pick" : "picks"}
+            </span>
           </div>
           <div className="flex flex-col">
             {buckets.other.map((pick, i) => (
