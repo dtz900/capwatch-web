@@ -116,19 +116,19 @@ export function GameBlock({ game }: { game: SlateGame }) {
         <div className="text-[11px] tabular-nums font-semibold text-[var(--color-text-muted)] mb-4">
           {time}
         </div>
-        <div className="flex items-center justify-center gap-6 sm:gap-10">
-          <div className="flex flex-col items-center gap-3">
-            <TeamLogo abbr={game.away_team} size={88} />
-            <span className="text-[30px] font-extrabold tracking-[-0.03em] leading-none">
+        <div className="flex items-center justify-center gap-4 sm:gap-10">
+          <div className="flex flex-col items-center gap-2 sm:gap-3">
+            <TeamLogo abbr={game.away_team} size={88} className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]" />
+            <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
               {game.away_team}
             </span>
           </div>
-          <span className="text-[12px] uppercase tracking-[0.22em] font-bold text-[var(--color-text-muted)] mt-10">
+          <span className="text-[11px] sm:text-[12px] uppercase tracking-[0.22em] font-bold text-[var(--color-text-muted)] mt-7 sm:mt-10">
             vs
           </span>
-          <div className="flex flex-col items-center gap-3">
-            <TeamLogo abbr={game.home_team} size={88} />
-            <span className="text-[30px] font-extrabold tracking-[-0.03em] leading-none">
+          <div className="flex flex-col items-center gap-2 sm:gap-3">
+            <TeamLogo abbr={game.home_team} size={88} className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]" />
+            <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
               {game.home_team}
             </span>
           </div>
