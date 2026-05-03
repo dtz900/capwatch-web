@@ -53,12 +53,14 @@ export default async function Home({ searchParams }: PageProps) {
 
   const top3 = rows.slice(0, 3);
   const rest = rows.slice(3, 50);
+  const totalPicks = rows.reduce((sum, r) => sum + (r.picks_count ?? 0), 0);
+  const heroStats = { totalPicks, cappersCount: rows.length };
 
   return (
     <>
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
-        <Hero />
+        <Hero stats={heroStats} />
         <div className="mb-8">
           <FilterBar filters={filters} />
         </div>
