@@ -33,7 +33,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
     return (
       <>
         <TopNav />
-        <main className="max-w-[920px] mx-auto px-7 pb-24">
+        <main className="max-w-[920px] mx-auto px-4 sm:px-7 pb-24">
           <header className="pt-12 pb-3">
             <h1 className="text-[44px] font-extrabold tracking-[-0.03em] leading-[1]">
               {dateParam === "today" ? "Tonight's slate" : "Tomorrow's slate"}
@@ -60,7 +60,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
   return (
     <>
       <TopNav />
-      <main className="max-w-[920px] mx-auto px-7 pb-24">
+      <main className="max-w-[920px] mx-auto px-4 sm:px-7 pb-24">
         <header className="pt-12 pb-3 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-[44px] font-extrabold tracking-[-0.03em] leading-[1]">

@@ -57,7 +57,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
     return (
       <>
         <TopNav />
-        <main className="max-w-[1240px] mx-auto px-7 pt-12 pb-16">
+        <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pt-12 pb-16">
           <h1 className="text-[24px] font-extrabold mb-2">@{handle}</h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">
             Capper profile is temporarily unavailable. Refresh in a moment.
@@ -79,7 +79,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   return (
     <>
       <TopNav />
-      <main className="max-w-[1240px] mx-auto px-7 pb-16">
+      <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <div className="pt-10">
           <CapperHero profile={profile} windowAgg={windowAgg ?? allTimeAgg} recentHistory={profile.history} />
         </div>

@@ -41,7 +41,7 @@ export default async function Home({ searchParams }: PageProps) {
     return (
       <>
         <TopNav />
-        <main className="max-w-[1240px] mx-auto px-7">
+        <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
           <Hero />
           <div className="text-center py-16 text-[13px] text-[var(--color-text-muted)]">
             Leaderboard is temporarily unavailable. Refresh in a moment.
@@ -57,7 +57,7 @@ export default async function Home({ searchParams }: PageProps) {
   return (
     <>
       <TopNav />
-      <main className="max-w-[1240px] mx-auto px-7">
+      <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
         <Hero />
         <div className="mb-8">
           <FilterBar filters={filters} />

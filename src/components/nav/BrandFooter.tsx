@@ -9,8 +9,8 @@ import Image from "next/image";
  */
 export function BrandFooter() {
   return (
-    <footer className="border-t border-[rgba(255,255,255,0.04)] mt-4">
-      <div className="max-w-[1240px] mx-auto px-7 py-10 flex flex-col items-center justify-center gap-3">
+    <footer className="border-t border-[rgba(255,255,255,0.04)] mt-4 pb-20 sm:pb-0">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-7 py-10 flex flex-col items-center justify-center gap-3">
         <Image
           src="/logo-stacked.png"
           alt="TailSlips"

@@ -47,7 +47,7 @@ export default async function CappersIndexPage() {
     return (
       <>
         <TopNav />
-        <main className="max-w-[1240px] mx-auto px-7 pb-16 pt-12">
+        <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16 pt-12">
           <h1 className="text-[24px] font-extrabold mb-2">Capper index</h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">
             Leaderboard is temporarily unavailable. Refresh in a moment.
@@ -60,7 +60,7 @@ export default async function CappersIndexPage() {
   return (
     <>
       <TopNav />
-      <main className="max-w-[1240px] mx-auto px-7 pb-16">
+      <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <header className="pt-12 pb-8">
           <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2.5">
             Capper index
