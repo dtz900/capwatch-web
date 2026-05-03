@@ -155,16 +155,28 @@ export function FixPanel(props: Props) {
     });
   };
 
-  const doListGames = () => {
-    if (!props.postedAt) {
-      flash("No posted_at", false);
+  const defaultGameDate = props.postedAt
+    ? new Date(props.postedAt).toISOString().slice(0, 10)
+    : new Date().toISOString().slice(0, 10);
+  const [gameSearchDate, setGameSearchDate] = useState<string>(defaultGameDate);
+
+  const doListGames = (overrideDate?: string) => {
+    const ymd = overrideDate ?? gameSearchDate;
+    if (!ymd) {
+      flash("No date specified", false);
       return;
     }
-    const ymd = new Date(props.postedAt).toISOString().slice(0, 10);
+    if (overrideDate) setGameSearchDate(overrideDate);
     startTransition(async () => {
       const r = await searchGamesAction(ymd);
       setGameResults(r);
     });
+  };
+
+  const shiftDay = (delta: number): string => {
+    const d = new Date(gameSearchDate + "T12:00:00Z");
+    d.setUTCDate(d.getUTCDate() + delta);
+    return d.toISOString().slice(0, 10);
   };
 
   if (!open) {
@@ -250,14 +262,40 @@ export function FixPanel(props: Props) {
 
           {lane === "game" && (
             <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                disabled={pending}
-                onClick={doListGames}
-                className="self-start px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
-              >
-                List games on this date
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="date"
+                  value={gameSearchDate}
+                  onChange={(e) => setGameSearchDate(e.target.value)}
+                  className="bg-[rgba(0,0,0,0.30)] border border-[rgba(255,255,255,0.10)] rounded px-2 py-1 text-[11px] text-[var(--color-text)] outline-none focus:border-[rgba(255,255,255,0.25)]"
+                />
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => doListGames()}
+                  className="px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
+                >
+                  List games
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => doListGames(shiftDay(-1))}
+                  title="Search the day before"
+                  className="px-2 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-muted)]"
+                >
+                  ← prev
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => doListGames(shiftDay(1))}
+                  title="Search the day after"
+                  className="px-2 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-muted)]"
+                >
+                  next →
+                </button>
+              </div>
               {gameResults.length > 0 && (
                 <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
                   {(() => {
