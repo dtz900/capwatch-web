@@ -146,6 +146,10 @@ export interface GameSearchResult {
   home_team: string | null;
   game_date: string | null;
   commence_time: string | null;
+  /** Canonical doubleheader index from MLB Stats API. 1 for single games and
+   * doubleheader-game-1; 2 for doubleheader-game-2; null when the upstream
+   * couldn't be reached. */
+  game_number?: number | null;
 }
 
 export async function searchGamesAction(

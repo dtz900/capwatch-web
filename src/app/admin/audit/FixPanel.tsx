@@ -261,35 +261,23 @@ export function FixPanel(props: Props) {
               {gameResults.length > 0 && (
                 <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
                   {(() => {
-                    // Group games by matchup so we can detect doubleheaders.
-                    // Only attach Game 1 / Game 2 labels when EVERY game in
-                    // the matchup has a non-null commence_time we can trust.
-                    // Otherwise tag the row as "DH" without claiming order.
-                    const byMatchup: Record<string, typeof gameResults> = {};
+                    // Doubleheader detection: a matchup that appears more than
+                    // once on the date. game_number comes from MLB Stats API
+                    // and is the canonical source for which is Game 1 vs 2.
+                    const matchupCount: Record<string, number> = {};
                     for (const g of gameResults) {
                       const key = `${g.away_team}@${g.home_team}`;
-                      (byMatchup[key] ??= []).push(g);
-                    }
-                    const orderedLabel: Record<number, string | null> = {};
-                    for (const [, games] of Object.entries(byMatchup)) {
-                      if (games.length < 2) continue;
-                      const allHaveTime = games.every((x) => x.commence_time);
-                      if (allHaveTime) {
-                        // Sort copy by time, attach Game 1 / Game 2 / Game N.
-                        const sorted = [...games].sort((a, b) =>
-                          (a.commence_time ?? "").localeCompare(b.commence_time ?? ""),
-                        );
-                        sorted.forEach((g, i) => {
-                          orderedLabel[g.game_pk] = `Game ${i + 1}`;
-                        });
-                      } else {
-                        // Mixed/missing commence_time. Mark all as "DH" only.
-                        for (const g of games) orderedLabel[g.game_pk] = "DH";
-                      }
+                      matchupCount[key] = (matchupCount[key] ?? 0) + 1;
                     }
 
                     return gameResults.map((g) => {
-                      const dhLabel = orderedLabel[g.game_pk] ?? null;
+                      const matchupKey = `${g.away_team}@${g.home_team}`;
+                      const isDoubleheader = (matchupCount[matchupKey] ?? 0) > 1;
+                      const dhLabel = isDoubleheader
+                        ? g.game_number != null
+                          ? `Game ${g.game_number}`
+                          : "DH"
+                        : null;
                       const timeLabel = g.commence_time
                         ? new Date(g.commence_time).toLocaleTimeString("en-US", {
                             hour: "numeric",
@@ -317,8 +305,8 @@ export function FixPanel(props: Props) {
                               }`}
                               title={
                                 dhLabel === "DH"
-                                  ? "Doubleheader — game order can't be confirmed (missing start time)"
-                                  : `Doubleheader ${dhLabel}, ordered by start time`
+                                  ? "Doubleheader. MLB Stats API was unreachable so game order can't be confirmed right now."
+                                  : `Doubleheader ${dhLabel} (per MLB Stats API)`
                               }
                             >
                               {dhLabel}
