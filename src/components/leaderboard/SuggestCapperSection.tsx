@@ -53,7 +53,7 @@ export function SuggestCapperSection() {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg
                          border border-[var(--color-border-h)] bg-[var(--color-bg-card)]
                          text-sm font-bold hover:border-[rgba(255,255,255,0.20)]
                          transition-colors"
@@ -111,7 +111,7 @@ export function SuggestCapperSection() {
                 <button
                   type="submit"
                   disabled={submitting || !handle.trim()}
-                  className="px-4 py-2.5 rounded-lg text-sm font-bold
+                  className="flex-1 sm:flex-none px-4 py-3 sm:py-2.5 rounded-lg text-sm font-bold
                              bg-[var(--color-gold)] text-black
                              hover:brightness-110 active:brightness-95
                              disabled:opacity-50 disabled:cursor-not-allowed
@@ -122,7 +122,7 @@ export function SuggestCapperSection() {
                 <button
                   type="button"
                   onClick={() => { setOpen(false); setResult(null); }}
-                  className="px-3 py-2.5 text-sm font-semibold
+                  className="px-3 py-3 sm:py-2.5 text-sm font-semibold
                              text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 >
                   Cancel
