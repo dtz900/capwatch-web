@@ -18,19 +18,44 @@ export const metadata = {
     "Every tracked capper on TailSlips. Click a row for the full pick history and audit trail.",
 };
 
+// Render on demand instead of prerendering at build time. The API's
+// supabase_disconnect_recovery middleware can return a transient 503 when an
+// idle Supabase HTTP/2 connection drops; we don't want a build to fail on it.
+export const dynamic = "force-dynamic";
+
 const GRID =
   "grid grid-cols-[44px_minmax(220px,1fr)_72px_84px_72px_72px_20px] items-center gap-4";
 
 export default async function CappersIndexPage() {
-  const data = await fetchLeaderboard({
-    window: "all_time",
-    sort: "units_profit",
-    min_picks: 0,
-    active_only: false,
-  });
-  const cappers = [...data.leaderboard].sort((a, b) =>
-    (a.display_name ?? a.handle ?? "").localeCompare(b.display_name ?? b.handle ?? ""),
-  );
+  let cappers: CapperRow[] = [];
+  let fetchError: string | null = null;
+  try {
+    const data = await fetchLeaderboard({
+      window: "all_time",
+      sort: "units_profit",
+      min_picks: 0,
+      active_only: false,
+    });
+    cappers = [...data.leaderboard].sort((a, b) =>
+      (a.display_name ?? a.handle ?? "").localeCompare(b.display_name ?? b.handle ?? ""),
+    );
+  } catch (err) {
+    fetchError = err instanceof Error ? err.message : String(err);
+  }
+
+  if (fetchError) {
+    return (
+      <>
+        <TopNav />
+        <main className="max-w-[1240px] mx-auto px-7 pb-16 pt-12">
+          <h1 className="text-[24px] font-extrabold mb-2">Capper index</h1>
+          <p className="text-[13px] text-[var(--color-text-muted)]">
+            Leaderboard is temporarily unavailable. Refresh in a moment.
+          </p>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>

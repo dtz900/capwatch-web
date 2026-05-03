@@ -14,11 +14,38 @@ export const metadata = {
     "Tonight's MLB slate. What every tracked sharp is betting, ranked by leaderboard, grouped by game.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function SlatePage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const dateParam: "today" | "tomorrow" =
     sp.date === "tomorrow" ? "tomorrow" : "today";
-  const data = await fetchSlate(dateParam);
+
+  let data: Awaited<ReturnType<typeof fetchSlate>> | null = null;
+  let fetchError: string | null = null;
+  try {
+    data = await fetchSlate(dateParam);
+  } catch (err) {
+    fetchError = err instanceof Error ? err.message : String(err);
+  }
+
+  if (fetchError || !data) {
+    return (
+      <>
+        <TopNav />
+        <main className="max-w-[920px] mx-auto px-7 pb-24">
+          <header className="pt-12 pb-3">
+            <h1 className="text-[44px] font-extrabold tracking-[-0.03em] leading-[1]">
+              {dateParam === "today" ? "Tonight's slate" : "Tomorrow's slate"}
+            </h1>
+          </header>
+          <div className="text-center py-16 text-[13px] text-[var(--color-text-muted)]">
+            Slate is temporarily unavailable. Refresh in a moment.
+          </div>
+        </main>
+      </>
+    );
+  }
 
   const allPicks = data.games.flatMap((g) => g.picks);
   const totalPicks = allPicks.length;

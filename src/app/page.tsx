@@ -15,6 +15,10 @@ const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
 const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count"];
 const MIN_PICKS = 10;
 
+// Render on demand; the API can return a transient 503 during a Supabase
+// HTTP/2 reconnect and we don't want a build to fail on it.
+export const dynamic = "force-dynamic";
+
 export default async function Home({ searchParams }: PageProps) {
   const sp = await searchParams;
   const filters: LeaderboardFilters = {
@@ -24,8 +28,29 @@ export default async function Home({ searchParams }: PageProps) {
     active_only: sp.active_only !== "false",
   };
 
-  const data = await fetchLeaderboard(filters);
-  const rows = data.leaderboard;
+  let rows: Awaited<ReturnType<typeof fetchLeaderboard>>["leaderboard"] = [];
+  let fetchError: string | null = null;
+  try {
+    const data = await fetchLeaderboard(filters);
+    rows = data.leaderboard;
+  } catch (err) {
+    fetchError = err instanceof Error ? err.message : String(err);
+  }
+
+  if (fetchError) {
+    return (
+      <>
+        <TopNav />
+        <main className="max-w-[1240px] mx-auto px-7">
+          <Hero />
+          <div className="text-center py-16 text-[13px] text-[var(--color-text-muted)]">
+            Leaderboard is temporarily unavailable. Refresh in a moment.
+          </div>
+        </main>
+      </>
+    );
+  }
+
   const top3 = rows.slice(0, 3);
   const rest = rows.slice(3, 50);
 
