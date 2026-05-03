@@ -3,6 +3,7 @@ import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { XIcon } from "@/components/icons/XIcon";
 import { SignalsIcon } from "@/components/icons/SignalsIcon";
 import { formatPickText } from "@/lib/bet-format";
+import { sharpTier } from "@/lib/sharp-tier";
 import type { SlatePick } from "@/lib/types";
 
 const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
@@ -24,22 +25,28 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
   const isParlayLeg = pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1;
   const handleStr = pick.handle ? `@${pick.handle}` : "";
   const rankStr = pick.capper_rank != null && pick.capper_rank <= 99 ? `#${pick.capper_rank}` : null;
+  const tier = sharpTier(pick.capper_rank);
   const betText = formatPickText({ pick, awayTeam, homeTeam });
 
   return (
     <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0 py-2 text-[12px] items-start">
       <Link
         href={pick.handle ? `/cappers/${pick.handle}` : "#"}
-        className="shrink-0 row-span-2 self-start mt-0.5"
+        className="shrink-0 row-span-2 self-start mt-0.5 rounded-full"
         aria-label={`View ${pick.handle ?? "capper"} profile`}
+        title={tier ? `Top ${tier.label === "gold" ? 1 : tier.label === "silver" ? 2 : 3} on the leaderboard` : undefined}
+        style={tier ? { boxShadow: `0 0 0 2px ${tier.color}` } : undefined}
       >
-        <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={20} apiIntegrated={isModel} />
+        <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={26} apiIntegrated={isModel} />
       </Link>
 
       {/* Top line: rank, handle, action icon */}
       <div className="flex items-center gap-1.5 min-w-0">
         {rankStr && (
-          <span className="text-[10px] font-bold tabular-nums text-[var(--color-text-muted)]">
+          <span
+            className="text-[10px] font-extrabold tabular-nums"
+            style={{ color: tier?.color ?? "var(--color-text-muted)" }}
+          >
             {rankStr}
           </span>
         )}

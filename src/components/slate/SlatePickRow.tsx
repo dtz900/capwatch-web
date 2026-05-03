@@ -3,6 +3,7 @@ import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { XIcon } from "@/components/icons/XIcon";
 import { SignalsIcon } from "@/components/icons/SignalsIcon";
 import { formatPickText } from "@/lib/bet-format";
+import { sharpTier } from "@/lib/sharp-tier";
 import type { SlatePick } from "@/lib/types";
 
 const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
@@ -36,20 +37,26 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
   const betText = formatPickText({ pick, awayTeam, homeTeam });
   const handleStr = pick.handle ? `@${pick.handle}` : "";
   const rankStr = pick.capper_rank != null && pick.capper_rank <= 99 ? `#${pick.capper_rank}` : null;
+  const tier = sharpTier(pick.capper_rank);
 
   return (
     <div className="group grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 gap-y-0 py-1.5 text-[13px]">
       <Link
         href={pick.handle ? `/cappers/${pick.handle}` : "#"}
-        className="shrink-0"
+        className="shrink-0 rounded-full"
         aria-label={`View ${pick.handle ?? "capper"} profile`}
+        title={tier ? `Top ${tier.label === "gold" ? 1 : tier.label === "silver" ? 2 : 3} on the leaderboard` : undefined}
+        style={tier ? { boxShadow: `0 0 0 2px ${tier.color}` } : undefined}
       >
-        <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={20} apiIntegrated={isModel} />
+        <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={26} apiIntegrated={isModel} />
       </Link>
 
       <div className="min-w-0 truncate text-[var(--color-text-soft)]">
         {rankStr && (
-          <span className="text-[11px] font-bold tabular-nums text-[var(--color-text-muted)] mr-1.5">
+          <span
+            className="text-[11px] font-extrabold tabular-nums mr-1.5"
+            style={{ color: tier?.color ?? "var(--color-text-muted)" }}
+          >
             {rankStr}
           </span>
         )}
