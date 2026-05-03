@@ -27,10 +27,10 @@ export function TopNav() {
       <div className="max-w-[1240px] mx-auto px-7 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center text-[var(--color-text)]" aria-label="TailSlips home">
           <Image
-            src="/logo-horizontal-tight.png"
+            src="/logo-horizontal-aligned-tight.png"
             alt="TailSlips"
-            width={1712}
-            height={418}
+            width={1704}
+            height={402}
             priority
             className="h-9 w-auto"
           />
