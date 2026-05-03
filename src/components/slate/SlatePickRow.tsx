@@ -62,7 +62,8 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
         )}
         <Link
           href={pick.handle ? `/cappers/${pick.handle}` : "#"}
-          className="font-semibold text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
+          className={`font-semibold ${tier ? "" : "text-[var(--color-text-soft)] hover:text-[var(--color-text)]"}`}
+          style={tier ? { color: tier.color } : undefined}
         >
           {handleStr}
         </Link>
@@ -71,7 +72,10 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
         )}
       </div>
 
-      <div className={`shrink-0 text-right tabular-nums ${isHeavy ? "font-extrabold text-[var(--color-text)]" : "font-semibold text-[var(--color-text)]"}`}>
+      <div
+        className={`shrink-0 text-right tabular-nums ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
+        style={tier ? { color: tier.color } : undefined}
+      >
         {betText}
       </div>
 

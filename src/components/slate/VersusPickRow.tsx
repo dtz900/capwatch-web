@@ -52,7 +52,8 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
         )}
         <Link
           href={pick.handle ? `/cappers/${pick.handle}` : "#"}
-          className="font-semibold text-[var(--color-text-soft)] hover:text-[var(--color-text)] truncate"
+          className={`font-semibold truncate ${tier ? "" : "text-[var(--color-text-soft)] hover:text-[var(--color-text)]"}`}
+          style={tier ? { color: tier.color } : undefined}
         >
           {handleStr}
         </Link>
@@ -83,7 +84,10 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
 
       {/* Bottom line: bet text + units */}
       <div className="flex items-baseline justify-between gap-2 mt-0.5">
-        <span className={`tabular-nums truncate ${isHeavy ? "font-extrabold text-[var(--color-text)]" : "font-semibold text-[var(--color-text)]"}`}>
+        <span
+          className={`tabular-nums truncate ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
+          style={tier ? { color: tier.color } : undefined}
+        >
           {betText}
         </span>
         <span className="shrink-0 text-[11px] tabular-nums">
