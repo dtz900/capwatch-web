@@ -53,3 +53,16 @@ html, body {
   0%   { opacity: 0; }
   100% { opacity: 1; }
 }
+
+.tap-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
