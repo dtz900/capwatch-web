@@ -3,7 +3,7 @@ import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { XIcon } from "@/components/icons/XIcon";
 import { SignalsIcon } from "@/components/icons/SignalsIcon";
 import { formatPickText } from "@/lib/bet-format";
-import { sharpTier } from "@/lib/sharp-tier";
+import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
 import type { SlatePick } from "@/lib/types";
 
 const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
@@ -34,8 +34,8 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
         href={pick.handle ? `/cappers/${pick.handle}` : "#"}
         className="shrink-0 row-span-2 self-start mt-0.5 rounded-full"
         aria-label={`View ${pick.handle ?? "capper"} profile`}
-        title={tier ? `Top ${tier.label === "gold" ? 1 : tier.label === "silver" ? 2 : 3} on the leaderboard` : undefined}
-        style={tier ? { boxShadow: `0 0 0 2px ${tier.color}` } : undefined}
+        title={tier ? `Elite sharp · top ${pick.capper_rank} on the leaderboard` : undefined}
+        style={tier ? { boxShadow: ELITE_RING_SHADOW } : undefined}
       >
         <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={26} apiIntegrated={isModel} />
       </Link>
