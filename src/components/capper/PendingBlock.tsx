@@ -47,7 +47,7 @@ export function PendingBlock({ picks }: { picks: HistoryPick[] }) {
               className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-[rgba(255,255,255,0.03)] transition-colors"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                   <span
                     className="text-[9px] uppercase tracking-[0.14em] font-bold px-1.5 py-0.5 rounded
                                bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]"
