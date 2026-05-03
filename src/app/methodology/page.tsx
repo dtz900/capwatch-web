@@ -9,8 +9,8 @@ export default function Methodology() {
   return (
     <>
       <TopNav />
-      <main className="max-w-[760px] mx-auto px-4 sm:px-7 pt-14 pb-16">
-        <h1 className="text-[36px] font-extrabold tracking-[-0.025em] mb-4">Methodology</h1>
+      <main className="max-w-[760px] mx-auto px-4 sm:px-7 pt-10 sm:pt-14 pb-16">
+        <h1 className="text-[28px] sm:text-[36px] font-extrabold tracking-[-0.025em] mb-4">Methodology</h1>
         <p className="text-[var(--color-text-soft)] mb-4">
           TailSlips ingests every tweet from a curated list of public sports-betting accounts via the X Filtered Stream.
           A language model parses each tweet into a structured pick. After the game finalizes, the pick is graded against
