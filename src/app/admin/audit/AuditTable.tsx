@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { AuditProblem } from "@/lib/api";
-import { batchDeletePicksAction } from "./actions";
+import { batchDeletePicksAction, batchRegradePicksAction } from "./actions";
 import { FixPanel } from "./FixPanel";
 
 const REASON_LABEL: Record<string, string> = {
@@ -82,6 +82,20 @@ export function AuditTable({ problems }: Props) {
     router.refresh();
   }
 
+  async function handleBatchRegrade() {
+    if (selected.size === 0) return;
+    setPending(true);
+    setError(null);
+    const res = await batchRegradePicksAction([...selected]);
+    setPending(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setSelected(new Set());
+    router.refresh();
+  }
+
   return (
     <>
       <section className="rounded-2xl border border-[var(--color-border)] overflow-hidden">
@@ -148,12 +162,22 @@ export function AuditTable({ problems }: Props) {
           </button>
           <button
             type="button"
+            onClick={handleBatchRegrade}
+            disabled={pending}
+            title="Clear existing grades so the grader cron re-runs on these picks"
+            className="px-3 py-1.5 rounded-md bg-[rgba(96,165,250,0.18)] hover:bg-[rgba(96,165,250,0.28)]
+                       text-[#93c5fd] text-[12px] font-bold disabled:opacity-50"
+          >
+            {pending ? "Working..." : `Regrade ${selected.size}`}
+          </button>
+          <button
+            type="button"
             onClick={handleBatchDelete}
             disabled={pending}
             className="px-3 py-1.5 rounded-md bg-[var(--color-neg)] hover:opacity-90
                        text-white text-[12px] font-bold disabled:opacity-50"
           >
-            {pending ? "Deleting..." : `Delete ${selected.size}`}
+            {pending ? "Working..." : `Delete ${selected.size}`}
           </button>
         </div>
       )}
