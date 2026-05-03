@@ -4,7 +4,7 @@ import { RecentPicks } from "./RecentPicks";
 import { BiggestWin } from "./BiggestWin";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
-import { LogoMark } from "@/components/nav/LogoMark";
+import Image from "next/image";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
@@ -88,12 +88,12 @@ export function PodiumCard({ rank, variant, capper }: Props) {
         {rank}
       </span>
 
-      {/* CAPWATCH brand mark, faint, bottom-right */}
+      {/* TailSlips crown watermark, faint, bottom-right */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-4 right-4 opacity-[0.10] grayscale"
+        className="pointer-events-none absolute bottom-4 right-4 opacity-[0.12] grayscale"
       >
-        <LogoMark />
+        <Image src="/logo-favicon.png" alt="" width={32} height={32} className="w-8 h-8" />
       </div>
 
       {/* Header: rank pill + X link */}
