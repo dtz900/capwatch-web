@@ -261,21 +261,35 @@ export function FixPanel(props: Props) {
               {gameResults.length > 0 && (
                 <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
                   {(() => {
-                    // Tag game 1 / game 2 within same matchup based on
-                    // commence_time. Endpoint returns rows sorted by
-                    // commence_time ASC, so first occurrence per matchup is
-                    // game 1.
-                    const matchupCounts: Record<string, number> = {};
+                    // Group games by matchup so we can detect doubleheaders.
+                    // Only attach Game 1 / Game 2 labels when EVERY game in
+                    // the matchup has a non-null commence_time we can trust.
+                    // Otherwise tag the row as "DH" without claiming order.
+                    const byMatchup: Record<string, typeof gameResults> = {};
                     for (const g of gameResults) {
                       const key = `${g.away_team}@${g.home_team}`;
-                      matchupCounts[key] = (matchupCounts[key] ?? 0) + 1;
+                      (byMatchup[key] ??= []).push(g);
                     }
-                    const seen: Record<string, number> = {};
+                    const orderedLabel: Record<number, string | null> = {};
+                    for (const [, games] of Object.entries(byMatchup)) {
+                      if (games.length < 2) continue;
+                      const allHaveTime = games.every((x) => x.commence_time);
+                      if (allHaveTime) {
+                        // Sort copy by time, attach Game 1 / Game 2 / Game N.
+                        const sorted = [...games].sort((a, b) =>
+                          (a.commence_time ?? "").localeCompare(b.commence_time ?? ""),
+                        );
+                        sorted.forEach((g, i) => {
+                          orderedLabel[g.game_pk] = `Game ${i + 1}`;
+                        });
+                      } else {
+                        // Mixed/missing commence_time. Mark all as "DH" only.
+                        for (const g of games) orderedLabel[g.game_pk] = "DH";
+                      }
+                    }
+
                     return gameResults.map((g) => {
-                      const key = `${g.away_team}@${g.home_team}`;
-                      seen[key] = (seen[key] ?? 0) + 1;
-                      const isDoubleheader = (matchupCounts[key] ?? 0) > 1;
-                      const dhLabel = isDoubleheader ? `Game ${seen[key]}` : null;
+                      const dhLabel = orderedLabel[g.game_pk] ?? null;
                       const timeLabel = g.commence_time
                         ? new Date(g.commence_time).toLocaleTimeString("en-US", {
                             hour: "numeric",
@@ -295,7 +309,18 @@ export function FixPanel(props: Props) {
                             {g.away_team} @ {g.home_team}
                           </span>
                           {dhLabel && (
-                            <span className="text-[9px] uppercase tracking-[0.10em] font-extrabold px-1.5 py-0.5 rounded bg-[rgba(245,197,74,0.14)] text-[var(--color-gold)]">
+                            <span
+                              className={`text-[9px] uppercase tracking-[0.10em] font-extrabold px-1.5 py-0.5 rounded ${
+                                dhLabel === "DH"
+                                  ? "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-muted)]"
+                                  : "bg-[rgba(245,197,74,0.14)] text-[var(--color-gold)]"
+                              }`}
+                              title={
+                                dhLabel === "DH"
+                                  ? "Doubleheader — game order can't be confirmed (missing start time)"
+                                  : `Doubleheader ${dhLabel}, ordered by start time`
+                              }
+                            >
                               {dhLabel}
                             </span>
                           )}
