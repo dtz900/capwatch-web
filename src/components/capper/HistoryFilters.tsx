@@ -73,7 +73,7 @@ function Group({
               key={o.value || "all"}
               type="button"
               onClick={() => onChange(o.value)}
-              className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-colors ${
+              className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md text-[11px] sm:text-[10px] font-bold transition-colors ${
                 active
                   ? "bg-[rgba(255,255,255,0.10)] text-[var(--color-text)]"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
