@@ -126,7 +126,7 @@ function SegmentedControl<T extends string | number | boolean>({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(item.value)}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold leading-none transition-all duration-150 ${
+            className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md text-[12px] sm:text-[11px] font-bold leading-none transition-all duration-150 ${
               selected
                 ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[rgba(255,255,255,0.04)]"
