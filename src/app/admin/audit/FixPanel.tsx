@@ -260,20 +260,57 @@ export function FixPanel(props: Props) {
               </button>
               {gameResults.length > 0 && (
                 <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
-                  {gameResults.map((g) => (
-                    <button
-                      key={g.game_pk}
-                      type="button"
-                      disabled={pending}
-                      onClick={() => onPickGame(g)}
-                      className="text-left px-2.5 py-1.5 rounded text-[11px] bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)]"
-                    >
-                      <span className="font-semibold text-[var(--color-text)]">
-                        {g.away_team} @ {g.home_team}
-                      </span>
-                      <span className="text-[var(--color-text-muted)] ml-2">id {g.game_pk}</span>
-                    </button>
-                  ))}
+                  {(() => {
+                    // Tag game 1 / game 2 within same matchup based on
+                    // commence_time. Endpoint returns rows sorted by
+                    // commence_time ASC, so first occurrence per matchup is
+                    // game 1.
+                    const matchupCounts: Record<string, number> = {};
+                    for (const g of gameResults) {
+                      const key = `${g.away_team}@${g.home_team}`;
+                      matchupCounts[key] = (matchupCounts[key] ?? 0) + 1;
+                    }
+                    const seen: Record<string, number> = {};
+                    return gameResults.map((g) => {
+                      const key = `${g.away_team}@${g.home_team}`;
+                      seen[key] = (seen[key] ?? 0) + 1;
+                      const isDoubleheader = (matchupCounts[key] ?? 0) > 1;
+                      const dhLabel = isDoubleheader ? `Game ${seen[key]}` : null;
+                      const timeLabel = g.commence_time
+                        ? new Date(g.commence_time).toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            timeZoneName: "short",
+                          })
+                        : null;
+                      return (
+                        <button
+                          key={g.game_pk}
+                          type="button"
+                          disabled={pending}
+                          onClick={() => onPickGame(g)}
+                          className="text-left px-2.5 py-1.5 rounded text-[11px] bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)] flex items-center gap-2"
+                        >
+                          <span className="font-semibold text-[var(--color-text)]">
+                            {g.away_team} @ {g.home_team}
+                          </span>
+                          {dhLabel && (
+                            <span className="text-[9px] uppercase tracking-[0.10em] font-extrabold px-1.5 py-0.5 rounded bg-[rgba(245,197,74,0.14)] text-[var(--color-gold)]">
+                              {dhLabel}
+                            </span>
+                          )}
+                          {timeLabel && (
+                            <span className="text-[var(--color-text-soft)] tabular-nums">
+                              {timeLabel}
+                            </span>
+                          )}
+                          <span className="text-[var(--color-text-muted)] ml-auto">
+                            id {g.game_pk}
+                          </span>
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>

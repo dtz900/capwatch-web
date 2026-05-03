@@ -92,6 +92,32 @@ export async function deletePickAction(pickId: number): Promise<ActionResult> {
   });
 }
 
+export type BatchDeleteResult =
+  | { ok: true; deleted: number; capper_ids: number[] }
+  | { ok: false; error: string };
+
+export async function batchDeletePicksAction(pickIds: number[]): Promise<BatchDeleteResult> {
+  if (pickIds.length === 0) return { ok: true, deleted: 0, capper_ids: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/picks/batch-delete`, {
+      method: "POST",
+      headers: adminHeaders(),
+      body: JSON.stringify({ pick_ids: pickIds }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as { deleted: number; capper_ids: number[] };
+    revalidatePath("/admin/audit");
+    revalidatePath("/");
+    revalidatePath("/cappers");
+    return { ok: true, deleted: data.deleted ?? 0, capper_ids: data.capper_ids ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export interface PlayerSearchResult {
   player_id: number;
   full_name: string;

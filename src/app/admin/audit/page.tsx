@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
-import { fetchAudit, type AuditProblem } from "@/lib/api";
-import { FixPanel } from "./FixPanel";
+import { fetchAudit } from "@/lib/api";
+import { AuditTable } from "./AuditTable";
 
 interface PageProps {
   searchParams: Promise<{
@@ -36,10 +36,6 @@ const REASON_LABEL: Record<string, string> = {
   player_did_not_play: "Player didn't play",
   data_gap: "Game data gap",
 };
-
-// Reasons that are book-rules-correct voids (no human triage needed).
-// Render muted on the audit page so they don't compete with real bugs.
-const BENIGN_REASONS = new Set(["player_did_not_play", "game_pending"]);
 
 export default async function AdminAuditPage({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -91,7 +87,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             Picks needing review
           </h1>
           <p className="text-[13px] text-[var(--color-text-soft)] font-medium mt-2">
-            Real-time. Every pick that didn't grade cleanly, with the specific
+            Real-time. Every pick that didn&apos;t grade cleanly, with the specific
             failure reason. {data.total_problems} item{data.total_problems === 1 ? "" : "s"} match the current filters.
           </p>
         </header>
@@ -170,55 +166,39 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[var(--color-border)] overflow-hidden">
-          <div
-            className="grid grid-cols-[80px_120px_140px_1fr_60px_30px] gap-3 items-center px-4 py-2.5
-                          bg-[rgba(255,255,255,0.02)] border-b border-[var(--color-border)]
-                          text-[10px] uppercase tracking-[0.14em] font-bold text-[var(--color-text-muted)]"
-          >
-            <div>Date</div>
-            <div>Capper</div>
-            <div>Reason</div>
-            <div>Pick</div>
-            <div className="text-right">Market</div>
-            <div />
-          </div>
-          {data.problems.length === 0 ? (
-            <div className="px-6 py-10 text-center text-[13px] text-[var(--color-text-muted)] italic">
-              Nothing matches these filters.
-            </div>
-          ) : (
-            data.problems.map((p) => <ProblemRow key={p.pick_id} p={p} />)
-          )}
-          <div
-            className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]
+        <AuditTable
+          key={`${reason ?? ""}|${capper ?? ""}|${kind ?? ""}|${sort}|${offset}`}
+          problems={data.problems}
+        />
+
+        <div
+          className="flex items-center justify-between px-4 py-3 mt-4 border-t border-[var(--color-border)]
                           text-[11px] text-[var(--color-text-muted)] font-medium"
-          >
-            <div>
-              Showing {showingFrom}-{showingTo} of {data.total_problems}
-            </div>
-            <div className="flex items-center gap-2">
-              {offset > 0 && (
-                <Link
-                  href={buildHref({ offset: String(Math.max(0, offset - PAGE_SIZE)) })}
-                  className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
-                             text-[var(--color-text-soft)] text-[11px] font-bold"
-                >
-                  ← Newer
-                </Link>
-              )}
-              {offset + data.problems.length < data.total_problems && (
-                <Link
-                  href={buildHref({ offset: String(offset + PAGE_SIZE) })}
-                  className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
-                             text-[var(--color-text-soft)] text-[11px] font-bold"
-                >
-                  Older →
-                </Link>
-              )}
-            </div>
+        >
+          <div>
+            Showing {showingFrom}-{showingTo} of {data.total_problems}
           </div>
-        </section>
+          <div className="flex items-center gap-2">
+            {offset > 0 && (
+              <Link
+                href={buildHref({ offset: String(Math.max(0, offset - PAGE_SIZE)) })}
+                className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
+                             text-[var(--color-text-soft)] text-[11px] font-bold"
+              >
+                ← Newer
+              </Link>
+            )}
+            {offset + data.problems.length < data.total_problems && (
+              <Link
+                href={buildHref({ offset: String(offset + PAGE_SIZE) })}
+                className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
+                             text-[var(--color-text-soft)] text-[11px] font-bold"
+              >
+                Older →
+              </Link>
+            )}
+          </div>
+        </div>
 
         <footer className="flex items-center justify-between py-7 pb-2 mt-6 text-xs text-[var(--color-text-muted)] font-medium">
           <div>Live data. No cache. Every refresh hits the audit endpoint.</div>
@@ -255,82 +235,3 @@ function Stat({
   );
 }
 
-function ProblemRow({ p }: { p: AuditProblem }) {
-  const date = p.posted_at
-    ? new Date(p.posted_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : "—";
-  const reasonLabel = REASON_LABEL[p.reason] ?? p.reason;
-  const benign = BENIGN_REASONS.has(p.reason);
-  const reasonColor = benign
-    ? "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)]"
-    : p.kind === "void"
-      ? "bg-[var(--color-neg-soft)] text-[var(--color-neg)]"
-      : "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]";
-  return (
-    <div className="border-b border-[rgba(255,255,255,0.03)] last:border-b-0 px-4 py-3">
-      <div className="grid grid-cols-[80px_120px_140px_1fr_60px_50px] gap-3 items-start text-[12px]">
-        <div className="text-[var(--color-text-muted)] font-medium tabular-nums">{date}</div>
-        <div className="min-w-0">
-          <Link
-            href={p.capper_handle ? `/cappers/${p.capper_handle}` : "#"}
-            className="font-semibold truncate text-[var(--color-text)] hover:underline block"
-          >
-            {p.capper_display_name ?? p.capper_handle ?? "—"}
-          </Link>
-          <div className="text-[10px] text-[var(--color-text-muted)]">
-            @{p.capper_handle ?? "—"}
-          </div>
-        </div>
-        <div>
-          <span
-            className={`inline-block px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-[0.10em] ${reasonColor}`}
-          >
-            {reasonLabel}
-          </span>
-          <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
-            pid={p.pick_id}
-            {p.parlay_id != null && <span className="ml-1">· parlay {p.parlay_id}</span>}
-          </div>
-        </div>
-        <div className="min-w-0">
-          <div className="font-semibold text-[var(--color-text)] truncate">
-            {p.selection ?? p.market ?? "—"}
-          </div>
-          {p.tweet_text && (
-            <div className="text-[10px] text-[var(--color-text-muted)] mt-1 leading-snug line-clamp-2">
-              {p.tweet_text}
-            </div>
-          )}
-        </div>
-        <div className="text-right text-[var(--color-text-soft)] font-medium">
-          {p.market ?? "—"}
-        </div>
-        <div className="text-right flex flex-col gap-1.5 items-end">
-          {p.tweet_url && (
-            <a
-              href={p.tweet_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-[12px] font-bold"
-              aria-label="Open tweet"
-            >
-              ↗
-            </a>
-          )}
-        </div>
-      </div>
-      <FixPanel
-        pickId={p.pick_id}
-        reason={p.reason}
-        market={p.market}
-        selection={p.selection}
-        line={p.line}
-        oddsTaken={p.odds_taken}
-        units={p.units}
-        playerId={p.player_id}
-        gameId={p.game_id}
-        postedAt={p.posted_at}
-      />
-    </div>
-  );
-}
