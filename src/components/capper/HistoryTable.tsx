@@ -7,8 +7,8 @@ import type { HistoryPick } from "@/lib/types";
 
 const PAGE_SIZE = 25;
 
-const GRID =
-  "grid grid-cols-[64px_minmax(220px,1fr)_56px_72px_64px_80px_28px] gap-3 items-center";
+const DESKTOP_GRID =
+  "hidden sm:grid grid-cols-[64px_minmax(220px,1fr)_56px_72px_64px_80px_28px] gap-3 items-center";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -52,7 +52,7 @@ export function HistoryTable({
   return (
     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] overflow-hidden">
       <div
-        className={`${GRID} pl-[19px] pr-5 py-3
+        className={`${DESKTOP_GRID} pl-[19px] pr-5 py-3
                     border-b border-[var(--color-border)]
                     text-[10px] uppercase tracking-[0.16em] font-bold text-[var(--color-text-muted)]`}
       >
@@ -131,64 +131,110 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
   const unitsValue =
     pick.units != null && pick.units > 0 ? (pick.units > 5 ? 1 : pick.units) : 1;
 
+  const selectionNode = (
+    <span className={`font-bold ${isParlay ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"}`}>
+      {formatBetDescriptor({
+        kind: isParlay ? "parlay" : "straight",
+        leg_count: pick.leg_count ?? null,
+        market: pick.market,
+        selection: pick.selection,
+        line: pick.line,
+        odds_taken: pick.odds_taken,
+      })}
+    </span>
+  );
+
   return (
-    <div
-      className={`group/row relative ${GRID} pl-[19px] pr-5 py-3.5
-                  hover:bg-[rgba(255,255,255,0.02)] transition-colors duration-150
-                  ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
-    >
-      <span aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
-      <div className="text-[12px] text-[var(--color-text-muted)] font-medium tabular-nums">
-        {date ?? ""}
+    <>
+      <div
+        className={`group/row relative ${DESKTOP_GRID} pl-[19px] pr-5 py-3.5
+                    hover:bg-[rgba(255,255,255,0.02)] transition-colors duration-150
+                    ${isLast ? "" : "sm:border-b sm:border-[rgba(255,255,255,0.035)]"}`}
+      >
+        <span aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
+        <div className="text-[12px] text-[var(--color-text-muted)] font-medium tabular-nums">
+          {date ?? ""}
+        </div>
+        <div className="min-w-0 truncate text-[13px]">
+          {pick.game_label && (
+            <span className="text-[var(--color-text-muted)] mr-2 font-medium">
+              {pick.game_label}
+            </span>
+          )}
+          {selectionNode}
+        </div>
+        <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
+          {pick.line != null ? pick.line : ""}
+        </div>
+        <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
+          {oddsText}
+        </div>
+        <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)] font-medium">
+          {unitsValue}u
+        </div>
+        <div className={`text-right tabular-nums text-[13px] font-extrabold ${profitColor}`}>
+          {pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : ""}
+        </div>
+        <div className="flex justify-end">
+          {pick.tweet_url ? (
+            <a
+              href={pick.tweet_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View tweet"
+              className="inline-flex w-7 h-7 items-center justify-center rounded-md
+                         text-[var(--color-text-muted)]
+                         opacity-0 group-hover/row:opacity-100
+                         hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--color-text)]
+                         transition-all duration-150"
+            >
+              <XIcon size={11} />
+            </a>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+        </div>
       </div>
-      <div className="min-w-0 truncate text-[13px]">
-        {pick.game_label && (
-          <span className="text-[var(--color-text-muted)] mr-2 font-medium">
-            {pick.game_label}
-          </span>
-        )}
-        <span className={`font-bold ${isParlay ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"}`}>
-          {formatBetDescriptor({
-            kind: isParlay ? "parlay" : "straight",
-            leg_count: pick.leg_count ?? null,
-            market: pick.market,
-            selection: pick.selection,
-            line: pick.line,
-            odds_taken: pick.odds_taken,
-          })}
-        </span>
+
+      <div
+        className={`sm:hidden relative pl-4 pr-4 py-3
+                    ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
+      >
+        <span aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
+        <div className="flex items-baseline justify-between gap-3 mb-1.5">
+          <div className="text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums uppercase tracking-wide">
+            {date ?? ""}
+          </div>
+          <div className={`tabular-nums text-[14px] font-extrabold ${profitColor}`}>
+            {pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : ""}
+          </div>
+        </div>
+        <div className="text-[13px] leading-snug">
+          {pick.game_label && (
+            <span className="text-[var(--color-text-muted)] mr-1.5 font-medium">
+              {pick.game_label}
+            </span>
+          )}
+          {selectionNode}
+        </div>
+        <div className="mt-1 text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums flex items-center gap-3 flex-wrap">
+          {pick.line != null && <span>Line {pick.line}</span>}
+          {oddsText && <span>{oddsText}</span>}
+          <span>{unitsValue}u</span>
+          {pick.tweet_url && (
+            <a
+              href={pick.tweet_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View tweet"
+              className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)]"
+            >
+              <XIcon size={11} />
+            </a>
+          )}
+        </div>
       </div>
-      <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
-        {pick.line != null ? pick.line : ""}
-      </div>
-      <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
-        {oddsText}
-      </div>
-      <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)] font-medium">
-        {unitsValue}u
-      </div>
-      <div className={`text-right tabular-nums text-[13px] font-extrabold ${profitColor}`}>
-        {pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : ""}
-      </div>
-      <div className="flex justify-end">
-        {pick.tweet_url ? (
-          <a
-            href={pick.tweet_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View tweet"
-            className="inline-flex w-7 h-7 items-center justify-center rounded-md
-                       text-[var(--color-text-muted)]
-                       opacity-0 group-hover/row:opacity-100
-                       hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--color-text)]
-                       transition-all duration-150"
-          >
-            <XIcon size={11} />
-          </a>
-        ) : (
-          <span aria-hidden="true" />
-        )}
-      </div>
-    </div>
+    </>
   );
 }
