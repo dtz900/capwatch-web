@@ -18,20 +18,29 @@ const row: CapperRow = {
 };
 
 describe("StandingsRow", () => {
-  it("renders rank, name, handle, stats", () => {
+  it("renders rank, name, handle, stats (in both desktop grid and mobile card)", () => {
     render(<StandingsRow rank={4} capper={row} />);
-    expect(screen.getByText("04")).toBeInTheDocument();
-    expect(screen.getByText("Lineups Winning")).toBeInTheDocument();
-    expect(screen.getByText("@lineupwins")).toBeInTheDocument();
-    expect(screen.getByText("67")).toBeInTheDocument();
-    expect(screen.getByText("55%")).toBeInTheDocument();
-    expect(screen.getByText("+5.2")).toBeInTheDocument();
-    expect(screen.getByText("+7.7%")).toBeInTheDocument();
+    expect(screen.getAllByText("04").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Lineups Winning").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("@lineupwins").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("67").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("55%").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("+5.2").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("+7.7%").length).toBeGreaterThan(0);
   });
 
   it("colors negative units/ROI red", () => {
     const losing = { ...row, units_profit: -2.1, roi_pct: -2.4 };
     render(<StandingsRow rank={5} capper={losing} />);
-    expect(screen.getByText("-2.1").className).toContain("text-[var(--color-neg)]");
+    const negCells = screen.getAllByText("-2.1");
+    expect(negCells.some((el) => el.className.includes("text-[var(--color-neg)]"))).toBe(true);
+  });
+
+  it("renders the mobile micro-grid stat labels", () => {
+    render(<StandingsRow rank={4} capper={row} />);
+    expect(screen.getByText("Picks")).toBeInTheDocument();
+    expect(screen.getByText("Win")).toBeInTheDocument();
+    expect(screen.getByText("Units")).toBeInTheDocument();
+    expect(screen.getByText("ROI")).toBeInTheDocument();
   });
 });
