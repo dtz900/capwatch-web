@@ -4,6 +4,7 @@ import { PickTiles } from "./PickTiles";
 import { StatusPill } from "./StatusPill";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
+import { LivePicksIndicator } from "./LivePicksIndicator";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import type { CapperRow } from "@/lib/types";
@@ -34,6 +35,12 @@ export function StandingsRow({ rank, capper }: Props) {
           {capper.handle ? formatHandle(capper.handle) : ""}
           {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
           <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
+          {capper.live_picks_count > 0 && (
+            <>
+              <span aria-hidden="true" className="opacity-30">·</span>
+              <LivePicksIndicator count={capper.live_picks_count} />
+            </>
+          )}
         </div>
       </div>
     </>

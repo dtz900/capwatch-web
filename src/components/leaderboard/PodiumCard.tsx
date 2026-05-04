@@ -4,6 +4,7 @@ import { RecentPicks } from "./RecentPicks";
 import { BiggestWin } from "./BiggestWin";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
+import { LivePicksIndicator } from "./LivePicksIndicator";
 import Image from "next/image";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
@@ -159,6 +160,14 @@ export function PodiumCard({ rank, variant, capper }: Props) {
               <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Live signal — pulsing dot + count, sits below the handle so it
+          reads as live status text rather than a label/pill. */}
+      {capper.live_picks_count > 0 && (
+        <div className="relative -mt-1 mb-3">
+          <LivePicksIndicator count={capper.live_picks_count} />
         </div>
       )}
 

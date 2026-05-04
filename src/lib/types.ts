@@ -53,6 +53,7 @@ export interface CapperRow {
   tweets_parsed: number;
   parlay_share: number;
   deleted_picks_count: number;
+  live_picks_count: number;
   last_picks: LastPick[];
 }
 
