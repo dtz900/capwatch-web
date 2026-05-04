@@ -39,17 +39,22 @@ export function FixPanel(props: Props) {
   const [success, setSuccess] = useState<string | null>(null);
 
   // Auto-pick the most relevant edit lane based on the failure reason.
+  // player_did_not_play almost always means the capper tweeted late on
+  // day N about day N+1's slate and we bound to a day-N game. Land in
+  // the game lane so the user sees the date picker and prev/next.
   type EditLane = "none" | "player" | "game" | "market" | "line" | "more";
   const defaultLane: EditLane =
     props.reason === "missing_player_id"
       ? "player"
       : props.reason === "missing_game_id"
         ? "game"
-        : props.reason === "market_unhandled"
-          ? "market"
-          : props.reason === "missing_line"
-            ? "line"
-            : "none";
+        : props.reason === "player_did_not_play"
+          ? "game"
+          : props.reason === "market_unhandled"
+            ? "market"
+            : props.reason === "missing_line"
+              ? "line"
+              : "none";
   const [lane, setLane] = useState<EditLane>(defaultLane);
 
   // Player search state
@@ -155,9 +160,20 @@ export function FixPanel(props: Props) {
     });
   };
 
-  const defaultGameDate = props.postedAt
+  // For player_did_not_play, default to posted_at + 1 day. The capper
+  // almost always tweeted late at night about the next day's slate, so
+  // tomorrow's schedule is the right starting point.
+  const baseDate = props.postedAt
     ? new Date(props.postedAt).toISOString().slice(0, 10)
     : new Date().toISOString().slice(0, 10);
+  const defaultGameDate =
+    props.reason === "player_did_not_play"
+      ? (() => {
+          const d = new Date(baseDate + "T12:00:00Z");
+          d.setUTCDate(d.getUTCDate() + 1);
+          return d.toISOString().slice(0, 10);
+        })()
+      : baseDate;
   const [gameSearchDate, setGameSearchDate] = useState<string>(defaultGameDate);
 
   const doListGames = (overrideDate?: string) => {
@@ -262,6 +278,13 @@ export function FixPanel(props: Props) {
 
           {lane === "game" && (
             <div className="flex flex-col gap-2">
+              {props.reason === "player_did_not_play" && (
+                <div className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
+                  This player wasn&apos;t in the bound game&apos;s box score.
+                  Likely cause: tweet was for tomorrow&apos;s slate. Defaulted
+                  the search to the day after the tweet.
+                </div>
+              )}
               <div className="flex items-center gap-2 flex-wrap">
                 <input
                   type="date"
