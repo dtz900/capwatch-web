@@ -56,7 +56,7 @@ export function CapperHero({
             {c.display_name ?? c.handle}
           </h1>
           {c.has_paid_program && <PaidProgramPill />}
-          <DeletedPicksPill count={windowAgg?.deleted_picks_count ?? 0} />
+          <DeletedPicksPill count={windowAgg?.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
         </div>
         <div className="text-[14px] text-[var(--color-text-muted)] font-semibold flex items-center gap-2 flex-wrap">
           {c.handle ? formatHandle(c.handle) : ""}

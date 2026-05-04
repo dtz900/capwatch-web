@@ -139,3 +139,35 @@ export async function fetchCapperProfile(
   if (!res.ok) throw new Error(`Capper profile fetch failed: ${res.status}`);
   return res.json() as Promise<CapperProfile>;
 }
+
+export interface DeletedPick {
+  id: number;
+  raw_id: number;
+  market: string | null;
+  selection: string | null;
+  line: number | null;
+  odds_taken: number | null;
+  units: number | null;
+  parlay_id: number | null;
+  parlay_leg_index: number | null;
+  posted_at: string;
+  tweet_deleted_at: string;
+  tweet_body: string;
+  /** When non-null, refers to a still-live capper_picks.id with the same
+   * selection/market/line/odds within +/- 24h, suggesting this row was
+   * an edit or duplicate ingest rather than a real deletion. */
+  likely_duplicate_of: number | null;
+}
+
+export interface DeletedPicksResponse {
+  handle: string;
+  items: DeletedPick[];
+}
+
+export async function fetchDeletedPicks(handle: string): Promise<DeletedPicksResponse> {
+  const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}/deleted-picks`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (res.status === 404) throw new Error("not_found");
+  if (!res.ok) throw new Error(`Deleted picks fetch failed: ${res.status}`);
+  return res.json() as Promise<DeletedPicksResponse>;
+}
