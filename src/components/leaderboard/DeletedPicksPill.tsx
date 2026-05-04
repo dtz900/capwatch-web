@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchDeletedPicks, type DeletedPick } from "@/lib/api";
+import { fetchDeletedPicks, type DeletedPick, type DeletedPicksResponse } from "@/lib/api";
 
 interface Props {
   count: number;
@@ -11,20 +11,20 @@ interface Props {
 
 export function DeletedPicksPill({ count, handle }: Props) {
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<DeletedPick[] | null>(null);
+  const [data, setData] = useState<DeletedPicksResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!open || items != null || !handle) return;
+    if (!open || data != null || !handle) return;
     setLoading(true);
     setError(null);
     fetchDeletedPicks(handle)
-      .then((r) => setItems(r.items))
+      .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [open, handle, items]);
+  }, [open, handle, data]);
 
   // Close on Escape; close on click-outside.
   useEffect(() => {
@@ -113,16 +113,31 @@ export function DeletedPicksPill({ count, handle }: Props) {
             </div>
 
             <div className="px-5 py-3 text-[11px] text-[var(--color-text-muted)] leading-relaxed border-b border-[rgba(255,255,255,0.04)]">
-              These picks were captured live from X, then the original tweets
-              were later deleted by the capper. Picks are still graded against
-              the final outcome. Items tagged{" "}
-              <span className="text-[var(--color-text-soft)] font-semibold">
-                possible duplicate
-              </span>{" "}
-              have an identical still-live pick from the same capper within{" "}
-              <span className="tabular-nums">24h</span>, suggesting an edit or
-              re-post rather than an outright deletion.
+              These picks were captured live from X. Picks tagged{" "}
+              <span className="text-[var(--color-pos)] font-semibold">reposted</span>{" "}
+              were followed by a same-content tweet from the same capper within
+              an hour (effectively an edit, not a deletion). Picks tagged{" "}
+              <span className="text-[var(--color-neg)] font-semibold">removed</span>{" "}
+              are no longer accessible on X. All picks remain graded against the
+              final outcome.
             </div>
+
+            {data && data.summary && (
+              <div className="px-5 py-3 flex items-center gap-4 border-b border-[rgba(255,255,255,0.04)] text-[11px] flex-wrap">
+                <span className="text-[var(--color-text-muted)] uppercase tracking-[0.10em] font-bold">
+                  Breakdown
+                </span>
+                <span className="text-[var(--color-pos)] tabular-nums font-bold">
+                  {data.summary.reposted} reposted
+                </span>
+                <span className="text-[var(--color-neg)] tabular-nums font-bold">
+                  {data.summary.truly_deleted} removed
+                </span>
+                <span className="text-[var(--color-text-muted)] tabular-nums ml-auto">
+                  {data.summary.total} total
+                </span>
+              </div>
+            )}
 
             <div className="scrollbar-subtle px-5 py-4 max-h-[60vh] overflow-y-auto">
               {loading && (
@@ -135,14 +150,14 @@ export function DeletedPicksPill({ count, handle }: Props) {
                   Failed to load: {error}
                 </div>
               )}
-              {items && items.length === 0 && (
+              {data && data.items.length === 0 && (
                 <div className="text-[12px] text-[var(--color-text-muted)]">
                   No deleted picks on record.
                 </div>
               )}
-              {items && items.length > 0 && (
+              {data && data.items.length > 0 && (
                 <ul className="flex flex-col gap-3">
-                  {items.map((p) => (
+                  {data.items.map((p) => (
                     <DeletedPickRow key={p.id} pick={p} />
                   ))}
                 </ul>
@@ -170,12 +185,15 @@ function DeletedPickRow({ pick }: { pick: DeletedPick }) {
     minute: "2-digit",
   });
   const isParlayLeg = pick.parlay_id != null;
+  const isReposted = pick.replacement_tweet_url != null;
   return (
     <li
       className={`rounded-lg border p-3 ${
-        pick.likely_duplicate_of != null
-          ? "border-[rgba(245,197,74,0.25)] bg-[rgba(245,197,74,0.04)]"
-          : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)]"
+        isReposted
+          ? "border-[rgba(25,245,124,0.20)] bg-[rgba(25,245,124,0.03)]"
+          : pick.likely_duplicate_of != null
+            ? "border-[rgba(245,197,74,0.25)] bg-[rgba(245,197,74,0.04)]"
+            : "border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.03)]"
       }`}
     >
       <div className="flex items-center gap-2 flex-wrap">
@@ -202,7 +220,21 @@ function DeletedPickRow({ pick }: { pick: DeletedPick }) {
             parlay leg
           </span>
         )}
-        {pick.likely_duplicate_of != null && (
+        {isReposted ? (
+          <a
+            href={pick.replacement_tweet_url ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title="Same body re-tweeted within an hour. Click to view the live replacement."
+            className="ml-auto text-[9px] uppercase tracking-[0.10em] font-extrabold
+                       text-[var(--color-pos)] bg-[rgba(25,245,124,0.10)]
+                       border border-[rgba(25,245,124,0.30)] px-1.5 py-0.5 rounded
+                       hover:bg-[rgba(25,245,124,0.16)]"
+          >
+            reposted →
+          </a>
+        ) : pick.likely_duplicate_of != null ? (
           <span
             title={`Identical still-live pick id ${pick.likely_duplicate_of} within 24h`}
             className="ml-auto text-[9px] uppercase tracking-[0.10em] font-extrabold
@@ -210,6 +242,15 @@ function DeletedPickRow({ pick }: { pick: DeletedPick }) {
                        border border-[rgba(245,197,74,0.30)] px-1.5 py-0.5 rounded"
           >
             possible duplicate
+          </span>
+        ) : (
+          <span
+            title="Source tweet is no longer accessible on X and no replacement was found within the hour after."
+            className="ml-auto text-[9px] uppercase tracking-[0.10em] font-extrabold
+                       text-[var(--color-neg)] bg-[rgba(239,68,68,0.10)]
+                       border border-[rgba(239,68,68,0.30)] px-1.5 py-0.5 rounded"
+          >
+            removed
           </span>
         )}
       </div>
