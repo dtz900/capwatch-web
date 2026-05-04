@@ -63,6 +63,12 @@ export interface LeaderboardResponse {
   min_picks: number;
   active_only: boolean;
   leaderboard: CapperRow[];
+  platform_stats?: PlatformStats;
+}
+
+export interface PlatformStats {
+  graded_picks_total: number;
+  cappers_tracked: number;
 }
 
 export interface SlatePick {

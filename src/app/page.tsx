@@ -29,10 +29,12 @@ export default async function Home({ searchParams }: PageProps) {
   };
 
   let rows: Awaited<ReturnType<typeof fetchLeaderboard>>["leaderboard"] = [];
+  let platformStats: Awaited<ReturnType<typeof fetchLeaderboard>>["platform_stats"];
   let fetchError: string | null = null;
   try {
     const data = await fetchLeaderboard(filters);
     rows = data.leaderboard;
+    platformStats = data.platform_stats;
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
   }
@@ -53,8 +55,16 @@ export default async function Home({ searchParams }: PageProps) {
 
   const top3 = rows.slice(0, 3);
   const rest = rows.slice(3, 50);
-  const totalPicks = rows.reduce((sum, r) => sum + (r.picks_count ?? 0), 0);
-  const heroStats = { totalPicks, cappersCount: rows.length };
+  // Hero numbers come from platform_stats (cross-capper, all-time, no filter)
+  // so the public "Records you can verify" promise tracks the admin truth and
+  // doesn't shift when users toggle the leaderboard filters. Falls back to a
+  // window-scoped sum if the backend is on an older deploy.
+  const heroStats = platformStats
+    ? { totalPicks: platformStats.graded_picks_total, cappersCount: platformStats.cappers_tracked }
+    : {
+        totalPicks: rows.reduce((sum, r) => sum + (r.picks_count ?? 0), 0),
+        cappersCount: rows.length,
+      };
 
   return (
     <>
