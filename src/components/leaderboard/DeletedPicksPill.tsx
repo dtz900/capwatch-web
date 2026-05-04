@@ -83,7 +83,7 @@ export function DeletedPicksPill({ count, handle }: Props) {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 py-10 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/85 backdrop-blur-sm px-4 py-10 overflow-y-auto"
           aria-modal="true"
           role="dialog"
         >
@@ -91,7 +91,7 @@ export function DeletedPicksPill({ count, handle }: Props) {
             ref={dialogRef}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-2xl rounded-xl border border-[rgba(255,255,255,0.10)]
-                       bg-[var(--color-surface)] shadow-2xl"
+                       bg-[#15151a] shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.06)] px-5 py-3">
               <div>
@@ -124,7 +124,7 @@ export function DeletedPicksPill({ count, handle }: Props) {
               re-post rather than an outright deletion.
             </div>
 
-            <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="scrollbar-subtle px-5 py-4 max-h-[60vh] overflow-y-auto">
               {loading && (
                 <div className="text-[12px] text-[var(--color-text-muted)] italic">
                   Loading...
