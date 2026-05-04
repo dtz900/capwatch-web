@@ -136,7 +136,7 @@ export function PodiumCard({ rank, variant, capper }: Props) {
             <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 flex-wrap tracking-[-0.02em] ${nameSize}`}>
               {capper.display_name ?? capper.handle}
               {capper.has_paid_program && <PaidProgramPill />}
-              <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
+              <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
             </div>
             <div className="text-[var(--color-text-muted)] text-sm font-medium">
               {formatHandle(capper.handle)}
@@ -156,7 +156,7 @@ export function PodiumCard({ rank, variant, capper }: Props) {
             <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 flex-wrap tracking-[-0.02em] ${nameSize}`}>
               {capper.display_name ?? capper.handle}
               {capper.has_paid_program && <PaidProgramPill />}
-              <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
+              <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
             </div>
           </div>
         </div>

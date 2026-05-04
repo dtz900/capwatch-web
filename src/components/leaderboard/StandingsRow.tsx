@@ -33,7 +33,7 @@ export function StandingsRow({ rank, capper }: Props) {
         <div className="text-xs text-[var(--color-text-muted)] font-medium flex items-center gap-1.5 flex-wrap">
           {capper.handle ? formatHandle(capper.handle) : ""}
           {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
-          <DeletedPicksPill count={capper.deleted_picks_count ?? 0} />
+          <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
         </div>
       </div>
     </>
