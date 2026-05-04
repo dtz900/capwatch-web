@@ -140,7 +140,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
 
       {/* Versus: cappers face off on either side */}
       {hasMlAction && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
+        <div className="grid grid-cols-2 gap-x-3 sm:gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
           <Side
             team={game.away_team}
             picks={buckets.awayMl}
