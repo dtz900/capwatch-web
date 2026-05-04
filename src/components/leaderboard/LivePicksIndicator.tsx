@@ -20,7 +20,7 @@ export function LivePicksIndicator({ count }: Props) {
         className="w-1.5 h-1.5 rounded-full"
         style={{ backgroundColor: LIVE_TEAL, animation: "pulse 1.6s ease-out infinite" }}
       />
-      {count} live picks
+      {count} live
     </span>
   );
 }
