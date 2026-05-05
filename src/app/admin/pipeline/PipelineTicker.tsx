@@ -79,11 +79,18 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [lastFetched, setLastFetched] = useState<number | null>(null);
+  const [lastSuccessAt, setLastSuccessAt] = useState<number | null>(null);
+  const [lastAttemptAt, setLastAttemptAt] = useState<number | null>(null);
   const [runningTask, setRunningTask] = useState<CronTaskName | null>(null);
   const [lastTrigger, setLastTrigger] = useState<CronTriggerResult | null>(null);
+  // Tick state forces a 1Hz re-render so the relative-time labels stay fresh
+  // even while no fetch is happening.
+  const [, setTick] = useState(0);
   const handleRef = useRef(handle);
   const minutesRef = useRef(minutes);
+  // Single in-flight guard: skip polls when a fetch is already running so a
+  // slow Railway cold start (~70s) doesn't queue up overlapping requests.
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
     handleRef.current = handle;
@@ -92,21 +99,36 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
     minutesRef.current = minutes;
   }, [minutes]);
 
-  const refresh = useCallback(async () => {
+  // 1Hz tick so age-of-last-success label updates without a fetch.
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const refresh = useCallback(async (opts?: { force?: boolean }) => {
+    if (inFlightRef.current && !opts?.force) return;
+    inFlightRef.current = true;
     setLoading(true);
-    const res = await fetchPipelineRecent(handleRef.current, minutesRef.current);
-    if (res.ok) {
-      setData(res.data);
-      setError(null);
-    } else {
-      setError(res.error);
+    setLastAttemptAt(Date.now());
+    try {
+      const res = await fetchPipelineRecent(handleRef.current, minutesRef.current);
+      if (res.ok) {
+        setData(res.data);
+        setError(null);
+        setLastSuccessAt(Date.now());
+      } else {
+        setError(res.error);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+      inFlightRef.current = false;
     }
-    setLastFetched(Date.now());
-    setLoading(false);
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh({ force: true });
   }, [refresh]);
 
   useEffect(() => {
@@ -119,7 +141,7 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    void refresh();
+    void refresh({ force: true });
   };
 
   const onRunTask = useCallback(
@@ -129,13 +151,32 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
       const res = await triggerCronTask(task);
       setLastTrigger(res);
       setRunningTask(null);
-      // Pull fresh ticker state after the task lands
-      void refresh();
+      void refresh({ force: true });
     },
     [refresh],
   );
 
-  const ageLabel = lastFetched ? `${Math.max(0, Math.floor((Date.now() - lastFetched) / 1000))}s ago` : "never";
+  const fetchAgeSec = lastSuccessAt
+    ? Math.max(0, Math.floor((Date.now() - lastSuccessAt) / 1000))
+    : null;
+  const ageLabel = fetchAgeSec === null
+    ? "never"
+    : fetchAgeSec < 60
+      ? `${fetchAgeSec}s ago`
+      : `${Math.floor(fetchAgeSec / 60)}m ago`;
+  // Health: green if the last successful fetch is within 1.5x the poll
+  // interval, yellow if 1.5-3x (slow but not dead), red beyond that.
+  const healthDot =
+    fetchAgeSec === null
+      ? "bg-[var(--color-text-muted)]"
+      : fetchAgeSec < (POLL_MS / 1000) * 1.5
+        ? "bg-[var(--color-pos)]"
+        : fetchAgeSec < (POLL_MS / 1000) * 3
+          ? "bg-[var(--color-gold)]"
+          : "bg-[var(--color-neg)]";
+  const attemptInProgressAge = loading && lastAttemptAt
+    ? Math.max(0, Math.floor((Date.now() - lastAttemptAt) / 1000))
+    : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -188,8 +229,24 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
           {paused ? "Resume polling" : "Pause polling"}
         </button>
 
-        <div className="ml-auto text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums">
-          last fetch: {ageLabel}
+        <div className="ml-auto flex items-center gap-2 text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums">
+          <span
+            aria-hidden="true"
+            className={`w-1.5 h-1.5 rounded-full ${healthDot}`}
+            title={
+              fetchAgeSec === null
+                ? "no successful fetch yet"
+                : fetchAgeSec < (POLL_MS / 1000) * 1.5
+                  ? "polling healthy"
+                  : fetchAgeSec < (POLL_MS / 1000) * 3
+                    ? "fetches running slow"
+                    : "fetches failing or stuck"
+            }
+          />
+          <span>last success: {ageLabel}</span>
+          {attemptInProgressAge !== null && attemptInProgressAge >= 5 && (
+            <span className="text-[var(--color-gold)]">· fetching {attemptInProgressAge}s</span>
+          )}
         </div>
       </form>
 
@@ -248,7 +305,19 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
       )}
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] overflow-hidden">
-        {data && data.events.length === 0 && !loading ? (
+        {!data && loading ? (
+          <div className="px-6 py-10 text-center text-[13px] text-[var(--color-text-muted)] italic">
+            Loading pipeline events…{attemptInProgressAge !== null && attemptInProgressAge >= 8 && (
+              <span className="block mt-1 text-[var(--color-gold)] not-italic">
+                Backend cold start can take up to 90s; hold tight.
+              </span>
+            )}
+          </div>
+        ) : !data && error ? (
+          <div className="px-6 py-10 text-center text-[13px] text-[var(--color-text-muted)] italic">
+            Couldn&apos;t reach pipeline service. See error above.
+          </div>
+        ) : data && data.events.length === 0 && !loading ? (
           <div className="px-6 py-10 text-center text-[13px] text-[var(--color-text-muted)] italic">
             No events in this window{handle ? ` for @${handle.replace(/^@/, "")}` : ""}.
           </div>

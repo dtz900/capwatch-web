@@ -58,6 +58,11 @@ export type PipelineResult =
   | { ok: true; data: PipelineResponse }
   | { ok: false; error: string };
 
+// Vercel server actions on Pro time out after 60s. Cap our fetch a few
+// seconds short so we surface a useful error instead of letting Vercel kill
+// the whole action with an opaque message.
+const FETCH_TIMEOUT_MS = 55_000;
+
 export async function fetchPipelineRecent(
   handle: string,
   minutes: number,
@@ -69,10 +74,13 @@ export async function fetchPipelineRecent(
   const cleanHandle = handle.replace(/^@/, "").trim();
   if (cleanHandle) params.set("handle", cleanHandle);
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(`${API_BASE}/api/admin/pipeline/recent?${params}`, {
       headers: { Authorization: `Bearer ${secret}` },
       cache: "no-store",
+      signal: controller.signal,
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
@@ -81,7 +89,15 @@ export async function fetchPipelineRecent(
     const data = (await res.json()) as PipelineResponse;
     return { ok: true, data };
   } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return {
+        ok: false,
+        error: `Pipeline service didn't respond within ${FETCH_TIMEOUT_MS / 1000}s. Likely Railway cold start; will retry on the next poll.`,
+      };
+    }
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
