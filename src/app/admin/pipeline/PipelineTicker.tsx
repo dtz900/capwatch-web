@@ -85,7 +85,9 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
   const [lastTrigger, setLastTrigger] = useState<CronTriggerResult | null>(null);
   // Tick state forces a 1Hz re-render so the relative-time labels stay fresh
   // even while no fetch is happening.
-  const [, setTick] = useState(0);
+  // Current time as state so age labels rerender without calling Date.now()
+  // during render. Updated by the 1Hz interval below.
+  const [now, setNow] = useState<number>(() => Date.now());
   const handleRef = useRef(handle);
   const minutesRef = useRef(minutes);
   // Single in-flight guard: skip polls when a fetch is already running so a
@@ -101,7 +103,7 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
 
   // 1Hz tick so age-of-last-success label updates without a fetch.
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -157,7 +159,7 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
   );
 
   const fetchAgeSec = lastSuccessAt
-    ? Math.max(0, Math.floor((Date.now() - lastSuccessAt) / 1000))
+    ? Math.max(0, Math.floor((now - lastSuccessAt) / 1000))
     : null;
   const ageLabel = fetchAgeSec === null
     ? "never"
@@ -175,7 +177,7 @@ export function PipelineTicker({ initialHandle, initialMinutes }: Props) {
           ? "bg-[var(--color-gold)]"
           : "bg-[var(--color-neg)]";
   const attemptInProgressAge = loading && lastAttemptAt
-    ? Math.max(0, Math.floor((Date.now() - lastAttemptAt) / 1000))
+    ? Math.max(0, Math.floor((now - lastAttemptAt) / 1000))
     : null;
 
   return (

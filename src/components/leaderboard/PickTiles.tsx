@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { LastPick } from "@/lib/types";
-import { formatBetDescriptor, formatMarketLabel, normalizeMarket } from "@/lib/markets";
+import { formatMarketLabel, normalizeMarket } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import { XIcon } from "@/components/icons/XIcon";
 

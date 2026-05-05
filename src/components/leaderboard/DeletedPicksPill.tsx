@@ -13,18 +13,24 @@ export function DeletedPicksPill({ count, handle }: Props) {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<DeletedPicksResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
+  // Loading is derived rather than a separate useState so we don't have to
+  // call setLoading synchronously inside the effect body (React 19's
+  // react-hooks/set-state-in-effect rule). It's true while the dialog is
+  // open and we don't yet have either a result or an error.
+  const loading = open && !!handle && data == null && error == null;
+
   useEffect(() => {
-    if (!open || data != null || !handle) return;
-    setLoading(true);
-    setError(null);
+    if (!open || data != null || error != null || !handle) return;
+    let cancelled = false;
     fetchDeletedPicks(handle)
-      .then(setData)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [open, handle, data]);
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch((e: Error) => { if (!cancelled) setError(e.message); });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, handle, data, error]);
 
   // Close on Escape; close on click-outside.
   useEffect(() => {
