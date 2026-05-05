@@ -3,6 +3,7 @@ import type {
   LeaderboardResponse,
   Window,
   Sort,
+  BetTypeFilter,
   SlateResponse,
   CapperProfile,
 } from "./types";
@@ -10,6 +11,7 @@ import type {
 export interface LeaderboardFilters {
   window: Window;
   sort: Sort;
+  bet_type: BetTypeFilter;
   min_picks: number;
   active_only: boolean;
 }
@@ -33,6 +35,7 @@ export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<Lea
   const params = new URLSearchParams({
     window: filters.window,
     sort: filters.sort,
+    bet_type: filters.bet_type,
     min_picks: String(filters.min_picks),
     active_only: String(filters.active_only),
   });

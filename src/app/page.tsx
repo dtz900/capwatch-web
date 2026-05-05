@@ -6,14 +6,15 @@ import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
 import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
-import type { Window, Sort } from "@/lib/types";
+import type { Window, Sort, BetTypeFilter } from "@/lib/types";
 
 interface PageProps {
-  searchParams: Promise<{ window?: string; sort?: string; active_only?: string }>;
+  searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string }>;
 }
 
 const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
 const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count"];
+const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const MIN_PICKS = 10;
 
 // ISR: render on first request, serve from edge cache for 5 minutes,
@@ -27,6 +28,7 @@ export default async function Home({ searchParams }: PageProps) {
   const filters: LeaderboardFilters = {
     window: VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30",
     sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
+    bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
     min_picks: MIN_PICKS,
     active_only: sp.active_only !== "false",
   };

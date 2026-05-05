@@ -33,6 +33,7 @@ export default async function CappersIndexPage() {
     const data = await fetchLeaderboard({
       window: "all_time",
       sort: "units_profit",
+      bet_type: "all",
       min_picks: 0,
       active_only: false,
     });

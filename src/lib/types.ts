@@ -2,6 +2,7 @@ export type ActivityStatus = "active" | "quiet" | "dormant" | "dark";
 export type FormOutcome = "W" | "L" | "P";
 export type Window = "all_time" | "season" | "last_30" | "last_7";
 export type Sort = "roi_pct" | "units_profit" | "win_rate" | "picks_count";
+export type BetTypeFilter = "all" | "straights" | "parlays";
 
 export interface BiggestWin {
   units: number;
@@ -60,6 +61,7 @@ export interface CapperRow {
 export interface LeaderboardResponse {
   window: Window;
   sort: Sort;
+  bet_type?: BetTypeFilter;
   min_picks: number;
   active_only: boolean;
   leaderboard: CapperRow[];

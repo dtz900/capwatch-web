@@ -7,7 +7,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("fetchLeaderboard", () => {
   it("hits /api/public/cappers with the supplied filters", async () => {
     const sample: LeaderboardResponse = {
-      window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true,
+      window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true, bet_type: "all" as const,
       leaderboard: [],
     };
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
@@ -15,7 +15,7 @@ describe("fetchLeaderboard", () => {
     } as unknown as Response);
 
     const out = await fetchLeaderboard({
-      window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true,
+      window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true, bet_type: "all" as const,
     });
     expect(out).toEqual(sample);
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -27,7 +27,7 @@ describe("fetchLeaderboard", () => {
   it("throws on non-2xx", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({ ok: false, status: 500 } as unknown as Response);
     await expect(
-      fetchLeaderboard({ window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true })
+      fetchLeaderboard({ window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true, bet_type: "all" })
     ).rejects.toThrow();
   });
 });

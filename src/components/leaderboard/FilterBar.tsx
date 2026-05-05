@@ -27,6 +27,12 @@ const SHOW: SegmentItem<boolean>[] = [
   { value: false, label: "All" },
 ];
 
+const BET_TYPES: SegmentItem<LeaderboardFilters["bet_type"]>[] = [
+  { value: "all",       label: "All" },
+  { value: "straights", label: "Straights" },
+  { value: "parlays",   label: "Parlays" },
+];
+
 interface Props {
   filters: LeaderboardFilters;
 }
@@ -41,6 +47,7 @@ export function FilterBar({ filters }: Props) {
     const params = new URLSearchParams({
       window: next.window,
       sort: next.sort,
+      bet_type: next.bet_type,
       active_only: String(next.active_only),
     });
     startTransition(() => {
@@ -53,6 +60,7 @@ export function FilterBar({ filters }: Props) {
   const showLabel = SHOW.find((o) => o.value === view.active_only)?.label ?? "Active";
   const windowLabel = WINDOWS.find((o) => o.value === view.window)?.label ?? "30d";
   const sortLabel = SORTS.find((o) => o.value === view.sort)?.label ?? "Units";
+  const betTypeLabel = BET_TYPES.find((o) => o.value === view.bet_type)?.label ?? "All";
 
   return (
     <>
@@ -87,6 +95,14 @@ export function FilterBar({ filters }: Props) {
           options={SORTS}
           onChange={(v) => apply({ ...view, sort: v })}
         />
+        <Bullet />
+        <InlinePicker
+          ariaLabel="Bet type"
+          value={view.bet_type}
+          label={betTypeLabel}
+          options={BET_TYPES}
+          onChange={(v) => apply({ ...view, bet_type: v })}
+        />
       </div>
 
       <div
@@ -119,6 +135,14 @@ export function FilterBar({ filters }: Props) {
             items={SHOW}
             value={view.active_only}
             onChange={(v) => apply({ ...view, active_only: v })}
+          />
+        </Group>
+        <Divider />
+        <Group label="Bet type">
+          <SegmentedControl
+            items={BET_TYPES}
+            value={view.bet_type}
+            onChange={(v) => apply({ ...view, bet_type: v })}
           />
         </Group>
       </div>
