@@ -114,8 +114,13 @@ export async function triggerCronTask(task: CronTaskName): Promise<CronTriggerRe
   const secret = process.env.CRON_SECRET;
   if (!secret) return { ok: false, task, error: "CRON_SECRET not set on server" };
 
+  // Use the fire-and-forget endpoint so the request returns instantly and
+  // the heavy job runs on Railway in BackgroundTasks. Hitting the synchronous
+  // /api/cron/{task} endpoint would block Railway's worker for the duration
+  // of the job (parser/grader can run 30s+), starving the polling endpoint
+  // and freezing the UI.
   try {
-    const res = await fetch(`${API_BASE}/api/cron/${task}`, {
+    const res = await fetch(`${API_BASE}/api/cron/fire/${task}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${secret}` },
       cache: "no-store",
