@@ -8,6 +8,7 @@ interface PageProps {
     reason?: string;
     capper?: string;
     kind?: "void" | "ungraded";
+    pick_id?: string;
     offset?: string;
     sort?: "oldest" | "newest";
   }>;
@@ -43,12 +44,15 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   const reason = (sp.reason ?? "").trim() || undefined;
   const capper = (sp.capper ?? "").trim() || undefined;
   const kind = sp.kind === "void" || sp.kind === "ungraded" ? sp.kind : undefined;
+  const pickIdParsed = sp.pick_id ? parseInt(sp.pick_id, 10) : NaN;
+  const pickIdLookup = Number.isFinite(pickIdParsed) && pickIdParsed > 0 ? pickIdParsed : undefined;
   const sort: "oldest" | "newest" = sp.sort === "newest" ? "newest" : "oldest";
 
   const data = await fetchAudit({
     reason,
     capper,
     kind,
+    pick_id: pickIdLookup,
     sort,
     limit: PAGE_SIZE,
     offset,
@@ -97,6 +101,40 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
           <Stat label="Graded W/L/P" value={data.summary.graded} tone="pos" />
           <Stat label="Voided" value={data.summary.void} tone="neg" />
           <Stat label="Ungraded" value={data.summary.ungraded} tone="neutral" />
+        </section>
+
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4 mb-6">
+          <form action="/admin/audit" method="GET" className="flex items-center gap-3 flex-wrap">
+            <label className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold" htmlFor="pick_id">
+              Find pick by ID
+            </label>
+            <input
+              id="pick_id"
+              name="pick_id"
+              type="number"
+              min={1}
+              defaultValue={pickIdLookup ?? ""}
+              placeholder="e.g. 5416"
+              className="rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none w-32 tabular-nums"
+            />
+            <button
+              type="submit"
+              className="px-3 py-1.5 rounded-md bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.14)] text-[12px] font-bold text-[var(--color-text)]"
+            >
+              Find
+            </button>
+            {pickIdLookup !== undefined && (
+              <Link
+                href="/admin/audit"
+                className="px-3 py-1.5 rounded-md text-[12px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              >
+                Clear
+              </Link>
+            )}
+            <span className="text-[11px] text-[var(--color-text-muted)] font-medium ml-auto">
+              Bypasses kind/reason filters. Works for graded picks too — fix accidental manual grades or delete duplicates.
+            </span>
+          </form>
         </section>
 
         <section className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4 mb-6">
