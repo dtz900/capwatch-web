@@ -45,6 +45,18 @@ export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<Lea
   return res.json() as Promise<LeaderboardResponse>;
 }
 
+export interface LivePicksCountsResponse {
+  counts: Record<string, number>;
+}
+
+export async function fetchLivePicksCounts(): Promise<LivePicksCountsResponse> {
+  const res = await fetch(`${API_BASE}/api/public/cappers/live-picks-counts`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Live picks counts fetch failed: ${res.status}`);
+  return res.json() as Promise<LivePicksCountsResponse>;
+}
+
 export async function fetchSlate(date: string = "today"): Promise<SlateResponse> {
   const res = await fetch(`${API_BASE}/api/public/slate?date=${encodeURIComponent(date)}`, {
     next: { revalidate: REVALIDATE_SECONDS },

@@ -35,12 +35,7 @@ export function StandingsRow({ rank, capper }: Props) {
           {capper.handle ? formatHandle(capper.handle) : ""}
           {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
           <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
-          {capper.live_picks_count > 0 && (
-            <>
-              <span aria-hidden="true" className="opacity-30">·</span>
-              <LivePicksIndicator count={capper.live_picks_count} />
-            </>
-          )}
+          <LivePicksIndicator capperId={capper.capper_id} initialCount={capper.live_picks_count} />
         </div>
       </div>
     </>

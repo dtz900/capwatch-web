@@ -163,13 +163,13 @@ export function PodiumCard({ rank, variant, capper }: Props) {
         </div>
       )}
 
-      {/* Live signal — pulsing dot + count, sits below the handle so it
-          reads as live status text rather than a label/pill. */}
-      {capper.live_picks_count > 0 && (
-        <div className="relative -mt-1 mb-3">
-          <LivePicksIndicator count={capper.live_picks_count} />
-        </div>
-      )}
+      {/* Live signal: pulsing dot + count, sits below the handle so it reads
+          as live status text rather than a label/pill. The indicator hides
+          itself when count is 0, so the wrapper div renders unconditionally
+          (lets a 0->N transition between SSR and the next client poll show). */}
+      <div className="relative -mt-1 mb-3 empty:hidden">
+        <LivePicksIndicator capperId={capper.capper_id} initialCount={capper.live_picks_count} />
+      </div>
 
       {/* Identity tagline */}
       {tagline && (

@@ -4,6 +4,7 @@ import { FilterBar } from "@/components/leaderboard/FilterBar";
 import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
+import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
 import type { Window, Sort } from "@/lib/types";
 
@@ -15,9 +16,11 @@ const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
 const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count"];
 const MIN_PICKS = 10;
 
-// Render on demand; the API can return a transient 503 during a Supabase
-// HTTP/2 reconnect and we don't want a build to fail on it.
-export const dynamic = "force-dynamic";
+// ISR: render on first request, serve from edge cache for 5 minutes,
+// regenerate in background. Heavy aggregates only refresh once/day so 5 min
+// of staleness is invisible. The "N live" indicator updates near-realtime
+// via LivePicksProvider polling, separate from this cache.
+export const revalidate = 300;
 
 export default async function Home({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -66,22 +69,32 @@ export default async function Home({ searchParams }: PageProps) {
         cappersCount: rows.length,
       };
 
+  // Seed the live-picks context with the SSR-rendered counts so the first
+  // paint already has correct values. The provider polls every 30s after
+  // mount to keep the indicator fresh as cappers tweet new picks.
+  const liveInitial: Record<number, number> = {};
+  for (const r of rows) {
+    if (r.live_picks_count > 0) liveInitial[Number(r.capper_id)] = r.live_picks_count;
+  }
+
   return (
     <>
       <TopNav />
-      <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
-        <Hero stats={heroStats} />
-        <div className="mb-8">
-          <FilterBar filters={filters} />
-        </div>
-        {top3.length === 3 && <Podium rows={top3} />}
-        {rest.length > 0 && <StandingsTable rows={rest} startRank={4} />}
-        <SuggestCapperSection />
-        <footer className="flex items-center justify-between py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
-          <div>Min {MIN_PICKS} graded picks · refreshed daily 6:00 AM PT.</div>
-          <div>Operated by FADE AI · The model entry is graded identically</div>
-        </footer>
-      </main>
+      <LivePicksProvider initial={liveInitial}>
+        <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
+          <Hero stats={heroStats} />
+          <div className="mb-8">
+            <FilterBar filters={filters} />
+          </div>
+          {top3.length === 3 && <Podium rows={top3} />}
+          {rest.length > 0 && <StandingsTable rows={rest} startRank={4} />}
+          <SuggestCapperSection />
+          <footer className="flex items-center justify-between py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
+            <div>Min {MIN_PICKS} graded picks · refreshed daily 6:00 AM PT.</div>
+            <div>Operated by FADE AI · The model entry is graded identically</div>
+          </footer>
+        </main>
+      </LivePicksProvider>
     </>
   );
 }

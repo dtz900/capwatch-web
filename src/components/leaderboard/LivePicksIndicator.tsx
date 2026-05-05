@@ -1,13 +1,20 @@
+"use client";
+
+import { useLivePicksCount } from "./LivePicksContext";
+
 interface Props {
-  count: number;
+  capperId: number | string;
+  initialCount: number;
 }
 
-// Inline live signal: pulsing dot + count + "live picks". Soft teal so it
-// reads as a separate channel from the dominant green/red P&L palette and
-// doesn't add to the visual noise on the row.
+// Inline live signal: pulsing dot + count + "live". Soft teal so it reads as
+// a separate channel from the dominant green/red P&L palette. Reads from
+// LivePicksContext when mounted (poll-driven near-realtime updates) and
+// falls back to the SSR-rendered initialCount otherwise.
 const LIVE_TEAL = "#5eead4";
 
-export function LivePicksIndicator({ count }: Props) {
+export function LivePicksIndicator({ capperId, initialCount }: Props) {
+  const count = useLivePicksCount(capperId, initialCount);
   if (!count || count <= 0) return null;
   return (
     <span
