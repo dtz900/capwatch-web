@@ -94,6 +94,19 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             Real-time. Every pick that didn&apos;t grade cleanly, with the specific
             failure reason. {data.total_problems} item{data.total_problems === 1 ? "" : "s"} match the current filters.
           </p>
+          <div className="mt-3 flex items-center gap-3 text-[11px] text-[var(--color-text-muted)] font-medium">
+            <Link href="/admin/review" className="hover:text-[var(--color-text)] underline">
+              Review queue (parser-quarantined picks) →
+            </Link>
+            <span>·</span>
+            <Link href="/admin/pipeline" className="hover:text-[var(--color-text)] underline">
+              Pipeline ticker
+            </Link>
+            <span>·</span>
+            <Link href="/admin/cappers" className="hover:text-[var(--color-text)] underline">
+              Cappers
+            </Link>
+          </div>
         </header>
 
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

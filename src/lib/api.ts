@@ -140,6 +140,55 @@ export async function fetchAudit(filters: AuditFilters = {}): Promise<AuditRespo
   return res.json() as Promise<AuditResponse>;
 }
 
+export interface ReviewQueueItem {
+  id: number;
+  capper_id: number;
+  capper_handle: string | null;
+  capper_display_name: string | null;
+  capper_profile_image_url: string | null;
+  raw_id: number | null;
+  tweet_id: string | null;
+  tweet_url: string | null;
+  tweet_excerpt: string;
+  posted_at: string | null;
+  parsed_at: string | null;
+  parser_version: string | null;
+  selection: string | null;
+  line: number | null;
+  odds_taken: number | null;
+  units: number | null;
+  market: string | null;
+  bet_kind: string | null;
+  stat_name: string | null;
+  player_name: string | null;
+  was_image_parsed: boolean | null;
+  parlay_id: number | null;
+}
+
+export interface ReviewQueueResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  items: ReviewQueueItem[];
+}
+
+/** Server-only. Lists picks parked in needs_review for admin approval. */
+export async function fetchReviewQueue(
+  limit: number = 100,
+  offset: number = 0,
+): Promise<ReviewQueueResponse> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error("CRON_SECRET not set on server");
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  const url = `${API_BASE}/api/admin/review-queue?${params}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${secret}` },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Review queue fetch failed: ${res.status}`);
+  return res.json() as Promise<ReviewQueueResponse>;
+}
+
 export async function fetchCapperProfile(
   handle: string,
   filters: CapperProfileFilters = {},
