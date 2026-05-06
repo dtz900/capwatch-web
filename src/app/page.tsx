@@ -88,8 +88,8 @@ export default async function Home({ searchParams }: PageProps) {
           <div className="mb-8">
             <FilterBar filters={filters} />
           </div>
-          {top3.length === 3 && <Podium rows={top3} />}
-          {rest.length > 0 && <StandingsTable rows={rest} startRank={4} />}
+          {top3.length === 3 && <Podium rows={top3} window={filters.window} />}
+          {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} />}
           <SuggestCapperSection />
           <footer className="flex items-center justify-between py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
             <div>Min {MIN_PICKS} graded picks · refreshed daily 6:00 AM PT.</div>

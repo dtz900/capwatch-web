@@ -5,7 +5,7 @@ import { XIcon } from "@/components/icons/XIcon";
 import { RecentTrajectory } from "@/components/capper/RecentTrajectory";
 import { formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
-import type { CapperProfile, CapperAggregate, HistoryPick } from "@/lib/types";
+import type { CapperProfile, CapperAggregate, HistoryPick, Window } from "@/lib/types";
 
 function formatMonth(iso: string | null): string | null {
   if (!iso) return null;
@@ -36,10 +36,12 @@ export function CapperHero({
   profile,
   windowAgg,
   recentHistory = [],
+  window,
 }: {
   profile: CapperProfile;
   windowAgg: CapperAggregate | undefined;
   recentHistory?: HistoryPick[];
+  window?: Window;
 }) {
   const c = profile.capper;
   const isModel = c.handle === "fadeai_";
@@ -116,7 +118,7 @@ export function CapperHero({
       </div>
       {recentHistory.length >= 2 && (
         <div className="shrink-0 hidden md:block">
-          <RecentTrajectory history={recentHistory} />
+          <RecentTrajectory history={recentHistory} window={window} />
         </div>
       )}
     </header>

@@ -7,9 +7,10 @@ import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LivePicksIndicator } from "./LivePicksIndicator";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
-import type { CapperRow } from "@/lib/types";
+import { buildProfileHref } from "@/lib/profileHref";
+import type { CapperRow, Window } from "@/lib/types";
 
-interface Props { rank: number; capper: CapperRow }
+interface Props { rank: number; capper: CapperRow; window?: Window }
 
 const DESKTOP_COLS =
   "hidden sm:grid grid-cols-[40px_minmax(180px,1fr)_minmax(280px,1.6fr)_64px_64px_70px_80px_44px] items-center gap-3 px-[22px] py-3.5 border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
@@ -17,11 +18,11 @@ const DESKTOP_COLS =
 const MOBILE_CARD =
   "sm:hidden block px-4 py-3.5 border-b border-[rgba(255,255,255,0.03)] last:border-0";
 
-export function StandingsRow({ rank, capper }: Props) {
+export function StandingsRow({ rank, capper, window }: Props) {
   const unitsCls = capper.units_profit >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
   const roiCls   = capper.roi_pct      >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
   const isModel = capper.handle === "fadeai_";
-  const profileHref = capper.handle ? `/cappers/${capper.handle}` : null;
+  const profileHref = capper.handle ? buildProfileHref(capper.handle, { window }) : null;
 
   const handleNode = (
     <>

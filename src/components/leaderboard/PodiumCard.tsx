@@ -9,7 +9,8 @@ import Image from "next/image";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
-import type { CapperRow, LastPick } from "@/lib/types";
+import { buildProfileHref } from "@/lib/profileHref";
+import type { CapperRow, LastPick, Window } from "@/lib/types";
 
 type Variant = "gold" | "silver" | "bronze";
 
@@ -17,6 +18,7 @@ interface Props {
   rank: 1 | 2 | 3;
   variant: Variant;
   capper: CapperRow;
+  window?: Window;
 }
 
 const RANK_LABEL: Record<1 | 2 | 3, string> = { 1: "Leader", 2: "2nd", 3: "3rd" };
@@ -56,10 +58,11 @@ const ACCENT: Record<Variant, Accent> = {
   },
 };
 
-export function PodiumCard({ rank, variant, capper }: Props) {
+export function PodiumCard({ rank, variant, capper, window }: Props) {
   const isModel = capper.handle === "fadeai_";
   const isGold = variant === "gold";
   const accent = ACCENT[variant];
+  const profileHref = capper.handle ? buildProfileHref(capper.handle, { window }) : null;
 
   const heroPositive = capper.units_profit >= 0;
   const heroSize = isGold ? "text-[44px]" : "text-[32px]";
@@ -121,9 +124,9 @@ export function PodiumCard({ rank, variant, capper }: Props) {
       </div>
 
       {/* Avatar + name + status pills */}
-      {capper.handle ? (
+      {capper.handle && profileHref ? (
         <Link
-          href={`/cappers/${capper.handle}`}
+          href={profileHref}
           className="relative inline-flex items-center gap-3.5 mb-3 max-w-full hover:opacity-95 transition-opacity"
         >
           <CapperAvatar

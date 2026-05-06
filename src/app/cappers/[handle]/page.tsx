@@ -81,7 +81,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <div className="pt-10">
-          <CapperHero profile={profile} windowAgg={windowAgg ?? allTimeAgg} recentHistory={profile.history} />
+          <CapperHero profile={profile} windowAgg={windowAgg ?? allTimeAgg} recentHistory={profile.history} window={window} />
         </div>
 
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
