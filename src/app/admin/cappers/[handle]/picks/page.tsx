@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { TopNav } from "@/components/nav/TopNav";
 import { fetchCapperProfile } from "@/lib/api";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
@@ -47,7 +46,6 @@ export default async function AdminCapperPicksPage({ params, searchParams }: Pag
     if (err instanceof Error && err.message === "not_found") notFound();
     return (
       <>
-        <TopNav />
         <main className="max-w-[1240px] mx-auto px-7 pt-12 pb-16">
           <h1 className="text-[24px] font-extrabold mb-2">Admin · @{handle}</h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">
@@ -68,7 +66,6 @@ export default async function AdminCapperPicksPage({ params, searchParams }: Pag
 
   return (
     <>
-      <TopNav />
       <main className="max-w-[1240px] mx-auto px-7 pb-16">
         <header className="pt-10 pb-5">
           <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2">

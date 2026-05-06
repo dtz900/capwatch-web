@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { TopNav } from "@/components/nav/TopNav";
 import { AddCapperForm } from "./AddCapperForm";
 
 export const metadata = {
@@ -17,7 +16,6 @@ async function browseCapperPicks(formData: FormData) {
 export default function AdminCappersPage() {
   return (
     <>
-      <TopNav />
       <main className="max-w-[720px] mx-auto px-7 pb-16">
         <header className="pt-10 pb-7">
           <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2">

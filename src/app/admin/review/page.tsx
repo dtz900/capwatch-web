@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { TopNav } from "@/components/nav/TopNav";
 import { fetchReviewQueue } from "@/lib/api";
 import { ReviewQueueTable } from "./ReviewQueueTable";
 
@@ -28,7 +27,6 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <TopNav />
       <main className="max-w-[1240px] mx-auto px-7 pb-16">
         <header className="pt-10 pb-7">
           <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2">
@@ -43,19 +41,6 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
             published to the public leaderboard until you approve. Reject if
             the tweet wasn&apos;t actually a bet declaration.
           </p>
-          <div className="mt-3 flex items-center gap-3 text-[11px] text-[var(--color-text-muted)] font-medium">
-            <Link href="/admin/audit" className="hover:text-[var(--color-text)] underline">
-              ← Audit page
-            </Link>
-            <span>·</span>
-            <Link href="/admin/pipeline" className="hover:text-[var(--color-text)] underline">
-              Pipeline ticker
-            </Link>
-            <span>·</span>
-            <Link href="/admin/cappers" className="hover:text-[var(--color-text)] underline">
-              Cappers
-            </Link>
-          </div>
         </header>
 
         <section className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
