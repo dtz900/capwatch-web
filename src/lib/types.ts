@@ -176,4 +176,8 @@ export interface CapperProfile {
   history_total: number;
   history_offset: number;
   history_limit: number;
+  /** Per-window cumulative profit_units series, oldest-first. Used by the
+   * hero sparkline so the trajectory reflects the selected window without
+   * needing the table-paginated history array to contain enough depth. */
+  trajectory?: Partial<Record<Window, number[]>>;
 }

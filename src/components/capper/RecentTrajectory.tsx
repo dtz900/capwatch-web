@@ -1,13 +1,13 @@
-import type { HistoryPick, Window } from "@/lib/types";
+import type { Window } from "@/lib/types";
 import { formatUnitsSmart } from "@/lib/formatters";
 
 interface Props {
-  history: HistoryPick[];
-  /**
-   * Selected performance window. Drives both which picks are visualized
-   * (date filter) and the title label. When omitted, falls back to the
-   * legacy "last 25 picks" behavior.
-   */
+  /** Cumulative profit_units series, oldest-first. Comes from the
+   * profile endpoint's per-window precomputed trajectory so the
+   * sparkline reflects the FULL window's depth (not just the page's
+   * paginated history). When the series has < 2 points, nothing is
+   * rendered. */
+  series: number[];
   window?: Window;
   width?: number;
   height?: number;
@@ -20,91 +20,49 @@ const WINDOW_LABEL: Record<Window, string> = {
   all_time: "All-time",
 };
 
-/**
- * Cutoff in ms-since-epoch for a given window. last_7 / last_30 are rolling
- * day windows; "season" anchors to Jan 1 of the current year as a workable
- * proxy for an MLB season (active April through October but pre-season /
- * spring training picks are rare on TailSlips); "all_time" returns 0.
- */
-function cutoffFor(window: Window): number {
-  const now = Date.now();
-  const day = 24 * 60 * 60 * 1000;
-  switch (window) {
-    case "last_7": return now - 7 * day;
-    case "last_30": return now - 30 * day;
-    case "season": return new Date(new Date().getUTCFullYear(), 0, 1).getTime();
-    case "all_time": return 0;
-  }
-}
-
-/**
- * Compact cumulative-units sparkline. Reads recent picks (most-recent-first
- * input), filters to the selected window's date range, reverses to oldest-
- * first, and accumulates profit_units to draw the trajectory.
- *
- * Note: respects whatever depth of history was fetched into `history`. If
- * the profile page only fetched 25 picks but the user selected the season
- * window with 80 picks, the sparkline shows whatever subset of those 25
- * fall inside the date range. A bigger fetch on longer windows would be
- * a follow-up; for now the trajectory is visually consistent with the
- * window's intent (line stops at the boundary) without forcing a separate
- * round-trip.
- */
 export function RecentTrajectory({
-  history,
+  series,
   window,
   width = 320,
   height = 76,
 }: Props) {
-  const cutoff = window ? cutoffFor(window) : 0;
-  const graded = history
-    .filter((p) => p.profit_units != null)
-    .filter((p) => {
-      if (!window || cutoff === 0) return true;
-      if (!p.posted_at) return true;
-      const ts = new Date(p.posted_at).getTime();
-      return Number.isFinite(ts) && ts >= cutoff;
-    })
-    .reverse();
+  if (series.length < 2) return null;
 
-  if (graded.length < 2) return null;
+  // The backend sends running totals only (no leading 0). Prepend 0 so the
+  // first segment renders from baseline -- mirrors the original component's
+  // shape and keeps the area path anchored on the zero line.
+  const points = [0, ...series];
 
-  let running = 0;
-  const series: number[] = [0];
-  for (const p of graded) {
-    running += p.profit_units ?? 0;
-    series.push(running);
-  }
-
-  const last = series[series.length - 1];
-  const min = Math.min(0, ...series);
-  const max = Math.max(0, ...series);
+  const last = points[points.length - 1];
+  const min = Math.min(0, ...points);
+  const max = Math.max(0, ...points);
   const range = max - min || 1;
 
   const padX = 2;
   const padY = 6;
   const innerW = width - padX * 2;
   const innerH = height - padY * 2;
-  const stepX = innerW / (series.length - 1);
+  const stepX = innerW / (points.length - 1);
   const yFor = (v: number) => padY + innerH - ((v - min) / range) * innerH;
   const zeroY = yFor(0);
 
-  const linePoints = series.map((v, i) => `${padX + i * stepX},${yFor(v)}`).join(" ");
+  const linePoints = points.map((v, i) => `${padX + i * stepX},${yFor(v)}`).join(" ");
   const areaPath =
     `M ${padX},${zeroY} ` +
-    series.map((v, i) => `L ${padX + i * stepX},${yFor(v)}`).join(" ") +
-    ` L ${padX + (series.length - 1) * stepX},${zeroY} Z`;
+    points.map((v, i) => `L ${padX + i * stepX},${yFor(v)}`).join(" ") +
+    ` L ${padX + (points.length - 1) * stepX},${zeroY} Z`;
 
   const positive = last >= 0;
   const stroke = positive ? "var(--color-pos)" : "var(--color-neg)";
   const fillId = positive ? "trajectory-fill-pos" : "trajectory-fill-neg";
   const fillStop = positive ? "rgba(25,245,124," : "rgba(239,68,68,";
-  const lastX = padX + (series.length - 1) * stepX;
+  const lastX = padX + (points.length - 1) * stepX;
   const lastY = yFor(last);
 
+  // series.length is the actual graded pick count (excludes the prepended 0).
   const label = window
-    ? `${WINDOW_LABEL[window]} · ${graded.length} picks`
-    : `Last ${graded.length} picks`;
+    ? `${WINDOW_LABEL[window]} · ${series.length} picks`
+    : `${series.length} picks`;
 
   return (
     <div className="flex flex-col items-end gap-2">

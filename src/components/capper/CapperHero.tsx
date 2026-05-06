@@ -5,7 +5,7 @@ import { XIcon } from "@/components/icons/XIcon";
 import { RecentTrajectory } from "@/components/capper/RecentTrajectory";
 import { formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
-import type { CapperProfile, CapperAggregate, HistoryPick, Window } from "@/lib/types";
+import type { CapperProfile, CapperAggregate, Window } from "@/lib/types";
 
 function formatMonth(iso: string | null): string | null {
   if (!iso) return null;
@@ -35,12 +35,13 @@ function identityTagline(agg: CapperAggregate | undefined): string | null {
 export function CapperHero({
   profile,
   windowAgg,
-  recentHistory = [],
+  trajectorySeries = [],
   window,
 }: {
   profile: CapperProfile;
   windowAgg: CapperAggregate | undefined;
-  recentHistory?: HistoryPick[];
+  /** Cumulative profit_units series for the selected window. */
+  trajectorySeries?: number[];
   window?: Window;
 }) {
   const c = profile.capper;
@@ -116,9 +117,9 @@ export function CapperHero({
           )}
         </div>
       </div>
-      {recentHistory.length >= 2 && (
+      {trajectorySeries.length >= 2 && (
         <div className="shrink-0 hidden md:block">
-          <RecentTrajectory history={recentHistory} window={window} />
+          <RecentTrajectory series={trajectorySeries} window={window} />
         </div>
       )}
     </header>
