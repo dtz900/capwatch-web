@@ -23,11 +23,9 @@ const NEG = "#ef4444";
 // Tier accents. Mirror the live site: top-3 use gold, the FADE AI model uses
 // premium blue, everyone else gets the muted treatment.
 const GOLD = "#f5c54a";
-const GOLD_SOFT = "rgba(245, 197, 74, 0.12)";
-const GOLD_BORDER = "rgba(245, 197, 74, 0.55)";
 const BLUE = "#60a5fa";
 const BLUE_SOFT = "rgba(37, 99, 235, 0.15)";
-const BLUE_BORDER = "rgba(37, 99, 235, 0.55)";
+const BLUE_BORDER = "rgba(37, 99, 235, 0.6)";
 
 type Tier = "model" | "top3" | "standard";
 
@@ -39,9 +37,10 @@ interface PillSpec {
 }
 
 interface TierVisuals {
-  pill: PillSpec;
-  stripeColor: string | null;
-  avatarRing: string;
+  pill: PillSpec | null;
+  ribbonRank: number | null;
+  avatarBorder: string;
+  avatarShadow: string;
 }
 
 function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
@@ -53,20 +52,21 @@ function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
         background: BLUE_SOFT,
         border: BLUE_BORDER,
       },
-      stripeColor: BLUE,
-      avatarRing: BLUE_BORDER,
+      ribbonRank: null,
+      avatarBorder: BLUE,
+      // Soft blue halo + crisp blue ring.
+      avatarShadow: "0 0 0 3px #60a5fa, 0 0 32px rgba(96, 165, 250, 0.45)",
     };
   }
   if (tier === "top3" && rank !== null) {
     return {
-      pill: {
-        text: `RANKED #${rank} · MLB`,
-        color: GOLD,
-        background: GOLD_SOFT,
-        border: GOLD_BORDER,
-      },
-      stripeColor: GOLD,
-      avatarRing: GOLD_BORDER,
+      // Pill suppressed for top-3; the corner ribbon is the prestige stamp.
+      pill: null,
+      ribbonRank: rank,
+      avatarBorder: GOLD,
+      // Layered gold halo: ring + outer glow. Reads as a medal mount.
+      avatarShadow:
+        "0 0 0 3px #f5c54a, 0 0 0 7px rgba(245, 197, 74, 0.18), 0 0 38px rgba(245, 197, 74, 0.45)",
     };
   }
   return {
@@ -76,9 +76,46 @@ function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
       background: "transparent",
       border: BORDER,
     },
-    stripeColor: null,
-    avatarRing: BORDER,
+    ribbonRank: null,
+    avatarBorder: BORDER,
+    avatarShadow: "none",
   };
+}
+
+function CornerRibbon({ rank }: { rank: number }) {
+  // Diagonal corner ribbon, top-right. Anchored slightly off the right edge
+  // so the rotated banner clips against the card's overflow:hidden frame and
+  // reads as wrapping the corner. Multi-stop linear gradient gives the
+  // metallic gold-foil feel; the inner highlight + drop shadow add depth so
+  // it looks pressed onto the card, not floated over it.
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 36,
+        right: -68,
+        width: 260,
+        transform: "rotate(45deg)",
+        transformOrigin: "center center",
+        background:
+          "linear-gradient(135deg, #8a6312 0%, #c79224 18%, #f5c54a 42%, #fff1b8 50%, #f5c54a 58%, #c79224 82%, #8a6312 100%)",
+        color: "#1a0e00",
+        fontSize: 26,
+        fontWeight: 900,
+        letterSpacing: 4,
+        padding: "10px 0",
+        textAlign: "center",
+        boxShadow:
+          "0 10px 24px rgba(0, 0, 0, 0.55), 0 0 1px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.25)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10,
+      }}
+    >
+      #{rank}
+    </div>
+  );
 }
 
 interface RenderInputs {
@@ -266,21 +303,10 @@ function buildOgJsx(inputs: RenderInputs) {
         color: TEXT,
         padding: "44px 56px 36px",
         position: "relative",
+        overflow: "hidden",
       }}
     >
-      {visuals.stripeColor ? (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 6,
-            background: visuals.stripeColor,
-            display: "flex",
-          }}
-        />
-      ) : null}
+      {visuals.ribbonRank !== null ? <CornerRibbon rank={visuals.ribbonRank} /> : null}
       <div
         style={{
           display: "flex",
@@ -297,23 +323,25 @@ function buildOgJsx(inputs: RenderInputs) {
             TAILSLIPS
           </div>
         )}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "6px 14px",
-            background: visuals.pill.background,
-            border: `1px solid ${visuals.pill.border}`,
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 700,
-            color: visuals.pill.color,
-            letterSpacing: 1.6,
-            textTransform: "uppercase",
-          }}
-        >
-          {visuals.pill.text}
-        </div>
+        {visuals.pill ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "6px 14px",
+              background: visuals.pill.background,
+              border: `1px solid ${visuals.pill.border}`,
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 700,
+              color: visuals.pill.color,
+              letterSpacing: 1.6,
+              textTransform: "uppercase",
+            }}
+          >
+            {visuals.pill.text}
+          </div>
+        ) : null}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 24, marginBottom: 32 }}>
@@ -328,7 +356,8 @@ function buildOgJsx(inputs: RenderInputs) {
               width: 120,
               height: 120,
               borderRadius: 999,
-              border: `3px solid ${visuals.avatarRing}`,
+              border: tier === "standard" ? `3px solid ${visuals.avatarBorder}` : "none",
+              boxShadow: visuals.avatarShadow,
               objectFit: "cover",
             }}
           />
@@ -339,7 +368,8 @@ function buildOgJsx(inputs: RenderInputs) {
               height: 120,
               borderRadius: 999,
               background: CARD,
-              border: `3px solid ${visuals.avatarRing}`,
+              border: tier === "standard" ? `3px solid ${visuals.avatarBorder}` : "none",
+              boxShadow: visuals.avatarShadow,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
