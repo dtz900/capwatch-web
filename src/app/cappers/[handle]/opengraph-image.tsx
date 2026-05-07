@@ -46,7 +46,7 @@ export default async function CapperOgImage({
   let hasData = false;
 
   try {
-    const profile = await fetchCapperProfile(handle, { history_limit: 0, history_offset: 0 });
+    const profile = await fetchCapperProfile(handle, { history_limit: 1, history_offset: 0 });
     const allTime = profile.aggregates["all_time"];
     displayName = profile.capper.display_name;
     if (allTime && allTime.picks_count > 0) {
@@ -57,8 +57,10 @@ export default async function CapperOgImage({
       trackedSince = allTime.tracked_since ?? null;
       hasData = true;
     }
-  } catch {
-    // fallthrough renders the no-data variant
+  } catch (err) {
+    // Log so this surfaces in Vercel function logs. The render still proceeds
+    // with the no-data variant rather than failing the whole route.
+    console.error("[opengraph-image] fetchCapperProfile failed", { handle, err });
   }
 
   const inputs: RenderInputs = {
