@@ -88,32 +88,55 @@ function CornerRibbon({ rank }: { rank: number }) {
   // reads as wrapping the corner. Multi-stop linear gradient gives the
   // metallic gold-foil feel; the inner highlight + drop shadow add depth so
   // it looks pressed onto the card, not floated over it.
+  //
+  // Two-line medal layout: big rank number on top, small caps qualifier
+  // below ("BY UNITS"). The rank alone is ambiguous; the qualifier ties
+  // back to the UNITS stat tile and matches the leaderboard sort.
   return (
     <div
       style={{
         position: "absolute",
-        top: 36,
-        right: -68,
-        width: 260,
+        top: 38,
+        right: -72,
+        width: 280,
         transform: "rotate(45deg)",
         transformOrigin: "center center",
         background:
           "linear-gradient(135deg, #8a6312 0%, #c79224 18%, #f5c54a 42%, #fff1b8 50%, #f5c54a 58%, #c79224 82%, #8a6312 100%)",
         color: "#1a0e00",
-        fontSize: 26,
-        fontWeight: 900,
-        letterSpacing: 4,
-        padding: "10px 0",
-        textAlign: "center",
+        padding: "10px 0 12px",
         boxShadow:
           "0 10px 24px rgba(0, 0, 0, 0.55), 0 0 1px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.25)",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 10,
       }}
     >
-      #{rank}
+      <div
+        style={{
+          fontSize: 30,
+          fontWeight: 900,
+          letterSpacing: 1,
+          lineHeight: 1,
+          display: "flex",
+        }}
+      >
+        #{rank}
+      </div>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: 2.6,
+          marginTop: 3,
+          display: "flex",
+          opacity: 0.85,
+        }}
+      >
+        BY UNITS
+      </div>
     </div>
   );
 }
