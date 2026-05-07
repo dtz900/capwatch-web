@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { fetchCapperProfile } from "@/lib/api";
+import { fetchCapperProfile, fetchLeaderboard } from "@/lib/api";
 import { formatRecord, formatRoiNumeric, formatUnitsForTitle } from "@/lib/seo";
 
 export const runtime = "nodejs";
@@ -20,6 +20,67 @@ const TEXT_MUTED = "#71717a";
 const POS = "#19f57c";
 const NEG = "#ef4444";
 
+// Tier accents. Mirror the live site: top-3 use gold, the FADE AI model uses
+// premium blue, everyone else gets the muted treatment.
+const GOLD = "#f5c54a";
+const GOLD_SOFT = "rgba(245, 197, 74, 0.12)";
+const GOLD_BORDER = "rgba(245, 197, 74, 0.55)";
+const BLUE = "#60a5fa";
+const BLUE_SOFT = "rgba(37, 99, 235, 0.15)";
+const BLUE_BORDER = "rgba(37, 99, 235, 0.55)";
+
+type Tier = "model" | "top3" | "standard";
+
+interface PillSpec {
+  text: string;
+  color: string;
+  background: string;
+  border: string;
+}
+
+interface TierVisuals {
+  pill: PillSpec;
+  stripeColor: string | null;
+  avatarRing: string;
+}
+
+function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
+  if (tier === "model") {
+    return {
+      pill: {
+        text: "AI MODEL · MLB",
+        color: BLUE,
+        background: BLUE_SOFT,
+        border: BLUE_BORDER,
+      },
+      stripeColor: BLUE,
+      avatarRing: BLUE_BORDER,
+    };
+  }
+  if (tier === "top3" && rank !== null) {
+    return {
+      pill: {
+        text: `RANKED #${rank} · MLB`,
+        color: GOLD,
+        background: GOLD_SOFT,
+        border: GOLD_BORDER,
+      },
+      stripeColor: GOLD,
+      avatarRing: GOLD_BORDER,
+    };
+  }
+  return {
+    pill: {
+      text: "MLB CAPPER RECORD",
+      color: TEXT_MUTED,
+      background: "transparent",
+      border: BORDER,
+    },
+    stripeColor: null,
+    avatarRing: BORDER,
+  };
+}
+
 interface RenderInputs {
   handle: string;
   displayName: string | null;
@@ -31,6 +92,8 @@ interface RenderInputs {
   roiPct: number;
   picksCount: number;
   trackedSinceLabel: string;
+  tier: Tier;
+  rank: number | null;
 }
 
 const PRIMARY_CACHE = "public, max-age=300, s-maxage=300, stale-while-revalidate=86400";
@@ -55,6 +118,28 @@ async function fetchAvatarDataUri(url: string | null): Promise<string | null> {
     return null;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * Resolve the capper's rank using the same canonical sort the slate uses
+ * (season window + straights only + units profit). Returns null if the
+ * capper isn't on the leaderboard (below min picks, inactive, or unknown).
+ */
+async function fetchCapperRank(handle: string): Promise<number | null> {
+  try {
+    const data = await fetchLeaderboard({
+      window: "season",
+      sort: "units_profit",
+      bet_type: "straights",
+      min_picks: 10,
+      active_only: true,
+    });
+    const idx = data.leaderboard.findIndex((r) => r.handle === handle);
+    return idx >= 0 ? idx + 1 : null;
+  } catch (err) {
+    console.error("[opengraph-image] fetchCapperRank failed", { handle, err });
+    return null;
   }
 }
 
@@ -101,10 +186,14 @@ export default async function CapperOgImage({
     console.error("[opengraph-image] fetchCapperProfile failed", { handle, err });
   }
 
-  const [avatarDataUri, logoDataUri] = await Promise.all([
+  const [avatarDataUri, logoDataUri, rank] = await Promise.all([
     fetchAvatarDataUri(avatarSourceUrl),
     readLogoDataUri(),
+    fetchCapperRank(handle),
   ]);
+
+  const tier: Tier =
+    handle === "fadeai_" ? "model" : rank !== null && rank <= 3 ? "top3" : "standard";
 
   const inputs: RenderInputs = {
     handle,
@@ -117,6 +206,8 @@ export default async function CapperOgImage({
     roiPct,
     picksCount,
     trackedSinceLabel: trackedSince ? formatTrackedSince(trackedSince) : "",
+    tier,
+    rank,
   };
 
   // Force the satori render to complete inside the try block by awaiting
@@ -152,12 +243,13 @@ const TRANSPARENT_PNG = Buffer.from(
 );
 
 function buildOgJsx(inputs: RenderInputs) {
-  const { handle, displayName, avatarDataUri, logoDataUri, hasData, record, unitsRaw, roiPct, picksCount, trackedSinceLabel } = inputs;
+  const { handle, displayName, avatarDataUri, logoDataUri, hasData, record, unitsRaw, roiPct, picksCount, trackedSinceLabel, tier, rank } = inputs;
   const unitsLabel = formatUnitsForTitle(unitsRaw);
   const roiLabel = formatRoiNumeric(roiPct);
   const unitsColor = unitsRaw >= 0 ? POS : NEG;
   const roiColor = roiPct >= 0 ? POS : NEG;
   const initial = handle.slice(0, 1).toUpperCase();
+  const visuals = tierVisuals(tier, rank);
   const subline = trackedSinceLabel
     ? `Tracked since ${trackedSinceLabel} · ${picksCount} graded picks`
     : `${picksCount} graded picks`;
@@ -176,6 +268,19 @@ function buildOgJsx(inputs: RenderInputs) {
         position: "relative",
       }}
     >
+      {visuals.stripeColor ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 6,
+            background: visuals.stripeColor,
+            display: "flex",
+          }}
+        />
+      ) : null}
       <div
         style={{
           display: "flex",
@@ -197,16 +302,17 @@ function buildOgJsx(inputs: RenderInputs) {
             display: "flex",
             alignItems: "center",
             padding: "6px 14px",
-            border: `1px solid ${BORDER}`,
+            background: visuals.pill.background,
+            border: `1px solid ${visuals.pill.border}`,
             borderRadius: 999,
             fontSize: 12,
             fontWeight: 700,
-            color: TEXT_MUTED,
+            color: visuals.pill.color,
             letterSpacing: 1.6,
             textTransform: "uppercase",
           }}
         >
-          Verified MLB capper record
+          {visuals.pill.text}
         </div>
       </div>
 
@@ -222,7 +328,7 @@ function buildOgJsx(inputs: RenderInputs) {
               width: 120,
               height: 120,
               borderRadius: 999,
-              border: `3px solid ${BORDER}`,
+              border: `3px solid ${visuals.avatarRing}`,
               objectFit: "cover",
             }}
           />
@@ -233,7 +339,7 @@ function buildOgJsx(inputs: RenderInputs) {
               height: 120,
               borderRadius: 999,
               background: CARD,
-              border: `3px solid ${BORDER}`,
+              border: `3px solid ${visuals.avatarRing}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
