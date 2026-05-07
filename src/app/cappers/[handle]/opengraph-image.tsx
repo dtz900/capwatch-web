@@ -167,8 +167,10 @@ interface RenderInputs {
   rank: number | null;
 }
 
-const PRIMARY_CACHE = "public, max-age=300, s-maxage=300, stale-while-revalidate=86400";
-const FALLBACK_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
+// Short cache while we are still iterating on the card design. Bump back up
+// (300/86400) once the visual is locked.
+const PRIMARY_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=300";
+const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
 
 async function fetchAvatarDataUri(url: string | null): Promise<string | null> {
   if (!url) return null;
