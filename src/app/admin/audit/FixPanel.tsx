@@ -30,6 +30,7 @@ const MARKET_OPTIONS = [
   "nrfi", "yrfi",
   "prop_pitcher_k", "prop_pitcher_outs", "prop_pitcher_er", "prop_pitcher_h", "prop_pitcher_bb",
   "prop_batter_h", "prop_batter_tb", "prop_batter_r", "prop_batter_rbi", "prop_batter_hr", "prop_batter_sb",
+  "prop_batter_pa", "prop_batter_ab",
 ];
 
 export function FixPanel(props: Props) {
@@ -433,7 +434,7 @@ export function FixPanel(props: Props) {
           {lane === "more" && (
             <div className="flex flex-col gap-3">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                <Field label="Market" value={marketEdit} onChange={setMarketEdit} />
+                <MarketSelect value={marketEdit} onChange={setMarketEdit} />
                 <Field label="Line" value={lineEdit} onChange={setLineEdit} />
                 <Field label="Odds" value={oddsEdit} onChange={setOddsEdit} placeholder="-110" />
                 <Field label="Units" value={unitsEdit} onChange={setUnitsEdit} />
@@ -603,6 +604,40 @@ function Field({
         placeholder={placeholder}
         className="px-2 py-1 text-[11px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[var(--color-text)] tabular-nums focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
       />
+    </label>
+  );
+}
+
+function MarketSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  // Custom value (manually edited or pre-existing in DB but not in MARKET_OPTIONS)
+  // gets included in the option list so the field shows the truth instead of
+  // silently switching to the first option.
+  const optionList = MARKET_OPTIONS.includes(value) || value === ""
+    ? MARKET_OPTIONS
+    : [value, ...MARKET_OPTIONS];
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[9px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold">
+        Market
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="px-2 py-1 text-[11px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)] appearance-none"
+      >
+        <option value="">(unset)</option>
+        {optionList.map((m) => (
+          <option key={m} value={m} className="bg-[#0e0e12]">
+            {m}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }
