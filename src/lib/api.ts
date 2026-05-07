@@ -68,6 +68,34 @@ export async function fetchSlate(date: string = "today"): Promise<SlateResponse>
   return res.json() as Promise<SlateResponse>;
 }
 
+export interface SportsbookSummary {
+  book_key: string;
+  display_name: string;
+  brand_color: string;
+  display_order: number;
+}
+
+export interface SportsbooksResponse {
+  books: SportsbookSummary[];
+}
+
+export async function fetchEnabledSportsbooks(): Promise<SportsbookSummary[]> {
+  // Books are enabled per (DB enabled=true) AND ({BOOK_KEY}_AFFILIATE_ID env var
+  // set on Railway). Until at least one of those gates flips, this returns []
+  // and AffiliatePicker renders nothing -- which is the desired state until
+  // we have a real affiliate id to wire in.
+  try {
+    const res = await fetch(`${API_BASE}/api/public/sportsbooks`, {
+      next: { revalidate: REVALIDATE_SECONDS },
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as SportsbooksResponse;
+    return body.books ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export interface CapperProfileFilters {
   history_limit?: number;
   history_offset?: number;

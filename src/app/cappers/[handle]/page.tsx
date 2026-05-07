@@ -7,7 +7,7 @@ import { PendingBlock } from "@/components/capper/PendingBlock";
 import { HistoryFilters } from "@/components/capper/HistoryFilters";
 import { HistoryTable } from "@/components/capper/HistoryTable";
 import { MarketMixBar } from "@/components/capper/MarketMixBar";
-import { fetchCapperProfile } from "@/lib/api";
+import { fetchCapperProfile, fetchEnabledSportsbooks } from "@/lib/api";
 import type { Window } from "@/lib/types";
 
 interface PageProps {
@@ -45,13 +45,17 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   const outcome = (sp.outcome ?? "").trim();
 
   let profile;
+  let sportsbooks;
   try {
-    profile = await fetchCapperProfile(handle, {
-      history_limit: PAGE_SIZE,
-      history_offset: offset,
-      market: market || undefined,
-      outcome: outcome || undefined,
-    });
+    [profile, sportsbooks] = await Promise.all([
+      fetchCapperProfile(handle, {
+        history_limit: PAGE_SIZE,
+        history_offset: offset,
+        market: market || undefined,
+        outcome: outcome || undefined,
+      }),
+      fetchEnabledSportsbooks(),
+    ]);
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "not_found") notFound();
     return (
@@ -102,7 +106,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
 
         {profile.pending.length > 0 && (
           <div className="mb-6">
-            <PendingBlock picks={profile.pending} />
+            <PendingBlock picks={profile.pending} sportsbooks={sportsbooks} />
           </div>
         )}
 

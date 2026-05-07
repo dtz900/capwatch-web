@@ -1,5 +1,7 @@
 import { XIcon } from "@/components/icons/XIcon";
+import { AffiliatePicker } from "@/components/affiliate/AffiliatePicker";
 import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
+import type { SportsbookSummary } from "@/lib/api";
 import type { HistoryPick } from "@/lib/types";
 
 function formatPostedAt(iso: string | null): string | null {
@@ -25,7 +27,13 @@ function formatStakeUnits(u: number | null): string | null {
   return `${clamped.toFixed(clamped % 1 === 0 ? 0 : 1)}u`;
 }
 
-export function PendingBlock({ picks }: { picks: HistoryPick[] }) {
+export function PendingBlock({
+  picks,
+  sportsbooks = [],
+}: {
+  picks: HistoryPick[];
+  sportsbooks?: SportsbookSummary[];
+}) {
   if (picks.length === 0) return null;
 
   return (
@@ -81,19 +89,26 @@ export function PendingBlock({ picks }: { picks: HistoryPick[] }) {
                   {posted && <span className="opacity-80">{posted}</span>}
                 </div>
               </div>
-              {p.tweet_url && (
-                <a
-                  href={p.tweet_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="View tweet"
-                  className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md
-                             bg-[rgba(255,255,255,0.04)] text-[var(--color-text-soft)]
-                             hover:text-white hover:bg-[rgba(255,255,255,0.10)] transition-colors"
-                >
-                  <XIcon size={11} glow />
-                </a>
-              )}
+              <div className="shrink-0 flex items-center gap-2">
+                <AffiliatePicker
+                  books={sportsbooks}
+                  targetType={isParlay ? "parlay" : "pick"}
+                  targetId={isParlay ? (p.parlay_id ?? p.id) : p.id}
+                />
+                {p.tweet_url && (
+                  <a
+                    href={p.tweet_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="View tweet"
+                    className="w-7 h-7 flex items-center justify-center rounded-md
+                               bg-[rgba(255,255,255,0.04)] text-[var(--color-text-soft)]
+                               hover:text-white hover:bg-[rgba(255,255,255,0.10)] transition-colors"
+                  >
+                    <XIcon size={11} glow />
+                  </a>
+                )}
+              </div>
             </div>
           );
         })}
