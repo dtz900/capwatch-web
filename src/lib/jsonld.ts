@@ -118,6 +118,23 @@ export function capperReviewNode(profile: CapperProfile): JsonLdNode | null {
   };
 }
 
+export interface FaqEntry {
+  question: string;
+  answer: string;
+}
+
+export function faqNode(entries: FaqEntry[]): JsonLdNode {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: entries.map((e) => ({
+      "@type": "Question",
+      name: e.question,
+      acceptedAnswer: { "@type": "Answer", text: e.answer },
+    })),
+  };
+}
+
 export function methodologyArticleNode(): JsonLdNode {
   return {
     "@context": "https://schema.org",

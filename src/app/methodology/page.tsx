@@ -35,35 +35,118 @@ export default function Methodology() {
       />
       <TopNav />
       <main className="max-w-[760px] mx-auto px-4 sm:px-7 pt-10 sm:pt-14 pb-16">
-        <h1 className="text-[28px] sm:text-[36px] font-extrabold tracking-[-0.025em] mb-4">Methodology</h1>
+        <h1 className="text-[28px] sm:text-[36px] font-extrabold tracking-[-0.025em] mb-4">
+          Methodology
+        </h1>
+
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
-          Twitter is full of cappers posting picks. Most of them claim records you cannot verify. That is the
-          problem TailSlips solves.
+          Twitter is full of cappers posting picks. Most of them claim records you cannot verify.
+          That is the problem TailSlips solves.
         </p>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
-          We track every public pick from a curated list of sports-betting accounts. Picks are graded against the
-          final outcome of the game, at the odds and units the capper actually posted. The leaderboard is the
-          receipts.
+          We track every public pick from a curated list of sports-betting accounts. Picks are
+          graded against the final outcome of the game, at the odds and units the capper actually
+          posted. The leaderboard is the receipts, every account judged by the same rules.
         </p>
 
-        <h2 className="text-[20px] font-bold mt-9 mb-3">What counts</h2>
-        <ul className="list-disc list-inside text-[var(--color-text-soft)] space-y-2 leading-relaxed">
+        <h2 className="text-[20px] font-bold mt-9 mb-3">Why this exists</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          A capper who tweets ten picks and only references the wins is selling a different account
+          than a capper who tweets ten picks and grades every one of them. Most public-facing capper
+          records are the first kind. TailSlips is built around the second. Every public pick a
+          tracked account posts is captured at the moment it goes live and graded later, win or
+          lose, at the odds and stake the capper actually committed to.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          That means the leaderboard reflects what really happened, not what got highlighted. A
+          capper sitting at the top of TailSlips is at the top because their full body of work,
+          including the picks they would rather forget, nets out positive.
+        </p>
+
+        <h2 className="text-[20px] font-bold mt-9 mb-3">What counts as a pick</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          A tweet becomes a graded pick when it contains a clear wager: a side or selection, a line
+          where applicable, the odds taken, and the unit stake. The four pieces of information that
+          make a wager actionable are the four pieces TailSlips needs to grade it. If any are
+          missing, the pick is logged for review rather than auto-graded.
+        </p>
+        <ul className="list-disc list-inside text-[var(--color-text-soft)] space-y-2 leading-relaxed mb-4">
           <li>Public picks posted on the open timeline</li>
           <li>Captured at the moment the pick is posted, not retroactively</li>
+          <li>Locked at the odds and units the capper posted, not adjusted later</li>
           <li>Graded against the actual final outcome of the game</li>
-          <li>The same grading rules for every tracked account</li>
+          <li>The same grading rules applied to every tracked account</li>
         </ul>
 
         <h2 className="text-[20px] font-bold mt-9 mb-3">What doesn&apos;t</h2>
-        <ul className="list-disc list-inside text-[var(--color-text-soft)] space-y-2 leading-relaxed">
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Not every tweet that mentions a team or a line is a pick. The leaderboard would be useless
+          if it were padded with stat sheets, hot takes, and giveaway promos. The rules below
+          define what stays out.
+        </p>
+        <ul className="list-disc list-inside text-[var(--color-text-soft)] space-y-2 leading-relaxed mb-4">
           <li>Picks behind paywalls, in subscriber DMs, or in private Discord rooms</li>
+          <li>Picks that lock the wager terms behind paid-content language</li>
+          <li>Tweets that name a subject but hide the side, line, odds, or stake</li>
           <li>Picks edited or deleted after the game starts</li>
-          <li>Anything ambiguous enough that a clear wager can&apos;t be identified</li>
-          <li>Picks tied to a postponed game (these are voided, not graded)</li>
+          <li>Anything ambiguous enough that a clear wager cannot be identified</li>
+          <li>Picks tied to a postponed game, which are voided rather than graded</li>
+          <li>Stat sheets and probability tables, even when they list players and numbers</li>
+          <li>Pure giveaway and engagement-bait posts</li>
+          <li>Futures, season-long, and award bets that don&apos;t resolve on a single game</li>
         </ul>
 
-        <p className="text-[var(--color-text-soft)] leading-relaxed mt-9">
-          The full pick history for every account, wins and losses, is on their profile.
+        <h2 className="text-[20px] font-bold mt-9 mb-3">How grading works</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Once a game finalizes, every pick tied to it is graded against the box score. A win pays
+          out at the posted odds, a loss is the unit stake, a push returns the stake, and a void
+          (postponed, suspended early, or an outcome that the wager cannot resolve against) takes
+          the pick out of the record without counting as a result either way. The math is the same
+          math any sportsbook uses to settle a bet. There is no ranking adjustment, no
+          handicapping, no hindsight grading.
+        </p>
+
+        <h2 className="text-[20px] font-bold mt-9 mb-3">Parlays</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Parlays are graded as a single wager against the combined odds the capper posted. Every
+          leg has to win for the parlay to win. If any leg pushes or voids, that leg drops out and
+          the parlay is recomputed against the remaining legs. The parlay&apos;s line in the
+          record is one entry, not one per leg.
+        </p>
+
+        <h2 className="text-[20px] font-bold mt-9 mb-3">Reposts and edits</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Cappers sometimes delete and repost the same pick to fix a typo, swap a header, or clean
+          up the formatting. TailSlips treats those as the same wager and only counts them once.
+          What does not count as a credibility-preserving repost: deleting a pick because the line
+          moved against you and not putting it back up.
+        </p>
+
+        <h2 className="text-[20px] font-bold mt-9 mb-3">Doubleheaders and game binding</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          When two teams play twice in one day, picks are bound to the specific game the capper
+          named (Game 1, Game 2, or by pitching matchup). When a player prop names a player whose
+          team plays a doubleheader, the prop binds to the game the named player started. Wrong
+          binding is a real failure mode and gets caught in the audit pass before grades go public.
+        </p>
+
+        <h2 className="text-[20px] font-bold mt-9 mb-3">Same rules, every account</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          The model entry on the leaderboard, the FADE AI account, is graded by the exact same
+          rules as every human capper. No special treatment, no hand-waving on its losses. If
+          something disqualifies a pick from a human capper&apos;s record, it disqualifies the same
+          pick from the model&apos;s.
+        </p>
+
+        <h2 className="text-[20px] font-bold mt-9 mb-3">What you can verify</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Every pick on every profile links back to the original tweet. Click through and you see
+          what the capper posted, when they posted it, and what odds and units they committed to.
+          The grade you see is computed from the final game outcome a public sportsbook also has on
+          file. There is no hidden math.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed">
+          The full pick history for every tracked account, wins and losses, is on their profile.
         </p>
       </main>
     </>

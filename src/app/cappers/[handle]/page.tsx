@@ -8,16 +8,19 @@ import { PendingBlock } from "@/components/capper/PendingBlock";
 import { HistoryFilters } from "@/components/capper/HistoryFilters";
 import { HistoryTable } from "@/components/capper/HistoryTable";
 import { MarketMixBar } from "@/components/capper/MarketMixBar";
+import { FaqSection } from "@/components/capper/FaqSection";
+import { SimilarCappers } from "@/components/capper/SimilarCappers";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { fetchCapperProfile, fetchEnabledSportsbooks } from "@/lib/api";
-import { breadcrumbNode, capperPersonNode, capperReviewNode } from "@/lib/jsonld";
+import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
+import { breadcrumbNode, capperPersonNode, capperReviewNode, faqNode } from "@/lib/jsonld";
 import {
   buildCapperDescription,
+  buildCapperFaq,
   buildCapperOgDescription,
   buildCapperTitle,
   SITE_NAME,
 } from "@/lib/seo";
-import type { Window } from "@/lib/types";
+import type { CapperRow, Window } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
@@ -96,8 +99,9 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
 
   let profile;
   let sportsbooks;
+  let leaderboardRows: CapperRow[] = [];
   try {
-    [profile, sportsbooks] = await Promise.all([
+    const [profileResult, sportsbooksResult, leaderboardResult] = await Promise.all([
       fetchCapperProfile(handle, {
         history_limit: PAGE_SIZE,
         history_offset: offset,
@@ -105,7 +109,17 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
         outcome: outcome || undefined,
       }),
       fetchEnabledSportsbooks(),
+      fetchLeaderboard({
+        window: "season",
+        sort: "units_profit",
+        bet_type: "all",
+        min_picks: 10,
+        active_only: true,
+      }).catch(() => ({ leaderboard: [] as CapperRow[] })),
     ]);
+    profile = profileResult;
+    sportsbooks = sportsbooksResult;
+    leaderboardRows = leaderboardResult.leaderboard;
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "not_found") notFound();
     return (
@@ -130,6 +144,13 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   if (market) queryForPagination.set("market", market);
   if (outcome) queryForPagination.set("outcome", outcome);
 
+  const faqItems = buildCapperFaq({
+    handle,
+    displayName: profile.capper.display_name,
+    allTimeAgg: allTimeAgg ?? undefined,
+    trackedSince: allTimeAgg?.tracked_since ?? null,
+  });
+
   const jsonLdNodes = [
     breadcrumbNode([
       { name: "Home", path: "/" },
@@ -140,6 +161,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   ];
   const reviewNode = capperReviewNode(profile);
   if (reviewNode) jsonLdNodes.push(reviewNode);
+  if (faqItems.length > 0) jsonLdNodes.push(faqNode(faqItems));
 
   return (
     <>
@@ -191,6 +213,10 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
             query={queryForPagination}
           />
         </section>
+
+        <SimilarCappers rows={leaderboardRows} currentHandle={handle} />
+
+        <FaqSection items={faqItems} />
 
         <footer className="flex items-center justify-between py-7 pb-2 mt-8 text-xs text-[var(--color-text-muted)] font-medium">
           <div>Aggregates refresh daily at 6:00 AM PT.</div>
