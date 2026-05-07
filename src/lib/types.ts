@@ -117,6 +117,12 @@ export interface SlateResponse {
   most_picked: SlateMostPicked[];
 }
 
+export type GradingOddsSource =
+  | "posted"
+  | "pinnacle_close"
+  | "no_close_available"
+  | "fallback_-110";
+
 export interface HistoryPick {
   id: number;
   kind: "straight" | "parlay";
@@ -127,6 +133,8 @@ export interface HistoryPick {
   selection: string | null;
   line: number | null;
   odds_taken: number | null;
+  grading_odds?: number | null;
+  grading_odds_source?: GradingOddsSource | null;
   units: number | null;
   outcome: FormOutcome | null;
   profit_units: number | null;

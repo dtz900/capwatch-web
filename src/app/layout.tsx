@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
+import { AnalyticsWithExclusion } from "@/components/analytics/AnalyticsWithExclusion";
 import { BrandFooter } from "@/components/nav/BrandFooter";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
@@ -65,7 +65,7 @@ export default function RootLayout({
         {children}
         <BrandFooter />
         <MobileTabBar />
-        <Analytics />
+        <AnalyticsWithExclusion />
       </body>
     </html>
   );

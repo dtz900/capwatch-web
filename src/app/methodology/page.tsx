@@ -106,6 +106,22 @@ export default function Methodology() {
           handicapping, no hindsight grading.
         </p>
 
+        <h2 className="text-[20px] font-bold mt-9 mb-3">When a capper doesn&apos;t post the odds</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Some cappers post a moneyline pick without specifying the American odds they took.
+          Rather than fabricating a default, we grade those picks against the Pinnacle closing
+          line for the same game and side. Pinnacle is widely accepted as the sharpest book,
+          and the close is the consensus probability at first pitch, both factors that make it
+          the fairest available proxy when the capper has not given us a number.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Picks graded this way are marked with a small &quot;(close)&quot; indicator next to the
+          odds in the history table, so you can see at a glance which lines were graded against
+          literal posted odds and which were graded against the Pinnacle close. This is moneyline
+          only. Spreads and totals cluster near -110 in practice, so when those markets are
+          posted without odds we use a -110 default and disclose it the same way.
+        </p>
+
         <h2 className="text-[20px] font-bold mt-9 mb-3">Parlays</h2>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Parlays are graded as a single wager against the combined odds the capper posted. Every

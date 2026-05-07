@@ -106,12 +106,18 @@ export function HistoryTable({
 function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
   const date = formatDate(pick.posted_at);
   const isParlay = pick.kind === "parlay";
+  // Display grading_odds (the value the grader actually used) when present,
+  // falling back to odds_taken for legacy rows. The (close) indicator marks
+  // picks where the capper didn't post American odds and we graded against
+  // the Pinnacle moneyline close.
+  const displayedOdds = pick.grading_odds ?? pick.odds_taken;
   const oddsText =
-    pick.odds_taken == null
+    displayedOdds == null
       ? ""
-      : pick.odds_taken > 0
-        ? `+${pick.odds_taken}`
-        : String(pick.odds_taken);
+      : displayedOdds > 0
+        ? `+${displayedOdds}`
+        : String(displayedOdds);
+  const isPinnacleClose = pick.grading_odds_source === "pinnacle_close";
   const profitColor =
     pick.profit_units == null
       ? "text-[var(--color-text-muted)]"
@@ -168,6 +174,14 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
         </div>
         <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
           {oddsText}
+          {isPinnacleClose && (
+            <span
+              className="ml-1 text-[10px] text-[var(--color-text-muted)] font-medium"
+              title="Capper did not post odds. Graded at Pinnacle moneyline close."
+            >
+              (close)
+            </span>
+          )}
         </div>
         <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)] font-medium">
           {unitsValue}u
@@ -219,7 +233,14 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
         </div>
         <div className="mt-1 text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums flex items-center gap-3 flex-wrap">
           {pick.line != null && <span>Line {pick.line}</span>}
-          {oddsText && <span>{oddsText}</span>}
+          {oddsText && (
+            <span>
+              {oddsText}
+              {isPinnacleClose && (
+                <span className="ml-1 text-[10px] opacity-75">(close)</span>
+              )}
+            </span>
+          )}
           <span>{unitsValue}u</span>
           {pick.tweet_url && (
             <a
