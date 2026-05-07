@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { TopNav } from "@/components/nav/TopNav";
 import { Hero } from "@/components/leaderboard/Hero";
 import { FilterBar } from "@/components/leaderboard/FilterBar";
@@ -5,6 +6,7 @@ import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
 import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
+import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPrefsRestorer";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
@@ -91,6 +93,9 @@ export default async function Home({ searchParams }: PageProps) {
           leaderboardItemListNode(rows),
         ]}
       />
+      <Suspense fallback={null}>
+        <LeaderboardPrefsRestorer />
+      </Suspense>
       <TopNav />
       <LivePicksProvider initial={liveInitial}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
