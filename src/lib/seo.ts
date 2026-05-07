@@ -30,6 +30,17 @@ export function formatRoiForTitle(pct: number): string {
   return `${sign}${Math.abs(pct).toFixed(1)}% ROI`;
 }
 
+/**
+ * Same as formatRoiForTitle but without the " ROI" word suffix. Use in
+ * contexts where the surrounding label already conveys the metric (OG card
+ * stat tiles where the tile label is "ROI"), so the value can render on a
+ * single line at large font sizes.
+ */
+export function formatRoiNumeric(pct: number): string {
+  const sign = pct >= 0 ? "+" : "-";
+  return `${sign}${Math.abs(pct).toFixed(1)}%`;
+}
+
 export function formatWinRateForTitle(rate: number): string {
   return `${Math.round(rate * 100)}% win rate`;
 }

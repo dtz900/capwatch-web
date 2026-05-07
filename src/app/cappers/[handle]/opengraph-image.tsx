@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchCapperProfile } from "@/lib/api";
-import { formatRecord, formatRoiForTitle, formatUnitsForTitle } from "@/lib/seo";
+import { formatRecord, formatRoiNumeric, formatUnitsForTitle } from "@/lib/seo";
 
 export const runtime = "nodejs";
 export const alt = "Verified MLB capper record on TailSlips";
@@ -154,10 +154,13 @@ const TRANSPARENT_PNG = Buffer.from(
 function buildOgJsx(inputs: RenderInputs) {
   const { handle, displayName, avatarDataUri, logoDataUri, hasData, record, unitsRaw, roiPct, picksCount, trackedSinceLabel } = inputs;
   const unitsLabel = formatUnitsForTitle(unitsRaw);
-  const roiLabel = formatRoiForTitle(roiPct);
+  const roiLabel = formatRoiNumeric(roiPct);
   const unitsColor = unitsRaw >= 0 ? POS : NEG;
   const roiColor = roiPct >= 0 ? POS : NEG;
   const initial = handle.slice(0, 1).toUpperCase();
+  const subline = trackedSinceLabel
+    ? `Tracked since ${trackedSinceLabel} · ${picksCount} graded picks`
+    : `${picksCount} graded picks`;
 
   return (
     <div
@@ -169,7 +172,7 @@ function buildOgJsx(inputs: RenderInputs) {
         background: BG,
         fontFamily: "system-ui, sans-serif",
         color: TEXT,
-        padding: "56px 64px",
+        padding: "44px 56px 36px",
         position: "relative",
       }}
     >
@@ -178,14 +181,14 @@ function buildOgJsx(inputs: RenderInputs) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 36,
+          marginBottom: 28,
         }}
       >
         {logoDataUri ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoDataUri} alt="TailSlips" height={42} style={{ height: 42 }} />
+          <img src={logoDataUri} alt="TailSlips" height={36} style={{ height: 36 }} />
         ) : (
-          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, display: "flex" }}>
+          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, display: "flex" }}>
             TAILSLIPS
           </div>
         )}
@@ -193,10 +196,10 @@ function buildOgJsx(inputs: RenderInputs) {
           style={{
             display: "flex",
             alignItems: "center",
-            padding: "8px 16px",
+            padding: "6px 14px",
             border: `1px solid ${BORDER}`,
             borderRadius: 999,
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 700,
             color: TEXT_MUTED,
             letterSpacing: 1.6,
@@ -207,17 +210,17 @@ function buildOgJsx(inputs: RenderInputs) {
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 24, marginBottom: 32 }}>
         {avatarDataUri ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatarDataUri}
             alt=""
-            width={140}
-            height={140}
+            width={120}
+            height={120}
             style={{
-              width: 140,
-              height: 140,
+              width: 120,
+              height: 120,
               borderRadius: 999,
               border: `3px solid ${BORDER}`,
               objectFit: "cover",
@@ -226,15 +229,15 @@ function buildOgJsx(inputs: RenderInputs) {
         ) : (
           <div
             style={{
-              width: 140,
-              height: 140,
+              width: 120,
+              height: 120,
               borderRadius: 999,
               background: CARD,
               border: `3px solid ${BORDER}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 60,
+              fontSize: 52,
               fontWeight: 800,
               color: TEXT_SOFT,
             }}
@@ -245,7 +248,7 @@ function buildOgJsx(inputs: RenderInputs) {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
-              fontSize: 64,
+              fontSize: 60,
               fontWeight: 800,
               letterSpacing: -2,
               lineHeight: 1,
@@ -254,65 +257,57 @@ function buildOgJsx(inputs: RenderInputs) {
           >
             @{handle}
           </div>
-          {displayName && displayName !== handle ? (
-            <div
-              style={{
-                fontSize: 22,
-                fontWeight: 600,
-                color: TEXT_MUTED,
-                marginTop: 10,
-                display: "flex",
-              }}
-            >
-              {displayName}
-            </div>
-          ) : null}
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 600,
+              color: TEXT_MUTED,
+              marginTop: 8,
+              display: "flex",
+            }}
+          >
+            {displayName && displayName !== handle ? `${displayName} · ${subline}` : subline}
+          </div>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 16, marginTop: 56 }}>
-        {hasData ? (
-          <div style={{ display: "flex", gap: 16, width: "100%" }}>
-            <StatTile label="Record" value={record} valueColor={TEXT} />
-            <StatTile label="Units" value={unitsLabel} valueColor={unitsColor} />
-            <StatTile label="ROI" value={roiLabel} valueColor={roiColor} />
-            <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "flex",
-              padding: "28px 36px",
-              border: `1px solid ${BORDER}`,
-              borderRadius: 18,
-              fontSize: 22,
-              color: TEXT_MUTED,
-              fontWeight: 600,
-            }}
-          >
-            Tracked on TailSlips. Pick history grading in progress.
-          </div>
-        )}
-      </div>
+      {hasData ? (
+        <div style={{ display: "flex", gap: 14, width: "100%" }}>
+          <StatTile label="Record" value={record} valueColor={TEXT} />
+          <StatTile label="Units" value={unitsLabel} valueColor={unitsColor} />
+          <StatTile label="ROI" value={roiLabel} valueColor={roiColor} />
+          <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            padding: "28px 36px",
+            border: `1px solid ${BORDER}`,
+            borderRadius: 18,
+            fontSize: 22,
+            color: TEXT_MUTED,
+            fontWeight: 600,
+          }}
+        >
+          Tracked on TailSlips. Pick history grading in progress.
+        </div>
+      )}
 
       <div
         style={{
-          position: "absolute",
-          left: 64,
-          right: 64,
-          bottom: 48,
+          marginTop: "auto",
+          paddingTop: 24,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          fontSize: 17,
+          fontSize: 16,
           color: TEXT_MUTED,
           fontWeight: 600,
         }}
       >
         <div style={{ display: "flex" }}>
-          {trackedSinceLabel
-            ? `Tracked since ${trackedSinceLabel}. Every public pick parsed live, graded against final outcomes.`
-            : "Every public pick parsed live, graded against final outcomes."}
+          Every public pick parsed live, graded against final outcomes.
         </div>
         <div style={{ display: "flex", color: TEXT_SOFT, fontWeight: 700 }}>tailslips.com</div>
       </div>
@@ -375,6 +370,9 @@ function StatTile({
   value: string;
   valueColor: string;
 }) {
+  // Scale value font down for longer strings so 4-digit numbers and triple-
+  // digit ROI never wrap inside the fixed-width tile.
+  const valueFontSize = value.length > 7 ? 40 : value.length > 5 ? 46 : 56;
   return (
     <div
       style={{
@@ -383,13 +381,13 @@ function StatTile({
         flex: 1,
         background: CARD,
         border: `1px solid ${BORDER}`,
-        borderRadius: 18,
-        padding: "22px 26px",
+        borderRadius: 16,
+        padding: "20px 22px",
       }}
     >
       <div
         style={{
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: 700,
           color: TEXT_MUTED,
           letterSpacing: 2,
@@ -401,13 +399,14 @@ function StatTile({
       </div>
       <div
         style={{
-          fontSize: 52,
+          fontSize: valueFontSize,
           fontWeight: 800,
           color: valueColor,
-          marginTop: 10,
+          marginTop: 8,
           letterSpacing: -1.5,
           lineHeight: 1,
           display: "flex",
+          whiteSpace: "nowrap",
         }}
       >
         {value}
