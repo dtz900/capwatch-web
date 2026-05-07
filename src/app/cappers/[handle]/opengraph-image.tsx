@@ -60,8 +60,14 @@ function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
   }
   if (tier === "top3" && rank !== null) {
     return {
-      // Pill suppressed for top-3; the corner ribbon is the prestige stamp.
-      pill: null,
+      // Keep the standard pill alongside the ribbon. Pill is the universal
+      // brand mark; ribbon is the rank stamp. They serve different roles.
+      pill: {
+        text: "MLB CAPPER RECORD",
+        color: TEXT_MUTED,
+        background: "transparent",
+        border: BORDER,
+      },
       ribbonRank: rank,
       avatarBorder: GOLD,
       // Layered gold halo: ring + outer glow. Reads as a medal mount.
@@ -340,9 +346,9 @@ function buildOgJsx(inputs: RenderInputs) {
       >
         {logoDataUri ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoDataUri} alt="TailSlips" height={36} style={{ height: 36 }} />
+          <img src={logoDataUri} alt="TailSlips" height={56} style={{ height: 56 }} />
         ) : (
-          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, display: "flex" }}>
+          <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: -0.5, display: "flex" }}>
             TAILSLIPS
           </div>
         )}
@@ -466,7 +472,7 @@ function buildOgJsx(inputs: RenderInputs) {
         }}
       >
         <div style={{ display: "flex" }}>
-          Every public pick parsed live, graded against final outcomes.
+          Every public pick graded against final outcomes.
         </div>
         <div style={{ display: "flex", color: TEXT_SOFT, fontWeight: 700 }}>tailslips.com</div>
       </div>
@@ -529,9 +535,9 @@ function StatTile({
   value: string;
   valueColor: string;
 }) {
-  // Scale value font down for longer strings so 4-digit numbers and triple-
-  // digit ROI never wrap inside the fixed-width tile.
-  const valueFontSize = value.length > 7 ? 40 : value.length > 5 ? 46 : 56;
+  // Uniform 44px across all four tiles. Comfortably fits "109-247-4" and
+  // "+999.9u" worst-case strings without wrapping. Per-tile auto-scaling
+  // looked uneven on the rendered card.
   return (
     <div
       style={{
@@ -558,7 +564,7 @@ function StatTile({
       </div>
       <div
         style={{
-          fontSize: valueFontSize,
+          fontSize: 44,
           fontWeight: 800,
           color: valueColor,
           marginTop: 8,
