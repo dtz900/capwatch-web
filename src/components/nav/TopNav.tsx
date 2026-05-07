@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { SearchIcon } from "@/components/icons/SearchIcon";
+import { NavSearch } from "@/components/nav/NavSearch";
 
 const LINKS = [
   { href: "/slate", label: "Slate" },
@@ -54,14 +54,7 @@ export function TopNav() {
           })}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="w-9 h-9 flex items-center justify-center
-                             border border-[rgba(255,255,255,0.06)] rounded-lg
-                             text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            aria-label="Search"
-          >
-            <SearchIcon />
-          </button>
+          <NavSearch />
         </div>
       </div>
     </nav>
