@@ -61,7 +61,9 @@ export function HistoryTable({
         <div className="text-right">Line</div>
         <div className="text-right">Odds</div>
         <div className="text-right">Units</div>
-        <div className="text-right">Profit</div>
+        <div className="text-right" title="Profit excludes prop picks where the capper did not post odds. Those picks count toward Win % but not units.">
+          Profit<sup className="ml-0.5 text-[var(--color-text-muted)]">*</sup>
+        </div>
         <div></div>
       </div>
       {history.map((p, i) => (
@@ -118,6 +120,10 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
         ? `+${displayedOdds}`
         : String(displayedOdds);
   const isPinnacleClose = pick.grading_odds_source === "pinnacle_close";
+  // outcome-only: capper posted no odds and we have no honest close-line
+  // proxy (player props, or ML where Pinnacle is missing). Hide the odds
+  // and profit cells; the row still shows W/L via the bar color.
+  const isOutcomeOnly = pick.grading_odds_source === "no_close_available";
   const profitColor =
     pick.profit_units == null
       ? "text-[var(--color-text-muted)]"
@@ -173,21 +179,36 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
           {pick.line != null ? pick.line : ""}
         </div>
         <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
-          {oddsText}
-          {isPinnacleClose && (
+          {isOutcomeOnly ? (
             <span
-              className="ml-1 text-[10px] text-[var(--color-text-muted)] font-medium"
-              title="Capper did not post odds. Graded at Pinnacle moneyline close."
+              className="text-[10px] italic text-[var(--color-text-muted)]"
+              title="Capper did not post odds. Counted toward Win % only."
             >
-              (close)
+              no odds
             </span>
+          ) : (
+            <>
+              {oddsText}
+              {isPinnacleClose && (
+                <span
+                  className="ml-1 text-[10px] text-[var(--color-text-muted)] font-medium"
+                  title="Capper did not post odds. Graded at Pinnacle moneyline close."
+                >
+                  (close)
+                </span>
+              )}
+            </>
           )}
         </div>
         <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)] font-medium">
-          {unitsValue}u
+          {isOutcomeOnly ? "" : `${unitsValue}u`}
         </div>
         <div className={`text-right tabular-nums text-[13px] font-extrabold ${profitColor}`}>
-          {pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : ""}
+          {isOutcomeOnly
+            ? ""
+            : pick.profit_units != null
+              ? `${formatUnitsSmart(pick.profit_units)}u`
+              : ""}
         </div>
         <div className="flex justify-end">
           {pick.tweet_url ? (
@@ -220,7 +241,14 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
             {date ?? ""}
           </div>
           <div className={`tabular-nums text-[14px] font-extrabold ${profitColor}`}>
-            {pick.profit_units != null ? `${formatUnitsSmart(pick.profit_units)}u` : ""}
+            {isOutcomeOnly
+              ? (pick.outcome === "W" ? <span className="text-[var(--color-pos)]">W</span>
+                : pick.outcome === "L" ? <span className="text-[var(--color-neg)]">L</span>
+                : pick.outcome === "P" ? <span className="text-[var(--color-text-muted)]">P</span>
+                : "")
+              : pick.profit_units != null
+                ? `${formatUnitsSmart(pick.profit_units)}u`
+                : ""}
           </div>
         </div>
         <div className="text-[13px] leading-snug">
@@ -233,15 +261,19 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
         </div>
         <div className="mt-1 text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums flex items-center gap-3 flex-wrap">
           {pick.line != null && <span>Line {pick.line}</span>}
-          {oddsText && (
+          {isOutcomeOnly ? (
+            <span className="italic opacity-75" title="No odds posted. Counts toward Win % only.">
+              no odds
+            </span>
+          ) : oddsText ? (
             <span>
               {oddsText}
               {isPinnacleClose && (
                 <span className="ml-1 text-[10px] opacity-75">(close)</span>
               )}
             </span>
-          )}
-          <span>{unitsValue}u</span>
+          ) : null}
+          {!isOutcomeOnly && <span>{unitsValue}u</span>}
           {pick.tweet_url && (
             <a
               href={pick.tweet_url}

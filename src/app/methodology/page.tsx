@@ -121,6 +121,15 @@ export default function Methodology() {
           only. Spreads and totals cluster near -110 in practice, so when those markets are
           posted without odds we use a -110 default and disclose it the same way.
         </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Player props are different. Prop odds vary widely between players (a star hitter&apos;s
+          1+ hits is priced very differently from a bench bat&apos;s), and Pinnacle&apos;s prop
+          coverage is sparse. So when a capper posts a player prop without committing to specific
+          odds, we grade it on outcome only: the pick still counts toward Win %, but it is
+          excluded from the unit profit and ROI calculation. Those rows show &quot;no odds&quot;
+          in the history table where the odds and profit would normally be. The capper gets
+          credit for being right or wrong, without a fabricated payout shaping the bottom line.
+        </p>
 
         <h2 className="text-[20px] font-bold mt-9 mb-3">Parlays</h2>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
