@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
 import { CapperHero } from "@/components/capper/CapperHero";
@@ -7,7 +8,15 @@ import { PendingBlock } from "@/components/capper/PendingBlock";
 import { HistoryFilters } from "@/components/capper/HistoryFilters";
 import { HistoryTable } from "@/components/capper/HistoryTable";
 import { MarketMixBar } from "@/components/capper/MarketMixBar";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchCapperProfile, fetchEnabledSportsbooks } from "@/lib/api";
+import { breadcrumbNode, capperPersonNode, capperReviewNode } from "@/lib/jsonld";
+import {
+  buildCapperDescription,
+  buildCapperOgDescription,
+  buildCapperTitle,
+  SITE_NAME,
+} from "@/lib/seo";
 import type { Window } from "@/lib/types";
 
 interface PageProps {
@@ -25,12 +34,53 @@ const PAGE_SIZE = 25;
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { handle } = await params;
-  return {
-    title: `@${handle} · TailSlips`,
-    description: `Pick history and audit trail for @${handle} on TailSlips.`,
-  };
+  const canonical = `/cappers/${handle}`;
+  try {
+    const profile = await fetchCapperProfile(handle, { history_limit: 0, history_offset: 0 });
+    const allTimeAgg = profile.aggregates["all_time"];
+    const windowAgg = profile.aggregates["last_30"] ?? allTimeAgg;
+    const inputs = {
+      handle,
+      displayName: profile.capper.display_name,
+      windowAgg,
+      allTimeAgg,
+      trackedSince: allTimeAgg?.tracked_since ?? null,
+    };
+    const title = buildCapperTitle(inputs);
+    const description = buildCapperDescription(inputs);
+    const ogDescription = buildCapperOgDescription(inputs);
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: {
+        title,
+        description: ogDescription,
+        url: canonical,
+        type: "profile",
+        siteName: SITE_NAME,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description: ogDescription,
+        site: "@FadeAI_",
+      },
+      robots: { index: true, follow: true },
+    };
+  } catch {
+    const title = `@${handle} · MLB capper record on ${SITE_NAME}`;
+    const description = `@${handle} is tracked on ${SITE_NAME}. Every public MLB pick is parsed within seconds and graded against final game outcomes.`;
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: { title, description, url: canonical, type: "profile", siteName: SITE_NAME },
+      twitter: { card: "summary_large_image", title, description, site: "@FadeAI_" },
+    };
+  }
 }
 
 export default async function CapperPage({ params, searchParams }: PageProps) {
@@ -80,8 +130,20 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   if (market) queryForPagination.set("market", market);
   if (outcome) queryForPagination.set("outcome", outcome);
 
+  const jsonLdNodes = [
+    breadcrumbNode([
+      { name: "Home", path: "/" },
+      { name: "Cappers", path: "/cappers" },
+      { name: `@${handle}`, path: `/cappers/${handle}` },
+    ]),
+    capperPersonNode(profile),
+  ];
+  const reviewNode = capperReviewNode(profile);
+  if (reviewNode) jsonLdNodes.push(reviewNode);
+
   return (
     <>
+      <JsonLd data={jsonLdNodes} />
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <div className="pt-10">

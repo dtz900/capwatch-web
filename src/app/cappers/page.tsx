@@ -3,7 +3,9 @@ import { TopNav } from "@/components/nav/TopNav";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { ChevronIcon } from "@/components/icons/ChevronIcon";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchLeaderboard } from "@/lib/api";
+import { breadcrumbNode } from "@/lib/jsonld";
 import {
   formatHandle,
   formatRoi,
@@ -13,9 +15,22 @@ import {
 import type { CapperRow } from "@/lib/types";
 
 export const metadata = {
-  title: "Cappers · TailSlips",
+  title: "Capper Index",
   description:
-    "Every tracked capper on TailSlips. Click a row for the full pick history and audit trail.",
+    "Every tracked MLB Twitter capper on TailSlips. Click a row for the full pick history, units profit, ROI, and graded record.",
+  alternates: { canonical: "/cappers" },
+  openGraph: {
+    title: "Capper Index · TailSlips",
+    description:
+      "Every tracked MLB Twitter capper on TailSlips with verified records and full pick histories.",
+    url: "/cappers",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Capper Index · TailSlips",
+    description: "Every tracked MLB Twitter capper with verified records.",
+  },
 };
 
 // Render on demand instead of prerendering at build time. The API's
@@ -60,6 +75,12 @@ export default async function CappersIndexPage() {
 
   return (
     <>
+      <JsonLd
+        data={breadcrumbNode([
+          { name: "Home", path: "/" },
+          { name: "Cappers", path: "/cappers" },
+        ])}
+      />
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <header className="pt-12 pb-8">

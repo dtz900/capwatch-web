@@ -1,14 +1,38 @@
 import { TopNav } from "@/components/nav/TopNav";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbNode, methodologyArticleNode } from "@/lib/jsonld";
 
 export const metadata = {
-  title: "Methodology · TailSlips",
+  title: "Methodology",
   description:
-    "What TailSlips tracks, why it exists, and the rules every account on the leaderboard is graded by.",
+    "How TailSlips grades MLB Twitter cappers: what counts as a verifiable pick, what doesn't, and why every account on the leaderboard is judged by the same rules.",
+  alternates: { canonical: "/methodology" },
+  openGraph: {
+    title: "Methodology · TailSlips",
+    description:
+      "What TailSlips tracks, why it exists, and the rules every account on the leaderboard is graded by.",
+    url: "/methodology",
+    type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Methodology · TailSlips",
+    description: "How TailSlips grades MLB Twitter cappers, with the same rules applied to every account.",
+  },
 };
 
 export default function Methodology() {
   return (
     <>
+      <JsonLd
+        data={[
+          methodologyArticleNode(),
+          breadcrumbNode([
+            { name: "Home", path: "/" },
+            { name: "Methodology", path: "/methodology" },
+          ]),
+        ]}
+      />
       <TopNav />
       <main className="max-w-[760px] mx-auto px-4 sm:px-7 pt-10 sm:pt-14 pb-16">
         <h1 className="text-[28px] sm:text-[36px] font-extrabold tracking-[-0.025em] mb-4">Methodology</h1>

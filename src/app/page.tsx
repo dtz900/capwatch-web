@@ -5,7 +5,9 @@ import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
 import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
+import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import type { Window, Sort, BetTypeFilter } from "@/lib/types";
 
 interface PageProps {
@@ -81,6 +83,14 @@ export default async function Home({ searchParams }: PageProps) {
 
   return (
     <>
+      <JsonLd
+        data={[
+          organizationNode(),
+          websiteNode(),
+          breadcrumbNode([{ name: "Home", path: "/" }]),
+          leaderboardItemListNode(rows),
+        ]}
+      />
       <TopNav />
       <LivePicksProvider initial={liveInitial}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
