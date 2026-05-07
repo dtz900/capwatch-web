@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchCapperProfile } from "@/lib/api";
 import { formatRecord, formatRoiForTitle, formatUnitsForTitle } from "@/lib/seo";
@@ -7,18 +9,22 @@ export const alt = "Verified MLB capper record on TailSlips";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// Color tokens from globals.css. Keep these in sync with the live theme so the
+// OG card matches what users see on the page.
 const BG = "#0a0a0c";
-const CARD = "#111114";
-const BORDER = "#26262b";
-const TEXT = "#f5f5f5";
-const MUTED = "#9a9aa1";
-const POS = "#3ddc84";
-const NEG = "#ff6b6b";
-const BRAND_GOLD = "#f5c54a";
+const CARD = "rgba(255, 255, 255, 0.025)";
+const BORDER = "rgba(255, 255, 255, 0.10)";
+const TEXT = "#fafafa";
+const TEXT_SOFT = "#d4d4d8";
+const TEXT_MUTED = "#71717a";
+const POS = "#19f57c";
+const NEG = "#ef4444";
 
 interface RenderInputs {
   handle: string;
   displayName: string | null;
+  avatarDataUri: string | null;
+  logoDataUri: string | null;
   hasData: boolean;
   record: string;
   unitsRaw: number;
@@ -30,6 +36,38 @@ interface RenderInputs {
 const PRIMARY_CACHE = "public, max-age=300, s-maxage=300, stale-while-revalidate=86400";
 const FALLBACK_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
 
+async function fetchAvatarDataUri(url: string | null): Promise<string | null> {
+  if (!url) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "TailSlipsBot/1.0 (+https://tailslips.com)" },
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.byteLength === 0 || buf.byteLength > 1_500_000) return null;
+    return `data:${ct};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readLogoDataUri(): Promise<string | null> {
+  try {
+    const path = join(process.cwd(), "public", "logo-horizontal-aligned-tight.png");
+    const buf = await readFile(path);
+    return `data:image/png;base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
 export default async function CapperOgImage({
   params,
 }: {
@@ -38,6 +76,7 @@ export default async function CapperOgImage({
   const { handle } = await params;
 
   let displayName: string | null = null;
+  let avatarSourceUrl: string | null = null;
   let record = "0-0";
   let unitsRaw = 0;
   let roiPct = 0;
@@ -49,6 +88,7 @@ export default async function CapperOgImage({
     const profile = await fetchCapperProfile(handle, { history_limit: 1, history_offset: 0 });
     const allTime = profile.aggregates["all_time"];
     displayName = profile.capper.display_name;
+    avatarSourceUrl = profile.capper.profile_image_url;
     if (allTime && allTime.picks_count > 0) {
       record = formatRecord(allTime);
       unitsRaw = allTime.units_profit;
@@ -58,14 +98,19 @@ export default async function CapperOgImage({
       hasData = true;
     }
   } catch (err) {
-    // Log so this surfaces in Vercel function logs. The render still proceeds
-    // with the no-data variant rather than failing the whole route.
     console.error("[opengraph-image] fetchCapperProfile failed", { handle, err });
   }
+
+  const [avatarDataUri, logoDataUri] = await Promise.all([
+    fetchAvatarDataUri(avatarSourceUrl),
+    readLogoDataUri(),
+  ]);
 
   const inputs: RenderInputs = {
     handle,
     displayName,
+    avatarDataUri,
+    logoDataUri,
     hasData,
     record,
     unitsRaw,
@@ -84,16 +129,16 @@ export default async function CapperOgImage({
     return new Response(buf, {
       headers: { "content-type": "image/png", "cache-control": PRIMARY_CACHE },
     });
-  } catch {
+  } catch (err) {
+    console.error("[opengraph-image] primary render failed", { handle, err });
     try {
-      const fallback = new ImageResponse(buildFallbackJsx(handle), { ...size });
+      const fallback = new ImageResponse(buildFallbackJsx(handle, logoDataUri), { ...size });
       const buf = await fallback.arrayBuffer();
       return new Response(buf, {
         headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
       });
-    } catch {
-      // Final guard: never return 500 to social crawlers. A 1x1 transparent
-      // PNG is preferable to a broken card preview cached for hours.
+    } catch (err2) {
+      console.error("[opengraph-image] fallback render failed", { handle, err2 });
       return new Response(TRANSPARENT_PNG, {
         headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
       });
@@ -107,7 +152,7 @@ const TRANSPARENT_PNG = Buffer.from(
 );
 
 function buildOgJsx(inputs: RenderInputs) {
-  const { handle, displayName, hasData, record, unitsRaw, roiPct, picksCount, trackedSinceLabel } = inputs;
+  const { handle, displayName, avatarDataUri, logoDataUri, hasData, record, unitsRaw, roiPct, picksCount, trackedSinceLabel } = inputs;
   const unitsLabel = formatUnitsForTitle(unitsRaw);
   const roiLabel = formatRoiForTitle(roiPct);
   const unitsColor = unitsRaw >= 0 ? POS : NEG;
@@ -136,27 +181,14 @@ function buildOgJsx(inputs: RenderInputs) {
           marginBottom: 36,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: BRAND_GOLD,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#1a1305",
-              fontWeight: 800,
-              fontSize: 22,
-            }}
-          >
-            T
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, display: "flex" }}>
+        {logoDataUri ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoDataUri} alt="TailSlips" height={42} style={{ height: 42 }} />
+        ) : (
+          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, display: "flex" }}>
             TAILSLIPS
           </div>
-        </div>
+        )}
         <div
           style={{
             display: "flex",
@@ -164,10 +196,10 @@ function buildOgJsx(inputs: RenderInputs) {
             padding: "8px 16px",
             border: `1px solid ${BORDER}`,
             borderRadius: 999,
-            fontSize: 14,
-            fontWeight: 600,
-            color: MUTED,
-            letterSpacing: 1.4,
+            fontSize: 13,
+            fontWeight: 700,
+            color: TEXT_MUTED,
+            letterSpacing: 1.6,
             textTransform: "uppercase",
           }}
         >
@@ -176,23 +208,40 @@ function buildOgJsx(inputs: RenderInputs) {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-        <div
-          style={{
-            width: 140,
-            height: 140,
-            borderRadius: 999,
-            background: CARD,
-            border: `3px solid ${BORDER}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 60,
-            fontWeight: 800,
-            color: BRAND_GOLD,
-          }}
-        >
-          {initial}
-        </div>
+        {avatarDataUri ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarDataUri}
+            alt=""
+            width={140}
+            height={140}
+            style={{
+              width: 140,
+              height: 140,
+              borderRadius: 999,
+              border: `3px solid ${BORDER}`,
+              objectFit: "cover",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 140,
+              height: 140,
+              borderRadius: 999,
+              background: CARD,
+              border: `3px solid ${BORDER}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 60,
+              fontWeight: 800,
+              color: TEXT_SOFT,
+            }}
+          >
+            {initial}
+          </div>
+        )}
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
@@ -210,7 +259,7 @@ function buildOgJsx(inputs: RenderInputs) {
               style={{
                 fontSize: 22,
                 fontWeight: 600,
-                color: MUTED,
+                color: TEXT_MUTED,
                 marginTop: 10,
                 display: "flex",
               }}
@@ -237,7 +286,7 @@ function buildOgJsx(inputs: RenderInputs) {
               border: `1px solid ${BORDER}`,
               borderRadius: 18,
               fontSize: 22,
-              color: MUTED,
+              color: TEXT_MUTED,
               fontWeight: 600,
             }}
           >
@@ -255,8 +304,8 @@ function buildOgJsx(inputs: RenderInputs) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          fontSize: 18,
-          color: MUTED,
+          fontSize: 17,
+          color: TEXT_MUTED,
           fontWeight: 600,
         }}
       >
@@ -265,13 +314,13 @@ function buildOgJsx(inputs: RenderInputs) {
             ? `Tracked since ${trackedSinceLabel}. Every public pick parsed live, graded against final outcomes.`
             : "Every public pick parsed live, graded against final outcomes."}
         </div>
-        <div style={{ display: "flex", color: BRAND_GOLD, fontWeight: 700 }}>tailslips.com</div>
+        <div style={{ display: "flex", color: TEXT_SOFT, fontWeight: 700 }}>tailslips.com</div>
       </div>
     </div>
   );
 }
 
-function buildFallbackJsx(handle: string) {
+function buildFallbackJsx(handle: string, logoDataUri: string | null) {
   return (
     <div
       style={{
@@ -286,27 +335,14 @@ function buildFallbackJsx(handle: string) {
         fontFamily: "system-ui, sans-serif",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 10,
-            background: BRAND_GOLD,
-            color: "#1a1305",
-            fontWeight: 800,
-            fontSize: 28,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          T
-        </div>
-        <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.5, display: "flex" }}>
+      {logoDataUri ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoDataUri} alt="TailSlips" height={48} style={{ height: 48 }} />
+      ) : (
+        <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -0.5, display: "flex" }}>
           TAILSLIPS
         </div>
-      </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ fontSize: 80, fontWeight: 800, letterSpacing: -2, display: "flex" }}>
           @{handle}
@@ -314,7 +350,7 @@ function buildFallbackJsx(handle: string) {
         <div
           style={{
             fontSize: 26,
-            color: MUTED,
+            color: TEXT_MUTED,
             marginTop: 16,
             fontWeight: 600,
             display: "flex",
@@ -323,7 +359,7 @@ function buildFallbackJsx(handle: string) {
           Verified MLB capper record on TailSlips
         </div>
       </div>
-      <div style={{ color: BRAND_GOLD, fontWeight: 700, fontSize: 22, display: "flex" }}>
+      <div style={{ color: TEXT_SOFT, fontWeight: 700, fontSize: 22, display: "flex" }}>
         tailslips.com
       </div>
     </div>
@@ -353,10 +389,10 @@ function StatTile({
     >
       <div
         style={{
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: 700,
-          color: MUTED,
-          letterSpacing: 1.6,
+          color: TEXT_MUTED,
+          letterSpacing: 2,
           textTransform: "uppercase",
           display: "flex",
         }}
@@ -368,7 +404,7 @@ function StatTile({
           fontSize: 52,
           fontWeight: 800,
           color: valueColor,
-          marginTop: 8,
+          marginTop: 10,
           letterSpacing: -1.5,
           lineHeight: 1,
           display: "flex",
