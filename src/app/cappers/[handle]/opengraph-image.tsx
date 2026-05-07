@@ -122,16 +122,16 @@ async function fetchAvatarDataUri(url: string | null): Promise<string | null> {
 }
 
 /**
- * Resolve the capper's rank using the same canonical sort the slate uses
- * (season window + straights only + units profit). Returns null if the
- * capper isn't on the leaderboard (below min picks, inactive, or unknown).
+ * Resolve the capper's rank using the leaderboard default: season window,
+ * all bet types, sorted by units profit. Profile share cards should reflect
+ * the capper's overall standing, not the straights-only slate slice.
  */
 async function fetchCapperRank(handle: string): Promise<number | null> {
   try {
     const data = await fetchLeaderboard({
       window: "season",
       sort: "units_profit",
-      bet_type: "straights",
+      bet_type: "all",
       min_picks: 10,
       active_only: true,
     });
