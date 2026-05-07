@@ -26,6 +26,11 @@ const GOLD = "#f5c54a";
 const BLUE = "#60a5fa";
 const BLUE_SOFT = "rgba(37, 99, 235, 0.15)";
 const BLUE_BORDER = "rgba(37, 99, 235, 0.6)";
+// Pill accent: violet for the standard "MLB CAPPER RECORD" mark. Differentiates
+// from the green stats and gold ribbon while reading as premium.
+const VIOLET = "#c4b5fd";
+const VIOLET_SOFT = "rgba(167, 139, 250, 0.12)";
+const VIOLET_BORDER = "rgba(167, 139, 250, 0.45)";
 
 type Tier = "model" | "top3" | "standard";
 
@@ -64,9 +69,9 @@ function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
       // brand mark; ribbon is the rank stamp. They serve different roles.
       pill: {
         text: "MLB CAPPER RECORD",
-        color: TEXT_MUTED,
-        background: "transparent",
-        border: BORDER,
+        color: VIOLET,
+        background: VIOLET_SOFT,
+        border: VIOLET_BORDER,
       },
       ribbonRank: rank,
       avatarBorder: GOLD,
@@ -340,7 +345,7 @@ function buildOgJsx(inputs: RenderInputs) {
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          gap: 20,
           marginBottom: 28,
         }}
       >
@@ -357,14 +362,14 @@ function buildOgJsx(inputs: RenderInputs) {
             style={{
               display: "flex",
               alignItems: "center",
-              padding: "6px 14px",
+              padding: "8px 16px",
               background: visuals.pill.background,
               border: `1px solid ${visuals.pill.border}`,
               borderRadius: 999,
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: 700,
               color: visuals.pill.color,
-              letterSpacing: 1.6,
+              letterSpacing: 1.8,
               textTransform: "uppercase",
             }}
           >
