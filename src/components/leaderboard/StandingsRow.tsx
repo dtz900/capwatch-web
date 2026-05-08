@@ -5,6 +5,7 @@ import { StatusPill } from "./StatusPill";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LivePicksIndicator } from "./LivePicksIndicator";
+import { Sparkline } from "./Sparkline";
 import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import { buildProfileHref } from "@/lib/profileHref";
@@ -13,7 +14,7 @@ import type { CapperRow, Window } from "@/lib/types";
 interface Props { rank: number; capper: CapperRow; window?: Window }
 
 const DESKTOP_COLS =
-  "hidden sm:grid grid-cols-[40px_minmax(180px,1fr)_minmax(280px,1.6fr)_64px_64px_70px_80px_44px] items-center gap-3 px-[22px] py-3.5 border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
+  "hidden sm:grid grid-cols-[40px_minmax(180px,1fr)_minmax(220px,1.4fr)_64px_64px_70px_80px_92px_44px] items-center gap-3 px-[22px] py-3.5 border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
 
 const MOBILE_CARD =
   "sm:hidden block px-4 py-3.5 border-b border-[rgba(255,255,255,0.03)] last:border-0";
@@ -63,6 +64,9 @@ export function StandingsRow({ rank, capper, window }: Props) {
         <div className="text-right">{formatWinRate(capper.win_rate)}</div>
         <div className={`text-right ${unitsCls}`}>{formatUnits(capper.units_profit)}</div>
         <div className={`text-right ${roiCls}`}>{formatRoi(capper.roi_pct)}</div>
+        <div className="flex justify-end">
+          <Sparkline values={capper.trajectory_units ?? []} />
+        </div>
         <div className="text-right relative">
           <a aria-label="View on X" target="_blank" rel="noopener"
              href={capper.handle ? `https://x.com/${capper.handle}` : "#"}
@@ -104,6 +108,11 @@ export function StandingsRow({ rank, capper, window }: Props) {
             <div className={`text-sm font-bold tabular-nums mt-0.5 ${roiCls}`}>{formatRoi(capper.roi_pct)}</div>
           </div>
         </div>
+        {(capper.trajectory_units?.length ?? 0) >= 2 && (
+          <div className="mt-3 flex justify-center">
+            <Sparkline values={capper.trajectory_units ?? []} width={140} height={28} />
+          </div>
+        )}
       </div>
     </>
   );

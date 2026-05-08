@@ -56,6 +56,7 @@ export interface CapperRow {
   deleted_picks_count: number;
   live_picks_count: number;
   last_picks: LastPick[];
+  trajectory_units?: number[];
 }
 
 export interface LeaderboardResponse {
