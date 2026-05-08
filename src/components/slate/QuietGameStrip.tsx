@@ -4,11 +4,12 @@ import type { SlateGame } from "@/lib/types";
 function formatGameTime(iso: string | null): string | null {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleTimeString("en-US", {
+    const t = new Date(iso).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
-      timeZoneName: "short",
+      timeZone: "America/New_York",
     });
+    return `${t} ET`;
   } catch {
     return null;
   }
