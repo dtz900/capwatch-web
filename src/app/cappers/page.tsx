@@ -33,10 +33,7 @@ export const metadata = {
   },
 };
 
-// Render on demand instead of prerendering at build time. The API's
-// supabase_disconnect_recovery middleware can return a transient 503 when an
-// idle Supabase HTTP/2 connection drops; we don't want a build to fail on it.
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const DESKTOP_GRID =
   "hidden sm:grid grid-cols-[44px_minmax(220px,1fr)_72px_84px_72px_72px_20px] items-center gap-4";

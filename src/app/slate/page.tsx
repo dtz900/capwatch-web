@@ -45,7 +45,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   };
 }
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function SlatePage({ searchParams }: PageProps) {
   const sp = await searchParams;

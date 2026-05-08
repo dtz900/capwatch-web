@@ -35,7 +35,7 @@ interface PageProps {
 const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const PAGE_SIZE = 25;
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { handle } = await params;
