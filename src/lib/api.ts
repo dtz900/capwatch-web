@@ -268,6 +268,25 @@ export interface DeletedPicksResponse {
   };
 }
 
+export interface PipelineStatusResponse {
+  is_stale: boolean;
+  message: string | null;
+  parser_minutes_ago: number | null;
+  grader_minutes_ago: number | null;
+}
+
+export async function fetchPipelineStatus(): Promise<PipelineStatusResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/public/pipeline-status`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as PipelineStatusResponse;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchDeletedPicks(handle: string): Promise<DeletedPicksResponse> {
   const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}/deleted-picks`;
   const res = await fetch(url, { cache: "no-store" });

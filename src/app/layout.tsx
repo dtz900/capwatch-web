@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
+import { Suspense } from "react";
 import { AnalyticsWithExclusion } from "@/components/analytics/AnalyticsWithExclusion";
 import { BrandFooter } from "@/components/nav/BrandFooter";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
+import { PipelineStaleBanner } from "@/components/nav/PipelineStaleBanner";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
@@ -62,6 +64,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={manrope.variable}>
       <body>
+        <Suspense fallback={null}>
+          <PipelineStaleBanner />
+        </Suspense>
         {children}
         <BrandFooter />
         <MobileTabBar />
