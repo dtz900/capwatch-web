@@ -268,6 +268,24 @@ export interface DeletedPicksResponse {
   };
 }
 
+export type EmailSignupStatus = "ok" | "invalid_email" | "error";
+
+export async function submitEmailSignup(input: { email: string; source?: string }): Promise<EmailSignupStatus> {
+  try {
+    const res = await fetch(`${API_BASE}/api/public/email-signups`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      cache: "no-store",
+    });
+    if (res.ok) return "ok";
+    if (res.status === 400) return "invalid_email";
+    return "error";
+  } catch {
+    return "error";
+  }
+}
+
 export interface PipelineStatusResponse {
   is_stale: boolean;
   message: string | null;

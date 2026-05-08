@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import { EmailSignupForm } from "@/components/forms/EmailSignupForm";
 
 export function BrandFooter() {
   return (
     <footer className="border-t border-[rgba(255,255,255,0.04)] mt-4 pb-20 sm:pb-0">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-7 py-10 flex flex-col items-center justify-center gap-6">
+        <EmailSignupForm source="footer" />
         <div className="max-w-[640px] text-center text-[12px] leading-[1.55] text-[var(--color-text-muted)] space-y-2 px-2">
           <p>
             TailSlips tracks publicly posted picks from public Twitter accounts. We are not a sportsbook
