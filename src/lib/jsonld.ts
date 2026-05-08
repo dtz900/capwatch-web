@@ -85,12 +85,17 @@ export function capperReviewNode(profile: CapperProfile): JsonLdNode | null {
 
   const handle = profile.capper.handle ?? "";
   const url = canonicalUrl(`/cappers/${handle}`);
-  const ratingValue = roiToReviewRating(allTime.roi_pct);
+  // Coalesce nullable aggregates: tortpicks-style cappers can have
+  // roi_pct=null when no graded pick had a usable odds source, and a
+  // theoretical 0-units row would crash the toFixed call below.
+  const safeRoi = allTime.roi_pct ?? 0;
+  const safeUnits = allTime.units_profit ?? 0;
+  const ratingValue = roiToReviewRating(safeRoi);
   const record = formatRecord(allTime);
-  const units = allTime.units_profit >= 0
-    ? `+${allTime.units_profit.toFixed(1)}u`
-    : `${allTime.units_profit.toFixed(1)}u`;
-  const roi = `${allTime.roi_pct >= 0 ? "+" : ""}${allTime.roi_pct.toFixed(1)}%`;
+  const units = safeUnits >= 0
+    ? `+${safeUnits.toFixed(1)}u`
+    : `${safeUnits.toFixed(1)}u`;
+  const roi = `${safeRoi >= 0 ? "+" : ""}${safeRoi.toFixed(1)}%`;
 
   return {
     "@context": "https://schema.org",

@@ -20,14 +20,16 @@ export function formatRecord({ wins, losses, pushes }: RecordLine): string {
   return pushes > 0 ? `${wins}-${losses}-${pushes}` : `${wins}-${losses}`;
 }
 
-export function formatUnitsForTitle(units: number): string {
-  const sign = units >= 0 ? "+" : "-";
-  return `${sign}${Math.abs(units).toFixed(1)}u`;
+export function formatUnitsForTitle(units: number | null | undefined): string {
+  const safe = units ?? 0;
+  const sign = safe >= 0 ? "+" : "-";
+  return `${sign}${Math.abs(safe).toFixed(1)}u`;
 }
 
-export function formatRoiForTitle(pct: number): string {
-  const sign = pct >= 0 ? "+" : "-";
-  return `${sign}${Math.abs(pct).toFixed(1)}% ROI`;
+export function formatRoiForTitle(pct: number | null | undefined): string {
+  const safe = pct ?? 0;
+  const sign = safe >= 0 ? "+" : "-";
+  return `${sign}${Math.abs(safe).toFixed(1)}% ROI`;
 }
 
 /**
@@ -152,11 +154,17 @@ export function buildCapperFaq(inputs: FaqInputs): FaqQA[] {
   }
 
   const record = formatRecord(allTimeAgg);
-  const units = formatUnitsForTitle(allTimeAgg.units_profit);
-  const roi = `${allTimeAgg.roi_pct >= 0 ? "+" : ""}${allTimeAgg.roi_pct.toFixed(1)}%`;
+  // Coalesce nullable aggregate fields. Cappers whose graded picks all
+  // lack a usable odds source (no posted odds + no Pinnacle close) get
+  // roi_pct=null and units_profit=0 from the backend; calling .toFixed
+  // on null would crash the page render.
+  const safeUnits = allTimeAgg.units_profit ?? 0;
+  const safeRoi = allTimeAgg.roi_pct ?? 0;
+  const units = formatUnitsForTitle(safeUnits);
+  const roi = `${safeRoi >= 0 ? "+" : ""}${safeRoi.toFixed(1)}%`;
   const winRate = `${Math.round(allTimeAgg.win_rate * 100)}%`;
-  const profitable = allTimeAgg.units_profit > 0;
-  const breakeven = Math.abs(allTimeAgg.units_profit) < 0.5;
+  const profitable = safeUnits > 0;
+  const breakeven = Math.abs(safeUnits) < 0.5;
 
   const profitabilityAnswer = breakeven
     ? `${name} is roughly breakeven on tracked MLB picks: ${record} across ${allTimeAgg.picks_count} graded picks for ${units} units (${roi} ROI, ${winRate} win rate). At this sample size their record is too close to flat to call profitable or unprofitable.`
