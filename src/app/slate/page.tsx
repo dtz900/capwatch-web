@@ -124,6 +124,10 @@ export default async function SlatePage({ searchParams }: PageProps) {
             <p className="text-[13px] text-[var(--color-text-muted)] font-medium mt-3 tabular-nums">
               {summaryLine}
             </p>
+            <p className="text-[12px] text-[var(--color-text-muted)] font-medium mt-2 max-w-[640px]">
+              Sharps are ranked by their season straight-pick performance (units profit, min 10 graded picks).
+              Parlay legs route to the team they back but do not count toward the season rank.
+            </p>
           </div>
           <DateToggle current={dateParam} />
         </header>
