@@ -109,83 +109,105 @@ export function GameBlock({ game }: { game: SlateGame }) {
   const hasMlAction = buckets.awayMl.length + buckets.homeMl.length > 0;
   const hasOther = buckets.other.length > 0;
   const isSilent = game.picks.length === 0;
+  const awayColor = teamColor(game.away_team);
+  const homeColor = teamColor(game.home_team);
 
   return (
-    <section id={`game-${game.game_id}`} className="py-10 border-t border-[rgba(255,255,255,0.07)]">
-      {/* Hero matchup */}
-      <div className="text-center">
-        <div className="text-[11px] tabular-nums font-semibold text-[var(--color-text-muted)] mb-4">
-          {time}
-        </div>
-        <div className="flex items-center justify-center gap-4 sm:gap-10">
-          <div className="flex flex-col items-center gap-2 sm:gap-3">
-            <TeamLogo abbr={game.away_team} size={88} className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]" />
-            <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
-              {game.away_team}
-            </span>
-          </div>
-          <span className="text-[11px] sm:text-[12px] uppercase tracking-[0.22em] font-bold text-[var(--color-text-muted)] mt-7 sm:mt-10">
-            vs
-          </span>
-          <div className="flex flex-col items-center gap-2 sm:gap-3">
-            <TeamLogo abbr={game.home_team} size={88} className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]" />
-            <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
-              {game.home_team}
-            </span>
-          </div>
-        </div>
-        {pitchers && (
-          <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-4">{pitchers}</div>
-        )}
+    <section
+      id={`game-${game.game_id}`}
+      className="relative rounded-2xl overflow-hidden
+                 bg-gradient-to-b from-[#15151a] via-[#101015] to-[#0b0b0f]
+                 border border-[rgba(255,255,255,0.07)]
+                 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.55)]"
+    >
+      {/* Top edge: split team-color hairline, like the spine of a lineup card */}
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] flex">
+        <span className="flex-1" style={{ backgroundColor: awayColor }} />
+        <span className="flex-1" style={{ backgroundColor: homeColor }} />
       </div>
 
-      {/* Versus: cappers face off on either side */}
-      {hasMlAction && (
-        <div className="grid grid-cols-2 gap-x-3 sm:gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
-          <Side
-            team={game.away_team}
-            picks={buckets.awayMl}
-            awayTeam={game.away_team}
-            homeTeam={game.home_team}
-          />
-          <Side
-            team={game.home_team}
-            picks={buckets.homeMl}
-            awayTeam={game.away_team}
-            homeTeam={game.home_team}
-          />
-        </div>
-      )}
+      {/* Card header: game time + matchup label, scoresheet style */}
+      <header className="flex items-center justify-between px-5 sm:px-7 py-3
+                         border-b border-[rgba(255,255,255,0.06)]
+                         text-[10px] uppercase tracking-[0.18em] font-bold
+                         text-[var(--color-text-muted)]">
+        <span>Matchup</span>
+        <span className="tabular-nums">{time}</span>
+      </header>
 
-      {/* Other markets: totals, props, non-ML parlay legs, etc. */}
-      {hasOther && (
-        <div className="mt-8 max-w-[680px] mx-auto">
-          <div className="flex items-baseline justify-between pb-2 mb-1 border-b border-[rgba(255,255,255,0.10)]">
-            <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-[var(--color-text-muted)]">
-              Totals, props & parlays
+      <div className="px-5 sm:px-7 py-7 sm:py-8">
+        {/* Hero matchup */}
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-4 sm:gap-10">
+            <div className="flex flex-col items-center gap-2 sm:gap-3">
+              <TeamLogo abbr={game.away_team} size={88} className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]" />
+              <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
+                {game.away_team}
+              </span>
+            </div>
+            <span className="text-[11px] sm:text-[12px] uppercase tracking-[0.22em] font-bold text-[var(--color-text-muted)] mt-7 sm:mt-10">
+              vs
             </span>
-            <span className="text-[11px] tabular-nums font-bold text-[var(--color-text-muted)]">
-              {buckets.other.length} {buckets.other.length === 1 ? "pick" : "picks"}
-            </span>
+            <div className="flex flex-col items-center gap-2 sm:gap-3">
+              <TeamLogo abbr={game.home_team} size={88} className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]" />
+              <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
+                {game.home_team}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            {buckets.other.map((pick, i) => (
-              <SlatePickRow
-                key={`${pick.capper_id}-${i}`}
-                pick={pick}
-                awayTeam={game.away_team}
-                homeTeam={game.home_team}
-              />
-            ))}
-          </div>
+          {pitchers && (
+            <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-4">{pitchers}</div>
+          )}
         </div>
-      )}
 
-      {isSilent && (
-        <div className="text-[12px] italic text-[var(--color-text-muted)] mt-6 text-center">
-          Quiet. No one has tweeted on this one yet.
-        </div>
-      )}
+        {/* Versus: cappers face off on either side */}
+        {hasMlAction && (
+          <div className="grid grid-cols-2 gap-x-3 sm:gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
+            <Side
+              team={game.away_team}
+              picks={buckets.awayMl}
+              awayTeam={game.away_team}
+              homeTeam={game.home_team}
+            />
+            <Side
+              team={game.home_team}
+              picks={buckets.homeMl}
+              awayTeam={game.away_team}
+              homeTeam={game.home_team}
+            />
+          </div>
+        )}
+
+        {/* Other markets: totals, props, non-ML parlay legs, etc. */}
+        {hasOther && (
+          <div className="mt-8 max-w-[680px] mx-auto">
+            <div className="flex items-baseline justify-between pb-2 mb-1 border-b border-[rgba(255,255,255,0.10)]">
+              <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-[var(--color-text-muted)]">
+                Totals, props & parlays
+              </span>
+              <span className="text-[11px] tabular-nums font-bold text-[var(--color-text-muted)]">
+                {buckets.other.length} {buckets.other.length === 1 ? "pick" : "picks"}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              {buckets.other.map((pick, i) => (
+                <SlatePickRow
+                  key={`${pick.capper_id}-${i}`}
+                  pick={pick}
+                  awayTeam={game.away_team}
+                  homeTeam={game.home_team}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isSilent && (
+          <div className="text-[12px] italic text-[var(--color-text-muted)] mt-6 text-center">
+            Quiet. No one has tweeted on this one yet.
+          </div>
+        )}
+      </div>
     </section>
   );
 }

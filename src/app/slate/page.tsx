@@ -139,7 +139,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
           </div>
         ) : (
           <>
-            <div>
+            <div className="flex flex-col gap-5 mt-2">
               {gamesWithPicks.map((g) => (
                 <GameBlock key={g.game_id} game={g} />
               ))}
