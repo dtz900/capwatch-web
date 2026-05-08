@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { XIcon } from "@/components/icons/XIcon";
 import { SignalsIcon } from "@/components/icons/SignalsIcon";
+import { OutcomeBadge } from "./OutcomeBadge";
 import { formatPickText } from "@/lib/bet-format";
 import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
 import type { SlatePick } from "@/lib/types";
@@ -82,7 +83,7 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
         </div>
       </div>
 
-      {/* Bottom line: bet text + units */}
+      {/* Bottom line: bet text + units (or outcome badge once graded) */}
       <div className="flex items-baseline justify-between gap-2 mt-0.5">
         <span
           className={`tabular-nums truncate ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
@@ -90,12 +91,16 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
         >
           {betText}
         </span>
-        <span className="shrink-0 text-[11px] tabular-nums">
-          <span className={isHeavy ? "text-[var(--color-gold)] font-extrabold" : "text-[var(--color-text-muted)] font-medium"}>
-            {formatStakeUnits(pick.stake_units)}
-          </span>
+        <span className="shrink-0 text-[11px] tabular-nums flex items-center gap-1.5">
+          {pick.outcome ? (
+            <OutcomeBadge outcome={pick.outcome} profitUnits={pick.profit_units} />
+          ) : (
+            <span className={isHeavy ? "text-[var(--color-gold)] font-extrabold" : "text-[var(--color-text-muted)] font-medium"}>
+              {formatStakeUnits(pick.stake_units)}
+            </span>
+          )}
           {isParlayLeg && (
-            <span className="ml-1 text-[10px] text-[var(--color-text-muted)] opacity-80">
+            <span className="text-[10px] text-[var(--color-text-muted)] opacity-80">
               in {pick.leg_count}-leg
             </span>
           )}

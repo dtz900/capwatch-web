@@ -83,10 +83,28 @@ export default async function SlatePage({ searchParams }: PageProps) {
   const gamesWithPicks = data.games.filter((g) => g.picks.length > 0);
   const gamesWithoutPicks = data.games.filter((g) => g.picks.length === 0);
   const uniqueSharps = new Set(allPicks.map((p) => p.capper_id)).size;
+  const totalGames = data.games.length;
+  const ds = data.day_summary;
+  const totalUnits = ds.graded_count + ds.pending_count;
 
-  const summaryLine = totalPicks === 0
-    ? `${data.games.length} games on the board, no picks tweeted yet`
-    : `${uniqueSharps} ${uniqueSharps === 1 ? "sharp" : "sharps"} · ${gamesWithPicks.length} live ${gamesWithPicks.length === 1 ? "game" : "games"} · ${totalPicks} picks pending`;
+  const summaryLine = (() => {
+    if (totalPicks === 0) {
+      return `${totalGames} games on the board, no picks tweeted yet`;
+    }
+    const sharps = `${uniqueSharps} ${uniqueSharps === 1 ? "sharp" : "sharps"}`;
+    if (ds.graded_count === 0) {
+      return `${sharps} · ${gamesWithPicks.length} live ${gamesWithPicks.length === 1 ? "game" : "games"} · ${totalUnits} pending`;
+    }
+    const sign = ds.net_units > 0 ? "+" : "";
+    const fixed = ds.net_units.toFixed(2);
+    let record = `${ds.wins}-${ds.losses}`;
+    if (ds.pushes > 0) record += `-${ds.pushes}`;
+    if (ds.voids > 0) record += ` · ${ds.voids} void`;
+    if (ds.pending_count === 0) {
+      return `${sharps} · ${ds.graded_count} graded · ${record} · ${sign}${fixed}u`;
+    }
+    return `${sharps} · ${ds.graded_count} graded (${record}, ${sign}${fixed}u) · ${ds.pending_count} pending`;
+  })();
 
   return (
     <>

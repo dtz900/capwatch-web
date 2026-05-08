@@ -73,6 +73,8 @@ export interface PlatformStats {
   cappers_tracked: number;
 }
 
+export type Outcome = "W" | "L" | "P" | "V";
+
 export interface SlatePick {
   capper_id: number;
   capper_rank: number | null;
@@ -91,6 +93,18 @@ export interface SlatePick {
   posted_at: string | null;
   tweet_url: string | null;
   source: string | null;
+  outcome: Outcome | null;
+  profit_units: number | null;
+}
+
+export interface DaySummary {
+  graded_count: number;
+  pending_count: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  voids: number;
+  net_units: number;
 }
 
 export interface SlateGame {
@@ -115,6 +129,7 @@ export interface SlateResponse {
   date: string;
   games: SlateGame[];
   most_picked: SlateMostPicked[];
+  day_summary: DaySummary;
 }
 
 export type GradingOddsSource =
