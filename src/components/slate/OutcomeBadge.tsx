@@ -27,7 +27,7 @@ export function OutcomeBadge({ outcome, profitUnits }: Props) {
       style={{ backgroundColor: style.bg, border: `1px solid ${style.border}`, color: style.color }}
     >
       <span>{style.label}</span>
-      {profitUnits !== null && outcome !== "V" && (
+      {profitUnits !== null && profitUnits !== 0 && outcome !== "V" && (
         <span className="font-bold opacity-90">{formatProfit(profitUnits)}</span>
       )}
     </span>
