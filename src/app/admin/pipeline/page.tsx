@@ -1,4 +1,5 @@
 import { PipelineTicker } from "./PipelineTicker";
+import { StreamUptimeStrip } from "./StreamUptimeStrip";
 
 export const metadata = {
   title: "Pipeline ticker · TailSlips Admin",
@@ -28,6 +29,8 @@ export default async function AdminPipelinePage({ searchParams }: PageProps) {
             Tweets captured, parsed, picks inserted, and grades written, ordered newest first. Polls every 15 seconds.
           </p>
         </header>
+
+        <StreamUptimeStrip />
 
         <PipelineTicker initialHandle={handle} initialMinutes={minutes} />
       </main>

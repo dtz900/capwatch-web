@@ -135,3 +135,52 @@ export async function triggerCronTask(task: CronTaskName): Promise<CronTriggerRe
     return { ok: false, task, error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+export interface StreamGap {
+  start: string;
+  end: string | null;
+  trigger: "disconnected" | "connection_error" | "worker_starting" | null;
+  ongoing: boolean;
+}
+
+export interface StreamEvent {
+  id: number;
+  event_type: "worker_starting" | "connected" | "disconnected" | "connection_error";
+  occurred_at: string;
+  details: Record<string, unknown>;
+}
+
+export interface StreamUptimeResponse {
+  hours: number;
+  since: string;
+  now: string;
+  events: StreamEvent[];
+  gaps: StreamGap[];
+  current_state: string;
+}
+
+export type StreamUptimeResult =
+  | { ok: true; data: StreamUptimeResponse }
+  | { ok: false; error: string };
+
+export async function fetchStreamUptime(hours: number = 24): Promise<StreamUptimeResult> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return { ok: false, error: "CRON_SECRET not set on server" };
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/admin/pipeline/stream-uptime?hours=${hours}`,
+      {
+        headers: { Authorization: `Bearer ${secret}` },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as StreamUptimeResponse;
+    return { ok: true, data };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
