@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LeaderboardFilters } from "@/lib/api";
 
@@ -41,6 +41,23 @@ export function FilterBar({ filters }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [optimistic, setOptimistic] = useState(filters);
+
+  // Sync optimistic state when the parent passes new server-rendered filters.
+  // Without this, the LeaderboardPrefsRestorer flow (no-param landing -> read
+  // localStorage -> router.replace with restored params) updates the URL and
+  // the underlying data but leaves the highlighted pill stuck on whatever
+  // useState captured on first mount. Compare field-by-field so object
+  // identity churn from parent re-renders doesn't reset optimistic mid-click.
+  useEffect(() => {
+    setOptimistic(filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    filters.window,
+    filters.sort,
+    filters.bet_type,
+    filters.active_only,
+    filters.min_picks,
+  ]);
 
   const apply = (next: LeaderboardFilters) => {
     setOptimistic(next);
