@@ -13,12 +13,19 @@ export function BrandFooter() {
             and not affiliated with any gambling operator. Information shown is not betting advice.
           </p>
           <p>
-            Records reflect only public posts parsed by our pipeline. Some picks may be missing or
-            misattributed. See{" "}
+            Records are computed from publicly posted picks that declared a side, line, odds, and
+            stake. Picks without those details are not gradeable and not shown. See{" "}
             <Link href="/methodology" className="underline hover:text-[var(--color-text)]">
               methodology
             </Link>{" "}
-            for what we do and do not capture.
+            for the full rules. Cappers who think a row is genuinely misattributed can email{" "}
+            <a
+              href="mailto:corrections@tailslips.com"
+              className="underline hover:text-[var(--color-text)]"
+            >
+              corrections@tailslips.com
+            </a>
+            .
           </p>
           <p>
             21+. If you or someone you know has a gambling problem, call{" "}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
@@ -222,6 +223,36 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
         <SimilarCappers rows={leaderboardRows} currentHandle={handle} />
 
         <FaqSection items={faqItems} />
+
+        <section className="mt-10 rounded-lg border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-5 sm:p-6">
+          <h2 className="text-[12px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-3">
+            How this record is calculated
+          </h2>
+          <p className="text-[13px] leading-relaxed text-[var(--color-text-soft)] mb-3">
+            This page reflects every publicly posted pick from @{handle} that declared a side,
+            line where applicable, odds taken, and unit stake. Picks without those details are
+            not gradeable and are not shown. Moneylines without posted odds are graded at the
+            Pinnacle close; spreads and totals default to -110. Player props without odds count
+            toward win rate but not units profit.
+          </p>
+          <p className="text-[13px] leading-relaxed text-[var(--color-text-soft)]">
+            Full rules at{" "}
+            <Link
+              href="/methodology"
+              className="underline text-[var(--color-text)] hover:text-[var(--color-text)]"
+            >
+              methodology
+            </Link>
+            . If you&apos;re @{handle} and you spot a genuine misattribution, email{" "}
+            <a
+              href={`mailto:corrections@tailslips.com?subject=Correction%20for%20%40${handle}`}
+              className="underline text-[var(--color-text)] hover:text-[var(--color-text)]"
+            >
+              corrections@tailslips.com
+            </a>
+            .
+          </p>
+        </section>
 
         <footer className="flex items-center justify-between py-7 pb-2 mt-8 text-xs text-[var(--color-text-muted)] font-medium">
           <div>Aggregates refresh daily at 6:00 AM PT.</div>

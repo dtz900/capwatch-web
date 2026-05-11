@@ -170,8 +170,50 @@ export default function Methodology() {
           The grade you see is computed from the final game outcome a public sportsbook also has on
           file. There is no hidden math.
         </p>
-        <p className="text-[var(--color-text-soft)] leading-relaxed">
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           The full pick history for every tracked account, wins and losses, is on their profile.
+        </p>
+
+        <h2 id="for-cappers" className="text-[20px] font-bold mt-12 mb-3">
+          If you&apos;re a capper
+        </h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          The number on your TailSlips profile will almost never match the spreadsheet you keep
+          yourself. That is intentional, and the reason it differs is the whole point of this site.
+          A few specifics worth knowing if you arrive here ready to dispute something.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          <strong className="text-[var(--color-text)] font-bold">Your record is computed from publicly posted, fully specified picks.</strong>{" "}
+          A tweet has to declare the side or selection, the line where applicable, the odds taken,
+          and the unit stake before we can grade it. Picks that hide any of those behind paid
+          content, lock emojis with no number attached, or vague language are kept out of the
+          record. Most missing picks fall into this bucket, and they are missing on purpose.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          <strong className="text-[var(--color-text)] font-bold">We do not retroactively delete losses.</strong>{" "}
+          Once a pick is captured and the game finalizes, the grade is permanent. Deleting the
+          original tweet does not pull the row off your record. If anything, deleting a losing
+          pick is detected and surfaced as a credibility signal of its own.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          <strong className="text-[var(--color-text)] font-bold">Moneylines without posted odds are graded at the Pinnacle close.</strong>{" "}
+          Spreads and totals default to -110. Player props posted without odds count toward your
+          win rate but stay out of units profit. All three are disclosed on the row itself. See
+          the &quot;When a capper doesn&apos;t post the odds&quot; section above for the full
+          rationale.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          <strong className="text-[var(--color-text)] font-bold">If you find a genuinely misattributed pick</strong>{" "}
+          (wrong game binding, wrong player, parser misread of your odds), email{" "}
+          <a
+            href="mailto:corrections@tailslips.com"
+            className="underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]"
+          >
+            corrections@tailslips.com
+          </a>{" "}
+          with the tweet link and what should be different. Real errors get fixed, usually within
+          a day. We do not honor requests to remove losing picks, fabricate odds the tweet did not
+          declare, or recategorize stakeless &quot;locks&quot; as graded wagers.
         </p>
       </main>
     </>
