@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
@@ -46,6 +47,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 }
 
 export const revalidate = 60;
+export const maxDuration = 30;
 
 export default async function SlatePage({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -58,6 +60,8 @@ export default async function SlatePage({ searchParams }: PageProps) {
     data = await fetchSlate(dateParam);
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
+    // Don't cache the failure render; next refresh re-fetches.
+    noStore();
   }
 
   if (fetchError || !data) {

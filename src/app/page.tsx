@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { Hero } from "@/components/leaderboard/Hero";
 import { FilterBar } from "@/components/leaderboard/FilterBar";
@@ -26,6 +27,7 @@ const MIN_PICKS = 10;
 // of staleness is invisible. The "N live" indicator updates near-realtime
 // via LivePicksProvider polling, separate from this cache.
 export const revalidate = 300;
+export const maxDuration = 30;
 
 export default async function Home({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -46,6 +48,8 @@ export default async function Home({ searchParams }: PageProps) {
     platformStats = data.platform_stats;
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
+    // Don't ISR-cache the failed render; let the next request retry.
+    noStore();
   }
 
   if (fetchError) {

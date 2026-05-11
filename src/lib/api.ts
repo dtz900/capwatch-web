@@ -8,6 +8,50 @@ import type {
   CapperProfile,
 } from "./types";
 
+// Retry-aware fetch for public reads. The Railway API's
+// supabase_disconnect_recovery middleware can emit a transient 503 when an
+// idle Supabase HTTP/2 connection drops, and individual cold-leaderboard
+// renders push 5+ seconds. A single failed fetch was tipping pages into
+// their try/catch fallback ("Leaderboard is temporarily unavailable"),
+// which then got ISR-cached for 60s and stuck for every visitor in that
+// window. Two attempts with a backoff, with a per-attempt timeout, handles
+// the common transient case without exceeding Vercel's function ceiling.
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit & { next?: { revalidate: number } } = {},
+  opts: { attempts?: number; perAttemptMs?: number; backoffMs?: number } = {},
+): Promise<Response> {
+  const attempts = opts.attempts ?? 2;
+  const perAttemptMs = opts.perAttemptMs ?? 10_000;
+  const backoffMs = opts.backoffMs ?? 1_000;
+
+  let lastErr: unknown = new Error("fetchWithRetry: no attempts made");
+  for (let i = 0; i < attempts; i++) {
+    const ctrl = new AbortController();
+    const timeoutId = setTimeout(() => ctrl.abort(), perAttemptMs);
+    try {
+      const res = await fetch(url, { ...init, signal: ctrl.signal });
+      clearTimeout(timeoutId);
+      // Only retry on server errors / proxy hiccups. Client errors are
+      // legitimate (bad params, not found, etc.) and won't recover.
+      if (res.status >= 500 && res.status < 600 && i < attempts - 1) {
+        lastErr = new Error(`upstream ${res.status}`);
+        await new Promise((r) => setTimeout(r, backoffMs * (i + 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      lastErr = err;
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, backoffMs * (i + 1)));
+        continue;
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export interface LeaderboardFilters {
   window: Window;
   sort: Sort;
@@ -39,7 +83,7 @@ export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<Lea
     min_picks: String(filters.min_picks),
     active_only: String(filters.active_only),
   });
-  const res = await fetch(`${API_BASE}/api/public/cappers?${params}`, {
+  const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {
     next: { revalidate: REVALIDATE_SECONDS },
   });
   if (!res.ok) {
@@ -61,7 +105,7 @@ export async function fetchLivePicksCounts(): Promise<LivePicksCountsResponse> {
 }
 
 export async function fetchSlate(date: string = "today"): Promise<SlateResponse> {
-  const res = await fetch(`${API_BASE}/api/public/slate?date=${encodeURIComponent(date)}`, {
+  const res = await fetchWithRetry(`${API_BASE}/api/public/slate?date=${encodeURIComponent(date)}`, {
     next: { revalidate: REVALIDATE_SECONDS },
   });
   if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
@@ -228,7 +272,7 @@ export async function fetchCapperProfile(
   if (filters.outcome) params.set("outcome", filters.outcome);
   const qs = params.toString();
   const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}${qs ? `?${qs}` : ""}`;
-  const res = await fetch(url, { next: { revalidate: REVALIDATE_SECONDS } });
+  const res = await fetchWithRetry(url, { next: { revalidate: REVALIDATE_SECONDS } });
   if (res.status === 404) throw new Error("not_found");
   if (!res.ok) throw new Error(`Capper profile fetch failed: ${res.status}`);
   return res.json() as Promise<CapperProfile>;

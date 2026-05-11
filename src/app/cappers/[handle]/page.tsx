@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { CapperHero } from "@/components/capper/CapperHero";
 import { StatBand } from "@/components/capper/StatBand";
@@ -36,6 +37,7 @@ const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const PAGE_SIZE = 25;
 
 export const revalidate = 60;
+export const maxDuration = 30;
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { handle } = await params;
@@ -122,6 +124,9 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
     leaderboardRows = leaderboardResult.leaderboard;
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "not_found") notFound();
+    // Skip ISR cache on the transient-failure render so the next refresh
+    // re-fetches against the now-recovered upstream.
+    noStore();
     return (
       <>
         <TopNav />

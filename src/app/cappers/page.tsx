@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
@@ -34,6 +35,10 @@ export const metadata = {
 };
 
 export const revalidate = 60;
+// Give the retry-aware fetch room: 2 attempts of up to 10s each plus
+// backoff fits inside ~25s. Default Vercel maxDuration can be tighter,
+// so set it explicitly.
+export const maxDuration = 30;
 
 const DESKTOP_GRID =
   "hidden sm:grid grid-cols-[44px_minmax(220px,1fr)_72px_84px_72px_72px_20px] items-center gap-4";
@@ -54,6 +59,10 @@ export default async function CappersIndexPage() {
     );
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
+    // Don't ISR-cache a failed render. Without this, a single transient
+    // 503 from Railway would stick the fallback message in the CDN for
+    // 60s for every visitor, even after the upstream recovered.
+    noStore();
   }
 
   if (fetchError) {
