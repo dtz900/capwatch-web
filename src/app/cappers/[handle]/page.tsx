@@ -44,7 +44,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { handle } = await params;
   const canonical = `/cappers/${handle}`;
   try {
-    const profile = await fetchCapperProfile(handle, { history_limit: 0, history_offset: 0 });
+    // history_limit must be >= 1 per the Railway API validator; we don't use
+    // history rows here so use the minimum.
+    const profile = await fetchCapperProfile(handle, { history_limit: 1, history_offset: 0 });
     const allTimeAgg = profile.aggregates["all_time"];
     const windowAgg = profile.aggregates["last_30"] ?? allTimeAgg;
     const inputs = {
