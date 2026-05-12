@@ -1,4 +1,5 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
+import { withKvCache } from "./kv-cache";
 import type {
   LeaderboardResponse,
   Window,
@@ -7,6 +8,17 @@ import type {
   SlateResponse,
   CapperProfile,
 } from "./types";
+
+// KV TTLs. Tuned to the underlying data cadence:
+//   - Leaderboard / profile: refresh_capper_aggregates writes hourly; 60s
+//     keeps cache responsive to admin actions (manual-grade, regrade)
+//     that fire a background aggregate refresh after each patch.
+//   - Slate: picks land throughout the day from the X stream worker;
+//     30s gives near-realtime visibility on the public board without
+//     melting Railway on traffic spikes.
+const LEADERBOARD_TTL_SEC = 60;
+const SLATE_TTL_SEC = 30;
+const PROFILE_TTL_SEC = 60;
 
 // Retry-aware fetch for public reads. The Railway API's
 // supabase_disconnect_recovery middleware can emit a transient 503 when an
@@ -83,13 +95,16 @@ export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<Lea
     min_picks: String(filters.min_picks),
     active_only: String(filters.active_only),
   });
-  const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {
-    next: { revalidate: REVALIDATE_SECONDS },
+  const cacheKey = `lb:v1:${params.toString()}`;
+  return withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, async () => {
+    const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {
+      next: { revalidate: REVALIDATE_SECONDS },
+    });
+    if (!res.ok) {
+      throw new Error(`Leaderboard fetch failed: ${res.status}`);
+    }
+    return (await res.json()) as LeaderboardResponse;
   });
-  if (!res.ok) {
-    throw new Error(`Leaderboard fetch failed: ${res.status}`);
-  }
-  return res.json() as Promise<LeaderboardResponse>;
 }
 
 export interface LivePicksCountsResponse {
@@ -105,11 +120,14 @@ export async function fetchLivePicksCounts(): Promise<LivePicksCountsResponse> {
 }
 
 export async function fetchSlate(date: string = "today"): Promise<SlateResponse> {
-  const res = await fetchWithRetry(`${API_BASE}/api/public/slate?date=${encodeURIComponent(date)}`, {
-    next: { revalidate: REVALIDATE_SECONDS },
+  const cacheKey = `slate:v1:${date}`;
+  return withKvCache<SlateResponse>(cacheKey, SLATE_TTL_SEC, async () => {
+    const res = await fetchWithRetry(`${API_BASE}/api/public/slate?date=${encodeURIComponent(date)}`, {
+      next: { revalidate: REVALIDATE_SECONDS },
+    });
+    if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
+    return (await res.json()) as SlateResponse;
   });
-  if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
-  return res.json() as Promise<SlateResponse>;
 }
 
 export interface SportsbookSummary {
@@ -277,10 +295,13 @@ export async function fetchCapperProfile(
   if (filters.outcome) params.set("outcome", filters.outcome);
   const qs = params.toString();
   const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}${qs ? `?${qs}` : ""}`;
-  const res = await fetchWithRetry(url, { next: { revalidate: REVALIDATE_SECONDS } });
-  if (res.status === 404) throw new Error("not_found");
-  if (!res.ok) throw new Error(`Capper profile fetch failed: ${res.status}`);
-  return res.json() as Promise<CapperProfile>;
+  const cacheKey = `profile:v1:${handle.toLowerCase()}:${qs}`;
+  return withKvCache<CapperProfile>(cacheKey, PROFILE_TTL_SEC, async () => {
+    const res = await fetchWithRetry(url, { next: { revalidate: REVALIDATE_SECONDS } });
+    if (res.status === 404) throw new Error("not_found");
+    if (!res.ok) throw new Error(`Capper profile fetch failed: ${res.status}`);
+    return (await res.json()) as CapperProfile;
+  });
 }
 
 export interface DeletedPick {
