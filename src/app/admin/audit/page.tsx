@@ -94,6 +94,20 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
           </p>
         </header>
 
+        {data.error && (
+          <section className="mb-6 rounded-2xl border border-[rgba(248,113,113,0.40)] bg-[rgba(248,113,113,0.05)] px-5 py-4">
+            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#f87171] mb-2">
+              Audit endpoint error
+            </div>
+            <div className="text-[12px] text-[#f87171] font-mono tabular-nums">
+              <span className="font-extrabold">{data.error.class}:</span> {data.error.message}
+            </div>
+            <div className="text-[11px] text-[var(--color-text-muted)] font-medium mt-2">
+              The backend caught this exception and returned an empty result so the page still renders. Reload to retry. If it persists, this is the real cause to dig into.
+            </div>
+          </section>
+        )}
+
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <Stat label="Total picks" value={data.summary.total} />
           <Stat label="Graded W/L/P" value={data.summary.graded} tone="pos" />

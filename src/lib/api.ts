@@ -188,6 +188,11 @@ export interface AuditResponse {
   limit: number;
   offset: number;
   problems: AuditProblem[];
+  /** Present only when the audit endpoint's _get_audit_impl threw an
+   * exception that the outer wrapper caught. Surfaces the exception class
+   * + first 240 chars of message so the admin operator can see what
+   * actually broke without reading Railway logs. */
+  error?: { class: string; message: string };
 }
 
 /** Server-only. Requires CRON_SECRET in env to authenticate. */
