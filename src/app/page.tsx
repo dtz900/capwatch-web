@@ -110,7 +110,7 @@ export default async function Home({ searchParams }: PageProps) {
           {top3.length === 3 && <Podium rows={top3} window={filters.window} />}
           {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} />}
           <SuggestCapperSection />
-          <footer className="flex items-center justify-between py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
+          <footer className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
             <div>Min {MIN_PICKS} graded picks · refreshed daily 6:00 AM PT.</div>
             <div>Operated by FADE AI · The model entry is graded identically</div>
           </footer>
