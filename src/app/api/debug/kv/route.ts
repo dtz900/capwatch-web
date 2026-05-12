@@ -16,9 +16,13 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const auth = request.headers.get("authorization") || "";
   const expected = process.env.CRON_SECRET;
-  if (!expected || !auth.startsWith("Bearer ") || auth.slice(7) !== expected) {
+  const auth = request.headers.get("authorization") || "";
+  const url = new URL(request.url);
+  const queryToken = url.searchParams.get("secret");
+  const bearerToken = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  const provided = queryToken || bearerToken;
+  if (!expected || !provided || provided !== expected) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
