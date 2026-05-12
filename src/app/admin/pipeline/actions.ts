@@ -184,3 +184,72 @@ export async function fetchStreamUptime(hours: number = 24): Promise<StreamUptim
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+export interface StreamBackfillSummary {
+  cappers: number;
+  seen: number;
+  inserted: number;
+  skipped: number;
+  per_capper?: Record<string, number>;
+}
+
+export interface StreamBackfillResponse {
+  ok: true;
+  start: string;
+  end: string | null;
+  handle: string | null;
+  dry_run: boolean;
+  summary: StreamBackfillSummary;
+}
+
+export type StreamBackfillResult =
+  | { ok: true; data: StreamBackfillResponse }
+  | { ok: false; error: string };
+
+// Backfill can hit X for ~40 cappers x 1-2 timeline calls each. Allow some
+// headroom on Vercel's 60s server-action ceiling.
+const BACKFILL_TIMEOUT_MS = 55_000;
+
+export async function triggerStreamBackfill(
+  start: string,
+  end: string | null,
+  opts: { handle?: string; dryRun?: boolean } = {},
+): Promise<StreamBackfillResult> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return { ok: false, error: "CRON_SECRET not set on server" };
+
+  const params = new URLSearchParams({ start });
+  if (end) params.set("end", end);
+  if (opts.handle) params.set("handle", opts.handle.replace(/^@/, ""));
+  if (opts.dryRun) params.set("dry_run", "true");
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), BACKFILL_TIMEOUT_MS);
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/admin/pipeline/stream-backfill?${params}`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${secret}` },
+        cache: "no-store",
+        signal: controller.signal,
+      },
+    );
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as StreamBackfillResponse;
+    return { ok: true, data };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return {
+        ok: false,
+        error: `Backfill didn't respond within ${BACKFILL_TIMEOUT_MS / 1000}s. It's likely still running on Railway; check stream events in a minute.`,
+      };
+    }
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
