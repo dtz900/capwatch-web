@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CapperAvatar } from "./CapperAvatar";
 import { RecentPicks } from "./RecentPicks";
 import { BiggestWin } from "./BiggestWin";
+import { Sparkline } from "./Sparkline";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LivePicksIndicator } from "./LivePicksIndicator";
@@ -186,11 +187,22 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
         <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-2">
           Net profit
         </div>
-        <div
-          className={`font-extrabold tabular-nums leading-none tracking-[-0.03em] ${heroSize}
-                      ${heroPositive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}
-        >
-          {formatUnits(capper.units_profit)}
+        <div className="flex items-center justify-between gap-3">
+          <div
+            className={`font-extrabold tabular-nums leading-none tracking-[-0.03em] ${heroSize}
+                        ${heroPositive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}
+          >
+            {formatUnits(capper.units_profit)}
+          </div>
+          {(capper.trajectory_units?.length ?? 0) >= 2 && (
+            <div className="shrink-0">
+              <Sparkline
+                values={capper.trajectory_units ?? []}
+                width={isGold ? 140 : 116}
+                height={isGold ? 50 : 38}
+              />
+            </div>
+          )}
         </div>
         <div className="text-[12px] font-semibold mt-3 flex items-center gap-2 flex-wrap">
           <span className={capper.roi_pct >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}>
