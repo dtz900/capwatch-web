@@ -57,6 +57,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const title = buildCapperTitle(inputs);
     const description = buildCapperDescription(inputs);
     const ogDescription = buildCapperOgDescription(inputs);
+    // Fingerprint the OG image URL with the current picks count. X caches the
+    // OG image per URL and never re-fetches a hash it has already seen, so the
+    // default Next.js opengraph-image route hash (build-time stable) leaves
+    // stale numbers in link previews forever. Including picks_count makes the
+    // URL change every time the capper's stats actually move.
+    const picksFp = allTimeAgg?.picks_count ?? 0;
+    const ogImage = `/cappers/${handle}/opengraph-image?p=${picksFp}`;
+    const twImage = `/cappers/${handle}/twitter-image?p=${picksFp}`;
     return {
       title,
       description,
@@ -67,24 +75,41 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         url: canonical,
         type: "profile",
         siteName: SITE_NAME,
+        images: [{ url: ogImage, width: 1200, height: 630, alt: "Verified MLB capper record on TailSlips" }],
       },
       twitter: {
         card: "summary_large_image",
         title,
         description: ogDescription,
         site: "@FadeAI_",
+        images: [{ url: twImage, alt: "Verified MLB capper record on TailSlips" }],
       },
       robots: { index: true, follow: true },
     };
   } catch {
     const title = `@${handle} · MLB capper record on ${SITE_NAME}`;
     const description = `@${handle} is tracked on ${SITE_NAME}. Every public MLB pick is parsed within seconds and graded against final game outcomes.`;
+    const ogImage = `/cappers/${handle}/opengraph-image?p=0`;
+    const twImage = `/cappers/${handle}/twitter-image?p=0`;
     return {
       title,
       description,
       alternates: { canonical },
-      openGraph: { title, description, url: canonical, type: "profile", siteName: SITE_NAME },
-      twitter: { card: "summary_large_image", title, description, site: "@FadeAI_" },
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        type: "profile",
+        siteName: SITE_NAME,
+        images: [{ url: ogImage, width: 1200, height: 630, alt: "Verified MLB capper record on TailSlips" }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        site: "@FadeAI_",
+        images: [{ url: twImage, alt: "Verified MLB capper record on TailSlips" }],
+      },
     };
   }
 }
