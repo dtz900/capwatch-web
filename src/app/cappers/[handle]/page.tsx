@@ -85,12 +85,25 @@ export async function generateMetadata({
   if (sp.bet_type) sharedQs.set("bet_type", sp.bet_type);
   const sharedUrl = sharedQs.toString() ? `${canonical}?${sharedQs.toString()}` : canonical;
 
-  const buildOgImageUrl = (picksFp: number): string => {
+  // OG image URL fingerprint. picks_count alone misses wins<->losses swaps
+  // that move units/ROI without moving picks_count; folding in the aggregate's
+  // refreshed_at epoch makes the URL change whenever capper_aggregates is
+  // recomputed (daily cron + post-grade/regrade write triggers). Critical for
+  // busting X's image CDN: it caches OG bytes per URL essentially forever, so
+  // a URL that never changes pins a stale card to every share.
+  const buildOgImageUrl = (picksFp: number, refreshTs: number): string => {
     const q = new URLSearchParams();
     q.set("w", window);
     q.set("bt", betType);
     q.set("p", String(picksFp));
+    if (refreshTs > 0) q.set("r", String(refreshTs));
     return `/cappers/${handle}/og?${q.toString()}`;
+  };
+
+  const toEpochSec = (iso: string | null | undefined): number => {
+    if (!iso) return 0;
+    const ms = Date.parse(iso);
+    return Number.isFinite(ms) ? Math.floor(ms / 1000) : 0;
   };
 
   try {
@@ -136,11 +149,12 @@ export async function generateMetadata({
       ogDescription = buildCapperOgDescription(baseInputs);
     }
 
-    // Fingerprint the OG image URL with the filtered picks_count. X caches
-    // OG images per URL forever, so changing the URL whenever the underlying
-    // numbers move forces a re-crawl for the next share.
+    // Fingerprint the OG image URL with picks_count + refreshed_at epoch.
+    // See buildOgImageUrl for why both are needed; refreshed_at carries
+    // wins<->losses shifts and post-write recomputes that picks_count misses.
     const picksFp = filteredAgg?.picks_count ?? 0;
-    const ogImage = buildOgImageUrl(picksFp);
+    const refreshTs = toEpochSec(filteredAgg?.refreshed_at);
+    const ogImage = buildOgImageUrl(picksFp, refreshTs);
 
     return {
       title,
@@ -168,7 +182,7 @@ export async function generateMetadata({
   } catch {
     const title = `@${handle} · MLB capper record on ${SITE_NAME}`;
     const description = `@${handle} is tracked on ${SITE_NAME}. Every public MLB pick is parsed within seconds and graded against final game outcomes.`;
-    const ogImage = buildOgImageUrl(0);
+    const ogImage = buildOgImageUrl(0, 0);
     return {
       title,
       description,
