@@ -6,6 +6,7 @@ import { TopNav } from "@/components/nav/TopNav";
 import { CapperHero } from "@/components/capper/CapperHero";
 import { StatBand } from "@/components/capper/StatBand";
 import { WindowToggle } from "@/components/capper/WindowToggle";
+import { BetTypeToggle } from "@/components/capper/BetTypeToggle";
 import { PendingBlock } from "@/components/capper/PendingBlock";
 import { HistoryFilters } from "@/components/capper/HistoryFilters";
 import { HistoryTable } from "@/components/capper/HistoryTable";
@@ -22,7 +23,7 @@ import {
   buildCapperTitle,
   SITE_NAME,
 } from "@/lib/seo";
-import type { CapperRow, Window } from "@/lib/types";
+import type { BetTypeFilter, CapperRow, Window } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
@@ -31,10 +32,12 @@ interface PageProps {
     offset?: string;
     market?: string;
     outcome?: string;
+    bet_type?: string;
   }>;
 }
 
 const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
+const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const PAGE_SIZE = 25;
 
 export const revalidate = 60;
@@ -126,6 +129,9 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   const offset = Math.max(0, parseInt(sp.offset ?? "0", 10) || 0);
   const market = (sp.market ?? "").trim();
   const outcome = (sp.outcome ?? "").trim();
+  const betType: BetTypeFilter = VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter)
+    ? (sp.bet_type as BetTypeFilter)
+    : "all";
 
   let profile;
   let sportsbooks;
@@ -137,6 +143,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
         history_offset: offset,
         market: market || undefined,
         outcome: outcome || undefined,
+        bet_type: betType !== "all" ? betType : undefined,
       }),
       fetchEnabledSportsbooks(),
       fetchLeaderboard({
@@ -176,6 +183,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   if (window !== "last_30") queryForPagination.set("window", window);
   if (market) queryForPagination.set("market", market);
   if (outcome) queryForPagination.set("outcome", outcome);
+  if (betType !== "all") queryForPagination.set("bet_type", betType);
 
   const faqItems = buildCapperFaq({
     handle,
@@ -214,7 +222,10 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <div className="text-[12px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
             Performance window
           </div>
-          <WindowToggle current={window} basePath={basePath} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <BetTypeToggle current={betType} basePath={basePath} />
+            <WindowToggle current={window} basePath={basePath} />
+          </div>
         </div>
 
         <div className="mb-6">
