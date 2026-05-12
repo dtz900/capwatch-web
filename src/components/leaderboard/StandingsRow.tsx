@@ -90,29 +90,33 @@ export function StandingsRow({ rank, capper, window }: Props) {
             {handleNode}
           </div>
         )}
-        <div className="grid grid-cols-4 gap-2 mt-3 text-center">
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] font-bold">Picks</div>
-            <div className="text-sm font-bold tabular-nums mt-0.5">{capper.picks_count}</div>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="grid grid-cols-4 gap-x-2 flex-1 min-w-0 text-center">
+            <div>
+              <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-bold">Picks</div>
+              <div className="text-[13px] font-bold tabular-nums whitespace-nowrap mt-0.5">{capper.picks_count}</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-bold">Win</div>
+              <div className="text-[13px] font-bold tabular-nums whitespace-nowrap mt-0.5">{formatWinRate(capper.win_rate)}</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-bold">Units</div>
+              <div className={`text-[13px] font-bold tabular-nums mt-0.5 ${unitsCls}`}>{formatUnits(capper.units_profit)}</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-bold">ROI</div>
+              <div className={`text-[13px] font-bold tabular-nums mt-0.5 ${roiCls}`}>{formatRoi(capper.roi_pct)}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] font-bold">Win</div>
-            <div className="text-sm font-bold tabular-nums mt-0.5">{formatWinRate(capper.win_rate)}</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] font-bold">Units</div>
-            <div className={`text-sm font-bold tabular-nums mt-0.5 ${unitsCls}`}>{formatUnits(capper.units_profit)}</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] font-bold">ROI</div>
-            <div className={`text-sm font-bold tabular-nums mt-0.5 ${roiCls}`}>{formatRoi(capper.roi_pct)}</div>
-          </div>
+          {(capper.trajectory_units?.length ?? 0) >= 2 ? (
+            <div className="shrink-0 pl-2 border-l border-[rgba(255,255,255,0.06)]">
+              <Sparkline values={capper.trajectory_units ?? []} width={84} height={32} />
+            </div>
+          ) : (
+            <div aria-hidden="true" className="shrink-0 w-[96px] h-[32px]" />
+          )}
         </div>
-        {(capper.trajectory_units?.length ?? 0) >= 2 && (
-          <div className="mt-3 flex justify-center">
-            <Sparkline values={capper.trajectory_units ?? []} width={140} height={28} />
-          </div>
-        )}
       </div>
     </>
   );
