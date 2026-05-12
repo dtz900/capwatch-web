@@ -28,8 +28,19 @@ let _clientChecked = false;
 function getClient(): Redis | null {
   if (_clientChecked) return _client;
   _clientChecked = true;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  // Accept both naming conventions:
+  //   UPSTASH_REDIS_REST_{URL,TOKEN}  -- Upstash-native, used when you create
+  //                                      the DB directly on console.upstash.com
+  //   KV_REST_API_{URL,TOKEN}         -- Legacy Vercel KV naming, still used
+  //                                      by the Vercel Marketplace integration
+  //                                      since the Dec 2024 migration from
+  //                                      Vercel KV to Upstash Redis.
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.KV_REST_API_URL;
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.KV_REST_API_TOKEN;
   if (!url || !token) return null;
   _client = new Redis({ url, token });
   return _client;
