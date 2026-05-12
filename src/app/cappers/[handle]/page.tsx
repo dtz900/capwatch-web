@@ -21,6 +21,9 @@ import {
   buildCapperFaq,
   buildCapperOgDescription,
   buildCapperTitle,
+  formatRecord,
+  formatRoiForTitle,
+  formatUnitsForTitle,
   SITE_NAME,
 } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Window } from "@/lib/types";
@@ -43,33 +46,102 @@ const PAGE_SIZE = 25;
 export const revalidate = 60;
 export const maxDuration = 30;
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+function filterLabelFor(window: Window, betType: BetTypeFilter): string {
+  const w =
+    window === "season"
+      ? "Season"
+      : window === "last_30"
+        ? "Last 30"
+        : window === "last_7"
+          ? "Last 7"
+          : null;
+  const bt =
+    betType === "straights" ? "Straights" : betType === "parlays" ? "Parlays" : null;
+  return [bt, w].filter(Boolean).join(" · ");
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { handle } = await params;
+  const sp = await searchParams;
+
+  // Resolve filter from the page's own query params so the meta tags (and
+  // OG image route URL) mirror the page view the share URL points at.
+  const requestedWindow = sp.window as Window | undefined;
+  const requestedBetType = sp.bet_type as BetTypeFilter | undefined;
+  const window: Window =
+    requestedWindow && VALID_WINDOWS.includes(requestedWindow) ? requestedWindow : "all_time";
+  const betType: BetTypeFilter =
+    requestedBetType && VALID_BET_TYPES.includes(requestedBetType) ? requestedBetType : "all";
+  const hasFilter = window !== "all_time" || betType !== "all";
+
+  // Canonical stays unfiltered for SEO; og:url reflects the actual shared
+  // URL so social click-throughs land on the filtered view they were sold.
   const canonical = `/cappers/${handle}`;
+  const sharedQs = new URLSearchParams();
+  if (sp.window) sharedQs.set("window", sp.window);
+  if (sp.bet_type) sharedQs.set("bet_type", sp.bet_type);
+  const sharedUrl = sharedQs.toString() ? `${canonical}?${sharedQs.toString()}` : canonical;
+
+  const buildOgImageUrl = (picksFp: number): string => {
+    const q = new URLSearchParams();
+    q.set("w", window);
+    q.set("bt", betType);
+    q.set("p", String(picksFp));
+    return `/cappers/${handle}/og?${q.toString()}`;
+  };
+
   try {
     // history_limit must be >= 1 per the Railway API validator; we don't use
     // history rows here so use the minimum.
-    const profile = await fetchCapperProfile(handle, { history_limit: 1, history_offset: 0 });
+    const profile = await fetchCapperProfile(handle, {
+      history_limit: 1,
+      history_offset: 0,
+      bet_type: betType !== "all" ? betType : undefined,
+    });
     const allTimeAgg = profile.aggregates["all_time"];
+    const filteredAgg = profile.aggregates[window] ?? allTimeAgg;
     const windowAgg = profile.aggregates["last_30"] ?? allTimeAgg;
-    const inputs = {
+
+    const baseInputs = {
       handle,
       displayName: profile.capper.display_name,
       windowAgg,
       allTimeAgg,
       trackedSince: allTimeAgg?.tracked_since ?? null,
     };
-    const title = buildCapperTitle(inputs);
-    const description = buildCapperDescription(inputs);
-    const ogDescription = buildCapperOgDescription(inputs);
-    // Fingerprint the OG image URL with the current picks count. X caches the
-    // OG image per URL and never re-fetches a hash it has already seen, so the
-    // default Next.js opengraph-image route hash (build-time stable) leaves
-    // stale numbers in link previews forever. Including picks_count makes the
-    // URL change every time the capper's stats actually move.
-    const picksFp = allTimeAgg?.picks_count ?? 0;
-    const ogImage = `/cappers/${handle}/opengraph-image?p=${picksFp}`;
-    const twImage = `/cappers/${handle}/twitter-image?p=${picksFp}`;
+
+    let title: string;
+    let description: string;
+    let ogDescription: string;
+    if (hasFilter && filteredAgg && filteredAgg.picks_count > 0) {
+      // Filter-aware text so the meta description matches the OG card image
+      // rather than contradicting it with all-time numbers.
+      const fLabel = filterLabelFor(window, betType);
+      const r = formatRecord(filteredAgg);
+      const u = formatUnitsForTitle(filteredAgg.units_profit);
+      const ro = formatRoiForTitle(filteredAgg.roi_pct);
+      const name =
+        profile.capper.display_name && profile.capper.display_name !== handle
+          ? `${profile.capper.display_name} (@${handle})`
+          : `@${handle}`;
+      title = `@${handle} · ${fLabel} · ${r} ${u} (${ro}) · ${SITE_NAME}`;
+      description = `${name} on ${fLabel.toLowerCase()}: ${r} (${u}, ${ro}) across ${filteredAgg.picks_count} graded picks. Verified on ${SITE_NAME}.`;
+      ogDescription = `${fLabel}: ${r} ${u} (${ro}) across ${filteredAgg.picks_count} graded picks.`;
+    } else {
+      title = buildCapperTitle(baseInputs);
+      description = buildCapperDescription(baseInputs);
+      ogDescription = buildCapperOgDescription(baseInputs);
+    }
+
+    // Fingerprint the OG image URL with the filtered picks_count. X caches
+    // OG images per URL forever, so changing the URL whenever the underlying
+    // numbers move forces a re-crawl for the next share.
+    const picksFp = filteredAgg?.picks_count ?? 0;
+    const ogImage = buildOgImageUrl(picksFp);
+
     return {
       title,
       description,
@@ -77,25 +149,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       openGraph: {
         title,
         description: ogDescription,
-        url: canonical,
+        url: sharedUrl,
         type: "profile",
         siteName: SITE_NAME,
-        images: [{ url: ogImage, width: 1200, height: 630, alt: "Verified MLB capper record on TailSlips" }],
+        images: [
+          { url: ogImage, width: 1200, height: 630, alt: "Verified MLB capper record on TailSlips" },
+        ],
       },
       twitter: {
         card: "summary_large_image",
         title,
         description: ogDescription,
         site: "@FadeAI_",
-        images: [{ url: twImage, alt: "Verified MLB capper record on TailSlips" }],
+        images: [{ url: ogImage, alt: "Verified MLB capper record on TailSlips" }],
       },
       robots: { index: true, follow: true },
     };
   } catch {
     const title = `@${handle} · MLB capper record on ${SITE_NAME}`;
     const description = `@${handle} is tracked on ${SITE_NAME}. Every public MLB pick is parsed within seconds and graded against final game outcomes.`;
-    const ogImage = `/cappers/${handle}/opengraph-image?p=0`;
-    const twImage = `/cappers/${handle}/twitter-image?p=0`;
+    const ogImage = buildOgImageUrl(0);
     return {
       title,
       description,
@@ -103,17 +176,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       openGraph: {
         title,
         description,
-        url: canonical,
+        url: sharedUrl,
         type: "profile",
         siteName: SITE_NAME,
-        images: [{ url: ogImage, width: 1200, height: 630, alt: "Verified MLB capper record on TailSlips" }],
+        images: [
+          { url: ogImage, width: 1200, height: 630, alt: "Verified MLB capper record on TailSlips" },
+        ],
       },
       twitter: {
         card: "summary_large_image",
         title,
         description,
         site: "@FadeAI_",
-        images: [{ url: twImage, alt: "Verified MLB capper record on TailSlips" }],
+        images: [{ url: ogImage, alt: "Verified MLB capper record on TailSlips" }],
       },
     };
   }
