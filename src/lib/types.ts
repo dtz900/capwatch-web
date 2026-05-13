@@ -126,11 +126,27 @@ export interface SlateMostPicked {
   pick_count: number;
 }
 
+export interface SlateCapperSummary {
+  capper_id: number;
+  handle: string | null;
+  display_name: string | null;
+  profile_image_url: string | null;
+  capper_rank: number | null;
+  wins: number;
+  losses: number;
+  pushes: number;
+  voids: number;
+  graded_count: number;
+  pending_count: number;
+  net_units: number;
+}
+
 export interface SlateResponse {
   date: string;
   games: SlateGame[];
   most_picked: SlateMostPicked[];
   day_summary: DaySummary;
+  capper_summary: SlateCapperSummary[];
 }
 
 export type GradingOddsSource =

@@ -4,6 +4,7 @@ import { TopNav } from "@/components/nav/TopNav";
 import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
 import { DateToggle } from "@/components/slate/DateToggle";
+import { CapperDayRanking } from "@/components/slate/CapperDayRanking";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchSlate } from "@/lib/api";
 import { breadcrumbNode } from "@/lib/jsonld";
@@ -147,6 +148,15 @@ export default async function SlatePage({ searchParams }: PageProps) {
           </div>
         ) : (
           <>
+            {ds.graded_count > 0 && (data.capper_summary?.length ?? 0) > 0 && (
+              <div className="mt-2 mb-5">
+                <CapperDayRanking
+                  summary={data.capper_summary}
+                  totalGraded={ds.graded_count}
+                  totalPending={ds.pending_count}
+                />
+              </div>
+            )}
             <div className="flex flex-col gap-5 mt-2">
               {gamesWithPicks.map((g) => (
                 <GameBlock key={g.game_id} game={g} />
