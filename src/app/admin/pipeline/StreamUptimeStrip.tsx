@@ -196,6 +196,10 @@ export function StreamUptimeStrip({ hours = DEFAULT_HOURS }: Props) {
             const bf = backfillState[g.start];
             const isRunning = bf?.status === "running";
             const canBackfill = !g.ongoing; // closed gaps only
+            // Server-side "already backfilled" wins over in-memory state
+            // so the mark survives page reloads.
+            const persistedDone = Boolean(g.backfilled_at) && bf?.status !== "running";
+            const isDone = persistedDone || bf?.status === "ok";
             return (
               <div key={i} className="flex flex-col gap-0.5">
                 <div className="text-[11px] tabular-nums flex items-center gap-3 text-[var(--color-text-soft)]">
@@ -213,9 +217,14 @@ export function StreamUptimeStrip({ hours = DEFAULT_HOURS }: Props) {
                     <button
                       type="button"
                       onClick={() => runBackfill(g.start, g.end)}
-                      disabled={isRunning || bf?.status === "ok"}
+                      disabled={isRunning || isDone}
+                      title={
+                        persistedDone && g.backfilled_at
+                          ? `Backfilled ${formatTimestamp(g.backfilled_at)}`
+                          : undefined
+                      }
                       className={`text-[10px] uppercase tracking-[0.10em] font-bold px-2 py-0.5 rounded transition-colors ${
-                        bf?.status === "ok"
+                        isDone
                           ? "bg-[rgba(94,234,212,0.14)] text-[#5eead4] cursor-default"
                           : bf?.status === "error"
                           ? "bg-[rgba(248,113,113,0.14)] text-[#f87171] hover:bg-[rgba(248,113,113,0.22)]"
@@ -224,7 +233,7 @@ export function StreamUptimeStrip({ hours = DEFAULT_HOURS }: Props) {
                           : "bg-[rgba(94,234,212,0.10)] text-[#5eead4] hover:bg-[rgba(94,234,212,0.18)]"
                       }`}
                     >
-                      {bf?.status === "ok"
+                      {isDone
                         ? "✓ backfilled"
                         : isRunning
                         ? "running..."
@@ -245,6 +254,11 @@ export function StreamUptimeStrip({ hours = DEFAULT_HOURS }: Props) {
                     }`}
                   >
                     {bf.message}
+                  </div>
+                )}
+                {!bf?.message && persistedDone && g.backfilled_at && (
+                  <div className="text-[10px] pl-[18px] text-[#5eead4]">
+                    backfilled {formatTimestamp(g.backfilled_at)}
                   </div>
                 )}
               </div>

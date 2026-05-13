@@ -141,6 +141,11 @@ export interface StreamGap {
   end: string | null;
   trigger: "disconnected" | "connection_error" | "worker_starting" | null;
   ongoing: boolean;
+  // ISO timestamp of the most recent successful full-cohort backfill for
+  // this gap, or null if no backfill has been recorded. Populated server-
+  // side from stream_gap_backfills so the admin UI's "✓ backfilled" mark
+  // survives page reloads.
+  backfilled_at?: string | null;
 }
 
 export interface StreamEvent {
