@@ -9,16 +9,14 @@ import type {
   CapperProfile,
 } from "./types";
 
-// KV TTLs. Tuned to the underlying data cadence:
-//   - Leaderboard / profile: refresh_capper_aggregates writes hourly; 60s
-//     keeps cache responsive to admin actions (manual-grade, regrade)
-//     that fire a background aggregate refresh after each patch.
-//   - Slate: picks land throughout the day from the X stream worker;
-//     30s gives near-realtime visibility on the public board without
-//     melting Railway on traffic spikes.
-const LEADERBOARD_TTL_SEC = 60;
-const SLATE_TTL_SEC = 30;
-const PROFILE_TTL_SEC = 60;
+// KV TTLs. Short enough that admin refresh-aggregates / regrade actions
+// surface on the public site within seconds without an explicit cache
+// purge. The /api/admin/purge-caches route is wired for the explicit case
+// (Refresh Aggregates button), but these TTLs cap the worst-case delay
+// for organic visitors during background cron writes.
+const LEADERBOARD_TTL_SEC = 15;
+const SLATE_TTL_SEC = 15;
+const PROFILE_TTL_SEC = 5;
 
 // Retry-aware fetch for public reads. The Railway API's
 // supabase_disconnect_recovery middleware can emit a transient 503 when an

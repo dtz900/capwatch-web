@@ -1,6 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { API_BASE } from "@/lib/config";
+import { purgeKvByPrefix } from "@/lib/kv-cache";
 
 export type PipelineEvent =
   | {
@@ -114,25 +116,74 @@ export async function triggerCronTask(task: CronTaskName): Promise<CronTriggerRe
   const secret = process.env.CRON_SECRET;
   if (!secret) return { ok: false, task, error: "CRON_SECRET not set on server" };
 
-  // Use the fire-and-forget endpoint so the request returns instantly and
-  // the heavy job runs on Railway in BackgroundTasks. Hitting the synchronous
-  // /api/cron/{task} endpoint would block Railway's worker for the duration
-  // of the job (parser/grader can run 30s+), starving the polling endpoint
-  // and freezing the UI.
+  // Parser/grader can run minutes (LLM calls per tweet, hundreds of picks);
+  // fire those into BackgroundTasks so the admin button returns instantly.
+  //
+  // refresh-capper-aggregates is short (~10-30s) and the admin is clicking
+  // it to *see* the result, so we use the synchronous endpoint and follow
+  // it with a cache purge. That way "click → wait → fresh data on capper
+  // page" is one continuous flow instead of "click → wait → wonder why the
+  // capper page is still stale → navigate around to bust the cache."
+  // The cron handler offloads run_once via asyncio.to_thread so this
+  // doesn't starve other Railway requests.
+  const isAggRefresh = task === "refresh-capper-aggregates";
+  const endpoint = isAggRefresh
+    ? `${API_BASE}/api/cron/${task}`
+    : `${API_BASE}/api/cron/fire/${task}`;
+
+  // Sync refresh waits for the job; cap a few seconds below Vercel's 60s
+  // server-action ceiling so we surface a useful error instead of an opaque
+  // Vercel timeout. Fire-and-forget paths return instantly so no timeout
+  // needed there.
+  const controller = isAggRefresh ? new AbortController() : null;
+  const timeoutId = controller
+    ? setTimeout(() => controller.abort(), 55_000)
+    : null;
+
   try {
-    const res = await fetch(`${API_BASE}/api/cron/fire/${task}`, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { Authorization: `Bearer ${secret}` },
       cache: "no-store",
+      signal: controller?.signal,
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       return { ok: false, task, error: `${res.status}: ${body || res.statusText}` };
     }
     const raw = await res.json().catch(() => ({}));
+
+    // After a successful aggregate refresh, blow away the KV + ISR layers
+    // for everything that displays aggregate data. Best-effort: if the
+    // purge fails we still report the cron as ok; the short TTLs (api.ts)
+    // will catch up within 15s anyway.
+    if (isAggRefresh) {
+      try {
+        await Promise.all([
+          purgeKvByPrefix("profile:"),
+          purgeKvByPrefix("lb:"),
+        ]);
+        revalidatePath("/cappers/[handle]", "page");
+        revalidatePath("/cappers");
+        revalidatePath("/leaderboard");
+        revalidatePath("/");
+      } catch {
+        // swallow: TTL fallback covers us
+      }
+    }
+
     return { ok: true, task, raw };
   } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return {
+        ok: false,
+        task,
+        error: "Refresh aggregates didn't return within 55s. Job is likely still running on Railway; check again in a moment.",
+      };
+    }
     return { ok: false, task, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 

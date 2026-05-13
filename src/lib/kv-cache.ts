@@ -99,3 +99,42 @@ export async function invalidateKvCache(key: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Admin tooling: delete every key matching `${prefix}*`. Used by the
+ * admin pipeline's Refresh Aggregates button so a fresh aggregate write
+ * surfaces immediately on the public site instead of waiting for the
+ * per-key TTL to expire.
+ *
+ * Returns the number of keys deleted. Safe to call without a configured
+ * client (returns 0). SCAN-based so it doesn't block Redis on big sets.
+ */
+export async function purgeKvByPrefix(prefix: string): Promise<number> {
+  const client = getClient();
+  if (!client) return 0;
+
+  let cursor: string | number = 0;
+  let deleted = 0;
+  // Bound the loop in case SCAN never converges on cursor=0 due to client
+  // weirdness. 100 iterations * count=200 = 20k keys, well past anything
+  // we ever expect for this site.
+  for (let i = 0; i < 100; i++) {
+    try {
+      const result = (await client.scan(cursor, {
+        match: `${prefix}*`,
+        count: 200,
+      })) as [string | number, string[]];
+      const nextCursor = result[0];
+      const keys = result[1];
+      if (keys && keys.length > 0) {
+        await client.del(...(keys as [string, ...string[]]));
+        deleted += keys.length;
+      }
+      cursor = nextCursor;
+      if (cursor === 0 || cursor === "0") break;
+    } catch {
+      break;
+    }
+  }
+  return deleted;
+}
