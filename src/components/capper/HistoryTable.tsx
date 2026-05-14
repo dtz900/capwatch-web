@@ -211,7 +211,25 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
               : ""}
         </div>
         <div className="flex justify-end">
-          {pick.tweet_url ? (
+          {pick.deleted_after_game_start ? (
+            <span
+              aria-label="Tweet deleted after first pitch"
+              title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+              className="inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(239,68,68,0.10)] text-[#ef4444] opacity-90"
+            >
+              <XIcon size={11} />
+            </span>
+          ) : pick.was_deleted_on_x ? (
+            <span
+              aria-label="Tweet deleted by capper"
+              title="The capper deleted this tweet. TailSlips kept the receipt."
+              className="inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(245,158,11,0.08)] text-[#f59e0b] opacity-90"
+            >
+              <XIcon size={11} />
+            </span>
+          ) : pick.tweet_url ? (
             <a
               href={pick.tweet_url}
               target="_blank"
@@ -274,7 +292,25 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
             </span>
           ) : null}
           {!isOutcomeOnly && <span>{unitsValue}u</span>}
-          {pick.tweet_url && (
+          {pick.deleted_after_game_start ? (
+            <span
+              aria-label="Tweet deleted after first pitch"
+              title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+              className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(239,68,68,0.10)] text-[#ef4444] opacity-90"
+            >
+              <XIcon size={11} />
+            </span>
+          ) : pick.was_deleted_on_x ? (
+            <span
+              aria-label="Tweet deleted by capper"
+              title="The capper deleted this tweet. TailSlips kept the receipt."
+              className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(245,158,11,0.08)] text-[#f59e0b] opacity-90"
+            >
+              <XIcon size={11} />
+            </span>
+          ) : pick.tweet_url ? (
             <a
               href={pick.tweet_url}
               target="_blank"
@@ -285,7 +321,7 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
             >
               <XIcon size={11} />
             </a>
-          )}
+          ) : null}
         </div>
       </div>
     </>

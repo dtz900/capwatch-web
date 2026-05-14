@@ -174,6 +174,12 @@ export interface HistoryPick {
   tweet_url: string | null;
   source: string | null;
   player_name?: string | null;
+  /** Source tweet has been deleted from X at any point. */
+  was_deleted_on_x?: boolean;
+  /** Deletion timestamp is after the game's commence_time -- the
+   * brand-killer pattern (capper pulling the receipt after the bet
+   * went bad). Always false for multi-leg parlays. */
+  deleted_after_game_start?: boolean;
 }
 
 export interface CapperAggregate {

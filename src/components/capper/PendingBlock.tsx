@@ -30,22 +30,16 @@ function formatStakeUnits(u: number | null): string | null {
 export function PendingBlock({
   picks,
   sportsbooks = [],
-  deletedPickIds,
 }: {
   picks: HistoryPick[];
   sportsbooks?: SportsbookSummary[];
-  /**
-   * Pick IDs the capper deleted from X *without* re-posting a replacement.
-   * These picks are still pending (will grade on game outcome) but the
-   * underlying tweet is gone. Rendering them with a visible badge is the
-   * brand promise: we keep the receipt even if the capper hides it.
-   */
-  deletedPickIds?: ReadonlySet<number>;
 }) {
   if (picks.length === 0) return null;
-  const deletedCount = deletedPickIds
-    ? picks.reduce((n, p) => (deletedPickIds.has(p.id) ? n + 1 : n), 0)
-    : 0;
+  const deletedCount = picks.reduce((n, p) => (p.was_deleted_on_x ? n + 1 : n), 0);
+  const afterStartCount = picks.reduce(
+    (n, p) => (p.deleted_after_game_start ? n + 1 : n),
+    0,
+  );
 
   return (
     <section className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4">
@@ -55,8 +49,16 @@ export function PendingBlock({
           Live · {picks.length} pending
         </span>
         {deletedCount > 0 && (
-          <span className="text-[10px] uppercase tracking-[0.14em] text-[#f59e0b] font-bold">
+          <span
+            className="text-[10px] uppercase tracking-[0.14em] text-[#f59e0b] font-bold"
+            title={
+              afterStartCount > 0
+                ? `${afterStartCount} of these were deleted after first pitch`
+                : undefined
+            }
+          >
             · {deletedCount} deleted on X
+            {afterStartCount > 0 ? ` (${afterStartCount} post-start)` : ""}
           </span>
         )}
       </div>
@@ -65,7 +67,8 @@ export function PendingBlock({
           const isParlay = p.kind === "parlay";
           const posted = formatPostedAt(p.posted_at);
           const stake = formatStakeUnits(p.units);
-          const isDeleted = deletedPickIds?.has(p.id) ?? false;
+          const isDeleted = !!p.was_deleted_on_x;
+          const deletedPostStart = !!p.deleted_after_game_start;
           return (
             <div
               key={p.id}
@@ -104,7 +107,7 @@ export function PendingBlock({
                 <div className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
                   {stake && <span>{stake}</span>}
                   {posted && <span className="opacity-80">{posted}</span>}
-                  {isDeleted && (
+                  {isDeleted && !deletedPostStart && (
                     <span
                       className="inline-flex items-center px-1.5 py-0.5 rounded
                                  text-[9px] uppercase tracking-[0.12em] font-bold
@@ -113,6 +116,17 @@ export function PendingBlock({
                       title="The capper deleted this tweet from X. TailSlips still grades the pick."
                     >
                       Deleted on X
+                    </span>
+                  )}
+                  {deletedPostStart && (
+                    <span
+                      className="inline-flex items-center px-1.5 py-0.5 rounded
+                                 text-[9px] uppercase tracking-[0.12em] font-bold
+                                 bg-[rgba(239,68,68,0.12)] border border-[rgba(239,68,68,0.55)]
+                                 text-[#ef4444]"
+                      title="The capper deleted this tweet AFTER the game started. TailSlips still grades the pick."
+                    >
+                      Deleted after first pitch
                     </span>
                   )}
                 </div>
