@@ -167,13 +167,37 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
         <div className="text-[12px] text-[var(--color-text-muted)] font-medium tabular-nums">
           {date ?? ""}
         </div>
-        <div className="min-w-0 truncate text-[13px]">
-          {pick.game_label && (
-            <span className="text-[var(--color-text-muted)] mr-2 font-medium">
-              {pick.game_label}
+        <div className="min-w-0 text-[13px] flex items-center gap-2">
+          <span className="truncate">
+            {pick.game_label && (
+              <span className="text-[var(--color-text-muted)] mr-2 font-medium">
+                {pick.game_label}
+              </span>
+            )}
+            {selectionNode}
+          </span>
+          {pick.deleted_after_game_start && (
+            <span
+              className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
+                         text-[9px] uppercase tracking-[0.12em] font-bold
+                         bg-[rgba(239,68,68,0.12)] border border-[rgba(239,68,68,0.55)]
+                         text-[#ef4444]"
+              title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+            >
+              Deleted after first pitch
             </span>
           )}
-          {selectionNode}
+          {pick.was_deleted_on_x && !pick.deleted_after_game_start && (
+            <span
+              className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
+                         text-[9px] uppercase tracking-[0.12em] font-bold
+                         bg-[rgba(245,158,11,0.10)] border border-[rgba(245,158,11,0.45)]
+                         text-[#f59e0b]"
+              title="The capper deleted this tweet from X. TailSlips kept the receipt."
+            >
+              Deleted on X
+            </span>
+          )}
         </div>
         <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
           {pick.line != null ? pick.line : ""}
@@ -277,6 +301,31 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
           )}
           {selectionNode}
         </div>
+        {(pick.deleted_after_game_start || pick.was_deleted_on_x) && (
+          <div className="mt-1.5">
+            {pick.deleted_after_game_start ? (
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded
+                           text-[9px] uppercase tracking-[0.12em] font-bold
+                           bg-[rgba(239,68,68,0.12)] border border-[rgba(239,68,68,0.55)]
+                           text-[#ef4444]"
+                title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+              >
+                Deleted after first pitch
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded
+                           text-[9px] uppercase tracking-[0.12em] font-bold
+                           bg-[rgba(245,158,11,0.10)] border border-[rgba(245,158,11,0.45)]
+                           text-[#f59e0b]"
+                title="The capper deleted this tweet from X. TailSlips kept the receipt."
+              >
+                Deleted on X
+              </span>
+            )}
+          </div>
+        )}
         <div className="mt-1 text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums flex items-center gap-3 flex-wrap">
           {pick.line != null && <span>Line {pick.line}</span>}
           {isOutcomeOnly ? (
