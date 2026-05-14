@@ -14,7 +14,12 @@ import { MarketMixBar } from "@/components/capper/MarketMixBar";
 import { FaqSection } from "@/components/capper/FaqSection";
 import { SimilarCappers } from "@/components/capper/SimilarCappers";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
+import {
+  fetchCapperProfile,
+  fetchDeletedPicks,
+  fetchEnabledSportsbooks,
+  fetchLeaderboard,
+} from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, capperReviewNode, faqNode } from "@/lib/jsonld";
 import {
   buildCapperDescription,
@@ -225,27 +230,45 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   let profile;
   let sportsbooks;
   let leaderboardRows: CapperRow[] = [];
+  let deletedPendingIds: ReadonlySet<number> = new Set();
   try {
-    const [profileResult, sportsbooksResult, leaderboardResult] = await Promise.all([
-      fetchCapperProfile(handle, {
-        history_limit: PAGE_SIZE,
-        history_offset: offset,
-        market: market || undefined,
-        outcome: outcome || undefined,
-        bet_type: betType !== "all" ? betType : undefined,
-      }),
-      fetchEnabledSportsbooks(),
-      fetchLeaderboard({
-        window: "season",
-        sort: "units_profit",
-        bet_type: "all",
-        min_picks: 10,
-        active_only: true,
-      }).catch(() => ({ leaderboard: [] as CapperRow[] })),
-    ]);
+    const [profileResult, sportsbooksResult, leaderboardResult, deletedPicksResult] =
+      await Promise.all([
+        fetchCapperProfile(handle, {
+          history_limit: PAGE_SIZE,
+          history_offset: offset,
+          market: market || undefined,
+          outcome: outcome || undefined,
+          bet_type: betType !== "all" ? betType : undefined,
+        }),
+        fetchEnabledSportsbooks(),
+        fetchLeaderboard({
+          window: "season",
+          sort: "units_profit",
+          bet_type: "all",
+          min_picks: 10,
+          active_only: true,
+        }).catch(() => ({ leaderboard: [] as CapperRow[] })),
+        // Deleted-picks lookup is best-effort. A failure here shouldn't take
+        // down the profile page; we just lose the "deleted on X" badge on
+        // pending picks for this render.
+        fetchDeletedPicks(handle).catch(() => ({
+          handle,
+          items: [] as Array<{ id: number; replacement_tweet_url: string | null }>,
+          summary: { total: 0, reposted: 0, truly_deleted: 0 },
+        })),
+      ]);
     profile = profileResult;
     sportsbooks = sportsbooksResult;
     leaderboardRows = leaderboardResult.leaderboard;
+    // Only flag picks that were truly deleted (no replacement tweet). Edits
+    // that the capper re-posted within an hour are not credibility-affecting
+    // and shouldn't get the warning badge.
+    deletedPendingIds = new Set(
+      deletedPicksResult.items
+        .filter((d) => !d.replacement_tweet_url)
+        .map((d) => d.id),
+    );
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "not_found") notFound();
     // Skip ISR cache on the transient-failure render so the next refresh
@@ -323,7 +346,11 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
 
         {profile.pending.length > 0 && (
           <div className="mb-6">
-            <PendingBlock picks={profile.pending} sportsbooks={sportsbooks} />
+            <PendingBlock
+              picks={profile.pending}
+              sportsbooks={sportsbooks}
+              deletedPickIds={deletedPendingIds}
+            />
           </div>
         )}
 

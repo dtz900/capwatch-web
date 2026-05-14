@@ -30,11 +30,22 @@ function formatStakeUnits(u: number | null): string | null {
 export function PendingBlock({
   picks,
   sportsbooks = [],
+  deletedPickIds,
 }: {
   picks: HistoryPick[];
   sportsbooks?: SportsbookSummary[];
+  /**
+   * Pick IDs the capper deleted from X *without* re-posting a replacement.
+   * These picks are still pending (will grade on game outcome) but the
+   * underlying tweet is gone. Rendering them with a visible badge is the
+   * brand promise: we keep the receipt even if the capper hides it.
+   */
+  deletedPickIds?: ReadonlySet<number>;
 }) {
   if (picks.length === 0) return null;
+  const deletedCount = deletedPickIds
+    ? picks.reduce((n, p) => (deletedPickIds.has(p.id) ? n + 1 : n), 0)
+    : 0;
 
   return (
     <section className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4">
@@ -43,12 +54,18 @@ export function PendingBlock({
         <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
           Live · {picks.length} pending
         </span>
+        {deletedCount > 0 && (
+          <span className="text-[10px] uppercase tracking-[0.14em] text-[#f59e0b] font-bold">
+            · {deletedCount} deleted on X
+          </span>
+        )}
       </div>
       <div className="flex flex-col">
         {picks.map((p) => {
           const isParlay = p.kind === "parlay";
           const posted = formatPostedAt(p.posted_at);
           const stake = formatStakeUnits(p.units);
+          const isDeleted = deletedPickIds?.has(p.id) ?? false;
           return (
             <div
               key={p.id}
@@ -84,9 +101,20 @@ export function PendingBlock({
                     odds_taken: p.odds_taken,
                   })}
                 </div>
-                <div className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5">
-                  {stake && <span className="mr-1.5">{stake}</span>}
+                <div className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+                  {stake && <span>{stake}</span>}
                   {posted && <span className="opacity-80">{posted}</span>}
+                  {isDeleted && (
+                    <span
+                      className="inline-flex items-center px-1.5 py-0.5 rounded
+                                 text-[9px] uppercase tracking-[0.12em] font-bold
+                                 bg-[rgba(245,158,11,0.10)] border border-[rgba(245,158,11,0.45)]
+                                 text-[#f59e0b]"
+                      title="The capper deleted this tweet from X. TailSlips still grades the pick."
+                    >
+                      Deleted on X
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="shrink-0 flex items-center gap-2">
@@ -95,7 +123,7 @@ export function PendingBlock({
                   targetType={isParlay ? "parlay" : "pick"}
                   targetId={isParlay ? (p.parlay_id ?? p.id) : p.id}
                 />
-                {p.tweet_url && (
+                {p.tweet_url && !isDeleted && (
                   <a
                     href={p.tweet_url}
                     target="_blank"
@@ -107,6 +135,16 @@ export function PendingBlock({
                   >
                     <XIcon size={11} glow />
                   </a>
+                )}
+                {p.tweet_url && isDeleted && (
+                  <span
+                    aria-label="Tweet deleted by capper"
+                    title="The capper deleted this tweet. TailSlips still grades the pick."
+                    className="w-7 h-7 flex items-center justify-center rounded-md
+                               bg-[rgba(245,158,11,0.06)] text-[#f59e0b] opacity-70"
+                  >
+                    <XIcon size={11} />
+                  </span>
                 )}
               </div>
             </div>
