@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchLeaderboard, fetchSlate } from "@/lib/api";
 import { pickMlSide } from "@/lib/bet-format";
-import { teamColor } from "@/lib/mlb-teams";
+import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
 import type { CapperRow, SlateGame, SlatePick } from "@/lib/types";
 
 export const size = { width: 1200, height: 630 };
@@ -41,6 +41,8 @@ interface MarqueeSide {
 interface MarqueeBlock {
   awayTeam: string | null;
   homeTeam: string | null;
+  awayLogoDataUri: string | null;
+  homeLogoDataUri: string | null;
   totalPicks: number;
   away: MarqueeSide;
   home: MarqueeSide;
@@ -68,6 +70,39 @@ async function readLogoDataUri(): Promise<string | null> {
   }
 }
 
+async function fetchRemoteImageAsDataUri(url: string | null): Promise<string | null> {
+  if (!url) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "TailSlipsBot/1.0 (+https://tailslips.com)" },
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.byteLength === 0 || buf.byteLength > 1_500_000) return null;
+    return `data:${ct};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchTeamLogosForGame(
+  awayTeam: string | null,
+  homeTeam: string | null,
+): Promise<{ away: string | null; home: string | null }> {
+  const [away, home] = await Promise.all([
+    fetchRemoteImageAsDataUri(teamLogoUrl(awayTeam)),
+    fetchRemoteImageAsDataUri(teamLogoUrl(homeTeam)),
+  ]);
+  return { away, home };
+}
+
 function formatUnits(units: number): string {
   const sign = units > 0 ? "+" : "";
   return `${sign}${units.toFixed(2)}u`;
@@ -82,7 +117,11 @@ function pickMarqueeGame(games: SlateGame[]): SlateGame | null {
   return best;
 }
 
-function buildMarqueeBlock(game: SlateGame): MarqueeBlock {
+function buildMarqueeBlock(
+  game: SlateGame,
+  awayLogoDataUri: string | null,
+  homeLogoDataUri: string | null,
+): MarqueeBlock {
   const awayHandles: string[] = [];
   const homeHandles: string[] = [];
   let other = 0;
@@ -96,6 +135,8 @@ function buildMarqueeBlock(game: SlateGame): MarqueeBlock {
   return {
     awayTeam: game.away_team,
     homeTeam: game.home_team,
+    awayLogoDataUri,
+    homeLogoDataUri,
     totalPicks: game.picks.length,
     away: { team: game.away_team, count: awayHandles.length, handles: awayHandles },
     home: { team: game.home_team, count: homeHandles.length, handles: homeHandles },
@@ -149,7 +190,12 @@ export async function renderSlateOg(): Promise<Response> {
   const allPicks = games.flatMap((g) => g.picks);
   const sharpsPosted = new Set(allPicks.map((p) => p.capper_id)).size;
   const marqueeGame = pickMarqueeGame(games);
-  const marquee = marqueeGame ? buildMarqueeBlock(marqueeGame) : null;
+  const teamLogos = marqueeGame
+    ? await fetchTeamLogosForGame(marqueeGame.away_team, marqueeGame.home_team)
+    : { away: null, home: null };
+  const marquee = marqueeGame
+    ? buildMarqueeBlock(marqueeGame, teamLogos.away, teamLogos.home)
+    : null;
   const roster = lb ? buildRoster(allPicks, lb.leaderboard, 3) : [];
 
   const inputs: RenderInputs = {
@@ -394,6 +440,32 @@ function buildJsx(inputs: RenderInputs) {
   );
 }
 
+function TeamLogo({ src, size }: { src: string | null; size: number }) {
+  if (!src) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          background: "rgba(255, 255, 255, 0.05)",
+          display: "flex",
+        }}
+      />
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      style={{ width: size, height: size, objectFit: "contain", display: "flex" }}
+    />
+  );
+}
+
 function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
   const awayColor = teamColor(marquee.awayTeam);
   const homeColor = teamColor(marquee.homeTeam);
@@ -421,7 +493,7 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
         <div
           style={{
             display: "flex",
-            alignItems: "baseline",
+            alignItems: "center",
             gap: 12,
           }}
         >
@@ -437,16 +509,43 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           >
             Most-bet game
           </div>
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 800,
-              color: TEXT,
-              letterSpacing: -0.5,
-              display: "flex",
-            }}
-          >
-            {marquee.awayTeam ?? "?"} @ {marquee.homeTeam ?? "?"}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <TeamLogo src={marquee.awayLogoDataUri} size={36} />
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: TEXT,
+                letterSpacing: -0.5,
+                display: "flex",
+              }}
+            >
+              {marquee.awayTeam ?? "?"}
+            </div>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: TEXT_MUTED,
+                letterSpacing: -0.2,
+                margin: "0 4px",
+                display: "flex",
+              }}
+            >
+              @
+            </div>
+            <TeamLogo src={marquee.homeLogoDataUri} size={36} />
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: TEXT,
+                letterSpacing: -0.5,
+                display: "flex",
+              }}
+            >
+              {marquee.homeTeam ?? "?"}
+            </div>
           </div>
         </div>
         <div
@@ -465,14 +564,22 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
 
       {/* Two-side row */}
       <div style={{ display: "flex", gap: 14 }}>
-        <SideTile side={marquee.away} color={awayColor} />
-        <SideTile side={marquee.home} color={homeColor} />
+        <SideTile side={marquee.away} color={awayColor} logo={marquee.awayLogoDataUri} />
+        <SideTile side={marquee.home} color={homeColor} logo={marquee.homeLogoDataUri} />
       </div>
     </div>
   );
 }
 
-function SideTile({ side, color }: { side: MarqueeSide; color: string }) {
+function SideTile({
+  side,
+  color,
+  logo,
+}: {
+  side: MarqueeSide;
+  color: string;
+  logo: string | null;
+}) {
   const visible = side.handles.slice(0, 3);
   const extra = side.handles.length - visible.length;
   return (
@@ -488,11 +595,12 @@ function SideTile({ side, color }: { side: MarqueeSide; color: string }) {
       <div
         style={{
           display: "flex",
-          alignItems: "baseline",
+          alignItems: "center",
           gap: 10,
           marginBottom: 4,
         }}
       >
+        <TeamLogo src={logo} size={26} />
         <div
           style={{
             fontSize: 20,
