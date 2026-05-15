@@ -330,7 +330,7 @@ function buildJsx(inputs: RenderInputs) {
         height: "100%",
         background: BG,
         color: TEXT,
-        padding: "32px 56px 26px",
+        padding: "28px 56px 22px",
         display: "flex",
         flexDirection: "column",
         fontFamily: "system-ui, sans-serif",
@@ -528,7 +528,7 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
         }}
       />
 
-      <div style={{ display: "flex", flexDirection: "column", padding: "12px 22px 16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", padding: "10px 22px 12px" }}>
         {/* Title bar: MATCHUP label + most-bet pill + game time */}
         <div
           style={{
@@ -594,14 +594,14 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <TeamLogo src={marquee.awayLogoDataUri} size={72} />
+            <TeamLogo src={marquee.awayLogoDataUri} size={64} />
             <div
               style={{
-                fontSize: 34,
+                fontSize: 30,
                 fontWeight: 800,
                 color: TEXT,
                 letterSpacing: -0.5,
-                marginTop: 4,
+                marginTop: 2,
                 display: "flex",
               }}
             >
@@ -621,14 +621,14 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
             VS
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <TeamLogo src={marquee.homeLogoDataUri} size={72} />
+            <TeamLogo src={marquee.homeLogoDataUri} size={64} />
             <div
               style={{
-                fontSize: 34,
+                fontSize: 30,
                 fontWeight: 800,
                 color: TEXT,
                 letterSpacing: -0.5,
-                marginTop: 4,
+                marginTop: 2,
                 display: "flex",
               }}
             >
