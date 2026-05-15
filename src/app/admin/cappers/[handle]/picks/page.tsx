@@ -4,6 +4,7 @@ import { fetchCapperProfile } from "@/lib/api";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import type { HistoryPick } from "@/lib/types";
+import { EditCapperPanel } from "./EditCapperPanel";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
@@ -89,6 +90,12 @@ export default async function AdminCapperPicksPage({ params, searchParams }: Pag
             Every pick with its pick_id and a one-click link to edit it in the audit FixPanel.
           </p>
         </header>
+
+        <EditCapperPanel
+          capperId={profile.capper.id}
+          initialHandle={handle}
+          initialDisplayName={profile.capper.display_name}
+        />
 
         {profile.pending && profile.pending.length > 0 && (
           <section className="mb-6">
