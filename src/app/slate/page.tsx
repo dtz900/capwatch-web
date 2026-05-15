@@ -43,7 +43,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     description,
     alternates: { canonical },
     openGraph: { title, description, url: canonical, type: "website", siteName: SITE_NAME },
-    twitter: { card: "summary_large_image", title, description, site: "@FadeAI_" },
+    twitter: { card: "summary_large_image", title, description, site: "@TailSlips" },
   };
 }
 
