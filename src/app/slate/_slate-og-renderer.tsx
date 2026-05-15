@@ -43,6 +43,9 @@ interface MarqueeBlock {
   homeTeam: string | null;
   awayLogoDataUri: string | null;
   homeLogoDataUri: string | null;
+  gameTime: string | null;
+  awayStarter: string | null;
+  homeStarter: string | null;
   totalPicks: number;
   away: MarqueeSide;
   home: MarqueeSide;
@@ -108,6 +111,29 @@ function formatUnits(units: number): string {
   return `${sign}${units.toFixed(2)}u`;
 }
 
+// Mirrors the slate page's pitcher name shortener so the OG card reads the
+// same way as the page it's previewing.
+function shortPitcher(name: string | null): string | null {
+  if (!name) return null;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
+}
+
+function formatGameTime(iso: string | null): string | null {
+  if (!iso) return null;
+  try {
+    const t = new Date(iso).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "America/New_York",
+    });
+    return `${t} ET`;
+  } catch {
+    return null;
+  }
+}
+
 function pickMarqueeGame(games: SlateGame[]): SlateGame | null {
   let best: SlateGame | null = null;
   for (const g of games) {
@@ -137,6 +163,9 @@ function buildMarqueeBlock(
     homeTeam: game.home_team,
     awayLogoDataUri,
     homeLogoDataUri,
+    gameTime: game.game_time,
+    awayStarter: game.away_starter,
+    homeStarter: game.home_starter,
     totalPicks: game.picks.length,
     away: { team: game.away_team, count: awayHandles.length, handles: awayHandles },
     home: { team: game.home_team, count: homeHandles.length, handles: homeHandles },
@@ -301,7 +330,7 @@ function buildJsx(inputs: RenderInputs) {
         height: "100%",
         background: BG,
         color: TEXT,
-        padding: "40px 56px 32px",
+        padding: "32px 56px 26px",
         display: "flex",
         flexDirection: "column",
         fontFamily: "system-ui, sans-serif",
@@ -340,16 +369,16 @@ function buildJsx(inputs: RenderInputs) {
         style={{
           display: "flex",
           alignItems: "baseline",
-          gap: 14,
-          marginBottom: 22,
+          gap: 12,
+          marginBottom: 14,
         }}
       >
         <div
           style={{
-            fontSize: 38,
+            fontSize: 32,
             fontWeight: 800,
             color: TEXT,
-            letterSpacing: -1.2,
+            letterSpacing: -1,
             display: "flex",
           }}
         >
@@ -357,7 +386,7 @@ function buildJsx(inputs: RenderInputs) {
         </div>
         <div
           style={{
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: 700,
             color: TEXT_MUTED,
             letterSpacing: 1.4,
@@ -469,6 +498,12 @@ function TeamLogo({ src, size }: { src: string | null; size: number }) {
 function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
   const awayColor = teamColor(marquee.awayTeam);
   const homeColor = teamColor(marquee.homeTeam);
+  const timeLabel = formatGameTime(marquee.gameTime);
+  const awayPitcher = shortPitcher(marquee.awayStarter);
+  const homePitcher = shortPitcher(marquee.homeStarter);
+  const pitcherLine =
+    awayPitcher && homePitcher ? `${awayPitcher} vs ${homePitcher}` : awayPitcher ?? homePitcher;
+
   return (
     <div
       style={{
@@ -477,70 +512,123 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
         background: CARD_BG,
         border: `1px solid ${ROW_BORDER}`,
         borderRadius: 14,
-        padding: "18px 22px",
-        marginBottom: 16,
+        marginBottom: 14,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      {/* Label row */}
+      {/* Team-color hairline at the top, echoing the slate page matchup block. */}
       <div
         style={{
+          height: 3,
+          width: "100%",
+          background: `linear-gradient(90deg, ${awayColor} 0%, ${awayColor} 50%, ${homeColor} 50%, ${homeColor} 100%)`,
+          opacity: 0.85,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 10,
         }}
-      >
+      />
+
+      <div style={{ display: "flex", flexDirection: "column", padding: "12px 22px 16px" }}>
+        {/* Title bar: MATCHUP label + most-bet pill + game time */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            justifyContent: "space-between",
+            marginBottom: 8,
           }}
         >
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: 2.4,
-              textTransform: "uppercase",
-              color: MINT,
-              display: "flex",
-            }}
-          >
-            Most-bet game
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <TeamLogo src={marquee.awayLogoDataUri} size={36} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
               style={{
-                fontSize: 28,
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 2.4,
+                textTransform: "uppercase",
+                color: TEXT_MUTED,
+                display: "flex",
+              }}
+            >
+              Matchup
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 2.4,
+                textTransform: "uppercase",
+                color: GOLD,
+                padding: "3px 8px",
+                border: `1px solid rgba(245, 197, 74, 0.45)`,
+                background: "rgba(245, 197, 74, 0.08)",
+                display: "flex",
+              }}
+            >
+              Most-bet · {marquee.totalPicks} sharps
+            </div>
+          </div>
+          {timeLabel ? (
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 800,
+                color: TEXT_SOFT,
+                letterSpacing: 0.4,
+                display: "flex",
+              }}
+            >
+              {timeLabel}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Center: logos + VS + abbrs */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 36,
+            marginTop: 4,
+            marginBottom: pitcherLine ? 4 : 10,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <TeamLogo src={marquee.awayLogoDataUri} size={72} />
+            <div
+              style={{
+                fontSize: 34,
                 fontWeight: 800,
                 color: TEXT,
                 letterSpacing: -0.5,
+                marginTop: 4,
                 display: "flex",
               }}
             >
               {marquee.awayTeam ?? "?"}
             </div>
+          </div>
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color: TEXT_MUTED,
+              letterSpacing: 3,
+              textTransform: "uppercase",
+              display: "flex",
+            }}
+          >
+            VS
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <TeamLogo src={marquee.homeLogoDataUri} size={72} />
             <div
               style={{
-                fontSize: 22,
-                fontWeight: 700,
-                color: TEXT_MUTED,
-                letterSpacing: -0.2,
-                margin: "0 4px",
-                display: "flex",
-              }}
-            >
-              @
-            </div>
-            <TeamLogo src={marquee.homeLogoDataUri} size={36} />
-            <div
-              style={{
-                fontSize: 28,
+                fontSize: 34,
                 fontWeight: 800,
                 color: TEXT,
                 letterSpacing: -0.5,
+                marginTop: 4,
                 display: "flex",
               }}
             >
@@ -548,76 +636,93 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
             </div>
           </div>
         </div>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 800,
-            color: GOLD,
-            letterSpacing: 1.4,
-            textTransform: "uppercase",
-            display: "flex",
-          }}
-        >
-          {marquee.totalPicks} sharps
-        </div>
-      </div>
 
-      {/* Two-side row */}
-      <div style={{ display: "flex", gap: 14 }}>
-        <SideTile side={marquee.away} color={awayColor} logo={marquee.awayLogoDataUri} />
-        <SideTile side={marquee.home} color={homeColor} logo={marquee.homeLogoDataUri} />
+        {/* Pitcher line, centered. */}
+        {pitcherLine ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              fontSize: 14,
+              fontWeight: 600,
+              color: TEXT_MUTED,
+              letterSpacing: 0.2,
+              marginBottom: 10,
+            }}
+          >
+            {pitcherLine}
+          </div>
+        ) : null}
+
+        {/* Two BACKING tiles, mirroring the slate page Side component. */}
+        <div style={{ display: "flex", gap: 14 }}>
+          <BackingTile side={marquee.away} color={awayColor} />
+          <BackingTile side={marquee.home} color={homeColor} />
+        </div>
       </div>
     </div>
   );
 }
 
-function SideTile({
-  side,
-  color,
-  logo,
-}: {
-  side: MarqueeSide;
-  color: string;
-  logo: string | null;
-}) {
+function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
   const visible = side.handles.slice(0, 3);
   const extra = side.handles.length - visible.length;
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        borderLeft: `3px solid ${color}`,
-        paddingLeft: 12,
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      {/* Header row with team-color underline, matching slate page Side. */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 10,
-          marginBottom: 4,
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          paddingBottom: 4,
+          borderBottom: `2px solid ${color}`,
+          marginBottom: 6,
         }}
       >
-        <TeamLogo src={logo} size={26} />
-        <div
-          style={{
-            fontSize: 20,
-            fontWeight: 800,
-            color,
-            letterSpacing: -0.3,
-            display: "flex",
-          }}
-        >
-          {side.team ?? "—"}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: 1.8,
+              textTransform: "uppercase",
+              color: TEXT_MUTED,
+              display: "flex",
+            }}
+          >
+            Backing
+          </div>
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color,
+              letterSpacing: -0.3,
+              display: "flex",
+            }}
+          >
+            {side.team ?? "—"}
+          </div>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              color: TEXT_MUTED,
+              display: "flex",
+            }}
+          >
+            moneyline
+          </div>
         </div>
         <div
           style={{
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: 800,
             color: TEXT_MUTED,
-            letterSpacing: 1.4,
+            letterSpacing: 1.2,
             textTransform: "uppercase",
             display: "flex",
           }}
@@ -627,8 +732,8 @@ function SideTile({
       </div>
       <div
         style={{
-          fontSize: 16,
-          fontWeight: 600,
+          fontSize: 15,
+          fontWeight: 700,
           color: TEXT_SOFT,
           letterSpacing: -0.2,
           display: "flex",
@@ -664,7 +769,7 @@ function RosterBlockView({ roster }: { roster: RosterRow[] }) {
         background: CARD_BG,
         border: `1px solid ${ROW_BORDER}`,
         borderRadius: 14,
-        padding: "14px 22px 16px",
+        padding: "10px 22px 12px",
       }}
     >
       <div
@@ -674,7 +779,7 @@ function RosterBlockView({ roster }: { roster: RosterRow[] }) {
           letterSpacing: 2.4,
           textTransform: "uppercase",
           color: MINT,
-          marginBottom: 8,
+          marginBottom: 4,
           display: "flex",
         }}
       >
@@ -690,17 +795,17 @@ function RosterBlockView({ roster }: { roster: RosterRow[] }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "8px 0",
+                padding: "5px 0",
                 borderBottom: i < roster.length - 1 ? `1px solid ${ROW_BORDER}` : "none",
               }}
             >
-              <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
                 <div
                   style={{
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: 800,
                     color: GOLD,
-                    width: 28,
+                    width: 24,
                     display: "flex",
                     justifyContent: "flex-end",
                   }}
@@ -709,7 +814,7 @@ function RosterBlockView({ roster }: { roster: RosterRow[] }) {
                 </div>
                 <div
                   style={{
-                    fontSize: 28,
+                    fontSize: 22,
                     fontWeight: 800,
                     color: TEXT,
                     letterSpacing: -0.4,
@@ -722,10 +827,10 @@ function RosterBlockView({ roster }: { roster: RosterRow[] }) {
               <div style={{ display: "flex", alignItems: "baseline", gap: 22 }}>
                 <div
                   style={{
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: 800,
                     color: unitsColor,
-                    width: 110,
+                    width: 100,
                     display: "flex",
                     justifyContent: "flex-end",
                   }}
@@ -734,12 +839,12 @@ function RosterBlockView({ roster }: { roster: RosterRow[] }) {
                 </div>
                 <div
                   style={{
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: 700,
                     color: TEXT_MUTED,
                     letterSpacing: 1.2,
                     textTransform: "uppercase",
-                    width: 160,
+                    width: 150,
                     display: "flex",
                     justifyContent: "flex-end",
                   }}
