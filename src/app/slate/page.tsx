@@ -38,12 +38,50 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     // fall through with the static defaults above
   }
 
+  // X (and most scrapers) cache the share image per og:image URL. Next.js
+  // derives the auto-injected opengraph-image URL hash from the *route file*
+  // source, which has not changed since the card was first shipped, so every
+  // redesign and every new daily slate kept serving X's first cached image.
+  // Pin the image URL to the slate date (forces a fresh crawl each day) plus
+  // a design version (bump OG_CARD_VERSION whenever the card layout changes).
+  const OG_CARD_VERSION = "6"; // bump on any _slate-og-renderer.tsx redesign
+  const etDay = (offsetDays: number) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(Date.now() + offsetDays * 86_400_000));
+  const slateDay = etDay(dateParam === "tomorrow" ? 1 : 0);
+  const ogKey = `d=${slateDay}&v=${OG_CARD_VERSION}`;
+  const ogAlt = `${dayLabel} MLB slate on ${SITE_NAME}`;
+
   return {
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: canonical, type: "website", siteName: SITE_NAME },
-    twitter: { card: "summary_large_image", title, description, site: "@TailSlips" },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: "website",
+      siteName: SITE_NAME,
+      images: [
+        {
+          url: `/slate/opengraph-image?${ogKey}`,
+          width: 1200,
+          height: 630,
+          alt: ogAlt,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      site: "@TailSlips",
+      images: [`/slate/twitter-image?${ogKey}`],
+    },
   };
 }
 
