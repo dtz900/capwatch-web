@@ -203,6 +203,9 @@ export interface AuditProblem {
   /** Ungraded only because the game hasn't finished. Self-resolving;
    * surfaced in its own bucket, not the actionable queue. */
   pending?: boolean;
+  /** Book-rules-correct void (player didn't play / data gap). No fix
+   * needed; its own glance-only bucket, cleared via ack. */
+  settled?: boolean;
 }
 
 export interface AuditResponse {
@@ -215,6 +218,10 @@ export interface AuditResponse {
     acked?: number;
     /** Game-pending rows split into their own self-resolving bucket. */
     pending?: number;
+    /** Book-rules-correct voids split into the settled bucket. */
+    settled?: number;
+    /** Actionable rows that actually need a human decision. */
+    needs_you?: number;
   };
   by_reason: Record<string, number>;
   total_problems: number;
@@ -224,6 +231,9 @@ export interface AuditResponse {
   /** Self-resolving game-pending rows, capped, not paginated. */
   pending?: AuditProblem[];
   pending_total?: number;
+  /** Book-rules-correct voids, capped, not paginated. Glance/clear-only. */
+  settled?: AuditProblem[];
+  settled_total?: number;
   /** Present only when the audit endpoint's _get_audit_impl threw an
    * exception that the outer wrapper caught. Surfaces the exception class
    * + first 240 chars of message so the admin operator can see what

@@ -28,6 +28,14 @@ export const maxDuration = 30;
 
 const PAGE_SIZE = 50;
 
+// Reasons that live in their own collapsed sections (pending / settled),
+// not the actionable failure-reason filter row.
+const HIDDEN_REASON_CHIPS = new Set([
+  "game_pending",
+  "player_did_not_play",
+  "data_gap",
+]);
+
 const REASON_LABEL: Record<string, string> = {
   market_unhandled: "Market not in grader",
   missing_player_id: "Player not resolved",
@@ -105,8 +113,10 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             Picks needing review
           </h1>
           <p className="text-[13px] text-[var(--color-text-soft)] font-medium mt-2">
-            Real-time. Every pick that didn&apos;t grade cleanly, with the specific
-            failure reason. {data.total_problems} item{data.total_problems === 1 ? "" : "s"} match the current filters.
+            Real-time. <span className="text-[var(--color-text)] font-bold">{data.total_problems}</span> pick
+            {data.total_problems === 1 ? "" : "s"} need a decision. Settled
+            book-rules voids and self-resolving pending picks are tucked into
+            their own sections below.
           </p>
         </header>
 
@@ -125,10 +135,22 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
         )}
 
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <Stat label="Total picks" value={data.summary.total} />
+          <Stat
+            label="Needs you"
+            value={data.summary.needs_you ?? data.total_problems}
+            tone="neg"
+          />
+          <Stat
+            label="Settled · 1-click clear"
+            value={data.settled_total ?? 0}
+            tone="neutral"
+          />
+          <Stat
+            label="Pending · self-resolving"
+            value={data.pending_total ?? 0}
+            tone="neutral"
+          />
           <Stat label="Graded W/L/P" value={data.summary.graded} tone="pos" />
-          <Stat label="Voided" value={data.summary.void} tone="neg" />
-          <Stat label="Ungraded" value={data.summary.ungraded} tone="neutral" />
         </section>
 
         <section className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4 mb-6">
@@ -180,12 +202,12 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             >
               All (
               {Object.entries(data.by_reason)
-                .filter(([r]) => r !== "game_pending")
+                .filter(([r]) => !HIDDEN_REASON_CHIPS.has(r))
                 .reduce((a, [, b]) => a + b, 0)}
               )
             </Link>
             {Object.entries(data.by_reason)
-              .filter(([r]) => r !== "game_pending")
+              .filter(([r]) => !HIDDEN_REASON_CHIPS.has(r))
               .sort((a, b) => b[1] - a[1])
               .map(([r, n]) => (
                 <Link
@@ -295,8 +317,51 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {(data.pending_total ?? 0) > 0 && (
+        {(data.settled_total ?? 0) > 0 && (
           <details className="mt-8 rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.01)]">
+            <summary className="cursor-pointer select-none px-5 py-4 text-[12px] font-bold text-[var(--color-text-soft)]">
+              Settled — no action needed ({data.settled_total})
+              <span className="ml-2 font-medium text-[var(--color-text-muted)]">
+                book-rules-correct voids (player didn&apos;t play / data gap).
+                {capper
+                  ? " Use “Ack all settled voids for @" + capper + "” above to clear."
+                  : " Filter to a capper, then “Ack all settled voids” to clear after a backfill."}
+              </span>
+            </summary>
+            <div className="border-t border-[var(--color-border)] divide-y divide-[rgba(255,255,255,0.03)]">
+              {(data.settled ?? []).map((p) => (
+                <div
+                  key={p.pick_id}
+                  className="grid grid-cols-[110px_150px_1fr_120px_70px] gap-3 items-center px-5 py-2.5 text-[12px]"
+                >
+                  <span className="text-[var(--color-text-muted)] tabular-nums">
+                    {p.game_date
+                      ? new Date(p.game_date + "T12:00:00Z").toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : "—"}
+                  </span>
+                  <span className="truncate text-[var(--color-text-soft)] font-semibold">
+                    {p.capper_display_name ?? p.capper_handle ?? "—"}
+                  </span>
+                  <span className="truncate text-[var(--color-text)]">
+                    {p.selection ?? p.market ?? "—"}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
+                    {REASON_LABEL[p.reason] ?? p.reason}
+                  </span>
+                  <span className="text-right text-[var(--color-text-muted)] tabular-nums">
+                    pid={p.pick_id}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
+        {(data.pending_total ?? 0) > 0 && (
+          <details className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.01)]">
             <summary className="cursor-pointer select-none px-5 py-4 text-[12px] font-bold text-[var(--color-text-soft)]">
               Pending — self-resolving ({data.pending_total})
               <span className="ml-2 font-medium text-[var(--color-text-muted)]">
