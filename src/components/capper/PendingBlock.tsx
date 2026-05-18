@@ -1,5 +1,6 @@
 import { XIcon } from "@/components/icons/XIcon";
 import { AffiliatePicker } from "@/components/affiliate/AffiliatePicker";
+import { AffiliateDisclaimer } from "@/components/affiliate/AffiliateDisclaimer";
 import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
 import type { SportsbookSummary } from "@/lib/api";
 import type { HistoryPick } from "@/lib/types";
@@ -165,6 +166,7 @@ export function PendingBlock({
           );
         })}
       </div>
+      <AffiliateDisclaimer books={sportsbooks} />
     </section>
   );
 }
