@@ -56,6 +56,10 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-snippet": -1, "max-image-preview": "large" },
   },
+  // Impact.com publisher site-ownership verification (tailslips.com).
+  verification: {
+    other: { "impact-site-verification": "a8ee1fb4-5268-41af-bfe6-e3e6cc1a60f6" },
+  },
 };
 
 export default function RootLayout({
