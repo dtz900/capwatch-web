@@ -144,6 +144,60 @@ export async function batchDeletePicksAction(pickIds: number[]): Promise<BatchDe
   }
 }
 
+export type AckResult =
+  | { ok: true; acked: number }
+  | { ok: false; error: string };
+
+/** Acknowledge (triage-dismiss) audit rows. Either explicit pickIds, or
+ * bulk by capper (clears that capper's settled book-rules-correct voids
+ * in one shot -- the post-onboard/backfill action). */
+export async function ackAuditAction(input: {
+  pickIds?: number[];
+  capper?: string;
+  reasons?: string[];
+}): Promise<AckResult> {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/audit/ack`, {
+      method: "POST",
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        pick_ids: input.pickIds,
+        capper: input.capper,
+        reasons: input.reasons,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as { acked: number };
+    revalidatePath("/admin/audit");
+    return { ok: true, acked: data.acked ?? 0 };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function unackAuditAction(pickIds: number[]): Promise<AckResult> {
+  if (pickIds.length === 0) return { ok: true, acked: 0 };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/audit/unack`, {
+      method: "POST",
+      headers: adminHeaders(),
+      body: JSON.stringify({ pick_ids: pickIds }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as { unacked: number };
+    revalidatePath("/admin/audit");
+    return { ok: true, acked: data.unacked ?? 0 };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export interface PlayerSearchResult {
   player_id: number;
   full_name: string;

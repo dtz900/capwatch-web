@@ -170,6 +170,7 @@ export interface AuditFilters {
   kind?: "void" | "ungraded";
   pick_id?: number;
   sort?: "oldest" | "newest";
+  show_acked?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -196,15 +197,33 @@ export interface AuditProblem {
   raw_id: number | null;
   tweet_text: string | null;
   tweet_url: string | null;
+  /** A human has triaged/dismissed this row -> hidden from the default
+   * queue (still reachable via show_acked). */
+  acked?: boolean;
+  /** Ungraded only because the game hasn't finished. Self-resolving;
+   * surfaced in its own bucket, not the actionable queue. */
+  pending?: boolean;
 }
 
 export interface AuditResponse {
-  summary: { total: number; graded: number; void: number; ungraded: number };
+  summary: {
+    total: number;
+    graded: number;
+    void: number;
+    ungraded: number;
+    /** Acked rows hidden from the actionable queue (UI shows "N hidden"). */
+    acked?: number;
+    /** Game-pending rows split into their own self-resolving bucket. */
+    pending?: number;
+  };
   by_reason: Record<string, number>;
   total_problems: number;
   limit: number;
   offset: number;
   problems: AuditProblem[];
+  /** Self-resolving game-pending rows, capped, not paginated. */
+  pending?: AuditProblem[];
+  pending_total?: number;
   /** Present only when the audit endpoint's _get_audit_impl threw an
    * exception that the outer wrapper caught. Surfaces the exception class
    * + first 240 chars of message so the admin operator can see what
@@ -222,6 +241,7 @@ export async function fetchAudit(filters: AuditFilters = {}): Promise<AuditRespo
   if (filters.kind) params.set("kind", filters.kind);
   if (filters.pick_id != null) params.set("pick_id", String(filters.pick_id));
   if (filters.sort) params.set("sort", filters.sort);
+  if (filters.show_acked) params.set("show_acked", "true");
   if (filters.limit != null) params.set("limit", String(filters.limit));
   if (filters.offset != null) params.set("offset", String(filters.offset));
   const qs = params.toString();

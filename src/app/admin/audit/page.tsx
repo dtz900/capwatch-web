@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { fetchAudit } from "@/lib/api";
 import { AuditTable } from "./AuditTable";
+import { BulkCapperAck } from "./BulkCapperAck";
 
 interface PageProps {
   searchParams: Promise<{
@@ -10,6 +11,7 @@ interface PageProps {
     pick_id?: string;
     offset?: string;
     sort?: "oldest" | "newest";
+    show_acked?: string;
   }>;
 }
 
@@ -45,7 +47,10 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   const kind = sp.kind === "void" || sp.kind === "ungraded" ? sp.kind : undefined;
   const pickIdParsed = sp.pick_id ? parseInt(sp.pick_id, 10) : NaN;
   const pickIdLookup = Number.isFinite(pickIdParsed) && pickIdParsed > 0 ? pickIdParsed : undefined;
-  const sort: "oldest" | "newest" = sp.sort === "newest" ? "newest" : "oldest";
+  // Newest-first by default: in the ack model the queue is the un-acked
+  // set, so the freshest un-triaged problems are what matter.
+  const sort: "oldest" | "newest" = sp.sort === "oldest" ? "oldest" : "newest";
+  const showAcked = sp.show_acked === "true";
 
   const data = await fetchAudit({
     reason,
@@ -53,6 +58,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     kind,
     pick_id: pickIdLookup,
     sort,
+    show_acked: showAcked,
     limit: PAGE_SIZE,
     offset,
   });
@@ -61,19 +67,29 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   const showingTo = Math.min(offset + data.problems.length, data.total_problems);
 
   const buildHref = (
-    overrides: Partial<{ reason: string; capper: string; kind: string; offset: string; sort: string }>,
+    overrides: Partial<{
+      reason: string;
+      capper: string;
+      kind: string;
+      offset: string;
+      sort: string;
+      show_acked: string;
+    }>,
   ) => {
     const params = new URLSearchParams();
     const r = overrides.reason ?? reason ?? "";
     const c = overrides.capper ?? capper ?? "";
     const k = overrides.kind ?? kind ?? "";
     const o = overrides.offset ?? "";
-    const s = overrides.sort ?? (sort === "oldest" ? "" : sort);
+    // Newest is the default now, so only encode "oldest".
+    const s = overrides.sort ?? (sort === "oldest" ? "oldest" : "");
+    const sa = overrides.show_acked ?? (showAcked ? "true" : "");
     if (r) params.set("reason", r);
     if (c) params.set("capper", c);
     if (k) params.set("kind", k);
     if (o) params.set("offset", o);
     if (s) params.set("sort", s);
+    if (sa) params.set("show_acked", sa);
     const qs = params.toString();
     return qs ? `/admin/audit?${qs}` : "/admin/audit";
   };
@@ -162,9 +178,14 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
                   : "border-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
               }`}
             >
-              All ({Object.values(data.by_reason).reduce((a, b) => a + b, 0)})
+              All (
+              {Object.entries(data.by_reason)
+                .filter(([r]) => r !== "game_pending")
+                .reduce((a, [, b]) => a + b, 0)}
+              )
             </Link>
             {Object.entries(data.by_reason)
+              .filter(([r]) => r !== "game_pending")
               .sort((a, b) => b[1] - a[1])
               .map(([r, n]) => (
                 <Link
@@ -200,7 +221,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
               Sort
             </span>
-            {(["oldest", "newest"] as const).map((s) => (
+            {(["newest", "oldest"] as const).map((s) => (
               <Link
                 key={s}
                 href={buildHref({ sort: s })}
@@ -213,12 +234,36 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
                 {s === "oldest" ? "Oldest first" : "Newest first"}
               </Link>
             ))}
+            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
+              Triaged
+            </span>
+            <Link
+              href={buildHref({ show_acked: showAcked ? "" : "true", offset: "" })}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
+                showAcked
+                  ? "bg-[rgba(255,255,255,0.08)] text-[var(--color-text)]"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              }`}
+            >
+              {showAcked ? "Showing acked" : "Hidden"}
+              {!showAcked && (data.summary.acked ?? 0) > 0 && (
+                <span className="ml-1 text-[var(--color-text-muted)]">
+                  ({data.summary.acked})
+                </span>
+              )}
+            </Link>
           </div>
+          {capper && (
+            <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
+              <BulkCapperAck capper={capper} />
+            </div>
+          )}
         </section>
 
         <AuditTable
-          key={`${reason ?? ""}|${capper ?? ""}|${kind ?? ""}|${sort}|${offset}`}
+          key={`${reason ?? ""}|${capper ?? ""}|${kind ?? ""}|${sort}|${offset}|${showAcked}`}
           problems={data.problems}
+          showAcked={showAcked}
         />
 
         <div
@@ -249,6 +294,43 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             )}
           </div>
         </div>
+
+        {(data.pending_total ?? 0) > 0 && (
+          <details className="mt-8 rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.01)]">
+            <summary className="cursor-pointer select-none px-5 py-4 text-[12px] font-bold text-[var(--color-text-soft)]">
+              Pending — self-resolving ({data.pending_total})
+              <span className="ml-2 font-medium text-[var(--color-text-muted)]">
+                ungraded only because the game hasn&apos;t finished. No action needed; grades automatically once final.
+              </span>
+            </summary>
+            <div className="border-t border-[var(--color-border)] divide-y divide-[rgba(255,255,255,0.03)]">
+              {(data.pending ?? []).map((p) => (
+                <div
+                  key={p.pick_id}
+                  className="grid grid-cols-[110px_150px_1fr_70px] gap-3 items-center px-5 py-2.5 text-[12px]"
+                >
+                  <span className="text-[var(--color-text-muted)] tabular-nums">
+                    {p.game_date
+                      ? new Date(p.game_date + "T12:00:00Z").toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : "—"}
+                  </span>
+                  <span className="truncate text-[var(--color-text-soft)] font-semibold">
+                    {p.capper_display_name ?? p.capper_handle ?? "—"}
+                  </span>
+                  <span className="truncate text-[var(--color-text)]">
+                    {p.selection ?? p.market ?? "—"}
+                  </span>
+                  <span className="text-right text-[var(--color-text-muted)] tabular-nums">
+                    pid={p.pick_id}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         <footer className="flex items-center justify-between py-7 pb-2 mt-6 text-xs text-[var(--color-text-muted)] font-medium">
           <div>Live data. No cache. Every refresh hits the audit endpoint.</div>

@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { AuditProblem } from "@/lib/api";
-import { batchDeletePicksAction, batchRegradePicksAction } from "./actions";
+import {
+  ackAuditAction,
+  batchDeletePicksAction,
+  batchRegradePicksAction,
+  unackAuditAction,
+} from "./actions";
 import { FixPanel } from "./FixPanel";
 
 const REASON_LABEL: Record<string, string> = {
@@ -22,9 +27,12 @@ const BENIGN_REASONS = new Set(["player_did_not_play", "game_pending"]);
 
 interface Props {
   problems: AuditProblem[];
+  /** When true the queue is showing already-acked rows, so the batch
+   * toolbar offers Unack instead of Ack. */
+  showAcked?: boolean;
 }
 
-export function AuditTable({ problems }: Props) {
+export function AuditTable({ problems, showAcked = false }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [pending, setPending] = useState(false);
@@ -87,6 +95,22 @@ export function AuditTable({ problems }: Props) {
     setPending(true);
     setError(null);
     const res = await batchRegradePicksAction([...selected]);
+    setPending(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setSelected(new Set());
+    router.refresh();
+  }
+
+  async function handleBatchAck() {
+    if (selected.size === 0) return;
+    setPending(true);
+    setError(null);
+    const res = showAcked
+      ? await unackAuditAction([...selected])
+      : await ackAuditAction({ pickIds: [...selected] });
     setPending(false);
     if (!res.ok) {
       setError(res.error);
@@ -159,6 +183,24 @@ export function AuditTable({ problems }: Props) {
                        px-2 py-1 disabled:opacity-50"
           >
             Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleBatchAck}
+            disabled={pending}
+            title={
+              showAcked
+                ? "Un-acknowledge: return these rows to the default queue"
+                : "Acknowledge: mark triaged so they drop out of the default queue (does not change grades)"
+            }
+            className="px-3 py-1.5 rounded-md bg-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.18)]
+                       text-[var(--color-text)] text-[12px] font-bold disabled:opacity-50"
+          >
+            {pending
+              ? "Working..."
+              : showAcked
+                ? `Unack ${selected.size}`
+                : `Ack ${selected.size}`}
           </button>
           <button
             type="button"
@@ -303,6 +345,11 @@ function ProblemRow({
           <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
             pid={p.pick_id}
             {p.parlay_id != null && <span className="ml-1">· parlay {p.parlay_id}</span>}
+            {p.acked && (
+              <span className="ml-1 text-[var(--color-text-soft)]" title="Already triaged">
+                · ✓ triaged
+              </span>
+            )}
           </div>
         </div>
         <div className="min-w-0">
