@@ -95,6 +95,7 @@ export default async function AdminCapperPicksPage({ params, searchParams }: Pag
           capperId={profile.capper.id}
           initialHandle={handle}
           initialDisplayName={profile.capper.display_name}
+          initialProfileImageUrl={profile.capper.profile_image_url}
         />
 
         {profile.pending && profile.pending.length > 0 && (

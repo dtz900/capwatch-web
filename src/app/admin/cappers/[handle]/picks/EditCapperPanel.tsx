@@ -2,18 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateCapperAction } from "../../actions";
+import { refreshCapperProfileAction, updateCapperAction } from "../../actions";
 
 interface EditCapperPanelProps {
   capperId: number;
   initialHandle: string;
   initialDisplayName: string | null;
+  initialProfileImageUrl: string | null;
 }
 
 export function EditCapperPanel({
   capperId,
   initialHandle,
   initialDisplayName,
+  initialProfileImageUrl,
 }: EditCapperPanelProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -23,6 +25,32 @@ export function EditCapperPanel({
   const [twitterUrl, setTwitterUrl] = useState("");
   const [overrideUrl, setOverrideUrl] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  // Profile-image refresh is its own one-click action, independent of the
+  // Save/dirty flow. Twitter CDN URLs rotate when a capper changes their
+  // avatar, so the cached one goes stale and renders blank.
+  const [imgUrl, setImgUrl] = useState(initialProfileImageUrl);
+  const [imgPending, startImgTransition] = useTransition();
+  const [imgMsg, setImgMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
+    null,
+  );
+
+  function onRefreshImage() {
+    setImgMsg(null);
+    startImgTransition(async () => {
+      const result = await refreshCapperProfileAction(
+        capperId,
+        handle.trim().replace(/^@/, ""),
+      );
+      if (!result.ok) {
+        setImgMsg({ kind: "err", text: result.error });
+        return;
+      }
+      if (result.profile_image_url) setImgUrl(result.profile_image_url);
+      setImgMsg({ kind: "ok", text: "Pulled latest from X." });
+      router.refresh();
+    });
+  }
 
   const dirty =
     handle.trim().replace(/^@/, "") !== initialHandle ||
@@ -127,6 +155,44 @@ export function EditCapperPanel({
                 className="mt-2 w-full rounded-md border border-[rgba(255,255,255,0.10)] bg-[rgba(0,0,0,0.25)] focus:border-[rgba(255,255,255,0.20)] py-1.5 px-3 text-sm text-[var(--color-text)] outline-none"
               />
             )}
+          </div>
+
+          <div className="border-t border-[var(--color-border)] pt-3">
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold mb-2">
+              Profile image
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Plain img: remote Twitter CDN URL, avoids next/image domain
+                  config on an admin-only page. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imgUrl ?? ""}
+                alt=""
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-full bg-[rgba(255,255,255,0.06)] object-cover shrink-0"
+              />
+              <button
+                type="button"
+                onClick={onRefreshImage}
+                disabled={imgPending}
+                title="Re-pull the avatar + follower count from X. Use when the capper changed their profile picture."
+                className="px-3 py-1.5 rounded-md bg-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.16)] disabled:opacity-40 disabled:cursor-not-allowed text-[12px] font-bold text-[var(--color-text)]"
+              >
+                {imgPending ? "Refreshing…" : "Refresh image from X"}
+              </button>
+              {imgMsg && (
+                <div
+                  className={`text-[12px] font-medium ${
+                    imgMsg.kind === "ok"
+                      ? "text-[var(--color-pos)]"
+                      : "text-[var(--color-neg)]"
+                  }`}
+                >
+                  {imgMsg.text}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

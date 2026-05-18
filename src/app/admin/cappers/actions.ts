@@ -72,6 +72,57 @@ export async function updateCapperAction(input: UpdateCapperInput): Promise<Upda
   }
 }
 
+export type RefreshProfileResult =
+  | {
+      ok: true;
+      profile_image_url?: string | null;
+      follower_count?: number | null;
+    }
+  | { ok: false; error: string };
+
+/** Re-pull a capper's avatar + follower count from X. Use when they
+ * changed their profile picture (the cached Twitter CDN URL rotates and
+ * goes stale, rendering the avatar blank). */
+export async function refreshCapperProfileAction(
+  capperId: number,
+  handle: string,
+): Promise<RefreshProfileResult> {
+  const token = process.env.ADMIN_API_TOKEN;
+  if (!token) return { ok: false, error: "ADMIN_API_TOKEN not set on server" };
+  if (!capperId || !Number.isFinite(capperId)) {
+    return { ok: false, error: "capper_id is required" };
+  }
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/admin/cappers/${capperId}/refresh-profile`,
+      {
+        method: "POST",
+        headers: { "x-admin-token": token },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${text || res.statusText}` };
+    }
+    const data = (await res.json()) as {
+      profile_image_url?: string | null;
+      follower_count?: number | null;
+    };
+    revalidatePath("/admin/cappers");
+    revalidatePath(`/admin/cappers/${handle}/picks`);
+    revalidatePath(`/cappers/${handle}`);
+    revalidatePath("/cappers");
+    return {
+      ok: true,
+      profile_image_url: data.profile_image_url ?? null,
+      follower_count: data.follower_count ?? null,
+    };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export interface AddCapperInput {
   handle: string;
   tier?: 1 | 2 | 3;
