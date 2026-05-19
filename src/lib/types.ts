@@ -265,7 +265,7 @@ export interface PalaceEntry {
   slate_date: string | null;
   hero_kind: "photo" | "clip" | "headshot" | null;
   hero_url: string | null;
-  body: PalaceBody;
+  body: PalaceBody | null;
   published_at: string | null;
 }
 
