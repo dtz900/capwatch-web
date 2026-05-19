@@ -54,6 +54,12 @@ html, body {
   100% { opacity: 1; }
 }
 
+@keyframes pp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.pp-rise { animation: pp-rise .45s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .pp-rise { animation: none; opacity: 1; transform: none; }
+}
+
 .tap-target {
   min-height: 2.75rem;
   min-width: 2.75rem;
