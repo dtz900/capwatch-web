@@ -1,58 +1,110 @@
 import type { PalaceLeg } from "@/lib/types";
 
+// Clean light logo tile so the real full-color MLB marks stay crisp (no
+// silhouette/wash). Total legs show both teams in the matchup.
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center overflow-hidden bg-[#f3f4f6] ring-1 ring-[rgba(0,0,0,0.08)] shadow-[inset_0_-1px_2px_rgba(0,0,0,0.06)]">
+      {children}
+    </div>
+  );
+}
+
 export function LegRow({ leg, position }: { leg: PalaceLeg; position: number }) {
   const odds =
     leg.odds_taken == null
       ? null
       : `${leg.odds_taken > 0 ? "+" : ""}${leg.odds_taken}`;
-  const img = leg.team_logo_url ?? leg.headshot_url;
   const label = leg.player_name ?? leg.selection ?? "Leg";
   const sub =
     leg.player_name && leg.line != null
       ? `${leg.selection ?? ""} ${leg.line}`.trim()
       : null;
+
+  const single = leg.team_logo_url ?? leg.headshot_url;
+  const isHeadshot = !leg.team_logo_url && !!leg.headshot_url;
+  const pair =
+    !leg.team_logo_url && leg.away_logo_url && leg.home_logo_url
+      ? [
+          { src: leg.away_logo_url, a: leg.away_abbr ?? "away" },
+          { src: leg.home_logo_url, a: leg.home_abbr ?? "home" },
+        ]
+      : null;
+
   return (
-    <div className="flex items-center gap-3 py-3.5 border-b border-[var(--color-border)] last:border-b-0">
-      <div className="w-10 h-10 rounded-lg bg-[var(--color-bg-card)] border border-[var(--color-border)] overflow-hidden shrink-0 flex items-center justify-center">
-        {img ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={img} alt={leg.team_abbr ?? leg.player_name ?? leg.selection ?? "leg"}
-               width={40} height={40}
-               className={leg.team_logo_url ? "w-7 h-7 object-contain" : "w-10 h-10 object-cover"} />
-        ) : null}
-      </div>
+    <div className="flex items-center gap-3.5 py-3.5 border-b border-[rgba(255,255,255,0.055)] last:border-b-0">
+      {pair ? (
+        <Chip>
+          <div className="flex items-center -space-x-1.5">
+            {pair.map((p, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={p.src}
+                alt={p.a}
+                width={22}
+                height={22}
+                className="w-[22px] h-[22px] object-contain drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]"
+              />
+            ))}
+          </div>
+        </Chip>
+      ) : single ? (
+        <Chip>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={single}
+            alt={leg.team_abbr ?? leg.player_name ?? leg.selection ?? "leg"}
+            width={44}
+            height={44}
+            className={
+              isHeadshot
+                ? "w-11 h-11 object-cover"
+                : "w-[30px] h-[30px] object-contain"
+            }
+          />
+        </Chip>
+      ) : (
+        <Chip>
+          <span className="text-[11px] font-black text-[#5b606b]">
+            {leg.team_abbr ?? "TOT"}
+          </span>
+        </Chip>
+      )}
+
       <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-bold text-[var(--color-text)] truncate">
+        <div className="text-[14px] font-bold text-white truncate leading-tight">
           {label}
           {sub && (
-            <span className="text-[var(--color-text-muted)] font-medium">
-              {" "}{sub}
+            <span className="text-[rgba(255,255,255,0.42)] font-medium">
+              {" "}
+              {sub}
             </span>
           )}
         </div>
-        <div className="text-[11px] mt-0.5 flex items-center gap-1.5">
-          <span className="text-[var(--color-text-muted)]">Leg {position}</span>
+        <div className="mt-1 flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] font-bold">
+          <span className="text-[rgba(255,255,255,0.38)]">Leg {position}</span>
           {leg.is_clincher && (
-            <span className="text-[var(--color-pos)] font-bold uppercase tracking-wide text-[10px]">
-              · clincher
-            </span>
+            <span className="text-[#e3c787]">· Clincher</span>
           )}
         </div>
       </div>
+
       <div className="text-right shrink-0">
-        {leg.score_text && (
-          <div className="text-[12px] font-bold text-[var(--color-text-soft)] flex items-center gap-1 justify-end">
-            <span>{leg.score_text}</span>
-            {leg.won && <span className="text-[var(--color-pos)]" aria-hidden="true">✓</span>}
+        {leg.score_text || leg.result_text ? (
+          <div className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(255,255,255,0.045)] ring-1 ring-[rgba(255,255,255,0.07)] px-2 py-1">
+            <span className="text-[12px] font-bold text-[rgba(255,255,255,0.86)] tabular-nums">
+              {leg.score_text ?? leg.result_text}
+            </span>
+            {(leg.won || (!leg.score_text && leg.result_text)) && (
+              <span className="text-[#5fd39b]" aria-hidden="true">
+                ✓
+              </span>
+            )}
           </div>
-        )}
-        {!leg.score_text && leg.result_text && (
-          <div className="text-[12px] font-bold text-[var(--color-pos)]">
-            <span>{leg.result_text}</span>{" "}<span aria-hidden="true">✓</span>
-          </div>
-        )}
+        ) : null}
         {odds && (
-          <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+          <div className="mt-1 text-[10px] font-bold tracking-wide text-[rgba(255,255,255,0.34)] tabular-nums">
             {odds}
           </div>
         )}
