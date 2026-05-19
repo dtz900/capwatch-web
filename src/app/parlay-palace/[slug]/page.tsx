@@ -39,8 +39,10 @@ export async function generateMetadata(
         title: entry.title ?? "Winning parlay",
         description: entry.recap_blurb ?? undefined,
         site: "@FadeAI_",
-        images: [`/parlay-palace/${slug}/opengraph-image`],
+        images: [{ url: `/parlay-palace/${slug}/opengraph-image`,
+                   alt: entry.title ?? "Winning parlay on TailSlips" }],
       },
+      robots: { index: true, follow: true },
     };
   } catch {
     return { title: "Parlay Palace | TailSlips" };
@@ -70,7 +72,8 @@ export default async function PalaceDetailPage({ params }: PageProps) {
   if (!entry) notFound();
 
   const legs = [...(entry.body?.legs ?? [])].sort(
-    (a, b) => a.leg_index - b.leg_index);
+    (a, b) => (a.leg_index ?? 0) - (b.leg_index ?? 0),
+  );
   return (
     <>
       <JsonLd data={[
@@ -81,10 +84,9 @@ export default async function PalaceDetailPage({ params }: PageProps) {
         ]),
       ]} />
       <TopNav />
-      <main className="max-w-[560px] mx-auto px-4 pb-16">
-        <div className="pt-8">
-          <ParlayHero entry={entry} />
-        </div>
+      <main className="max-w-[560px] mx-auto px-4 pb-16 pt-8">
+        <h1 style={{position:"absolute",width:1,height:1,padding:0,margin:-1,overflow:"hidden",clip:"rect(0,0,0,0)",whiteSpace:"nowrap",border:0}}>{entry.title ?? "Winning parlay"}</h1>
+        <ParlayHero entry={entry} />
         {entry.recap_blurb && (
           <p className="text-[13px] leading-relaxed text-[var(--color-text-soft)] mt-5">
             {entry.recap_blurb}
