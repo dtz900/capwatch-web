@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { fetchPalaceEntry } from "@/lib/api";
+import { formatUnits2 } from "@/lib/formatters";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -24,7 +25,7 @@ async function heroDataUri(url: string | null): Promise<string | null> {
     const ct = r.headers.get("content-type") ?? "";
     if (!ct.startsWith("image/")) return null;
     const buf = Buffer.from(await r.arrayBuffer());
-    if (buf.byteLength === 0 || buf.byteLength > 3_000_000) return null;
+    if (buf.byteLength === 0 || buf.byteLength > 1_500_000) return null;
     return `data:${ct};base64,${buf.toString("base64")}`;
   } catch {
     return null;
@@ -35,16 +36,17 @@ async function heroDataUri(url: string | null): Promise<string | null> {
 
 export async function renderPalaceOg(slug: string): Promise<Response> {
   let entry = null;
-  try { entry = await fetchPalaceEntry(slug); } catch {}
+  try { entry = await fetchPalaceEntry(slug); }
+  catch (err) { console.error("[pp-og-renderer] fetchPalaceEntry failed", err); }
   if (!entry) {
     return new Response(TRANSPARENT_PNG, {
       headers: { "content-type": "image/png",
-                 "cache-control": "public, max-age=30, s-maxage=30" } });
+                 "cache-control": "public, max-age=30, s-maxage=30, stale-while-revalidate=120" } });
   }
   // hero is decorative only; the card stands without it
   const heroUri = entry.hero_kind === "photo"
     ? await heroDataUri(entry.hero_url) : null;
-  const units = (entry.units_profit ?? 0).toFixed(2);
+  const units = formatUnits2(entry.units_profit ?? 0);
   try {
     const img = new ImageResponse((
       <div style={{ width: "100%", height: "100%", display: "flex",
@@ -64,16 +66,20 @@ export async function renderPalaceOg(slug: string): Promise<Response> {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 96, fontWeight: 800, color: POS,
             letterSpacing: -3, display: "flex" }}>
-            +{units}u
+            {units}u
           </div>
           <div style={{ fontSize: 30, fontWeight: 700, marginTop: 10,
             display: "flex" }}>
-            @{entry.capper_handle} · {entry.leg_count}-leg · +{entry.combined_odds}
+            {[
+              entry.capper_handle ? `@${entry.capper_handle}` : null,
+              entry.leg_count != null ? `${entry.leg_count}-leg` : null,
+              entry.combined_odds != null ? `+${entry.combined_odds}` : null,
+            ].filter(Boolean).join(" · ")}
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between",
           fontSize: 18, color: MUTED }}>
-          <div style={{ display: "flex" }}>Media: MLB Advanced Media</div>
+          <div style={{ display: "flex" }}>{entry.body?.media_attribution ?? "Media: MLB Advanced Media"}</div>
           <div style={{ display: "flex", fontWeight: 700, color: POS }}>
             tailslips.com
           </div>
@@ -87,6 +93,6 @@ export async function renderPalaceOg(slug: string): Promise<Response> {
   } catch {
     return new Response(TRANSPARENT_PNG, {
       headers: { "content-type": "image/png",
-                 "cache-control": "public, max-age=30, s-maxage=30" } });
+                 "cache-control": "public, max-age=30, s-maxage=30, stale-while-revalidate=120" } });
   }
 }
