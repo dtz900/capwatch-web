@@ -10,14 +10,18 @@ export function LegRow({ leg }: { leg: PalaceLeg }) {
       <div className="w-10 h-10 rounded-lg bg-[var(--color-bg-card)] border border-[var(--color-border)] overflow-hidden shrink-0">
         {leg.headshot_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={leg.headshot_url} alt={leg.player_name ?? ""}
+          <img src={leg.headshot_url} alt={leg.player_name ?? leg.selection ?? "player headshot"}
                width={40} height={40} className="w-10 h-10 object-cover" />
         ) : null}
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-[13px] font-bold text-[var(--color-text)] truncate">
-          {leg.player_name ?? leg.selection}
-          {leg.line != null && (
+          {leg.player_name
+            ? leg.player_name
+            : leg.line != null
+              ? `${leg.selection ?? ""} ${leg.line}`.trim()
+              : (leg.selection ?? "")}
+          {leg.player_name && leg.line != null && (
             <span className="text-[var(--color-text-muted)] font-medium">
               {" "}{leg.selection} {leg.line}
             </span>

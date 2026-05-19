@@ -21,10 +21,14 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
       </div>
       <div className="p-3">
         <div className="text-[13px] font-bold text-[var(--color-text)]">
-          @{entry.capper_handle}
+          @{entry.capper_handle ?? "unknown"}
         </div>
         <div className="text-[11px] text-[var(--color-text-muted)] mt-1">
-          {entry.leg_count}-leg · +{entry.combined_odds} · {entry.slate_date}
+          {[
+            entry.leg_count != null ? `${entry.leg_count}-leg` : null,
+            entry.combined_odds != null ? `+${entry.combined_odds}` : null,
+            entry.slate_date ?? null,
+          ].filter(Boolean).join(" · ")}
         </div>
       </div>
     </Link>
