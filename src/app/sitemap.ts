@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { fetchLeaderboard } from "@/lib/api";
+import { fetchLeaderboard, fetchPalaceList } from "@/lib/api";
 import { SITE_URL } from "@/lib/seo";
 
 export const revalidate = 3600;
@@ -38,10 +38,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let palaceEntries: MetadataRoute.Sitemap = [];
   try {
-    const { fetchPalaceList } = await import("@/lib/api");
     const list = await fetchPalaceList();
     palaceEntries = list.map((e) => ({
-      url: `${SITE_URL}/parlay-palace/${e.slug}`,
+      url: `${SITE_URL}/parlay-palace/${encodeURIComponent(e.slug)}`,
       lastModified: e.published_at ? new Date(e.published_at) : now,
       changeFrequency: "monthly" as const,
       priority: 0.6,

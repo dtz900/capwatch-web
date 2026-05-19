@@ -170,6 +170,11 @@ export function parlayPalaceArticleNode(entry: PalaceEntry): JsonLdNode {
     url,
     datePublished: entry.published_at ?? undefined,
     author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
-    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/logo-favicon.png` },
+    },
   };
 }
