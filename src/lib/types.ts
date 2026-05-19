@@ -227,3 +227,55 @@ export interface CapperProfile {
    * needing the table-paginated history array to contain enough depth. */
   trajectory?: Partial<Record<Window, number[]>>;
 }
+
+export interface PalaceLeg {
+  leg_index: number;
+  game_id: string | null;
+  market: string | null;
+  selection: string | null;
+  line: number | null;
+  odds_taken: number | null;
+  player_name: string | null;
+  player_id: number | null;
+  headshot_url: string | null;
+  result_text: string | null;
+  is_clincher: boolean;
+}
+
+export interface PalaceBody {
+  legs: PalaceLeg[];
+  clincher: { leg_index: number; player_name: string | null;
+              selection: string | null; game_id: string | null } | null;
+  hero: { kind: "photo" | "clip" | "headshot"; url: string } | null;
+  hero_kind: "photo" | "clip" | "headshot" | null;
+  media_attribution: string;
+  capper_handle: string | null;
+  capper_display_name: string | null;
+  capper_image_url: string | null;
+}
+
+export interface PalaceEntry {
+  slug: string;
+  title: string | null;
+  capper_handle: string | null;
+  recap_blurb: string | null;
+  units_profit: number | null;
+  combined_odds: number | null;
+  leg_count: number | null;
+  slate_date: string | null;
+  hero_kind: "photo" | "clip" | "headshot" | null;
+  hero_url: string | null;
+  body: PalaceBody;
+  published_at: string | null;
+}
+
+export interface PalaceCandidate {
+  parlay_id: number;
+  capper_handle: string | null;
+  capper_display_name: string | null;
+  combined_odds: number | null;
+  profit_units: number;
+  leg_count: number;
+  graded_at: string | null;
+  status: "candidate" | "draft" | "published";
+}
