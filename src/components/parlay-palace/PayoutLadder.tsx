@@ -1,23 +1,30 @@
 import type { PalaceLeg } from "@/lib/types";
 
-function dec(odds: number | null): number {
-  if (odds == null || odds === 0) return 1;
-  return odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
-}
-
 function fmt(v: number): string {
   return v >= 10 ? v.toFixed(0) : v.toFixed(1);
 }
 
-export function PayoutLadder({ legs }: { legs: PalaceLeg[] }) {
-  if (legs.length === 0) return null;
-  let acc = 1;
-  const steps = legs.map((l, i) => {
-    acc *= dec(l.odds_taken);
-    return { i, value: acc };
-  });
-  const max = steps[steps.length - 1].value;
-  const final = `${max.toFixed(2)}u`;
+// Growth curve from 1u to the parlay's actual result (the hero number).
+// Anchored to finalUnits rather than per-leg odds: per-leg odds are often
+// missing (many cappers only post combined odds), which previously collapsed
+// the ladder to a flat 1.00u. A geometric ramp always tells the real story
+// and stays consistent with the hero.
+export function PayoutLadder({
+  legs,
+  finalUnits,
+}: {
+  legs: PalaceLeg[];
+  finalUnits: number;
+}) {
+  const n = legs.length;
+  if (n === 0 || !Number.isFinite(finalUnits) || finalUnits <= 1) return null;
+
+  const steps = Array.from({ length: n }, (_, i) => ({
+    i,
+    value: Math.pow(finalUnits, (i + 1) / n),
+  }));
+  const max = finalUnits;
+  const final = `${finalUnits.toFixed(2)}u`;
 
   return (
     <div className="px-5 pt-5 pb-6 border-t border-[rgba(255,255,255,0.06)]">
@@ -30,7 +37,6 @@ export function PayoutLadder({ legs }: { legs: PalaceLeg[] }) {
         </span>
       </div>
 
-      {/* equal columns; bars share a baseline via flex-end + % heights */}
       <div className="flex items-end gap-2.5 h-[84px]">
         {steps.map((s) => {
           const pct = Math.max(12, Math.round((s.value / max) * 100));

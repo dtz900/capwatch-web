@@ -124,7 +124,7 @@ export default async function PalaceDetailPage({ params }: PageProps) {
             </div>
 
             <Reveal index={legs.length}>
-              <PayoutLadder legs={legs} />
+              <PayoutLadder legs={legs} finalUnits={entry.units_profit ?? 0} />
             </Reveal>
 
             <div className="px-5 pb-5 space-y-2.5">
