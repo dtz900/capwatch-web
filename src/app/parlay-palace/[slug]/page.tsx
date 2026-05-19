@@ -7,7 +7,7 @@ import { fetchPalaceEntry } from "@/lib/api";
 import { ParlayHero } from "@/components/parlay-palace/ParlayHero";
 import { LegRow } from "@/components/parlay-palace/LegRow";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { breadcrumbNode } from "@/lib/jsonld";
+import { breadcrumbNode, parlayPalaceArticleNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 
 export const revalidate = 60;
@@ -82,6 +82,7 @@ export default async function PalaceDetailPage({ params }: PageProps) {
           { name: "Parlay Palace", path: "/parlay-palace" },
           { name: entry.title ?? slug, path: `/parlay-palace/${slug}` },
         ]),
+        parlayPalaceArticleNode(entry),
       ]} />
       <TopNav />
       <main className="max-w-[560px] mx-auto px-4 pb-16 pt-8">
