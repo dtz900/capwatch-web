@@ -23,6 +23,9 @@ async function post(path: string): Promise<PalaceActionResult> {
     }
     revalidatePath("/admin/parlay-palace");
     revalidatePath("/parlay-palace");
+    // also bust every detail page so a republish/enrich shows immediately
+    // (without this the [slug] route serves its 60s-cached data fetch)
+    revalidatePath("/parlay-palace/[slug]", "page");
     // Purge the public Parlay Palace KV cache so gallery/detail pages reflect
     // publish/unpublish/enrich changes immediately rather than waiting for TTL.
     try {
