@@ -16,7 +16,7 @@ export function LegRow({ leg, position }: { leg: PalaceLeg; position: number }) 
       <div className="w-10 h-10 rounded-lg bg-[var(--color-bg-card)] border border-[var(--color-border)] overflow-hidden shrink-0 flex items-center justify-center">
         {img ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={img} alt={leg.team_abbr ?? leg.player_name ?? "leg"}
+          <img src={img} alt={leg.team_abbr ?? leg.player_name ?? leg.selection ?? "leg"}
                width={40} height={40}
                className={leg.team_logo_url ? "w-7 h-7 object-contain" : "w-10 h-10 object-cover"} />
         ) : null}
@@ -43,12 +43,12 @@ export function LegRow({ leg, position }: { leg: PalaceLeg; position: number }) 
         {leg.score_text && (
           <div className="text-[12px] font-bold text-[var(--color-text-soft)] flex items-center gap-1 justify-end">
             <span>{leg.score_text}</span>
-            {leg.won && <span className="text-[var(--color-pos)]">✓</span>}
+            {leg.won && <span className="text-[var(--color-pos)]" aria-hidden="true">✓</span>}
           </div>
         )}
         {!leg.score_text && leg.result_text && (
           <div className="text-[12px] font-bold text-[var(--color-pos)]">
-            <span>{leg.result_text}</span>{" "}✓
+            <span>{leg.result_text}</span>{" "}<span aria-hidden="true">✓</span>
           </div>
         )}
         {odds && (

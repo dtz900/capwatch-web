@@ -19,6 +19,7 @@ describe("LegRow", () => {
     expect(screen.getByText(/Leg 4/)).toBeInTheDocument();
     expect(screen.getByText(/clincher/i)).toBeInTheDocument();
     expect(screen.getByText("-136")).toBeInTheDocument();
+    expect(screen.getByText("✓")).toBeInTheDocument();
     const logo = screen.getByRole("img");
     expect(logo).toHaveAttribute("src",
       "https://www.mlbstatic.com/team-logos/140.svg");
