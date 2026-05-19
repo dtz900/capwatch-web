@@ -437,20 +437,22 @@ export async function fetchPalaceList(
 export async function fetchPalaceEntry(
   slug: string,
 ): Promise<PalaceEntry | null> {
-  const res = await fetchWithRetry(
-    `${API_BASE}/api/public/parlay-palace/${encodeURIComponent(slug)}`,
-    { next: { revalidate: REVALIDATE_SECONDS } });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Palace entry failed: ${res.status}`);
-  const body = (await res.json()) as { entry: PalaceEntry };
-  return body.entry ?? null;
+  const cacheKey = `pp:entry:v1:${slug}`;
+  return withKvCache<PalaceEntry | null>(cacheKey, PALACE_TTL_SEC, async () => {
+    const res = await fetchWithRetry(
+      `${API_BASE}/api/public/parlay-palace/${encodeURIComponent(slug)}`,
+      { next: { revalidate: REVALIDATE_SECONDS } });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Palace entry failed: ${res.status}`);
+    const body = (await res.json()) as { entry: PalaceEntry };
+    return body.entry ?? null;
+  });
 }
 
 async function adminPalaceHeaders(): Promise<HeadersInit> {
   const secret = process.env.CRON_SECRET;
   if (!secret) throw new Error("CRON_SECRET not set on server");
-  return { "Content-Type": "application/json",
-           Authorization: `Bearer ${secret}` };
+  return { Authorization: `Bearer ${secret}` };
 }
 
 export async function fetchPalaceCandidates(): Promise<PalaceCandidate[]> {
