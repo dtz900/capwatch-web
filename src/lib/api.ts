@@ -7,6 +7,8 @@ import type {
   BetTypeFilter,
   SlateResponse,
   CapperProfile,
+  PalaceEntry,
+  PalaceCandidate,
 } from "./types";
 
 // KV TTLs. Short enough that admin refresh-aggregates / regrade actions
@@ -411,4 +413,53 @@ export async function fetchDeletedPicks(handle: string): Promise<DeletedPicksRes
   if (res.status === 404) throw new Error("not_found");
   if (!res.ok) throw new Error(`Deleted picks fetch failed: ${res.status}`);
   return res.json() as Promise<DeletedPicksResponse>;
+}
+
+const PALACE_TTL_SEC = 30;
+
+export async function fetchPalaceList(
+  opts: { year?: number; sort?: "recent" | "units" } = {},
+): Promise<PalaceEntry[]> {
+  const p = new URLSearchParams();
+  if (opts.year) p.set("year", String(opts.year));
+  if (opts.sort) p.set("sort", opts.sort);
+  const cacheKey = `pp:list:v1:${p.toString()}`;
+  return withKvCache<PalaceEntry[]>(cacheKey, PALACE_TTL_SEC, async () => {
+    const res = await fetchWithRetry(
+      `${API_BASE}/api/public/parlay-palace?${p}`,
+      { next: { revalidate: REVALIDATE_SECONDS } });
+    if (!res.ok) throw new Error(`Palace list failed: ${res.status}`);
+    const body = (await res.json()) as { entries: PalaceEntry[] };
+    return body.entries ?? [];
+  });
+}
+
+export async function fetchPalaceEntry(
+  slug: string,
+): Promise<PalaceEntry | null> {
+  const cacheKey = `pp:entry:v1:${slug}`;
+  return withKvCache<PalaceEntry | null>(cacheKey, PALACE_TTL_SEC, async () => {
+    const res = await fetchWithRetry(
+      `${API_BASE}/api/public/parlay-palace/${encodeURIComponent(slug)}`,
+      { next: { revalidate: REVALIDATE_SECONDS } });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Palace entry failed: ${res.status}`);
+    const body = (await res.json()) as { entry: PalaceEntry };
+    return body.entry ?? null;
+  });
+}
+
+async function adminPalaceHeaders(): Promise<HeadersInit> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error("CRON_SECRET not set on server");
+  return { Authorization: `Bearer ${secret}` };
+}
+
+export async function fetchPalaceCandidates(): Promise<PalaceCandidate[]> {
+  const res = await fetch(
+    `${API_BASE}/api/admin/parlay-palace/candidates`,
+    { headers: await adminPalaceHeaders(), cache: "no-store" });
+  if (!res.ok) throw new Error(`Palace candidates failed: ${res.status}`);
+  const body = (await res.json()) as { candidates: PalaceCandidate[] };
+  return body.candidates ?? [];
 }

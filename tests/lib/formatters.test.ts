@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatUnits, formatRoi, formatWinRate, formatStreak, formatHandle } from "@/lib/formatters";
+import { formatUnits, formatUnits2, formatRoi, formatWinRate, formatStreak, formatHandle } from "@/lib/formatters";
 
 describe("formatUnits", () => {
   it("formats positive with + and one decimal", () => {
@@ -44,5 +44,13 @@ describe("formatHandle", () => {
   it("prepends @ if missing", () => {
     expect(formatHandle("fadeai_")).toBe("@fadeai_");
     expect(formatHandle("@fadeai_")).toBe("@fadeai_");
+  });
+});
+
+describe("formatUnits2", () => {
+  it("formats with 2 decimals and explicit sign", () => {
+    expect(formatUnits2(25.98)).toBe("+25.98");
+    expect(formatUnits2(-1.5)).toBe("-1.50");
+    expect(formatUnits2(0)).toBe("+0.00");
   });
 });

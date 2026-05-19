@@ -1,4 +1,4 @@
-import type { CapperProfile, CapperRow } from "./types";
+import type { CapperProfile, CapperRow, PalaceEntry } from "./types";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, canonicalUrl, formatRecord, roiToReviewRating } from "./seo";
 
 interface JsonLdNode {
@@ -155,5 +155,26 @@ export function methodologyArticleNode(): JsonLdNode {
       logo: { "@type": "ImageObject", url: `${SITE_URL}/logo-favicon.png` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl("/methodology") },
+  };
+}
+
+/** schema.org Article node for a published Parlay Palace entry. */
+export function parlayPalaceArticleNode(entry: PalaceEntry): JsonLdNode {
+  const url = canonicalUrl(`/parlay-palace/${entry.slug}`);
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: entry.title ?? "Winning MLB parlay",
+    description: entry.recap_blurb ?? undefined,
+    url,
+    datePublished: entry.published_at ?? undefined,
+    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/logo-favicon.png` },
+    },
   };
 }

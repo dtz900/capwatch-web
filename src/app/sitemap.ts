@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { fetchLeaderboard } from "@/lib/api";
+import { fetchLeaderboard, fetchPalaceList } from "@/lib/api";
 import { SITE_URL } from "@/lib/seo";
 
 export const revalidate = 3600;
@@ -7,10 +7,11 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const staticEntries: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`,            lastModified: now, changeFrequency: "daily",   priority: 1.0 },
-    { url: `${SITE_URL}/cappers`,     lastModified: now, changeFrequency: "daily",   priority: 0.9 },
-    { url: `${SITE_URL}/slate`,       lastModified: now, changeFrequency: "hourly",  priority: 0.9 },
-    { url: `${SITE_URL}/methodology`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/`,              lastModified: now, changeFrequency: "daily",   priority: 1.0 },
+    { url: `${SITE_URL}/cappers`,       lastModified: now, changeFrequency: "daily",   priority: 0.9 },
+    { url: `${SITE_URL}/slate`,         lastModified: now, changeFrequency: "hourly",  priority: 0.9 },
+    { url: `${SITE_URL}/parlay-palace`, lastModified: now, changeFrequency: "daily",   priority: 0.8 },
+    { url: `${SITE_URL}/methodology`,   lastModified: now, changeFrequency: "monthly", priority: 0.5 },
   ];
 
   let capperEntries: MetadataRoute.Sitemap = [];
@@ -35,7 +36,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // on the next regeneration once the API is reachable.
   }
 
-  return [...staticEntries, ...capperEntries];
+  let palaceEntries: MetadataRoute.Sitemap = [];
+  try {
+    const list = await fetchPalaceList();
+    palaceEntries = list.map((e) => ({
+      url: `${SITE_URL}/parlay-palace/${encodeURIComponent(e.slug)}`,
+      lastModified: e.published_at ? new Date(e.published_at) : now,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }));
+  } catch {
+    // API down at build time. Ship without palace entries; reappear next regen.
+  }
+
+  return [...staticEntries, ...capperEntries, ...palaceEntries];
 }
 
 function parseLastModified(iso: string | null | undefined): Date | null {
