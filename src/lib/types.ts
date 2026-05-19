@@ -243,6 +243,10 @@ export interface PalaceLeg {
   won: boolean | null;
   team_logo_url: string | null;
   team_abbr: string | null;
+  away_logo_url: string | null;
+  home_logo_url: string | null;
+  away_abbr: string | null;
+  home_abbr: string | null;
   is_clincher: boolean;
 }
 
