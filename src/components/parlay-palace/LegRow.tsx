@@ -29,7 +29,8 @@ export function LegRow({ leg }: { leg: PalaceLeg }) {
       </div>
       {leg.result_text && (
         <div className="text-[12px] font-bold text-[var(--color-pos)] shrink-0">
-          {leg.result_text}&nbsp;✓
+          <span>{leg.result_text}</span>
+          <span className="ml-1">✓</span>
         </div>
       )}
       {odds && (

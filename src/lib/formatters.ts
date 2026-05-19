@@ -3,6 +3,11 @@ export function formatUnits(units: number): string {
   return `${sign}${Math.abs(units).toFixed(1)}`;
 }
 
+export function formatUnits2(units: number): string {
+  const sign = units >= 0 ? "+" : "-";
+  return `${sign}${Math.abs(units).toFixed(2)}`;
+}
+
 /**
  * Like formatUnits but switches to 2 decimals when the magnitude is below 1
  * so very small profits/losses don't render as "+0.0".

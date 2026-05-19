@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { PalaceEntry } from "@/lib/types";
-import { formatUnits } from "@/lib/formatters";
+import { formatUnits2 } from "@/lib/formatters";
 
 export function PalaceCard({ entry }: { entry: PalaceEntry }) {
   return (
@@ -15,8 +15,7 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
         ) : null}
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-[linear-gradient(transparent,rgba(10,10,12,0.85))]">
           <div className="text-[var(--color-pos)] font-extrabold text-[26px] leading-none tabular-nums">
-            {formatUnits(entry.units_profit ?? 0)}
-            <span className="text-[13px] opacity-70">u</span>
+            {`${formatUnits2(entry.units_profit ?? 0)}u`}
           </div>
         </div>
       </div>
