@@ -10,7 +10,8 @@ import { PayoutLadder } from "@/components/parlay-palace/PayoutLadder";
 import { Reveal } from "@/components/parlay-palace/Reveal";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbNode, parlayPalaceArticleNode } from "@/lib/jsonld";
-import { SITE_NAME } from "@/lib/seo";
+import { SITE_NAME, SITE_URL } from "@/lib/seo";
+import { XIcon } from "@/components/icons/XIcon";
 
 export const revalidate = 60;
 export const maxDuration = 30;
@@ -78,6 +79,11 @@ export default async function PalaceDetailPage({ params }: PageProps) {
   );
   const attribution =
     entry.body?.media_attribution ?? "Media: MLB Advanced Media";
+  const shareUrl = `${SITE_URL}/parlay-palace/${slug}`;
+  const shareText = `${entry.title ?? "Winning parlay"}. Every leg graded on TailSlips.`;
+  const shareHref =
+    `https://x.com/intent/post?text=${encodeURIComponent(shareText)}` +
+    `&url=${encodeURIComponent(shareUrl)}&via=tailslips`;
   return (
     <>
       <JsonLd data={[
@@ -121,8 +127,8 @@ export default async function PalaceDetailPage({ params }: PageProps) {
               <PayoutLadder legs={legs} />
             </Reveal>
 
-            {entry.capper_handle && (
-              <div className="px-5 pb-5">
+            <div className="px-5 pb-5 space-y-2.5">
+              {entry.capper_handle && (
                 <Link
                   href={`/cappers/${entry.capper_handle}`}
                   className="block text-center rounded-xl py-3.5 text-[13px] font-black tracking-wide text-[#1c1402]
@@ -131,8 +137,20 @@ export default async function PalaceDetailPage({ params }: PageProps) {
                 >
                   See @{entry.capper_handle} on TailSlips →
                 </Link>
-              </div>
-            )}
+              )}
+              <a
+                href={shareHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Share this parlay on X"
+                className="flex items-center justify-center gap-2 rounded-xl py-3 text-[13px] font-bold
+                           text-white bg-[rgba(255,255,255,0.05)] ring-1 ring-[rgba(255,255,255,0.12)]
+                           hover:bg-[rgba(255,255,255,0.09)] transition"
+              >
+                <XIcon size={13} />
+                Share on X
+              </a>
+            </div>
 
             <div className="px-5 py-3 border-t border-[rgba(255,255,255,0.05)] flex items-center justify-between">
               <span className="text-[9px] uppercase tracking-[0.18em] font-bold text-[rgba(255,255,255,0.28)]">
