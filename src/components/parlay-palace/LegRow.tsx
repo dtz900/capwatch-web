@@ -34,21 +34,31 @@ export function LegRow({ leg, position }: { leg: PalaceLeg; position: number }) 
   return (
     <div className="flex items-center gap-3.5 py-3.5 border-b border-[rgba(255,255,255,0.055)] last:border-b-0">
       {pair ? (
-        <Chip>
-          <div className="flex items-center -space-x-1.5">
-            {pair.map((p, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={i}
-                src={p.src}
-                alt={p.a}
-                width={22}
-                height={22}
-                className="w-[22px] h-[22px] object-contain drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]"
-              />
-            ))}
-          </div>
-        </Chip>
+        <div className="shrink-0 flex items-center gap-1">
+          <span className="w-9 h-9 rounded-lg bg-[#f3f4f6] ring-1 ring-[rgba(0,0,0,0.08)] flex items-center justify-center overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={pair[0].src}
+              alt={pair[0].a}
+              width={36}
+              height={36}
+              className="w-6 h-6 object-contain"
+            />
+          </span>
+          <span className="text-[rgba(255,255,255,0.32)] text-[13px] font-bold leading-none">
+            /
+          </span>
+          <span className="w-9 h-9 rounded-lg bg-[#f3f4f6] ring-1 ring-[rgba(0,0,0,0.08)] flex items-center justify-center overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={pair[1].src}
+              alt={pair[1].a}
+              width={36}
+              height={36}
+              className="w-6 h-6 object-contain"
+            />
+          </span>
+        </div>
       ) : single ? (
         <Chip>
           {/* eslint-disable-next-line @next/next/no-img-element */}
