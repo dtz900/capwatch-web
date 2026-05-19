@@ -6,6 +6,8 @@ import { TopNav } from "@/components/nav/TopNav";
 import { fetchPalaceEntry } from "@/lib/api";
 import { ParlayHero } from "@/components/parlay-palace/ParlayHero";
 import { LegRow } from "@/components/parlay-palace/LegRow";
+import { PayoutLadder } from "@/components/parlay-palace/PayoutLadder";
+import { Reveal } from "@/components/parlay-palace/Reveal";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbNode, parlayPalaceArticleNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
@@ -94,8 +96,15 @@ export default async function PalaceDetailPage({ params }: PageProps) {
           </p>
         )}
         <div className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4">
-          {legs.map((l) => <LegRow key={l.leg_index} leg={l} />)}
+          {legs.map((l, i) => (
+            <Reveal key={l.leg_index} index={i}>
+              <LegRow leg={l} position={i + 1} />
+            </Reveal>
+          ))}
         </div>
+        <Reveal index={legs.length}>
+          <PayoutLadder legs={legs} />
+        </Reveal>
         {entry.capper_handle && (
           <Link
             href={`/cappers/${entry.capper_handle}`}
