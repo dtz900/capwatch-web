@@ -76,6 +76,8 @@ export default async function PalaceDetailPage({ params }: PageProps) {
   const legs = [...(entry.body?.legs ?? [])].sort(
     (a, b) => (a.leg_index ?? 0) - (b.leg_index ?? 0),
   );
+  const attribution =
+    entry.body?.media_attribution ?? "Media: MLB Advanced Media";
   return (
     <>
       <JsonLd data={[
@@ -87,32 +89,61 @@ export default async function PalaceDetailPage({ params }: PageProps) {
         parlayPalaceArticleNode(entry),
       ]} />
       <TopNav />
-      <main className="max-w-[560px] mx-auto px-4 pb-16 pt-8">
+      <main className="max-w-[460px] mx-auto px-4 pb-16 pt-8">
         <h1 style={{position:"absolute",width:1,height:1,padding:0,margin:-1,overflow:"hidden",clip:"rect(0,0,0,0)",whiteSpace:"nowrap",border:0}}>{entry.title ?? "Winning parlay"}</h1>
-        <ParlayHero entry={entry} />
-        {entry.recap_blurb && (
-          <p className="text-[13px] leading-relaxed text-[var(--color-text-soft)] mt-5">
-            {entry.recap_blurb}
-          </p>
-        )}
-        <div className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4">
-          {legs.map((l, i) => (
-            <Reveal key={l.leg_index} index={i}>
-              <LegRow leg={l} position={i + 1} />
+
+        {/* foil frame */}
+        <div
+          className="rounded-[22px] p-[3px] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]"
+          style={{
+            background:
+              "linear-gradient(135deg,#caa45a 0%,#f3e3b3 22%,#9c7a36 46%,#e9cf93 68%,#8a6e3a 100%)",
+          }}
+        >
+          <div className="rounded-[19px] overflow-hidden bg-[#0c0e13]">
+            <ParlayHero entry={entry} />
+
+            {entry.recap_blurb && (
+              <p className="px-5 pt-5 text-[13px] leading-[1.65] text-[rgba(255,255,255,0.66)]">
+                {entry.recap_blurb}
+              </p>
+            )}
+
+            <div className="px-5 pt-4">
+              {legs.map((l, i) => (
+                <Reveal key={l.leg_index} index={i}>
+                  <LegRow leg={l} position={i + 1} />
+                </Reveal>
+              ))}
+            </div>
+
+            <Reveal index={legs.length}>
+              <PayoutLadder legs={legs} />
             </Reveal>
-          ))}
+
+            {entry.capper_handle && (
+              <div className="px-5 pb-5">
+                <Link
+                  href={`/cappers/${entry.capper_handle}`}
+                  className="block text-center rounded-xl py-3.5 text-[13px] font-black tracking-wide text-[#1c1402]
+                             bg-[linear-gradient(180deg,#f0d79a,#c7a259)]
+                             hover:brightness-105 transition"
+                >
+                  See @{entry.capper_handle} on TailSlips →
+                </Link>
+              </div>
+            )}
+
+            <div className="px-5 py-3 border-t border-[rgba(255,255,255,0.05)] flex items-center justify-between">
+              <span className="text-[9px] uppercase tracking-[0.18em] font-bold text-[rgba(255,255,255,0.28)]">
+                {attribution}
+              </span>
+              <span className="text-[9px] uppercase tracking-[0.2em] font-extrabold text-[#caa45a]">
+                TailSlips
+              </span>
+            </div>
+          </div>
         </div>
-        <Reveal index={legs.length}>
-          <PayoutLadder legs={legs} />
-        </Reveal>
-        {entry.capper_handle && (
-          <Link
-            href={`/cappers/${entry.capper_handle}`}
-            className="block text-center mt-6 rounded-lg bg-[var(--color-pos)] text-black font-extrabold py-3 text-[13px]"
-          >
-            See @{entry.capper_handle} on TailSlips →
-          </Link>
-        )}
       </main>
     </>
   );
