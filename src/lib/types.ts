@@ -239,6 +239,10 @@ export interface PalaceLeg {
   player_id: number | null;
   headshot_url: string | null;
   result_text: string | null;
+  score_text: string | null;
+  won: boolean | null;
+  team_logo_url: string | null;
+  team_abbr: string | null;
   is_clincher: boolean;
 }
 
