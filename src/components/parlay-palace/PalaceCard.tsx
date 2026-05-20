@@ -73,9 +73,9 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
               height={36}
               className="pointer-events-none absolute w-9 h-9 object-contain"
               style={{
-                top: -22,
-                left: "50%",
-                transform: "translateX(-62%) rotate(-20deg)",
+                top: -28,
+                left: -8,
+                transform: "rotate(-22deg)",
                 mixBlendMode: "screen",
                 filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.65))",
               }}
