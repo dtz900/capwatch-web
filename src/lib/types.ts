@@ -13,6 +13,12 @@ export interface BiggestWin {
   game_label: string | null;
   game_date: string | null;
   tweet_url: string | null;
+  /** parlay_id of the underlying parlay when biggest_win is a Parlay row. */
+  parlay_id?: number | null;
+  /** Set by the profile endpoint when parlay_id matches a published
+   * parlay_palace_entries row. The frontend renders a gold crown and a
+   * link to /parlay-palace/<slug> when present. */
+  palace_slug?: string | null;
 }
 
 export interface LastPick {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   formatRoi,
   formatStreak,
@@ -58,6 +59,26 @@ export function StatBand({ agg, recentHistory = [] }: Props) {
         <div className="mt-6 pt-5 border-t border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-wrap">
             <Eyebrow>Biggest win</Eyebrow>
+            {win.palace_slug && (
+              // Gold crown badge: this biggest-win is a parlay enshrined
+              // in Parlay Palace. mix-blend-mode: screen drops the source
+              // PNG's black bg over the dark stat band.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/parlay-palace-crown.png"
+                alt=""
+                aria-hidden
+                width={26}
+                height={26}
+                title="In the Parlay Palace"
+                className="w-[26px] h-[26px] object-contain shrink-0"
+                style={{
+                  mixBlendMode: "screen",
+                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.55))",
+                  transform: "rotate(-10deg)",
+                }}
+              />
+            )}
             <span className="text-[16px] font-extrabold text-[var(--color-pos)] tabular-nums leading-none tracking-[-0.01em]">
               {formatUnitsSmart(win.units)}u
             </span>
@@ -75,7 +96,16 @@ export function StatBand({ agg, recentHistory = [] }: Props) {
               </span>
             )}
           </div>
-          {win.tweet_url && (
+          {win.palace_slug ? (
+            <Link
+              href={`/parlay-palace/${win.palace_slug}`}
+              className="text-[10px] uppercase tracking-[0.14em] font-extrabold
+                         whitespace-nowrap transition-colors"
+              style={{ color: "#caa45a" }}
+            >
+              View in Parlay Palace →
+            </Link>
+          ) : win.tweet_url ? (
             <a
               href={win.tweet_url}
               target="_blank"
@@ -86,7 +116,7 @@ export function StatBand({ agg, recentHistory = [] }: Props) {
             >
               View on X
             </a>
-          )}
+          ) : null}
         </div>
       )}
     </div>
