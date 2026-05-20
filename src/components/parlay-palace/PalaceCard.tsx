@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { PalaceEntry } from "@/lib/types";
 import { formatUnits2 } from "@/lib/formatters";
+import { CapperAvatar } from "./CapperAvatar";
 
 const FRAME_GRADIENT =
   "linear-gradient(135deg,#caa45a 0%,#f3e3b3 22%,#9c7a36 46%,#e9cf93 68%,#8a6e3a 100%)";
 
 export function PalaceCard({ entry }: { entry: PalaceEntry }) {
   const units = formatUnits2(entry.units_profit ?? 0);
+  const avatarUrl = entry.body?.capper_image_url ?? null;
   return (
     <Link
       href={`/parlay-palace/${entry.slug}`}
@@ -48,8 +50,9 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
             </div>
           </div>
         </div>
-        <div className="px-4 py-3 flex items-center justify-between gap-3">
-          <div className="min-w-0">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <CapperAvatar url={avatarUrl} handle={entry.capper_handle} size={32} />
+          <div className="flex-1 min-w-0">
             <div className="text-[13px] font-bold text-white truncate">
               @{entry.capper_handle ?? "unknown"}
             </div>

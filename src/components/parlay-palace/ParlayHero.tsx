@@ -1,5 +1,6 @@
 import type { PalaceEntry } from "@/lib/types";
 import { formatUnits2 } from "@/lib/formatters";
+import { CapperAvatar } from "./CapperAvatar";
 
 // Card "art": full-bleed hero with a cinematic bottom scrim so the foil
 // numeral never fights the subject. Gold-foil treatment, no neon.
@@ -57,16 +58,25 @@ export function ParlayHero({ entry }: { entry: PalaceEntry }) {
             u
           </span>
         </div>
-        <div className="mt-2 text-[11px] uppercase tracking-[0.18em] font-bold text-[rgba(255,255,255,0.78)]">
-          {entry.leg_count != null ? `${entry.leg_count}-Leg Parlay` : "Parlay"}
-          {entry.combined_odds != null && (
-            <span className="text-[rgba(255,255,255,0.5)]">
-              {"  ·  "}+{entry.combined_odds}
-            </span>
-          )}
+        <div className="mt-2.5 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] font-bold text-[rgba(255,255,255,0.78)]">
           {entry.capper_handle && (
-            <span className="text-[#e3c787]">{"  ·  "}@{entry.capper_handle}</span>
+            <CapperAvatar
+              url={entry.body?.capper_image_url ?? null}
+              handle={entry.capper_handle}
+              size={28}
+            />
           )}
+          <span className="leading-tight">
+            {entry.leg_count != null ? `${entry.leg_count}-Leg Parlay` : "Parlay"}
+            {entry.combined_odds != null && (
+              <span className="text-[rgba(255,255,255,0.5)]">
+                {"  ·  "}+{entry.combined_odds}
+              </span>
+            )}
+            {entry.capper_handle && (
+              <span className="text-[#e3c787]">{"  ·  "}@{entry.capper_handle}</span>
+            )}
+          </span>
         </div>
       </div>
     </div>

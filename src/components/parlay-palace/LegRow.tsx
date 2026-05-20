@@ -1,5 +1,34 @@
 import type { PalaceLeg } from "@/lib/types";
 
+// Right-edge "did the bet hit" badge. For player props (Ks, HRs, hits,
+// RBIs) the player's number is what settles the leg, not the game score,
+// so prefer result_text on those. Team / total legs keep falling back to
+// score_text.
+function ResultBadge({ leg, odds }: { leg: PalaceLeg; odds: string | null }) {
+  const display = leg.player_id != null
+    ? (leg.result_text ?? leg.score_text)
+    : (leg.score_text ?? leg.result_text);
+  return (
+    <div className="text-right shrink-0">
+      {display ? (
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(255,255,255,0.045)] ring-1 ring-[rgba(255,255,255,0.07)] px-2 py-1">
+          <span className="text-[12px] font-bold text-[rgba(255,255,255,0.86)] tabular-nums">
+            {display}
+          </span>
+          {(leg.won || (display === leg.result_text)) && (
+            <span className="text-[#5fd39b]" aria-hidden="true">✓</span>
+          )}
+        </div>
+      ) : null}
+      {odds && (
+        <div className="mt-1 text-[10px] font-bold tracking-wide text-[rgba(255,255,255,0.34)] tabular-nums">
+          {odds}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Clean light logo tile so the real full-color MLB marks stay crisp (no
 // silhouette/wash). Total legs show both teams in the matchup.
 function Chip({ children }: { children: React.ReactNode }) {
@@ -136,25 +165,7 @@ export function LegRow({ leg, position }: { leg: PalaceLeg; position: number }) 
         </div>
       </div>
 
-      <div className="text-right shrink-0">
-        {leg.score_text || leg.result_text ? (
-          <div className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(255,255,255,0.045)] ring-1 ring-[rgba(255,255,255,0.07)] px-2 py-1">
-            <span className="text-[12px] font-bold text-[rgba(255,255,255,0.86)] tabular-nums">
-              {leg.score_text ?? leg.result_text}
-            </span>
-            {(leg.won || (!leg.score_text && leg.result_text)) && (
-              <span className="text-[#5fd39b]" aria-hidden="true">
-                ✓
-              </span>
-            )}
-          </div>
-        ) : null}
-        {odds && (
-          <div className="mt-1 text-[10px] font-bold tracking-wide text-[rgba(255,255,255,0.34)] tabular-nums">
-            {odds}
-          </div>
-        )}
-      </div>
+      <ResultBadge leg={leg} odds={odds} />
     </div>
   );
 }
