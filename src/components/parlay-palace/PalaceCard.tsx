@@ -34,6 +34,20 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
                 "linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(8,7,4,0.55) 70%,rgba(8,7,4,0.95) 100%)",
             }}
           />
+          {/* Gold crown watermark, top-right of the hero. The source asset
+              has an opaque black background; mix-blend-mode: screen drops
+              the black and lets the gold sit cleanly over any hero photo. */}
+          <div className="absolute top-2 right-2 pointer-events-none">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/parlay-palace-crown.png"
+              alt=""
+              width={40}
+              height={40}
+              className="w-10 h-10 object-contain"
+              style={{ mixBlendMode: "screen" }}
+            />
+          </div>
           <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
             <div
               className="font-extrabold text-[28px] leading-none tabular-nums tracking-tight"
