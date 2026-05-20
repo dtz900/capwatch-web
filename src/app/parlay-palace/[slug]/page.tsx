@@ -8,6 +8,7 @@ import { ParlayHero } from "@/components/parlay-palace/ParlayHero";
 import { LegRow } from "@/components/parlay-palace/LegRow";
 import { PayoutLadder } from "@/components/parlay-palace/PayoutLadder";
 import { Reveal } from "@/components/parlay-palace/Reveal";
+import { PalaceAtmosphere } from "@/components/parlay-palace/PalaceAtmosphere";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbNode, parlayPalaceArticleNode } from "@/lib/jsonld";
 import { SITE_NAME, SITE_URL } from "@/lib/seo";
@@ -94,6 +95,7 @@ export default async function PalaceDetailPage({ params }: PageProps) {
         ]),
         parlayPalaceArticleNode(entry),
       ]} />
+      <PalaceAtmosphere />
       <TopNav />
       <main className="max-w-[460px] mx-auto px-4 pb-16 pt-8">
         <h1 style={{position:"absolute",width:1,height:1,padding:0,margin:-1,overflow:"hidden",clip:"rect(0,0,0,0)",whiteSpace:"nowrap",border:0}}>{entry.title ?? "Winning parlay"}</h1>

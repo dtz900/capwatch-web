@@ -1,0 +1,117 @@
+/* Palace atmosphere: motes, h1 shimmer, card glint.
+   All animations honor prefers-reduced-motion. */
+
+/* === Drifting gold motes ============================================= */
+.palace-mote {
+  position: absolute;
+  bottom: -2vh;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(253, 243, 214, 1) 0%,
+    rgba(202, 164, 90, 0.8) 60%,
+    transparent 100%
+  );
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: palace-mote-drift var(--mote-dur, 22s) linear infinite;
+  animation-delay: var(--mote-delay, 0s);
+}
+
+@keyframes palace-mote-drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  8% {
+    opacity: var(--mote-op, 0.18);
+  }
+  92% {
+    opacity: var(--mote-op, 0.18);
+  }
+  100% {
+    /* Float up the full viewport and a touch beyond, with optional
+       horizontal drift so they don't track straight verticals. */
+    transform: translate3d(var(--mote-drift, 0px), -110vh, 0);
+    opacity: 0;
+  }
+}
+
+/* === H1 gold shimmer sweep =========================================== */
+/* Applied to the Parlay Palace h1 in place of its static vertical
+   gradient. Background-position animates across a 300% wide gradient
+   so a bright stop sweeps across the gold-clipped text. */
+.palace-shimmer-text {
+  background: linear-gradient(
+    100deg,
+    #caa45a 0%,
+    #8a6e3a 25%,
+    #f3e3b3 42%,
+    #fdf3d6 50%,
+    #f3e3b3 58%,
+    #8a6e3a 75%,
+    #caa45a 100%
+  );
+  background-size: 300% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: palace-shimmer-sweep 8s ease-in-out infinite;
+}
+
+@keyframes palace-shimmer-sweep {
+  0%,
+  100% {
+    background-position: 100% 50%;
+  }
+  50% {
+    background-position: 0% 50%;
+  }
+}
+
+/* === Card glint on hover ============================================= */
+/* Diagonal highlight sweeps across the hero photo of a PalaceCard on
+   pointer hover. The parent must be `group` for this to fire. */
+.palace-card-glint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(253, 243, 214, 0.18) 48%,
+    rgba(253, 243, 214, 0.32) 50%,
+    rgba(253, 243, 214, 0.18) 52%,
+    transparent 70%
+  );
+  transform: translateX(-160%);
+  transition: transform 0.85s cubic-bezier(0.22, 0.61, 0.36, 1);
+  mix-blend-mode: screen;
+}
+
+.group:hover .palace-card-glint,
+.group:focus-visible .palace-card-glint {
+  transform: translateX(160%);
+}
+
+/* === Reduced motion =================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .palace-mote,
+  .palace-shimmer-text,
+  .palace-card-glint {
+    animation: none !important;
+    transition: none !important;
+  }
+  .palace-mote {
+    /* Hide motes entirely for users who opt out of motion. */
+    opacity: 0;
+  }
+  .palace-shimmer-text {
+    /* Fall back to the static gold-foil gradient. */
+    background: linear-gradient(180deg, #f3e3b3 0%, #caa45a 55%, #8a6e3a 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}

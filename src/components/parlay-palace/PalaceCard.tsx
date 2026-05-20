@@ -34,6 +34,10 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
                 "linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(8,7,4,0.55) 70%,rgba(8,7,4,0.95) 100%)",
             }}
           />
+          {/* Diagonal gold gleam sweeps on hover. Listens to the parent
+              Link's `group` class. CSS file scopes the motion to
+              prefers-reduced-motion users. */}
+          <span aria-hidden className="palace-card-glint" />
           <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
             <div
               className="font-extrabold text-[28px] leading-none tabular-nums tracking-tight"

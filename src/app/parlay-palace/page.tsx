@@ -4,6 +4,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { fetchPalaceList } from "@/lib/api";
 import { PalaceCard } from "@/components/parlay-palace/PalaceCard";
+import { PalaceAtmosphere } from "@/components/parlay-palace/PalaceAtmosphere";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
@@ -98,8 +99,9 @@ export default async function ParlayPalacePage({ searchParams }: PageProps) {
         { name: "Home", path: "/" },
         { name: "Parlay Palace", path: "/parlay-palace" },
       ])} />
+      <PalaceAtmosphere />
       <TopNav />
-      <main className="max-w-[1100px] mx-auto px-5 pb-16">
+      <main className="max-w-[1100px] mx-auto px-5 pb-16 relative">
         <header className="pt-10 pb-8 relative">
           <div
             className="text-[10px] uppercase tracking-[0.22em] font-extrabold mb-2"
@@ -107,16 +109,7 @@ export default async function ParlayPalacePage({ searchParams }: PageProps) {
           >
             TailSlips
           </div>
-          <h1
-            className="text-[36px] sm:text-[42px] font-extrabold tracking-[-0.02em] leading-[0.95]"
-            style={{
-              background:
-                "linear-gradient(180deg,#f3e3b3 0%,#caa45a 55%,#8a6e3a 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
+          <h1 className="palace-shimmer-text text-[36px] sm:text-[42px] font-extrabold tracking-[-0.02em] leading-[0.95]">
             Parlay Palace
           </h1>
           <p className="text-[13px] text-[rgba(255,255,255,0.55)] mt-3 max-w-[60ch] leading-[1.6]">
