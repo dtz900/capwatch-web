@@ -5,7 +5,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { NavSearch } from "@/components/nav/NavSearch";
 
-const LINKS = [
+const LINKS: { href: string; label: string; gold?: boolean }[] = [
+  { href: "/parlay-palace", label: "Parlay Palace", gold: true },
   { href: "/slate", label: "Slate" },
   { href: "/", label: "Leaderboard" },
   { href: "/cappers", label: "Cappers" },
@@ -38,14 +39,24 @@ export function TopNav() {
         <div className="hidden sm:flex gap-1 mx-6">
           {LINKS.map((l) => {
             const active = isActive(l.href, pathname);
-            const cls = active
-              ? "text-[var(--color-text)] bg-[rgba(255,255,255,0.05)]"
-              : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
+            let cls: string;
+            if (l.gold) {
+              // Parlay Palace gets a permanent gold treatment so it
+              // visually announces the section regardless of route.
+              cls = active
+                ? "bg-[rgba(202,164,90,0.12)] ring-1 ring-[rgba(202,164,90,0.45)]"
+                : "hover:bg-[rgba(202,164,90,0.08)]";
+            } else {
+              cls = active
+                ? "text-[var(--color-text)] bg-[rgba(255,255,255,0.05)]"
+                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
+            }
             return (
               <Link
                 key={l.label}
                 href={l.href}
                 className={`px-3.5 py-2 rounded-lg text-sm font-semibold ${cls}`}
+                style={l.gold ? { color: "#caa45a" } : undefined}
                 aria-current={active ? "page" : undefined}
               >
                 {l.label}
