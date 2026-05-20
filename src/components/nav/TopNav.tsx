@@ -53,12 +53,13 @@ export function TopNav() {
               <Link
                 key={l.label}
                 href={l.href}
-                className="relative px-3.5 py-2 text-sm font-semibold transition-colors hover:text-white"
+                className="px-3.5 py-2 text-sm font-semibold transition-colors hover:text-white"
                 style={{
                   color: textColor,
-                  boxShadow: active
-                    ? `inset 0 -2px 0 0 ${accentColor}`
-                    : undefined,
+                  textDecoration: active ? "underline" : undefined,
+                  textUnderlineOffset: active ? "8px" : undefined,
+                  textDecorationThickness: active ? "2px" : undefined,
+                  textDecorationColor: active ? accentColor : undefined,
                 }}
                 aria-current={active ? "page" : undefined}
               >
