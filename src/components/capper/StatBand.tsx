@@ -96,27 +96,30 @@ export function StatBand({ agg, recentHistory = [] }: Props) {
               </span>
             )}
           </div>
-          {win.palace_slug ? (
-            <Link
-              href={`/parlay-palace/${win.palace_slug}`}
-              className="text-[10px] uppercase tracking-[0.14em] font-extrabold
-                         whitespace-nowrap transition-colors"
-              style={{ color: "#caa45a" }}
-            >
-              View in Parlay Palace →
-            </Link>
-          ) : win.tweet_url ? (
-            <a
-              href={win.tweet_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] uppercase tracking-[0.14em] font-extrabold
-                         text-[var(--color-text-soft)] hover:text-[var(--color-text)]
-                         transition-colors whitespace-nowrap"
-            >
-              View on X
-            </a>
-          ) : null}
+          <div className="flex items-center gap-3 whitespace-nowrap">
+            {win.tweet_url && (
+              <a
+                href={win.tweet_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] uppercase tracking-[0.14em] font-extrabold
+                           text-[var(--color-text-soft)] hover:text-[var(--color-text)]
+                           transition-colors"
+              >
+                View on X
+              </a>
+            )}
+            {win.palace_slug && (
+              <Link
+                href={`/parlay-palace/${win.palace_slug}`}
+                className="text-[10px] uppercase tracking-[0.14em] font-extrabold
+                           transition-colors hover:brightness-110"
+                style={{ color: "#caa45a" }}
+              >
+                View in Parlay Palace →
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </div>

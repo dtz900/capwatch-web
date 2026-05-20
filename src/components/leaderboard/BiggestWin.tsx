@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatUnits } from "@/lib/formatters";
 import type { BiggestWin as BWType } from "@/lib/types";
 import { XIcon } from "@/components/icons/XIcon";
@@ -50,25 +51,66 @@ export function BiggestWin({ win, accent = "gold" }: Props) {
         <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
           Biggest win
         </span>
-        {win.tweet_url && (
-          <a
-            href={win.tweet_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View biggest win on X"
-            className="shrink-0 -mt-0.5 -mr-0.5 w-7 h-7 inline-flex items-center justify-center rounded-md
-                       bg-[rgba(255,255,255,0.04)] text-[var(--color-text-soft)]
-                       hover:text-white hover:bg-[rgba(255,255,255,0.10)] transition-colors"
-          >
-            <XIcon size={11} glow />
-          </a>
-        )}
+        <div className="shrink-0 -mt-0.5 -mr-0.5 flex items-center gap-1.5">
+          {win.palace_slug && (
+            <Link
+              href={`/parlay-palace/${win.palace_slug}`}
+              aria-label="View biggest win in Parlay Palace"
+              className="w-7 h-7 inline-flex items-center justify-center rounded-md
+                         bg-[rgba(202,164,90,0.10)] ring-1 ring-[rgba(202,164,90,0.35)]
+                         hover:bg-[rgba(202,164,90,0.18)] transition-colors"
+              title="View in Parlay Palace"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/parlay-palace-crown.png"
+                alt=""
+                aria-hidden
+                width={18}
+                height={18}
+                className="w-[18px] h-[18px] object-contain"
+                style={{ mixBlendMode: "screen" }}
+              />
+            </Link>
+          )}
+          {win.tweet_url && (
+            <a
+              href={win.tweet_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View biggest win on X"
+              className="w-7 h-7 inline-flex items-center justify-center rounded-md
+                         bg-[rgba(255,255,255,0.04)] text-[var(--color-text-soft)]
+                         hover:text-white hover:bg-[rgba(255,255,255,0.10)] transition-colors"
+            >
+              <XIcon size={11} glow />
+            </a>
+          )}
+        </div>
       </div>
 
-      {/* Hero number */}
-      <div className="text-[var(--color-pos)] font-extrabold tabular-nums leading-none tracking-[-0.03em] text-[28px] mb-2">
-        {formatUnits(win.units)}
-        <span className="text-[14px] font-bold opacity-70 ml-0.5">u</span>
+      {/* Hero number with optional crown badge when published in Parlay Palace. */}
+      <div className="flex items-center gap-2 mb-2">
+        {win.palace_slug && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/parlay-palace-crown.png"
+            alt=""
+            aria-hidden
+            width={22}
+            height={22}
+            className="w-[22px] h-[22px] object-contain shrink-0"
+            style={{
+              mixBlendMode: "screen",
+              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+              transform: "rotate(-10deg)",
+            }}
+          />
+        )}
+        <div className="text-[var(--color-pos)] font-extrabold tabular-nums leading-none tracking-[-0.03em] text-[28px]">
+          {formatUnits(win.units)}
+          <span className="text-[14px] font-bold opacity-70 ml-0.5">u</span>
+        </div>
       </div>
 
       {/* Receipt line */}
