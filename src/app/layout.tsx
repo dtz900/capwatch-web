@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { Manrope, Cinzel } from "next/font/google";
 import { Suspense } from "react";
 import { AnalyticsWithExclusion } from "@/components/analytics/AnalyticsWithExclusion";
 import { BrandFooter } from "@/components/nav/BrandFooter";
@@ -12,6 +12,17 @@ const manrope = Manrope({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-manrope",
+});
+
+// Cinzel: serif inspired by Roman inscriptions. Reserved for surfaces
+// that want a palatial / hall-of-fame feel (Parlay Palace title, podium
+// ornaments). Loaded once at root so any Palace-themed page can reach
+// for `font-[var(--font-cinzel)]`.
+const cinzel = Cinzel({
+  subsets: ["latin"],
+  weight: ["500", "700", "900"],
+  variable: "--font-cinzel",
+  display: "swap",
 });
 
 const ROOT_TITLE = `MLB Twitter Capper Rankings · ${SITE_NAME}`;
@@ -66,7 +77,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={manrope.variable}>
+    <html lang="en" className={`${manrope.variable} ${cinzel.variable}`}>
       <body>
         <Suspense fallback={null}>
           <PipelineStaleBanner />

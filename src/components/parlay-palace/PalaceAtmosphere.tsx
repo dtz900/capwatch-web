@@ -9,7 +9,7 @@
 // the section unmounts the atmosphere and other pages are unaffected.
 import "./palace-atmosphere.css";
 
-const MOTE_COUNT = 22;
+const MOTE_COUNT = 36;
 
 function _seed(i: number, salt: number): number {
   // Deterministic pseudo-random so SSR + client render match without a
@@ -35,12 +35,32 @@ export function PalaceAtmosphere() {
           interactive content on top. Negative z-index (-z-10) sits
           BEHIND the body's solid bg color and renders invisibly, which
           was the original bug. */}
+      {/* Layer A: warm "dome" spotlight at the top of the viewport. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 h-[78vh] z-0"
+        className="pointer-events-none fixed inset-x-0 top-0 h-[100vh] z-0"
         style={{
           background:
-            "radial-gradient(ellipse 90% 65% at 50% -8%, rgba(202,164,90,0.28) 0%, rgba(202,164,90,0.14) 22%, rgba(202,164,90,0.04) 50%, transparent 70%)",
+            "radial-gradient(ellipse 75% 55% at 50% -5%, rgba(245,213,140,0.42) 0%, rgba(202,164,90,0.24) 18%, rgba(202,164,90,0.10) 38%, rgba(202,164,90,0.04) 58%, transparent 75%)",
+        }}
+      />
+      {/* Layer B: secondary warm anchor at the bottom for a "lit room"
+          feel rather than a single spotlight. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 bottom-0 h-[55vh] z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 90% 50% at 50% 110%, rgba(202,164,90,0.18) 0%, rgba(202,164,90,0.06) 40%, transparent 70%)",
+        }}
+      />
+      {/* Layer C: edge vignette so the eye is pulled to center. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 70% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 95%)",
         }}
       />
       <div

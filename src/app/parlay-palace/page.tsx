@@ -5,6 +5,7 @@ import { TopNav } from "@/components/nav/TopNav";
 import { fetchPalaceList } from "@/lib/api";
 import { PalaceCard } from "@/components/parlay-palace/PalaceCard";
 import { PalaceAtmosphere } from "@/components/parlay-palace/PalaceAtmosphere";
+import { PalaceTitle } from "@/components/parlay-palace/PalaceTitle";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
@@ -102,41 +103,24 @@ export default async function ParlayPalacePage({ searchParams }: PageProps) {
       <PalaceAtmosphere />
       <TopNav />
       <main className="max-w-[1100px] mx-auto px-5 pb-16 relative z-10">
-        <header className="pt-10 pb-8 relative">
-          <div
-            className="text-[10px] uppercase tracking-[0.22em] font-extrabold mb-2"
-            style={{ color: "#caa45a" }}
-          >
-            TailSlips
-          </div>
-          <h1 className="palace-shimmer-text text-[36px] sm:text-[42px] font-extrabold tracking-[-0.02em] leading-[0.95]">
-            Parlay Palace
-          </h1>
-          <p className="text-[13px] text-[rgba(255,255,255,0.55)] mt-3 max-w-[60ch] leading-[1.6]">
-            The biggest winning MLB parlays tracked on TailSlips. Every leg
-            graded against final box scores.
-          </p>
-          <div
-            aria-hidden
-            className="mt-5 h-px"
-            style={{
-              background:
-                "linear-gradient(90deg,rgba(202,164,90,0.0),rgba(202,164,90,0.55),rgba(202,164,90,0.0))",
-            }}
+        <PalaceTitle
+          kicker="TailSlips"
+          title="Parlay Palace"
+          description="The biggest winning MLB parlays tracked on TailSlips. Every leg graded against final box scores."
+        />
+        <div className="flex items-center justify-center gap-7 mb-8 text-[11px] uppercase tracking-[0.22em] font-extrabold">
+          <SortTab
+            href="/parlay-palace?sort=recent"
+            active={sort === "recent"}
+            label="Recent"
           />
-          <div className="flex items-center gap-5 mt-4 text-[12px] uppercase tracking-[0.16em] font-bold">
-            <SortTab
-              href="/parlay-palace?sort=recent"
-              active={sort === "recent"}
-              label="Recent"
-            />
-            <SortTab
-              href="/parlay-palace?sort=units"
-              active={sort === "units"}
-              label="Biggest"
-            />
-          </div>
-        </header>
+          <span aria-hidden style={{ color: "rgba(202,164,90,0.45)" }}>◆</span>
+          <SortTab
+            href="/parlay-palace?sort=units"
+            active={sort === "units"}
+            label="Biggest"
+          />
+        </div>
         {entries.length === 0 ? (
           <div
             className="rounded-[14px] p-[1.5px]"
