@@ -43,7 +43,7 @@ export function TopNav() {
             // Parlay Palace gets a gold underline + gold text always;
             // other links get a brand-green underline + white text on
             // active, muted otherwise.
-            const accentColor = l.gold ? "#caa45a" : "var(--color-pos)";
+            const accentColor = l.gold ? "#caa45a" : "var(--color-text)";
             const textColor = l.gold
               ? "#caa45a"
               : active
