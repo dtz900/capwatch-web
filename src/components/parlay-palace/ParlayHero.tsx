@@ -60,11 +60,31 @@ export function ParlayHero({ entry }: { entry: PalaceEntry }) {
         </div>
         <div className="mt-3 flex items-center gap-2.5 text-[11px] uppercase tracking-[0.18em] font-bold text-[rgba(255,255,255,0.78)]">
           {entry.capper_handle && (
-            <CapperAvatar
-              url={entry.body?.capper_image_url ?? null}
-              handle={entry.capper_handle}
-              size={42}
-            />
+            <div className="relative shrink-0">
+              <CapperAvatar
+                url={entry.body?.capper_image_url ?? null}
+                handle={entry.capper_handle}
+                size={42}
+              />
+              {/* Same crooked-cap crown as PalaceCard; tuned slightly larger
+                  to balance the 42px avatar. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/parlay-palace-crown.png"
+                alt=""
+                aria-hidden
+                width={32}
+                height={32}
+                className="pointer-events-none absolute w-8 h-8 object-contain"
+                style={{
+                  top: -14,
+                  left: -10,
+                  transform: "rotate(-22deg)",
+                  mixBlendMode: "screen",
+                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))",
+                }}
+              />
+            </div>
           )}
           <span className="leading-tight">
             {entry.leg_count != null ? `${entry.leg_count}-Leg Parlay` : "Parlay"}

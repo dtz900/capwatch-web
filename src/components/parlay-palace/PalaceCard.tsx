@@ -34,20 +34,6 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
                 "linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(8,7,4,0.55) 70%,rgba(8,7,4,0.95) 100%)",
             }}
           />
-          {/* Gold crown watermark, top-right of the hero. The source asset
-              has an opaque black background; mix-blend-mode: screen drops
-              the black and lets the gold sit cleanly over any hero photo. */}
-          <div className="absolute top-2 right-2 pointer-events-none">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/parlay-palace-crown.png"
-              alt=""
-              width={40}
-              height={40}
-              className="w-10 h-10 object-contain"
-              style={{ mixBlendMode: "screen" }}
-            />
-          </div>
           <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
             <div
               className="font-extrabold text-[28px] leading-none tabular-nums tracking-tight"
@@ -65,7 +51,32 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
           </div>
         </div>
         <div className="px-4 py-3 flex items-center gap-3">
-          <CapperAvatar url={avatarUrl} handle={entry.capper_handle} size={44} />
+          <div className="relative shrink-0">
+            <CapperAvatar
+              url={avatarUrl}
+              handle={entry.capper_handle}
+              size={44}
+            />
+            {/* Gold crown perched on the avatar like a crooked cap.
+                mix-blend-mode: screen drops the source PNG's black bg so
+                only the gold shape sits over the avatar. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/parlay-palace-crown.png"
+              alt=""
+              aria-hidden
+              width={32}
+              height={32}
+              className="pointer-events-none absolute w-8 h-8 object-contain"
+              style={{
+                top: -14,
+                left: -10,
+                transform: "rotate(-22deg)",
+                mixBlendMode: "screen",
+                filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))",
+              }}
+            />
+          </div>
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-bold text-white truncate">
               @{entry.capper_handle ?? "unknown"}
