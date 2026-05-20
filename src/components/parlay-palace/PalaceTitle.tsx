@@ -21,7 +21,11 @@ export function PalaceTitle({
       <div className="flex items-center justify-center gap-4 sm:gap-6">
         <Flourish side="left" />
         <h1
-          className="palace-shimmer-text font-[family-name:var(--font-cinzel)] font-black uppercase tracking-[0.04em] leading-[1] text-[28px] sm:text-[44px] md:text-[56px]"
+          className="palace-shimmer-text font-black uppercase tracking-[0.04em] leading-[1] text-[28px] sm:text-[44px] md:text-[56px]"
+          style={{
+            fontFamily:
+              'var(--font-cinzel), Georgia, "Times New Roman", serif',
+          }}
         >
           {title}
         </h1>

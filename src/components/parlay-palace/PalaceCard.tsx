@@ -61,11 +61,9 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
               handle={entry.capper_handle}
               size={44}
             />
-            {/* Gold crown floats off the upper-left of the avatar, tilted
-                so it reads as a heraldic mark next to the headshot rather
-                than a hat sitting on it. Positioned fully outside the
-                circle. mix-blend-mode: screen drops the source PNG's
-                black background. */}
+            {/* Gold crown floats off the upper-left of the avatar with
+                enough offset to clear the circle entirely. mix-blend-mode:
+                screen drops the source PNG's black background. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/parlay-palace-crown.png"
@@ -75,9 +73,9 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
               height={36}
               className="pointer-events-none absolute w-9 h-9 object-contain"
               style={{
-                top: -22,
-                left: -26,
-                transform: "rotate(-24deg)",
+                top: -30,
+                left: -34,
+                transform: "rotate(-26deg)",
                 mixBlendMode: "screen",
                 filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.65))",
               }}
