@@ -74,7 +74,7 @@ export function MobileTabBar() {
                  border-t border-[rgba(255,255,255,0.06)]
                  pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="flex h-14">
+      <div className="grid grid-cols-5 h-14">
         {TABS.map((t) => {
           const active = isActive(t.href, pathname);
           const Icon = t.icon;
@@ -88,7 +88,7 @@ export function MobileTabBar() {
               key={t.label}
               href={t.href}
               aria-current={active ? "page" : undefined}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 ${cls}`}
+              className={`flex flex-col items-center justify-center gap-0.5 min-w-0 ${cls}`}
             >
               <Icon />
               <span className="text-[10px] font-semibold leading-none">{t.label}</span>
