@@ -21,27 +21,31 @@ function _seed(i: number, salt: number): number {
 export function PalaceAtmosphere() {
   const motes = Array.from({ length: MOTE_COUNT }, (_, i) => {
     const left = _seed(i, 1) * 100;
-    const size = 1.5 + _seed(i, 2) * 2.5; // 1.5 – 4 px
+    const size = 2 + _seed(i, 2) * 3;     // 2 – 5 px
     const dur = 18 + _seed(i, 3) * 18;    // 18 – 36 s
     const delay = -1 * _seed(i, 4) * dur; // negative so they're mid-flight on load
     const drift = (_seed(i, 5) - 0.5) * 80; // -40 to +40 px sideways
-    const op = 0.10 + _seed(i, 6) * 0.18;
+    const op = 0.30 + _seed(i, 6) * 0.45;  // 0.30 – 0.75 (visible against #0a0a0c)
     return { left, size, dur, delay, drift, op, key: i };
   });
 
   return (
     <>
+      {/* z-0 on the atmosphere + relative z-10 on `main` keeps the
+          interactive content on top. Negative z-index (-z-10) sits
+          BEHIND the body's solid bg color and renders invisibly, which
+          was the original bug. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 h-[78vh] -z-10"
+        className="pointer-events-none fixed inset-x-0 top-0 h-[78vh] z-0"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(202,164,90,0.13) 0%, rgba(202,164,90,0.06) 28%, transparent 62%)",
+            "radial-gradient(ellipse 90% 65% at 50% -8%, rgba(202,164,90,0.28) 0%, rgba(202,164,90,0.14) 22%, rgba(202,164,90,0.04) 50%, transparent 70%)",
         }}
       />
       <div
         aria-hidden
-        className="palace-motes pointer-events-none fixed inset-0 overflow-hidden -z-10"
+        className="palace-motes pointer-events-none fixed inset-0 overflow-hidden z-0"
       >
         {motes.map((m) => (
           <span

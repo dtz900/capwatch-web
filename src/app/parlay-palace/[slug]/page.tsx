@@ -97,7 +97,7 @@ export default async function PalaceDetailPage({ params }: PageProps) {
       ]} />
       <PalaceAtmosphere />
       <TopNav />
-      <main className="max-w-[460px] mx-auto px-4 pb-16 pt-8">
+      <main className="max-w-[460px] mx-auto px-4 pb-16 pt-8 relative z-10">
         <h1 style={{position:"absolute",width:1,height:1,padding:0,margin:-1,overflow:"hidden",clip:"rect(0,0,0,0)",whiteSpace:"nowrap",border:0}}>{entry.title ?? "Winning parlay"}</h1>
 
         {/* foil frame */}

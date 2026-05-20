@@ -101,7 +101,7 @@ export default async function ParlayPalacePage({ searchParams }: PageProps) {
       ])} />
       <PalaceAtmosphere />
       <TopNav />
-      <main className="max-w-[1100px] mx-auto px-5 pb-16 relative">
+      <main className="max-w-[1100px] mx-auto px-5 pb-16 relative z-10">
         <header className="pt-10 pb-8 relative">
           <div
             className="text-[10px] uppercase tracking-[0.22em] font-extrabold mb-2"
