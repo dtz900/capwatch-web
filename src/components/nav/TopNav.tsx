@@ -39,24 +39,27 @@ export function TopNav() {
         <div className="hidden sm:flex gap-1 mx-6">
           {LINKS.map((l) => {
             const active = isActive(l.href, pathname);
-            let cls: string;
-            if (l.gold) {
-              // Parlay Palace gets a permanent gold treatment so it
-              // visually announces the section regardless of route.
-              cls = active
-                ? "bg-[rgba(202,164,90,0.12)] ring-1 ring-[rgba(202,164,90,0.45)]"
-                : "hover:bg-[rgba(202,164,90,0.08)]";
-            } else {
-              cls = active
-                ? "text-[var(--color-text)] bg-[rgba(255,255,255,0.05)]"
-                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
-            }
+            // Active = a colored underline, not a boxed background.
+            // Parlay Palace gets a gold underline + gold text always;
+            // other links get a brand-green underline + white text on
+            // active, muted otherwise.
+            const accentColor = l.gold ? "#caa45a" : "var(--color-pos)";
+            const textColor = l.gold
+              ? "#caa45a"
+              : active
+                ? "var(--color-text)"
+                : "var(--color-text-muted)";
             return (
               <Link
                 key={l.label}
                 href={l.href}
-                className={`px-3.5 py-2 rounded-lg text-sm font-semibold ${cls}`}
-                style={l.gold ? { color: "#caa45a" } : undefined}
+                className="relative px-3.5 py-2 text-sm font-semibold transition-colors hover:text-white"
+                style={{
+                  color: textColor,
+                  boxShadow: active
+                    ? `inset 0 -2px 0 0 ${accentColor}`
+                    : undefined,
+                }}
                 aria-current={active ? "page" : undefined}
               >
                 {l.label}
