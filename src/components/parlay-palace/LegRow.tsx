@@ -10,16 +10,53 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
+function sentenceCase(s: string): string {
+  const t = s.trim();
+  if (!t) return t;
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
+// Selection strings come in two flavors: full-sentence ("Freddie Freeman To
+// Hit A Home Run", capper-typed) and short-token ("OVER"/"UNDER", parsed).
+// We render the player_name as the title line, so the action subtitle should
+// never repeat that name. Strip the prefix if present and sentence-case the
+// rest; for OVER/UNDER tokens, attach the line.
+function actionText(leg: PalaceLeg): string | null {
+  const sel = (leg.selection ?? "").trim();
+  if (!sel) return leg.line != null ? `Line ${leg.line}` : null;
+  const name = (leg.player_name ?? "").trim();
+  let rest = sel;
+  if (name && rest.toLowerCase().startsWith(name.toLowerCase())) {
+    rest = rest.slice(name.length).trim();
+  }
+  const lower = rest.toLowerCase();
+  if (lower === "over" && leg.line != null) return `Over ${leg.line}`;
+  if (lower === "under" && leg.line != null) return `Under ${leg.line}`;
+  if (!rest) return null;
+  return sentenceCase(rest);
+}
+
+function titleLines(leg: PalaceLeg, market: string): {
+  title: string; subtitle: string | null
+} {
+  if (leg.player_name) {
+    return { title: leg.player_name, subtitle: actionText(leg) };
+  }
+  if (market === "total" && leg.line != null) {
+    const sel = (leg.selection ?? "").trim().toLowerCase();
+    const dir = sel === "over" ? "Over" : sel === "under" ? "Under" : sel;
+    return { title: `${dir} ${leg.line}`, subtitle: null };
+  }
+  return { title: leg.selection ?? "Leg", subtitle: null };
+}
+
 export function LegRow({ leg, position }: { leg: PalaceLeg; position: number }) {
   const odds =
     leg.odds_taken == null
       ? null
       : `${leg.odds_taken > 0 ? "+" : ""}${leg.odds_taken}`;
-  const label = leg.player_name ?? leg.selection ?? "Leg";
-  const sub =
-    leg.player_name && leg.line != null
-      ? `${leg.selection ?? ""} ${leg.line}`.trim()
-      : null;
+  const market = (leg.market ?? "").toLowerCase();
+  const { title, subtitle } = titleLines(leg, market);
 
   const single = leg.team_logo_url ?? leg.headshot_url;
   const isHeadshot = !leg.team_logo_url && !!leg.headshot_url;
@@ -84,14 +121,13 @@ export function LegRow({ leg, position }: { leg: PalaceLeg; position: number }) 
 
       <div className="flex-1 min-w-0">
         <div className="text-[14px] font-bold text-white truncate leading-tight">
-          {label}
-          {sub && (
-            <span className="text-[rgba(255,255,255,0.42)] font-medium">
-              {" "}
-              {sub}
-            </span>
-          )}
+          {title}
         </div>
+        {subtitle && (
+          <div className="text-[11.5px] font-medium text-[rgba(255,255,255,0.55)] truncate leading-tight mt-0.5">
+            {subtitle}
+          </div>
+        )}
         <div className="mt-1 flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] font-bold">
           <span className="text-[rgba(255,255,255,0.38)]">Leg {position}</span>
           {leg.is_clincher && (

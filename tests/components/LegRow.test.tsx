@@ -39,6 +39,19 @@ describe("LegRow", () => {
       "https://midfield.mlbstatic.com/v1/people/1/spots/120");
   });
 
+  it("strips repeated player_name from selection and sentence-cases the action", () => {
+    const hrProp: PalaceLeg = { ...base, market: "prop_batter_hr",
+      selection: "Freddie Freeman To Hit A Home Run", line: 0.5,
+      player_name: "Freddie Freeman",
+      team_logo_url: null, team_abbr: null,
+      headshot_url: "https://midfield.mlbstatic.com/v1/people/518692/spots/120",
+      score_text: null, result_text: null, is_clincher: false };
+    render(<LegRow leg={hrProp} position={1} />);
+    expect(screen.getByText("Freddie Freeman")).toBeInTheDocument();
+    expect(screen.getByText("To hit a home run")).toBeInTheDocument();
+    expect(screen.queryByText(/Freddie Freeman To Hit/)).toBeNull();
+  });
+
   it("shows BOTH team logos on a total leg", () => {
     const total: PalaceLeg = { ...base, market: "total", selection: "Over",
       line: 7.5, score_text: "12 R", team_logo_url: null, team_abbr: null,

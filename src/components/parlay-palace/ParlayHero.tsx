@@ -29,14 +29,15 @@ export function ParlayHero({ entry }: { entry: PalaceEntry }) {
       {/* cinematic scrim: clear at top, solid at base */}
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,13,17,0)_30%,rgba(11,13,17,0.35)_52%,rgba(11,13,17,0.82)_74%,#0b0d11_100%)]" />
 
-      {/* kicker */}
-      <div className="absolute top-5 left-5">
-        <div className="text-[10px] uppercase tracking-[0.24em] text-[#e3c787] font-extrabold">
+      {/* kicker: tinted backdrop so the slate date stays legible over
+          bright hero photos (sky / stadium lighting / pale uniforms) */}
+      <div className="absolute top-4 left-4 rounded-md bg-[rgba(8,9,12,0.45)] backdrop-blur-[2px] px-2.5 py-1.5 ring-1 ring-[rgba(202,164,90,0.18)]">
+        <div className="text-[10px] uppercase tracking-[0.24em] text-[#e3c787] font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
           Parlay Palace
         </div>
         <div className="mt-1 h-px w-9 bg-[#caa45a]" />
         {entry.slate_date && (
-          <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-[rgba(255,255,255,0.62)] font-bold">
+          <div className="mt-1.5 text-[10px] uppercase tracking-[0.2em] text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
             {entry.slate_date}
           </div>
         )}
