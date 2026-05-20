@@ -48,8 +48,14 @@ export function BiggestWin({ win, accent = "gold" }: Props) {
       />
 
       <div className="flex items-start justify-between gap-2 mb-1.5">
-        <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
-          Biggest win
+        <span className="text-[10px] uppercase tracking-[0.14em] font-bold flex items-center gap-1.5 flex-wrap">
+          <span className="text-[var(--color-text-muted)]">Biggest win</span>
+          {win.palace_slug && (
+            <>
+              <span className="text-[var(--color-text-muted)] opacity-50">·</span>
+              <span style={{ color: "#caa45a" }}>In the Parlay Palace</span>
+            </>
+          )}
         </span>
         <div className="shrink-0 -mt-0.5 -mr-0.5 flex items-center gap-1.5">
           {win.palace_slug && (
@@ -89,28 +95,12 @@ export function BiggestWin({ win, accent = "gold" }: Props) {
         </div>
       </div>
 
-      {/* Hero number with optional crown badge when published in Parlay Palace. */}
-      <div className="flex items-center gap-2 mb-2">
-        {win.palace_slug && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src="/parlay-palace-crown.png"
-            alt=""
-            aria-hidden
-            width={22}
-            height={22}
-            className="w-[22px] h-[22px] object-contain shrink-0"
-            style={{
-              mixBlendMode: "screen",
-              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
-              transform: "rotate(-10deg)",
-            }}
-          />
-        )}
-        <div className="text-[var(--color-pos)] font-extrabold tabular-nums leading-none tracking-[-0.03em] text-[28px]">
-          {formatUnits(win.units)}
-          <span className="text-[14px] font-bold opacity-70 ml-0.5">u</span>
-        </div>
+      {/* Hero number. The Palace crown lives in the header row (next to
+          "Biggest win · In the Parlay Palace") and in the top-right link
+          tile; keeping the units number clean of decoration. */}
+      <div className="text-[var(--color-pos)] font-extrabold tabular-nums leading-none tracking-[-0.03em] text-[28px] mb-2">
+        {formatUnits(win.units)}
+        <span className="text-[14px] font-bold opacity-70 ml-0.5">u</span>
       </div>
 
       {/* Receipt line */}
