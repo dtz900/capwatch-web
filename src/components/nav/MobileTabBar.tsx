@@ -19,8 +19,8 @@ function isActive(href: string, pathname: string): boolean {
 function CrownIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 19l1.5-10 4 4L12 5l3.5 8 4-4L21 19z" />
-      <path d="M5 19h14" />
+      <path d="M4 18 L4 11 L7 6 L9 10 L12 4 L15 10 L17 6 L20 11 L20 18 Z" />
+      <path d="M4 14 L20 14" />
     </svg>
   );
 }
@@ -70,7 +70,7 @@ export function MobileTabBar() {
       role="navigation"
       aria-label="Primary"
       className="sm:hidden fixed bottom-0 left-0 right-0 z-40
-                 backdrop-blur-md bg-[rgba(10,10,12,0.85)]
+                 backdrop-blur-md bg-[rgba(10,10,12,0.97)]
                  border-t border-[rgba(255,255,255,0.06)]
                  pb-[env(safe-area-inset-bottom)]"
     >
