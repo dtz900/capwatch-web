@@ -54,16 +54,17 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
             </div>
           </div>
         </div>
-        <div className="px-4 py-3 flex items-center gap-3">
+        <div className="pl-12 pr-4 py-3 flex items-center gap-3">
           <div className="relative shrink-0">
             <CapperAvatar
               url={avatarUrl}
               handle={entry.capper_handle}
               size={44}
             />
-            {/* Gold crown floats off the side of the avatar at roughly the
-                avatar's vertical center, cleanly outside the circle. Reads
-                as a heraldic side mark, not a hat. mix-blend-mode: screen
+            {/* Gold crown sits to the upper-left of the avatar, fully
+                outside the circle. Meta row's left padding bumped to
+                pl-12 to give the crown room without clipping at the
+                card's overflow-hidden boundary. mix-blend-mode: screen
                 drops the source PNG's black background. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -74,9 +75,9 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
               height={36}
               className="pointer-events-none absolute w-9 h-9 object-contain"
               style={{
-                top: 4,
-                left: -34,
-                transform: "rotate(-18deg)",
+                top: -18,
+                left: -32,
+                transform: "rotate(-24deg)",
                 mixBlendMode: "screen",
                 filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.65))",
               }}
