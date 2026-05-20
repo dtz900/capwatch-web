@@ -66,8 +66,8 @@ export function ParlayHero({ entry }: { entry: PalaceEntry }) {
                 handle={entry.capper_handle}
                 size={42}
               />
-              {/* Crown perched on top of the avatar, centered then nudged
-                  left for the crooked-cap tilt. Mirror of PalaceCard. */}
+              {/* Crown floats off the upper-left of the avatar, fully
+                  outside the circle and tilted. Mirror of PalaceCard. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/parlay-palace-crown.png"
@@ -77,9 +77,9 @@ export function ParlayHero({ entry }: { entry: PalaceEntry }) {
                 height={36}
                 className="pointer-events-none absolute w-9 h-9 object-contain"
                 style={{
-                  top: -24,
-                  left: "50%",
-                  transform: "translateX(-58%) rotate(-18deg)",
+                  top: -22,
+                  left: -26,
+                  transform: "rotate(-24deg)",
                   mixBlendMode: "screen",
                   filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.65))",
                 }}
