@@ -51,7 +51,7 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
           </div>
         </div>
         <div className="px-4 py-3 flex items-center gap-3">
-          <CapperAvatar url={avatarUrl} handle={entry.capper_handle} size={32} />
+          <CapperAvatar url={avatarUrl} handle={entry.capper_handle} size={44} />
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-bold text-white truncate">
               @{entry.capper_handle ?? "unknown"}
