@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const TABS = [
+const TABS: { href: string; label: string; icon: () => React.JSX.Element; gold?: boolean }[] = [
+  { href: "/parlay-palace", label: "Palace", icon: CrownIcon, gold: true },
   { href: "/slate", label: "Slate", icon: SlateIcon },
   { href: "/", label: "Leaderboard", icon: LeaderboardIcon },
   { href: "/cappers", label: "Cappers", icon: CappersIcon },
@@ -13,6 +14,15 @@ const TABS = [
 function isActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function CrownIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 19l1.5-10 4 4L12 5l3.5 8 4-4L21 19z" />
+      <path d="M5 19h14" />
+    </svg>
+  );
 }
 
 function SlateIcon() {
@@ -68,9 +78,11 @@ export function MobileTabBar() {
         {TABS.map((t) => {
           const active = isActive(t.href, pathname);
           const Icon = t.icon;
-          const cls = active
-            ? "text-[#60a5fa]"
-            : "text-[var(--color-text-muted)]";
+          const cls = t.gold
+            ? "text-[#caa45a]"
+            : active
+              ? "text-[#60a5fa]"
+              : "text-[var(--color-text-muted)]";
           return (
             <Link
               key={t.label}
