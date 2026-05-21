@@ -161,6 +161,17 @@ export type GradingOddsSource =
   | "no_close_available"
   | "fallback_-110";
 
+export interface HistoryPickLeg {
+  leg_index: number;
+  market: string | null;
+  selection: string | null;
+  line: number | null;
+  odds_taken: number | null;
+  /** W / L / P, or null when the leg is still undecided (live parlay). */
+  outcome: "W" | "L" | "P" | null;
+  game_label: string | null;
+}
+
 export interface HistoryPick {
   id: number;
   kind: "straight" | "parlay";
@@ -180,6 +191,8 @@ export interface HistoryPick {
   tweet_url: string | null;
   source: string | null;
   player_name?: string | null;
+  /** Present on parlay rows. Ordered by parsed leg index ascending. */
+  legs?: HistoryPickLeg[];
   /** Source tweet has been deleted from X at any point. */
   was_deleted_on_x?: boolean;
   /** Deletion timestamp is after the game's commence_time -- the
