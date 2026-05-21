@@ -68,14 +68,16 @@ export async function generateMetadata({
   const sp = await searchParams;
 
   // Resolve filter from the page's own query params so the meta tags (and
-  // OG image route URL) mirror the page view the share URL points at.
+  // OG image route URL) mirror the page view the share URL points at. The
+  // window default must match the page render default (last_30) below;
+  // otherwise the share card shows different stats than the destination page.
   const requestedWindow = sp.window as Window | undefined;
   const requestedBetType = sp.bet_type as BetTypeFilter | undefined;
   const window: Window =
-    requestedWindow && VALID_WINDOWS.includes(requestedWindow) ? requestedWindow : "all_time";
+    requestedWindow && VALID_WINDOWS.includes(requestedWindow) ? requestedWindow : "last_30";
   const betType: BetTypeFilter =
     requestedBetType && VALID_BET_TYPES.includes(requestedBetType) ? requestedBetType : "all";
-  const hasFilter = window !== "all_time" || betType !== "all";
+  const hasFilter = window !== "last_30" || betType !== "all";
 
   // Canonical stays unfiltered for SEO; og:url reflects the actual shared
   // URL so social click-throughs land on the filtered view they were sold.
@@ -126,13 +128,18 @@ export async function generateMetadata({
       trackedSince: allTimeAgg?.tracked_since ?? null,
     };
 
+    // Compute filterLabel outside the branch so we can also gate on it. An
+    // explicit ?window=all_time URL is "filtered" away from the default
+    // (last_30) but produces an empty label, and feeding that into the
+    // filter-aware title format leaves a stray bullet ("@x ·  · 22-18 ..."),
+    // so we fall through to the generic path in that case.
+    const fLabel = filterLabelFor(window, betType);
     let title: string;
     let description: string;
     let ogDescription: string;
-    if (hasFilter && filteredAgg && filteredAgg.picks_count > 0) {
+    if (hasFilter && fLabel && filteredAgg && filteredAgg.picks_count > 0) {
       // Filter-aware text so the meta description matches the OG card image
       // rather than contradicting it with all-time numbers.
-      const fLabel = filterLabelFor(window, betType);
       const r = formatRecord(filteredAgg);
       const u = formatUnitsForTitle(filteredAgg.units_profit);
       const ro = formatRoiForTitle(filteredAgg.roi_pct);
