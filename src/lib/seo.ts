@@ -56,40 +56,59 @@ interface CapperMetaInputs {
   liveOrPending?: number;
 }
 
+// Prefer the windowAgg (Last 30 by convention) over all-time so the meta
+// title/description match what the capper page actually renders by default.
+// Sharing the canonical URL into X should produce a card that matches the
+// destination page; using all-time here would contradict it. Falls back to
+// all-time when the window has no picks (inactive capper) so the share isn't
+// empty.
+function pickDisplayAgg(
+  inputs: CapperMetaInputs,
+): CapperMetaInputs["allTimeAgg"] | null {
+  const w = inputs.windowAgg;
+  if (w && w.picks_count > 0) return w;
+  const a = inputs.allTimeAgg;
+  if (a && a.picks_count > 0) return a;
+  return null;
+}
+
 export function buildCapperTitle(inputs: CapperMetaInputs): string {
-  const { handle, allTimeAgg } = inputs;
-  if (!allTimeAgg || allTimeAgg.picks_count === 0) {
+  const { handle } = inputs;
+  const agg = pickDisplayAgg(inputs);
+  if (!agg) {
     return `@${handle} · MLB capper record on ${SITE_NAME}`;
   }
-  const record = formatRecord(allTimeAgg);
-  const units = formatUnitsForTitle(allTimeAgg.units_profit);
-  const roi = formatRoiForTitle(allTimeAgg.roi_pct);
+  const record = formatRecord(agg);
+  const units = formatUnitsForTitle(agg.units_profit);
+  const roi = formatRoiForTitle(agg.roi_pct);
   return `@${handle} · ${record} ${units} (${roi}) · MLB capper record on ${SITE_NAME}`;
 }
 
 export function buildCapperDescription(inputs: CapperMetaInputs): string {
-  const { handle, displayName, allTimeAgg } = inputs;
+  const { handle, displayName } = inputs;
   const name = displayName && displayName !== handle ? `${displayName} (@${handle})` : `@${handle}`;
-  if (!allTimeAgg || allTimeAgg.picks_count === 0) {
+  const agg = pickDisplayAgg(inputs);
+  if (!agg) {
     return `${name} is tracked on ${SITE_NAME}. Every public MLB pick is parsed within seconds and graded against the final game outcome.`;
   }
-  const record = formatRecord(allTimeAgg);
-  const units = formatUnitsForTitle(allTimeAgg.units_profit);
-  const roi = formatRoiForTitle(allTimeAgg.roi_pct);
-  const wr = formatWinRateForTitle(allTimeAgg.win_rate);
+  const record = formatRecord(agg);
+  const units = formatUnitsForTitle(agg.units_profit);
+  const roi = formatRoiForTitle(agg.roi_pct);
+  const wr = formatWinRateForTitle(agg.win_rate);
   const sinceStr = inputs.trackedSince ? ` Tracked since ${formatTrackedSince(inputs.trackedSince)}.` : "";
-  return `${name} is ${record} (${units}, ${roi}, ${wr}) on the ${SITE_NAME} verified-capper leaderboard across ${allTimeAgg.picks_count} graded MLB picks.${sinceStr} Every public pick is parsed within seconds and graded against final outcomes.`;
+  return `${name} is ${record} (${units}, ${roi}, ${wr}) on the ${SITE_NAME} verified-capper leaderboard across ${agg.picks_count} graded MLB picks.${sinceStr} Every public pick is parsed within seconds and graded against final outcomes.`;
 }
 
 export function buildCapperOgDescription(inputs: CapperMetaInputs): string {
-  const { handle, allTimeAgg } = inputs;
-  if (!allTimeAgg || allTimeAgg.picks_count === 0) {
+  const { handle } = inputs;
+  const agg = pickDisplayAgg(inputs);
+  if (!agg) {
     return `Verified MLB pick history for @${handle} on ${SITE_NAME}.`;
   }
-  const record = formatRecord(allTimeAgg);
-  const units = formatUnitsForTitle(allTimeAgg.units_profit);
-  const roi = formatRoiForTitle(allTimeAgg.roi_pct);
-  return `${record} ${units} (${roi}) across ${allTimeAgg.picks_count} graded MLB picks. Verified on ${SITE_NAME}.`;
+  const record = formatRecord(agg);
+  const units = formatUnitsForTitle(agg.units_profit);
+  const roi = formatRoiForTitle(agg.roi_pct);
+  return `${record} ${units} (${roi}) across ${agg.picks_count} graded MLB picks. Verified on ${SITE_NAME}.`;
 }
 
 function formatTrackedSince(iso: string): string {
