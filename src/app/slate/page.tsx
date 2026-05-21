@@ -9,6 +9,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchSlate } from "@/lib/api";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
+import { buildSlateOgFingerprint } from "./_slate-og-renderer";
 
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
@@ -38,22 +39,23 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     // fall through with the static defaults above
   }
 
-  // X (and most scrapers) cache the share image per og:image URL. Next.js
-  // derives the auto-injected opengraph-image URL hash from the *route file*
-  // source, which has not changed since the card was first shipped, so every
-  // redesign and every new daily slate kept serving X's first cached image.
-  // Pin the image URL to the slate date (forces a fresh crawl each day) plus
-  // a design version (bump OG_CARD_VERSION whenever the card layout changes).
-  const OG_CARD_VERSION = "6"; // bump on any _slate-og-renderer.tsx redesign
-  const etDay = (offsetDays: number) =>
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/New_York",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(Date.now() + offsetDays * 86_400_000));
-  const slateDay = etDay(dateParam === "tomorrow" ? 1 : 0);
-  const ogKey = `d=${slateDay}&v=${OG_CARD_VERSION}`;
+  // X caches the OG card per share URL and cards-dev.twitter.com/validator
+  // was retired, so the only way to force a fresh scrape is to change the
+  // og:image URL itself. Fingerprint with the ET slate day plus the live
+  // pick volume / sharps / season grading counter; any of those moving
+  // produces a new URL that X is forced to re-fetch. OG_CARD_VERSION stays
+  // as a manual escape hatch for layout-only redesigns where the data
+  // hasn't changed but we still want X to refresh.
+  const OG_CARD_VERSION = "7"; // bump on any _slate-og-renderer.tsx redesign
+  const fp = await buildSlateOgFingerprint(dateParam);
+  const ogQs = new URLSearchParams();
+  ogQs.set("date", dateParam);
+  ogQs.set("d", fp.etDay);
+  if (fp.picks > 0) ogQs.set("p", String(fp.picks));
+  if (fp.sharps > 0) ogQs.set("s", String(fp.sharps));
+  if (fp.seasonPicks > 0) ogQs.set("g", String(fp.seasonPicks));
+  ogQs.set("v", OG_CARD_VERSION);
+  const ogUrl = `/og/slate?${ogQs.toString()}`;
   const ogAlt = `${dayLabel} MLB slate on ${SITE_NAME}`;
 
   return {
@@ -68,7 +70,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       siteName: SITE_NAME,
       images: [
         {
-          url: `/slate/opengraph-image?${ogKey}`,
+          url: ogUrl,
           width: 1200,
           height: 630,
           alt: ogAlt,
@@ -80,7 +82,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       title,
       description,
       site: "@TailSlips",
-      images: [`/slate/twitter-image?${ogKey}`],
+      images: [{ url: ogUrl, alt: ogAlt }],
     },
   };
 }

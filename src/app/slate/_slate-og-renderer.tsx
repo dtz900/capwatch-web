@@ -198,9 +198,14 @@ function buildRoster(
   return rows;
 }
 
-export async function renderSlateOg(): Promise<Response> {
+export interface RenderSlateOpts {
+  dateParam?: "today" | "tomorrow";
+}
+
+export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
+  const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
   const [slateResult, lbResult, logoDataUri] = await Promise.allSettled([
-    fetchSlate("today"),
+    fetchSlate(dateParam),
     fetchLeaderboard({
       window: "season",
       sort: "units_profit",
@@ -229,7 +234,7 @@ export async function renderSlateOg(): Promise<Response> {
 
   const inputs: RenderInputs = {
     logoDataUri: logo,
-    dateLabel: "Tonight",
+    dateLabel: dateParam === "tomorrow" ? "Tomorrow" : "Tonight",
     totalGames: games.length,
     sharpsPosted,
     picksTotal: allPicks.length,
@@ -259,6 +264,48 @@ export async function renderSlateOg(): Promise<Response> {
       });
     }
   }
+}
+
+/**
+ * Fingerprint inputs for the slate OG image URL. Date alone busts X's cache
+ * once per day, but the slate updates intra-day as cappers tweet picks and as
+ * the season leaderboard grades. Folding in pick volume + sharps + season
+ * graded-total means the URL changes whenever the displayed card would
+ * actually look different. Used by app/slate/page.tsx generateMetadata.
+ */
+export async function buildSlateOgFingerprint(
+  dateParam: "today" | "tomorrow",
+): Promise<{ etDay: string; picks: number; sharps: number; seasonPicks: number }> {
+  let picks = 0;
+  let sharps = 0;
+  let seasonPicks = 0;
+  try {
+    const slate = await fetchSlate(dateParam);
+    const allPicks = slate.games.flatMap((g) => g.picks);
+    picks = allPicks.length;
+    sharps = new Set(allPicks.map((p) => p.capper_id)).size;
+  } catch {
+    // Falls back to date-only fingerprint when slate API is unreachable.
+  }
+  try {
+    const lb = await fetchLeaderboard({
+      window: "season",
+      sort: "units_profit",
+      bet_type: "all",
+      min_picks: 10,
+      active_only: true,
+    });
+    seasonPicks = lb.platform_stats?.graded_picks_total ?? 0;
+  } catch {
+    // Leaderboard fingerprint is optional; date + picks already changes a lot.
+  }
+  const etDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(Date.now() + (dateParam === "tomorrow" ? 86_400_000 : 0)));
+  return { etDay, picks, sharps, seasonPicks };
 }
 
 const TRANSPARENT_PNG = Buffer.from(
