@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
@@ -11,7 +12,9 @@ import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPr
 import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
+import { SITE_NAME } from "@/lib/seo";
 import type { Window, Sort, BetTypeFilter } from "@/lib/types";
+import { buildRootOgFingerprint } from "./_root-og";
 
 interface PageProps {
   searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string }>;
@@ -28,6 +31,35 @@ const MIN_PICKS = 10;
 // via LivePicksProvider polling, separate from this cache.
 export const revalidate = 300;
 export const maxDuration = 30;
+
+/**
+ * Override the layout's static OG image with a fingerprinted Route Handler
+ * URL. X caches OG bytes per share URL essentially forever and there's no
+ * manual invalidation path anymore (the cards-dev validator was retired),
+ * so the URL itself has to change whenever the leaderboard does. The
+ * fingerprint includes the platform's graded-picks counter (bumps on every
+ * grade event) and today's PT date (daily floor) so reposts of the same
+ * tailslips.com URL after data changes get scraped fresh.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const fp = await buildRootOgFingerprint();
+  const q = new URLSearchParams();
+  q.set("d", fp.ptDate);
+  if (fp.picks > 0) q.set("p", String(fp.picks));
+  if (fp.cappers > 0) q.set("c", String(fp.cappers));
+  const ogUrl = `/og/home?${q.toString()}`;
+  const title = `MLB Twitter Capper Rankings · ${SITE_NAME}`;
+  return {
+    openGraph: {
+      images: [{ url: ogUrl, width: 1200, height: 630, alt: "TailSlips · MLB Capper Scoreboard" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      images: [{ url: ogUrl, alt: "TailSlips · MLB Capper Scoreboard" }],
+    },
+  };
+}
 
 export default async function Home({ searchParams }: PageProps) {
   const sp = await searchParams;
