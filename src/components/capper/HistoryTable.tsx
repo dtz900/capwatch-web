@@ -179,6 +179,19 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
     <>
       <div
         onClick={hasExpandableLegs ? toggleExpanded : undefined}
+        onKeyDown={
+          hasExpandableLegs
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleExpanded();
+                }
+              }
+            : undefined
+        }
+        role={hasExpandableLegs ? "button" : undefined}
+        tabIndex={hasExpandableLegs ? 0 : undefined}
+        aria-expanded={hasExpandableLegs ? expanded : undefined}
         className={`group/row relative ${DESKTOP_GRID} pl-[19px] pr-5 py-3.5
                     hover:bg-[rgba(255,255,255,0.02)] transition-colors duration-150
                     ${hasExpandableLegs ? "cursor-pointer" : ""}
@@ -302,6 +315,19 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
 
       <div
         onClick={hasExpandableLegs ? toggleExpanded : undefined}
+        onKeyDown={
+          hasExpandableLegs
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleExpanded();
+                }
+              }
+            : undefined
+        }
+        role={hasExpandableLegs ? "button" : undefined}
+        tabIndex={hasExpandableLegs ? 0 : undefined}
+        aria-expanded={hasExpandableLegs ? expanded : undefined}
         className={`sm:hidden relative pl-4 pr-4 py-3
                     ${hasExpandableLegs ? "cursor-pointer" : ""}
                     ${isLast && !expanded ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
