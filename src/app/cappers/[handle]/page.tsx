@@ -339,6 +339,21 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <StatBand agg={windowAgg} recentHistory={profile.history} />
         </div>
 
+        {(allTimeAgg?.picks_count ?? 0) === 0
+          && profile.capper.has_paid_program
+          && profile.pending.length === 0
+          && (
+          <section className="mb-6 rounded-lg border border-[rgba(192,132,252,0.25)] bg-[rgba(192,132,252,0.05)] p-5 sm:p-6">
+            <h2 className="text-[12px] uppercase tracking-[0.18em] text-[#c084fc] font-bold mb-2">
+              No public picks
+            </h2>
+            <p className="text-[13px] leading-relaxed text-[var(--color-text-soft)]">
+              @{handle} does not post free picks publicly. Their picks are sold through a paid service.
+              TailSlips only tracks publicly-posted picks, so this profile carries no record.
+            </p>
+          </section>
+        )}
+
         {profile.pending.length > 0 && (
           <div className="mb-6">
             <PendingBlock picks={profile.pending} sportsbooks={sportsbooks} />
