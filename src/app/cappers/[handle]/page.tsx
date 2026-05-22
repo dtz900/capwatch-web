@@ -16,7 +16,7 @@ import { SimilarCappers } from "@/components/capper/SimilarCappers";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
-import { BETMGM_300x250 } from "@/lib/affiliates";
+import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, capperReviewNode, faqNode } from "@/lib/jsonld";
 import {
@@ -370,7 +370,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
 
         {(allTimeAgg?.picks_count ?? 0) > 0 && (
           <div className="mb-8 flex justify-center">
-            <SportsbookAd creative={BETMGM_300x250} placement="capper-inline" />
+            <SportsbookAd creative={BETMGM_1080x356} placement="capper-inline" />
           </div>
         )}
 
