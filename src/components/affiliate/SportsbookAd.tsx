@@ -22,20 +22,21 @@ export function SportsbookAd({
   const href = buildClickUrl(creative, placement);
   return (
     <div className={className}>
+      {/* Background is white because BetMGM (and most sportsbook) CJ
+          creatives are PNGs with alpha channels designed for light
+          backgrounds — transparent regions on a dark site theme bleed
+          through and the dark text becomes invisible. Giving the
+          container the canvas color the artwork was designed for makes
+          the creative render as intended without us having to host or
+          color-correct anything ourselves. */}
       <a
         href={href}
         target="_blank"
         rel="sponsored noopener noreferrer"
         aria-label={creative.alt}
-        className="inline-block leading-none rounded-md overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)]"
-        style={{ maxWidth: "100%" }}
+        className="inline-block leading-none rounded-md overflow-hidden border border-[rgba(255,255,255,0.06)]"
+        style={{ maxWidth: "100%", background: "#ffffff" }}
       >
-        {/* CJ serves the creative dynamically. Using a plain img tag (not
-            next/image) because the network rotates assets and the URL is
-            opaque to our build. Lazy-load since most placements are below
-            the fold; in-viewport browsers ignore lazy and load eagerly.
-            max-width:100% scales the image down on narrow viewports
-            without ever upscaling above natural pixel dimensions. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={creative.imageUrl}
