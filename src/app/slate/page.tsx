@@ -9,6 +9,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchSlate } from "@/lib/api";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
+import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { buildSlateOgFingerprint } from "./_slate-og-renderer";
 
 interface PageProps {
@@ -174,7 +175,13 @@ export default async function SlatePage({ searchParams }: PageProps) {
               Parlay legs route to the team they back but do not count toward the season rank.
             </p>
           </div>
-          <DateToggle current={dateParam} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateToggle current={dateParam} />
+            <ShareLinkButton
+              basePath="/slate"
+              queryParams={{ date: dateParam !== "today" ? dateParam : undefined }}
+            />
+          </div>
         </header>
 
         {data.games.length === 0 ? (

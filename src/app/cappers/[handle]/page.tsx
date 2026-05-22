@@ -14,6 +14,7 @@ import { MarketMixBar } from "@/components/capper/MarketMixBar";
 import { FaqSection } from "@/components/capper/FaqSection";
 import { SimilarCappers } from "@/components/capper/SimilarCappers";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, capperReviewNode, faqNode } from "@/lib/jsonld";
 import {
@@ -321,6 +322,13 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <div className="flex items-center gap-2 flex-wrap">
             <BetTypeToggle current={betType} basePath={basePath} />
             <WindowToggle current={window} basePath={basePath} />
+            <ShareLinkButton
+              basePath={`/cappers/${handle}`}
+              queryParams={{
+                window: window !== "last_30" ? window : undefined,
+                bet_type: betType !== "all" ? betType : undefined,
+              }}
+            />
           </div>
         </div>
 

@@ -10,6 +10,7 @@ import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSect
 import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPrefsRestorer";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
@@ -136,8 +137,20 @@ export default async function Home({ searchParams }: PageProps) {
       <LivePicksProvider initial={liveInitial}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
           <Hero stats={heroStats} />
-          <div className="mb-8">
+          <div className="mb-3">
             <FilterBar filters={filters} />
+          </div>
+          <div className="mb-8 flex justify-end">
+            <ShareLinkButton
+              basePath="/"
+              queryParams={{
+                window: filters.window !== "last_30" ? filters.window : undefined,
+                sort: filters.sort !== "units_profit" ? filters.sort : undefined,
+                bet_type: filters.bet_type !== "all" ? filters.bet_type : undefined,
+                active_only: filters.active_only ? undefined : "false",
+              }}
+              label="Share this view"
+            />
           </div>
           {top3.length === 3 && <Podium rows={top3} window={filters.window} />}
           {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} />}
