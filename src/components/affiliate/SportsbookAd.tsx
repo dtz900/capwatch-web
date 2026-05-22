@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { buildClickUrl, type SportsbookCreative } from "@/lib/affiliates";
 
 interface Props {
@@ -13,13 +16,44 @@ interface Props {
   showDisclosure?: boolean;
 }
 
+/**
+ * Picks the mobile click URL when the user-agent looks like iOS or
+ * Android, desktop URL otherwise. iPadOS reports as Mac in modern
+ * Safari, so we check for touch + Mac too. Server-rendered HTML always
+ * carries the desktop URL (better SEO default + matches non-JS clients);
+ * the swap on mount is invisible to users since the href is not visible
+ * UI and hydration completes in well under 100ms.
+ */
+function isMobileUserAgent(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
+  // iPadOS 13+ Safari masquerades as desktop Mac. Touch-capable Mac =
+  // iPad in practice (no MacBook ships with a touchscreen).
+  if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
+
 export function SportsbookAd({
   creative,
   placement,
   className,
   showDisclosure = true,
 }: Props) {
-  const href = buildClickUrl(creative, placement);
+  // Default to desktop URL on first render so SSR HTML and SEO crawlers
+  // see a browser-completable destination. Swap to mobile URL after
+  // hydration if the visitor is on a phone or tablet.
+  const [clickUrl, setClickUrl] = useState(creative.clickUrlDesktop);
+
+  useEffect(() => {
+    if (isMobileUserAgent()) {
+      setClickUrl(creative.clickUrlMobile);
+    } else {
+      setClickUrl(creative.clickUrlDesktop);
+    }
+  }, [creative]);
+
+  const href = buildClickUrl(clickUrl, placement);
   return (
     <div className={className}>
       {/* Canvas + frame styling. The PNG creative has an alpha channel
