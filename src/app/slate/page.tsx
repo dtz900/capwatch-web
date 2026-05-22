@@ -197,21 +197,21 @@ export default async function SlatePage({ searchParams }: PageProps) {
           </div>
         ) : (
           <>
-            {ds.graded_count > 0 && (data.capper_summary?.length ?? 0) > 0 && (
-              <div className="mt-2 mb-5">
-                <CapperDayRanking
-                  summary={data.capper_summary}
-                  totalGraded={ds.graded_count}
-                  totalPending={ds.pending_count}
-                />
-              </div>
-            )}
             {gamesWithPicks.length > 0 && (
-              <div className="mb-6">
+              <div className="mt-2 mb-5">
                 <SportsbookAd
                   creative={BETMGM_1080x356}
                   placement="slate-inline"
                   className="w-full"
+                />
+              </div>
+            )}
+            {ds.graded_count > 0 && (data.capper_summary?.length ?? 0) > 0 && (
+              <div className="mb-5">
+                <CapperDayRanking
+                  summary={data.capper_summary}
+                  totalGraded={ds.graded_count}
+                  totalPending={ds.pending_count}
                 />
               </div>
             )}

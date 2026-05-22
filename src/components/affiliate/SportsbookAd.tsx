@@ -82,7 +82,7 @@ export function SportsbookAd({
         />
       </a>
       {showDisclosure && (
-        <div className="mt-1.5 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold opacity-70">
+        <div className="mt-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-bold opacity-70 text-center whitespace-nowrap">
           Sponsored · 21+ ·{" "}
           <a
             href="https://sports.betmgm.com/en/sports/terms-conditions"
@@ -90,9 +90,9 @@ export function SportsbookAd({
             rel="noopener noreferrer"
             className="underline hover:opacity-100"
           >
-            Terms apply
+            Terms
           </a>
-          {" "}· Gambling problem? Call 1-800-GAMBLER
+          {" "}· 1-800-GAMBLER
         </div>
       )}
     </div>
