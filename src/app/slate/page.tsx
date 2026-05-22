@@ -10,6 +10,8 @@ import { fetchSlate } from "@/lib/api";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
+import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
+import { BETMGM_300x250 } from "@/lib/affiliates";
 import { buildSlateOgFingerprint } from "./_slate-og-renderer";
 
 interface PageProps {
@@ -202,6 +204,11 @@ export default async function SlatePage({ searchParams }: PageProps) {
                   totalGraded={ds.graded_count}
                   totalPending={ds.pending_count}
                 />
+              </div>
+            )}
+            {gamesWithPicks.length > 0 && (
+              <div className="mb-6 flex justify-center">
+                <SportsbookAd creative={BETMGM_300x250} placement="slate-inline" />
               </div>
             )}
             <div className="flex flex-col gap-5 mt-2">

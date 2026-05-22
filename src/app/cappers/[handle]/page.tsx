@@ -15,6 +15,8 @@ import { FaqSection } from "@/components/capper/FaqSection";
 import { SimilarCappers } from "@/components/capper/SimilarCappers";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
+import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
+import { BETMGM_300x250 } from "@/lib/affiliates";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, capperReviewNode, faqNode } from "@/lib/jsonld";
 import {
@@ -363,6 +365,12 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
         {(allTimeAgg?.bet_type_breakdown ?? null) && (
           <div className="mb-6">
             <MarketMixBar breakdown={allTimeAgg?.bet_type_breakdown ?? null} />
+          </div>
+        )}
+
+        {(allTimeAgg?.picks_count ?? 0) > 0 && (
+          <div className="mb-8 flex justify-center">
+            <SportsbookAd creative={BETMGM_300x250} placement="capper-inline" />
           </div>
         )}
 
