@@ -49,6 +49,10 @@ function sumProfit(picks: SlatePick[]): number {
 }
 
 function deriveLifecycle(game: SlateGame): ScoreStatusState {
+  // ISR-cached responses from before the backend started emitting
+  // game_state may deliver undefined. Treat that as pre-game so we never
+  // flash "FINAL · grading…" on a scheduled card during the cache turnover.
+  if (!game.game_state) return "pre";
   if (game.game_state === "scheduled") return "pre";
   if (game.game_state === "in_progress") return "live";
   const anyPending = game.picks.some((p) => p.outcome === null);
