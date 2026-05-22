@@ -220,7 +220,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
             </div>
           </div>
           {lifecycle !== "pre" && (
-            <div className="flex justify-center mt-5 text-[15px] sm:text-[16px] font-bold tracking-tight tabular-nums">
+            <div className="mt-6 sm:mt-7">
               <ScoreStatus
                 state={lifecycle}
                 awayTeam={game.away_team}

@@ -55,7 +55,7 @@ describe("GameBlock", () => {
     expect(screen.queryByText(/Bookie action/i)).toBeNull();
   });
 
-  it("in_progress shows TOP 4 + score", () => {
+  it("in_progress shows TOP 4 pill + both scores", () => {
     render(
       <GameBlock
         game={makeGame({
@@ -68,7 +68,8 @@ describe("GameBlock", () => {
       />,
     );
     expect(screen.getByText(/TOP 4/)).toBeInTheDocument();
-    expect(screen.getByText(/CHC 2/)).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
   });
 
   it("final + ungraded picks renders final_pending (FINAL · grading…)", () => {

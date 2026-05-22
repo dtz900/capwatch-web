@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { ScoreStatus } from "@/components/slate/ScoreStatus";
 
 describe("ScoreStatus", () => {
-  it("renders formatted ET time in the pre state", () => {
+  it("renders formatted ET time pill in the pre state", () => {
     render(
       <ScoreStatus
         state="pre"
@@ -20,7 +20,7 @@ describe("ScoreStatus", () => {
     expect(screen.getByText(/ET/)).toBeInTheDocument();
   });
 
-  it("renders inning half + inning + score in the live state", () => {
+  it("renders inning pill plus both team score numbers in live", () => {
     render(
       <ScoreStatus
         state="live"
@@ -34,11 +34,11 @@ describe("ScoreStatus", () => {
       />,
     );
     expect(screen.getByText(/TOP 4/)).toBeInTheDocument();
-    expect(screen.getByText(/CHC 2/)).toBeInTheDocument();
-    expect(screen.getByText(/STL 1/)).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
   });
 
-  it("renders FINAL with grading suffix in final_pending", () => {
+  it("renders FINAL pill, grading pill, and both scores in final_pending", () => {
     render(
       <ScoreStatus
         state="final_pending"
@@ -53,11 +53,11 @@ describe("ScoreStatus", () => {
     );
     expect(screen.getByText(/FINAL/)).toBeInTheDocument();
     expect(screen.getByText(/grading/i)).toBeInTheDocument();
-    expect(screen.getByText(/CHC 5/)).toBeInTheDocument();
-    expect(screen.getByText(/STL 3/)).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 
-  it("renders FINAL with score and no grading suffix in final_graded", () => {
+  it("renders FINAL pill and scores with no grading suffix in final_graded", () => {
     render(
       <ScoreStatus
         state="final_graded"
@@ -72,11 +72,11 @@ describe("ScoreStatus", () => {
     );
     expect(screen.getByText(/FINAL/)).toBeInTheDocument();
     expect(screen.queryByText(/grading/i)).toBeNull();
-    expect(screen.getByText(/CHC 5/)).toBeInTheDocument();
-    expect(screen.getByText(/STL 3/)).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 
-  it("renders MID 7 when inning_half is mid", () => {
+  it("renders MID 7 in the live pill when inning_half is mid", () => {
     render(
       <ScoreStatus
         state="live"

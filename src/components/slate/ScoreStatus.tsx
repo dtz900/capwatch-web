@@ -1,4 +1,5 @@
 import type { InningHalf } from "@/lib/types";
+import { teamColor } from "@/lib/mlb-teams";
 
 export type ScoreStatusState = "pre" | "live" | "final_pending" | "final_graded";
 
@@ -34,23 +35,37 @@ function formatGameTime(iso: string | null): string | null {
   }
 }
 
-function ScorePair({
-  awayTeam,
-  homeTeam,
-  awayScore,
-  homeScore,
+function Pill({
+  children,
+  variant,
 }: {
-  awayTeam: string | null;
-  homeTeam: string | null;
-  awayScore: number | null;
-  homeScore: number | null;
+  children: React.ReactNode;
+  variant: "live" | "final" | "grading" | "neutral";
 }) {
-  if (awayScore === null || homeScore === null) return null;
+  const palette =
+    variant === "live"
+      ? "bg-[var(--color-pos-soft)] text-[var(--color-pos)] ring-[rgba(25,245,124,0.25)]"
+      : variant === "grading"
+      ? "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] ring-[rgba(255,255,255,0.10)] italic normal-case tracking-wider"
+      : variant === "final"
+      ? "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)] ring-[rgba(255,255,255,0.14)]"
+      : "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] ring-[rgba(255,255,255,0.08)]";
   return (
-    <span className="tabular-nums">
-      <span>{awayTeam ?? "AWY"} {awayScore}</span>
-      <span className="px-1 text-[var(--color-text-muted)]">·</span>
-      <span>{homeTeam ?? "HME"} {homeScore}</span>
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.18em] font-bold ring-1 ring-inset whitespace-nowrap ${palette}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ScoreNumber({ value, color }: { value: number | null; color: string }) {
+  return (
+    <span
+      className="text-[44px] sm:text-[56px] font-extrabold leading-none tracking-tight tabular-nums"
+      style={{ color }}
+    >
+      {value ?? "—"}
     </span>
   );
 }
@@ -67,50 +82,46 @@ export function ScoreStatus({
 }: Props) {
   if (state === "pre") {
     const time = formatGameTime(gameTime);
-    return <span className="tabular-nums">{time ?? ""}</span>;
+    return (
+      <div className="flex justify-center">
+        <Pill variant="neutral">{time ?? ""}</Pill>
+      </div>
+    );
   }
+
+  const awayColor = teamColor(awayTeam);
+  const homeColor = teamColor(homeTeam);
+  const halfLabel = inningHalf ? HALF_LABEL[inningHalf] : null;
+
+  let statusChip: React.ReactNode = null;
   if (state === "live") {
-    const halfLabel = inningHalf ? HALF_LABEL[inningHalf] : null;
-    return (
-      <span className="flex items-baseline gap-2">
-        {halfLabel && inning !== null && (
-          <span className="text-[var(--color-text-muted)]">{halfLabel} {inning}</span>
-        )}
-        <ScorePair
-          awayTeam={awayTeam}
-          homeTeam={homeTeam}
-          awayScore={awayScore}
-          homeScore={homeScore}
+    statusChip = (
+      <Pill variant="live">
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"
+          aria-hidden
         />
-      </span>
+        {halfLabel && inning !== null ? `${halfLabel} ${inning}` : "LIVE"}
+      </Pill>
     );
-  }
-  if (state === "final_pending") {
-    return (
-      <span className="flex items-baseline gap-2">
-        <span>FINAL</span>
-        <ScorePair
-          awayTeam={awayTeam}
-          homeTeam={homeTeam}
-          awayScore={awayScore}
-          homeScore={homeScore}
-        />
-        <span className="text-[var(--color-text-muted)] italic normal-case tracking-normal">
-          grading…
-        </span>
-      </span>
+  } else if (state === "final_pending") {
+    statusChip = (
+      <div className="flex items-center gap-1.5">
+        <Pill variant="final">FINAL</Pill>
+        <Pill variant="grading">grading…</Pill>
+      </div>
     );
+  } else {
+    statusChip = <Pill variant="final">FINAL</Pill>;
   }
-  // final_graded
+
   return (
-    <span className="flex items-baseline gap-2">
-      <span>FINAL</span>
-      <ScorePair
-        awayTeam={awayTeam}
-        homeTeam={homeTeam}
-        awayScore={awayScore}
-        homeScore={homeScore}
-      />
-    </span>
+    <div className="flex items-center justify-center gap-5 sm:gap-8">
+      <ScoreNumber value={awayScore} color={awayColor} />
+      <div className="flex flex-col items-center justify-center gap-1.5 min-w-[80px]">
+        {statusChip}
+      </div>
+      <ScoreNumber value={homeScore} color={homeColor} />
+    </div>
   );
 }
