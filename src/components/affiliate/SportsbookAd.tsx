@@ -49,7 +49,16 @@ export function SportsbookAd({
       </a>
       {showDisclosure && (
         <div className="mt-1.5 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold opacity-70">
-          Sponsored · 21+ · Gambling problem? 1-800-GAMBLER
+          Sponsored · 21+ ·{" "}
+          <a
+            href="https://sports.betmgm.com/en/sports/terms-conditions"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:opacity-100"
+          >
+            Terms apply
+          </a>
+          {" "}· Gambling problem? Call 1-800-GAMBLER
         </div>
       )}
     </div>
