@@ -114,6 +114,9 @@ export interface DaySummary {
   net_units: number;
 }
 
+export type GameState = "scheduled" | "in_progress" | "final";
+export type InningHalf = "top" | "bot" | "mid" | "end";
+
 export interface SlateGame {
   game_id: number;
   away_team: string | null;
@@ -122,6 +125,14 @@ export interface SlateGame {
   home_starter: string | null;
   game_date: string | null;
   game_time: string | null;
+
+  game_state: GameState;
+  away_score: number | null;
+  home_score: number | null;
+  inning: number | null;
+  inning_half: InningHalf | null;
+  outs: number | null;
+
   picks: SlatePick[];
 }
 
