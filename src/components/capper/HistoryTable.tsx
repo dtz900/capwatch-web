@@ -400,6 +400,7 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
             <span
               aria-label="Tweet deleted after first pitch"
               title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+              onClick={(e) => e.stopPropagation()}
               className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
                          bg-[rgba(239,68,68,0.10)] text-[#ef4444] opacity-90"
             >
@@ -409,6 +410,7 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
             <span
               aria-label="Tweet deleted by capper"
               title="The capper deleted this tweet. TailSlips kept the receipt."
+              onClick={(e) => e.stopPropagation()}
               className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
                          bg-[rgba(245,158,11,0.08)] text-[#f59e0b] opacity-90"
             >
@@ -420,6 +422,7 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="View tweet"
+              onClick={(e) => e.stopPropagation()}
               className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
                          bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)]"
             >
