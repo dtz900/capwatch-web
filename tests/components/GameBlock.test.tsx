@@ -138,4 +138,27 @@ describe("GameBlock", () => {
     );
     expect(screen.getByText(/1\.00u/)).toBeInTheDocument();
   });
+
+  it("ungraded parlay legs do not gate final_graded (they wait on other games)", () => {
+    // Real-world case: a parlay leg lives on this game but the parent
+    // parlay can't grade until OTHER games on the slate finish. Treating
+    // that leg as "this game still pending" would leave the card stuck
+    // in final_pending long after the game itself is settled.
+    render(
+      <GameBlock
+        game={makeGame({
+          game_state: "final",
+          away_score: 4,
+          home_score: 2,
+          picks: [
+            makePick({ kind: "straight", selection: "CHC", outcome: "W", profit_units: 1.2, stake_units: 1 }),
+            makePick({ capper_id: 2, kind: "parlay_leg", selection: "CHC", outcome: null, profit_units: null, stake_units: 1, leg_count: 5 }),
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText(/FINAL/)).toBeInTheDocument();
+    expect(screen.queryByText(/grading/i)).toBeNull();
+    expect(screen.getByText(/Bookie action/i)).toBeInTheDocument();
+  });
 });

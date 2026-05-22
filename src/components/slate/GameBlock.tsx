@@ -14,6 +14,20 @@ function shortPitcher(name: string | null): string | null {
   return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
 }
 
+function formatGameTime(iso: string | null): string | null {
+  if (!iso) return null;
+  try {
+    const t = new Date(iso).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "America/New_York",
+    });
+    return `${t} ET`;
+  } catch {
+    return null;
+  }
+}
+
 interface BucketedPicks {
   awayMl: SlatePick[];
   homeMl: SlatePick[];
@@ -55,8 +69,14 @@ function deriveLifecycle(game: SlateGame): ScoreStatusState {
   if (!game.game_state) return "pre";
   if (game.game_state === "scheduled") return "pre";
   if (game.game_state === "in_progress") return "live";
-  const anyPending = game.picks.some((p) => p.outcome === null);
-  return anyPending ? "final_pending" : "final_graded";
+  // Only straight picks gate the "grading…" suffix. Parlay legs stay
+  // outcome=null until the parent parlay resolves, which depends on OTHER
+  // games on the slate finishing. Waiting on them would leave this card
+  // stuck in final_pending long after the game itself is decided.
+  const anyStraightPending = game.picks.some(
+    (p) => p.kind === "straight" && p.outcome === null,
+  );
+  return anyStraightPending ? "final_pending" : "final_graded";
 }
 
 function formatRiskedAndPnl(risked: number, pnl: number, showPnl: boolean): string {
@@ -169,18 +189,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
                    text-[var(--color-text-muted)]"
       >
         <span>Matchup</span>
-        <span className="text-[var(--color-text-soft)]">
-          <ScoreStatus
-            state={lifecycle}
-            awayTeam={game.away_team}
-            homeTeam={game.home_team}
-            awayScore={game.away_score}
-            homeScore={game.home_score}
-            inning={game.inning}
-            inningHalf={game.inning_half}
-            gameTime={game.game_time}
-          />
-        </span>
+        <span className="tabular-nums">{formatGameTime(game.game_time) ?? ""}</span>
       </header>
 
       <div className="px-5 sm:px-7 py-7 sm:py-8">
@@ -210,6 +219,20 @@ export function GameBlock({ game }: { game: SlateGame }) {
               </span>
             </div>
           </div>
+          {lifecycle !== "pre" && (
+            <div className="flex justify-center mt-5 text-[15px] sm:text-[16px] font-bold tracking-tight tabular-nums">
+              <ScoreStatus
+                state={lifecycle}
+                awayTeam={game.away_team}
+                homeTeam={game.home_team}
+                awayScore={game.away_score}
+                homeScore={game.home_score}
+                inning={game.inning}
+                inningHalf={game.inning_half}
+                gameTime={game.game_time}
+              />
+            </div>
+          )}
           {pitchers && (
             <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-4">
               {pitchers}
