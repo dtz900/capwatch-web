@@ -37,12 +37,15 @@ interface PageProps {
     market?: string;
     outcome?: string;
     bet_type?: string;
+    v?: string;
   }>;
 }
 
 const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const PAGE_SIZE = 25;
+const DEFAULT_WINDOW: Window = "season";
+const OG_CARD_VERSION = "2";
 
 export const revalidate = 60;
 export const maxDuration = 30;
@@ -68,17 +71,15 @@ export async function generateMetadata({
   const { handle } = await params;
   const sp = await searchParams;
 
-  // Resolve filter from the page's own query params so the meta tags (and
-  // OG image route URL) mirror the page view the share URL points at. The
-  // window default must match the page render default (last_30) below;
-  // otherwise the share card shows different stats than the destination page.
+  // Resolve filters from the page's own query params so social previews can
+  // intentionally show the same performance window a user is sharing.
   const requestedWindow = sp.window as Window | undefined;
   const requestedBetType = sp.bet_type as BetTypeFilter | undefined;
   const window: Window =
-    requestedWindow && VALID_WINDOWS.includes(requestedWindow) ? requestedWindow : "last_30";
+    requestedWindow && VALID_WINDOWS.includes(requestedWindow) ? requestedWindow : DEFAULT_WINDOW;
   const betType: BetTypeFilter =
     requestedBetType && VALID_BET_TYPES.includes(requestedBetType) ? requestedBetType : "all";
-  const hasFilter = window !== "last_30" || betType !== "all";
+  const hasFilter = window !== DEFAULT_WINDOW || betType !== "all";
 
   // Canonical stays unfiltered for SEO; og:url reflects the actual shared
   // URL so social click-throughs land on the filtered view they were sold.
@@ -99,6 +100,8 @@ export async function generateMetadata({
     q.set("w", window);
     q.set("bt", betType);
     q.set("p", String(picksFp));
+    q.set("v", OG_CARD_VERSION);
+    if (sp.v && /^[0-9]{8,}$/.test(sp.v)) q.set("sv", sp.v);
     if (refreshTs > 0) q.set("r", String(refreshTs));
     return `/cappers/${handle}/og?${q.toString()}`;
   };
@@ -119,7 +122,7 @@ export async function generateMetadata({
     });
     const allTimeAgg = profile.aggregates["all_time"];
     const filteredAgg = profile.aggregates[window] ?? allTimeAgg;
-    const windowAgg = profile.aggregates["last_30"] ?? allTimeAgg;
+    const windowAgg = profile.aggregates[DEFAULT_WINDOW] ?? allTimeAgg;
 
     const baseInputs = {
       handle,
@@ -222,7 +225,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
 
   const window: Window = VALID_WINDOWS.includes(sp.window as Window)
     ? (sp.window as Window)
-    : "last_30";
+    : DEFAULT_WINDOW;
   const offset = Math.max(0, parseInt(sp.offset ?? "0", 10) || 0);
   const market = (sp.market ?? "").trim();
   const outcome = (sp.outcome ?? "").trim();
@@ -325,7 +328,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
             <ShareLinkButton
               basePath={`/cappers/${handle}`}
               queryParams={{
-                window: window !== "last_30" ? window : undefined,
+                window: window !== DEFAULT_WINDOW ? window : undefined,
                 bet_type: betType !== "all" ? betType : undefined,
               }}
             />

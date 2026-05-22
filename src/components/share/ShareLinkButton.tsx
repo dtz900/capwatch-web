@@ -7,8 +7,7 @@ interface Props {
   basePath: string;
   /**
    * Query params to preserve in the share URL. Pass undefined for values at
-   * their page default so the URL stays clean (e.g. omit `window=last_30`
-   * for the capper page since that's the render default).
+   * their page default so the URL stays clean.
    */
   queryParams?: Record<string, string | undefined>;
   label?: string;

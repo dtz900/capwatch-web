@@ -235,11 +235,13 @@ export interface RenderOpts {
   bet_type?: BetTypeFilter;
 }
 
+const DEFAULT_OG_WINDOW: Window = "season";
+
 export async function renderCapperOg(
   handle: string,
   opts: RenderOpts = {},
 ): Promise<Response> {
-  const window: Window = opts.window ?? "all_time";
+  const window: Window = opts.window ?? DEFAULT_OG_WINDOW;
   const bet_type: BetTypeFilter = opts.bet_type ?? "all";
 
   let displayName: string | null = null;
