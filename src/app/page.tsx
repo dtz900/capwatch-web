@@ -11,6 +11,8 @@ import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPrefsRestorer";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
+import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
+import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
@@ -153,6 +155,14 @@ export default async function Home({ searchParams }: PageProps) {
             />
           </div>
           {top3.length === 3 && <Podium rows={top3} window={filters.window} />}
+          {rows.length > 0 && (
+            <div className="my-8 flex justify-center">
+              <SportsbookAd
+                creative={BETMGM_1080x356}
+                placement="home-inline"
+              />
+            </div>
+          )}
           {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} />}
           <SuggestCapperSection />
           <footer className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
