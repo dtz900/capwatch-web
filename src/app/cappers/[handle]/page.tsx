@@ -134,7 +134,7 @@ export async function generateMetadata({
 
     // Compute filterLabel outside the branch so we can also gate on it. An
     // explicit ?window=all_time URL is "filtered" away from the default
-    // (last_30) but produces an empty label, and feeding that into the
+    // (season) but produces an empty label, and feeding that into the
     // filter-aware title format leaves a stray bullet ("@x ·  · 22-18 ..."),
     // so we fall through to the generic path in that case.
     const fLabel = filterLabelFor(window, betType);
@@ -280,7 +280,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   const basePath = `/cappers/${encodeURIComponent(handle)}`;
 
   const queryForPagination = new URLSearchParams();
-  if (window !== "last_30") queryForPagination.set("window", window);
+  if (window !== DEFAULT_WINDOW) queryForPagination.set("window", window);
   if (market) queryForPagination.set("market", market);
   if (outcome) queryForPagination.set("outcome", outcome);
   if (betType !== "all") queryForPagination.set("bet_type", betType);

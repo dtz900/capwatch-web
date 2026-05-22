@@ -9,6 +9,7 @@ const OPTIONS: { value: Window; label: string }[] = [
   { value: "season", label: "Season" },
   { value: "all_time", label: "All-time" },
 ];
+const DEFAULT_WINDOW: Window = "season";
 
 export function WindowToggle({
   current,
@@ -22,7 +23,7 @@ export function WindowToggle({
 
   const onSelect = (value: Window) => {
     const params = new URLSearchParams(sp?.toString() ?? "");
-    if (value === "last_30") params.delete("window");
+    if (value === DEFAULT_WINDOW) params.delete("window");
     else params.set("window", value);
     const qs = params.toString();
     router.push(qs ? `${basePath}?${qs}` : basePath);
