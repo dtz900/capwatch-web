@@ -1,6 +1,8 @@
 import { SlatePickRow } from "./SlatePickRow";
 import { VersusPickRow } from "./VersusPickRow";
 import { TeamLogo } from "./TeamLogo";
+import { ScoreStatus, type ScoreStatusState } from "./ScoreStatus";
+import { BookieAction } from "./BookieAction";
 import { pickMlSide } from "@/lib/bet-format";
 import { teamColor } from "@/lib/mlb-teams";
 import type { SlateGame, SlatePick } from "@/lib/types";
@@ -12,27 +14,17 @@ function shortPitcher(name: string | null): string | null {
   return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
 }
 
-function formatGameTime(iso: string | null): string | null {
-  if (!iso) return null;
-  try {
-    const t = new Date(iso).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: "America/New_York",
-    });
-    return `${t} ET`;
-  } catch {
-    return null;
-  }
-}
-
 interface BucketedPicks {
   awayMl: SlatePick[];
   homeMl: SlatePick[];
   other: SlatePick[];
 }
 
-function bucketPicks(picks: SlatePick[], awayTeam: string | null, homeTeam: string | null): BucketedPicks {
+function bucketPicks(
+  picks: SlatePick[],
+  awayTeam: string | null,
+  homeTeam: string | null,
+): BucketedPicks {
   const awayMl: SlatePick[] = [];
   const homeMl: SlatePick[] = [];
   const other: SlatePick[] = [];
@@ -45,19 +37,52 @@ function bucketPicks(picks: SlatePick[], awayTeam: string | null, homeTeam: stri
   return { awayMl, homeMl, other };
 }
 
+function sumRisked(picks: SlatePick[]): number {
+  // Voided picks drop out; pushes and pending picks keep their stake.
+  return picks
+    .filter((p) => p.outcome !== "V")
+    .reduce((acc, p) => acc + (p.stake_units ?? 0), 0);
+}
+
+function sumProfit(picks: SlatePick[]): number {
+  return picks.reduce((acc, p) => acc + (p.profit_units ?? 0), 0);
+}
+
+function deriveLifecycle(game: SlateGame): ScoreStatusState {
+  if (game.game_state === "scheduled") return "pre";
+  if (game.game_state === "in_progress") return "live";
+  const anyPending = game.picks.some((p) => p.outcome === null);
+  return anyPending ? "final_pending" : "final_graded";
+}
+
+function formatRiskedAndPnl(risked: number, pnl: number, showPnl: boolean): string {
+  const r = `${risked.toFixed(2)}u risked`;
+  if (!showPnl) return r;
+  const sign = pnl > 0 ? "+" : pnl < 0 ? "−" : "±";
+  const p = `${sign}${Math.abs(pnl).toFixed(2)}u`;
+  return `${r} · ${p}`;
+}
+
 function Side({
   team,
   picks,
   awayTeam,
   homeTeam,
+  showPnl,
 }: {
   team: string | null;
   picks: SlatePick[];
   awayTeam: string | null;
   homeTeam: string | null;
+  showPnl: boolean;
 }) {
   const color = teamColor(team);
-  const label = `Backing ${team ?? "this side"} on the moneyline`;
+  const risked = sumRisked(picks);
+  const pnl = sumProfit(picks);
+  const tally =
+    picks.length === 0
+      ? "0 sharps"
+      : `${picks.length} ${picks.length === 1 ? "sharp" : "sharps"} · ${formatRiskedAndPnl(risked, pnl, showPnl)}`;
   return (
     <div>
       <div
@@ -76,12 +101,12 @@ function Side({
           </span>
         </div>
         <span className="text-[11px] tabular-nums font-bold text-[var(--color-text-muted)] whitespace-nowrap">
-          {picks.length} {picks.length === 1 ? "sharp" : "sharps"}
+          {tally}
         </span>
       </div>
       {picks.length === 0 ? (
         <div className="text-[11px] italic text-[var(--color-text-muted)] py-2">
-          No sharps {label.toLowerCase()}.
+          No sharps backing {team ?? "this side"} on the moneyline.
         </div>
       ) : (
         <div className="flex flex-col">
@@ -100,7 +125,6 @@ function Side({
 }
 
 export function GameBlock({ game }: { game: SlateGame }) {
-  const time = formatGameTime(game.game_time);
   const pitchers =
     game.away_starter && game.home_starter
       ? `${shortPitcher(game.away_starter)} vs ${shortPitcher(game.home_starter)}`
@@ -112,6 +136,15 @@ export function GameBlock({ game }: { game: SlateGame }) {
   const awayColor = teamColor(game.away_team);
   const homeColor = teamColor(game.home_team);
 
+  const lifecycle = deriveLifecycle(game);
+  const showPnl = lifecycle === "final_graded";
+
+  const awayPnl = sumProfit(buckets.awayMl);
+  const homePnl = sumProfit(buckets.homeMl);
+  const otherPnl = sumProfit(buckets.other);
+  const allVoided =
+    game.picks.length > 0 && game.picks.every((p) => p.outcome === "V");
+
   return (
     <section
       id={`game-${game.game_id}`}
@@ -120,27 +153,41 @@ export function GameBlock({ game }: { game: SlateGame }) {
                  border border-[rgba(255,255,255,0.07)]
                  shadow-[0_12px_32px_-16px_rgba(0,0,0,0.55)]"
     >
-      {/* Top edge: split team-color hairline, like the spine of a lineup card */}
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] flex">
         <span className="flex-1" style={{ backgroundColor: awayColor }} />
         <span className="flex-1" style={{ backgroundColor: homeColor }} />
       </div>
 
-      {/* Card header: game time + matchup label, scoresheet style */}
-      <header className="flex items-center justify-between px-5 sm:px-7 py-3
-                         border-b border-[rgba(255,255,255,0.06)]
-                         text-[10px] uppercase tracking-[0.18em] font-bold
-                         text-[var(--color-text-muted)]">
+      <header
+        className="flex items-center justify-between px-5 sm:px-7 py-3
+                   border-b border-[rgba(255,255,255,0.06)]
+                   text-[10px] uppercase tracking-[0.18em] font-bold
+                   text-[var(--color-text-muted)]"
+      >
         <span>Matchup</span>
-        <span className="tabular-nums">{time}</span>
+        <span className="text-[var(--color-text-soft)]">
+          <ScoreStatus
+            state={lifecycle}
+            awayTeam={game.away_team}
+            homeTeam={game.home_team}
+            awayScore={game.away_score}
+            homeScore={game.home_score}
+            inning={game.inning}
+            inningHalf={game.inning_half}
+            gameTime={game.game_time}
+          />
+        </span>
       </header>
 
       <div className="px-5 sm:px-7 py-7 sm:py-8">
-        {/* Hero matchup */}
         <div className="text-center">
           <div className="flex items-center justify-center gap-4 sm:gap-10">
             <div className="flex flex-col items-center gap-2 sm:gap-3">
-              <TeamLogo abbr={game.away_team} size={88} className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]" />
+              <TeamLogo
+                abbr={game.away_team}
+                size={88}
+                className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]"
+              />
               <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
                 {game.away_team}
               </span>
@@ -149,18 +196,23 @@ export function GameBlock({ game }: { game: SlateGame }) {
               vs
             </span>
             <div className="flex flex-col items-center gap-2 sm:gap-3">
-              <TeamLogo abbr={game.home_team} size={88} className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]" />
+              <TeamLogo
+                abbr={game.home_team}
+                size={88}
+                className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]"
+              />
               <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
                 {game.home_team}
               </span>
             </div>
           </div>
           {pitchers && (
-            <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-4">{pitchers}</div>
+            <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-4">
+              {pitchers}
+            </div>
           )}
         </div>
 
-        {/* Versus: cappers face off on either side */}
         {hasMlAction && (
           <div className="grid grid-cols-2 gap-x-3 sm:gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
             <Side
@@ -168,17 +220,18 @@ export function GameBlock({ game }: { game: SlateGame }) {
               picks={buckets.awayMl}
               awayTeam={game.away_team}
               homeTeam={game.home_team}
+              showPnl={showPnl}
             />
             <Side
               team={game.home_team}
               picks={buckets.homeMl}
               awayTeam={game.away_team}
               homeTeam={game.home_team}
+              showPnl={showPnl}
             />
           </div>
         )}
 
-        {/* Other markets: totals, props, non-ML parlay legs, etc. */}
         {hasOther && (
           <div className="mt-8 max-w-[680px] mx-auto">
             <div className="flex items-baseline justify-between pb-2 mb-1 border-b border-[rgba(255,255,255,0.10)]">
@@ -206,6 +259,15 @@ export function GameBlock({ game }: { game: SlateGame }) {
           <div className="text-[12px] italic text-[var(--color-text-muted)] mt-6 text-center">
             Quiet. No one has tweeted on this one yet.
           </div>
+        )}
+
+        {lifecycle === "final_graded" && !isSilent && (
+          <BookieAction
+            awayUnits={awayPnl}
+            homeUnits={homePnl}
+            otherUnits={otherPnl}
+            allVoided={allVoided}
+          />
         )}
       </div>
     </section>
