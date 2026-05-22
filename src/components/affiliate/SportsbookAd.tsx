@@ -22,20 +22,20 @@ export function SportsbookAd({
   const href = buildClickUrl(creative, placement);
   return (
     <div className={className}>
-      {/* Background is white because BetMGM (and most sportsbook) CJ
-          creatives are PNGs with alpha channels designed for light
-          backgrounds — transparent regions on a dark site theme bleed
-          through and the dark text becomes invisible. Giving the
-          container the canvas color the artwork was designed for makes
-          the creative render as intended without us having to host or
-          color-correct anything ourselves. */}
+      {/* Canvas + frame styling. The PNG creative has an alpha channel
+          and was designed for light publishers, so we paint a warm
+          off-white behind it (#f7f3e9 reads as cream, less harsh than
+          pure white against the dark TailSlips theme) and ring it with
+          a translucent gold border. The gold echoes BetMGM's own brand
+          accents and bridges the brightness gap so the ad doesn't pop
+          off the page like a flashbang. */}
       <a
         href={href}
         target="_blank"
         rel="sponsored noopener noreferrer"
         aria-label={creative.alt}
-        className="inline-block leading-none rounded-md overflow-hidden border border-[rgba(255,255,255,0.06)]"
-        style={{ maxWidth: "100%", background: "#ffffff" }}
+        className="inline-block leading-none rounded-md overflow-hidden border border-[rgba(245,197,74,0.45)] shadow-[0_0_24px_-12px_rgba(245,197,74,0.35)]"
+        style={{ maxWidth: "100%", background: "#f7f3e9" }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
