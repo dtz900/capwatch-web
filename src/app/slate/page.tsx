@@ -15,7 +15,7 @@ import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { buildSlateOgFingerprint } from "./_slate-og-renderer";
 
 interface PageProps {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; v?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -57,7 +57,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   if (fp.picks > 0) ogQs.set("p", String(fp.picks));
   if (fp.sharps > 0) ogQs.set("s", String(fp.sharps));
   if (fp.seasonPicks > 0) ogQs.set("g", String(fp.seasonPicks));
+  if (fp.contentHash) ogQs.set("h", fp.contentHash);
   ogQs.set("v", OG_CARD_VERSION);
+  if (sp.v && /^[0-9]{8,}$/.test(sp.v)) ogQs.set("sv", sp.v);
   const ogUrl = `/og/slate?${ogQs.toString()}`;
   const ogAlt = `${dayLabel} MLB slate on ${SITE_NAME}`;
 

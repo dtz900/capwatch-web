@@ -275,15 +275,35 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
  */
 export async function buildSlateOgFingerprint(
   dateParam: "today" | "tomorrow",
-): Promise<{ etDay: string; picks: number; sharps: number; seasonPicks: number }> {
+): Promise<{ etDay: string; picks: number; sharps: number; seasonPicks: number; contentHash: string }> {
   let picks = 0;
   let sharps = 0;
   let seasonPicks = 0;
+  let contentHash = "";
   try {
     const slate = await fetchSlate(dateParam);
     const allPicks = slate.games.flatMap((g) => g.picks);
     picks = allPicks.length;
     sharps = new Set(allPicks.map((p) => p.capper_id)).size;
+    contentHash = hashSlateFingerprint(
+      slate.games.map((g) => ({
+        game: g.game_id,
+        away: g.away_team,
+        home: g.home_team,
+        picks: g.picks.map((p) => [
+          p.capper_id,
+          p.handle,
+          p.kind,
+          p.market,
+          p.selection,
+          p.line,
+          p.odds_taken,
+          p.posted_at,
+          p.tweet_url,
+          p.outcome,
+        ]),
+      })),
+    );
   } catch {
     // Falls back to date-only fingerprint when slate API is unreachable.
   }
@@ -305,7 +325,17 @@ export async function buildSlateOgFingerprint(
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(Date.now() + (dateParam === "tomorrow" ? 86_400_000 : 0)));
-  return { etDay, picks, sharps, seasonPicks };
+  return { etDay, picks, sharps, seasonPicks, contentHash };
+}
+
+function hashSlateFingerprint(value: unknown): string {
+  const input = JSON.stringify(value);
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
 }
 
 const TRANSPARENT_PNG = Buffer.from(
