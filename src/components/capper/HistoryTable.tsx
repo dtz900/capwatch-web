@@ -1,9 +1,14 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { XIcon } from "@/components/icons/XIcon";
 import { ChevronIcon } from "@/components/icons/ChevronIcon";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import type { HistoryPick } from "@/lib/types";
+import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
+import { ParlayLegList } from "@/components/capper/ParlayLegList";
 
 const PAGE_SIZE = 25;
 
@@ -143,25 +148,41 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
   const unitsValue =
     pick.units != null && pick.units > 0 ? (pick.units > 5 ? 1 : pick.units) : 1;
 
+  const hasExpandableLegs = isParlay && !!pick.legs && pick.legs.length > 0;
+  const [expanded, setExpanded] = useState(false);
+  const toggleExpanded = () => {
+    if (hasExpandableLegs) setExpanded((v) => !v);
+  };
+
   const selectionNode = (
-    <span className={`font-bold ${isParlay ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"}`}>
-      {formatBetDescriptor({
-        kind: isParlay ? "parlay" : "straight",
-        leg_count: pick.leg_count ?? null,
-        market: pick.market,
-        selection: pick.selection,
-        line: pick.line,
-        odds_taken: pick.odds_taken,
-      })}
-    </span>
+    <>
+      <span className={`font-bold ${isParlay ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"}`}>
+        {formatBetDescriptor({
+          kind: isParlay ? "parlay" : "straight",
+          leg_count: pick.leg_count ?? null,
+          market: pick.market,
+          selection: pick.selection,
+          line: pick.line,
+          odds_taken: pick.odds_taken,
+        })}
+      </span>
+      {isParlay && pick.legs && pick.legs.length > 0 && (
+        <>
+          {" "}
+          <ParlayLegGlyphs legs={pick.legs} />
+        </>
+      )}
+    </>
   );
 
   return (
     <>
       <div
+        onClick={hasExpandableLegs ? toggleExpanded : undefined}
         className={`group/row relative ${DESKTOP_GRID} pl-[19px] pr-5 py-3.5
                     hover:bg-[rgba(255,255,255,0.02)] transition-colors duration-150
-                    ${isLast ? "" : "sm:border-b sm:border-[rgba(255,255,255,0.035)]"}`}
+                    ${hasExpandableLegs ? "cursor-pointer" : ""}
+                    ${isLast && !expanded ? "" : "sm:border-b sm:border-[rgba(255,255,255,0.035)]"}`}
       >
         <span aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
         <div className="text-[12px] text-[var(--color-text-muted)] font-medium tabular-nums">
@@ -234,7 +255,7 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
               ? `${formatUnitsSmart(pick.profit_units)}u`
               : ""}
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
           {pick.deleted_after_game_start ? (
             <span
               aria-label="Tweet deleted after first pitch"
@@ -273,9 +294,17 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
         </div>
       </div>
 
+      {hasExpandableLegs && expanded && (
+        <div className="hidden sm:block">
+          <ParlayLegList legs={pick.legs!} />
+        </div>
+      )}
+
       <div
+        onClick={hasExpandableLegs ? toggleExpanded : undefined}
         className={`sm:hidden relative pl-4 pr-4 py-3
-                    ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
+                    ${hasExpandableLegs ? "cursor-pointer" : ""}
+                    ${isLast && !expanded ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
       >
         <span aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
         <div className="flex items-baseline justify-between gap-3 mb-1.5">
@@ -372,6 +401,11 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
             </a>
           ) : null}
         </div>
+        {hasExpandableLegs && expanded && (
+          <div className="-mx-4 mt-2 sm:hidden">
+            <ParlayLegList legs={pick.legs!} />
+          </div>
+        )}
       </div>
     </>
   );
