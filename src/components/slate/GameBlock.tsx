@@ -238,12 +238,14 @@ export function GameBlock({ game }: { game: SlateGame }) {
                  shadow-[0_12px_32px_-16px_rgba(0,0,0,0.55)]"
     >
       {/* Sticky matchup: compact scoreboard pins to the top of the viewport
-          (below the global TopNav at top-16) as the user scrolls through
-          this card's picks. iOS section-header pattern. */}
+          a few px below the global TopNav (which ends at y=64). The extra
+          gap (top-[72px]) keeps the card's rounded-t edge visually distinct
+          from the nav above instead of blending flush. Team-color split
+          divider at the bottom acts as the boundary between sticky chrome
+          and the scrolling picks below. */}
       <div
-        className="sticky top-16 z-20 rounded-t-2xl overflow-hidden
-                   bg-[#13131a]/95 backdrop-blur-md
-                   border-b border-[rgba(255,255,255,0.06)]"
+        className="sticky top-[72px] z-20 rounded-t-2xl overflow-hidden
+                   bg-[#13131a]/95 backdrop-blur-md"
       >
         <div className="px-4 sm:px-6 py-4 sm:py-5">
           <div className="flex items-center justify-center gap-3 sm:gap-5">
@@ -303,6 +305,10 @@ export function GameBlock({ game }: { game: SlateGame }) {
               {pitchers}
             </div>
           )}
+        </div>
+        <div aria-hidden="true" className="h-[2px] w-full flex">
+          <span className="flex-1" style={{ backgroundColor: awayColor }} />
+          <span className="flex-1" style={{ backgroundColor: homeColor }} />
         </div>
       </div>
 
