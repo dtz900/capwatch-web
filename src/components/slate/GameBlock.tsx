@@ -14,20 +14,6 @@ function shortPitcher(name: string | null): string | null {
   return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
 }
 
-function formatGameTime(iso: string | null): string | null {
-  if (!iso) return null;
-  try {
-    const t = new Date(iso).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: "America/New_York",
-    });
-    return `${t} ET`;
-  } catch {
-    return null;
-  }
-}
-
 interface BucketedPicks {
   awayMl: SlatePick[];
   homeMl: SlatePick[];
@@ -110,7 +96,7 @@ function Side({
   return (
     <div>
       <div
-        className="flex items-baseline justify-between pb-2 mb-1 border-b-2"
+        className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-y-0.5 pb-2 mb-1 border-b-2"
         style={{ borderColor: color }}
       >
         <div className="flex items-baseline gap-1.5 min-w-0">
@@ -124,7 +110,7 @@ function Side({
             moneyline
           </span>
         </div>
-        <span className="text-[11px] tabular-nums font-bold text-[var(--color-text-muted)] whitespace-nowrap">
+        <span className="text-[10.5px] tabular-nums font-bold text-[var(--color-text-muted)] whitespace-normal sm:whitespace-nowrap">
           {tally}
         </span>
       </div>
@@ -172,55 +158,56 @@ export function GameBlock({ game }: { game: SlateGame }) {
   return (
     <section
       id={`game-${game.game_id}`}
-      className="relative rounded-2xl overflow-hidden
+      className="relative rounded-2xl
                  bg-gradient-to-b from-[#15151a] via-[#101015] to-[#0b0b0f]
                  border border-[rgba(255,255,255,0.07)]
                  shadow-[0_12px_32px_-16px_rgba(0,0,0,0.55)]"
     >
-      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] flex">
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[2px] flex rounded-t-2xl overflow-hidden z-10"
+      >
         <span className="flex-1" style={{ backgroundColor: awayColor }} />
         <span className="flex-1" style={{ backgroundColor: homeColor }} />
       </div>
 
-      <header
-        className="flex items-center justify-between px-5 sm:px-7 py-3
-                   border-b border-[rgba(255,255,255,0.06)]
-                   text-[10px] uppercase tracking-[0.18em] font-bold
-                   text-[var(--color-text-muted)]"
+      {/* Sticky matchup: logos, team abbreviations, and score stay pinned
+          below the top nav as the user scrolls through this card's picks.
+          Each game card has its own sticky region; scrolling past a card
+          swaps to the next card's sticky region (iOS section-header pattern). */}
+      <div
+        className="sticky top-16 z-20 rounded-t-2xl
+                   bg-[#13131a]/95 backdrop-blur-md
+                   border-b border-[rgba(255,255,255,0.06)]"
       >
-        <span>Matchup</span>
-        <span className="tabular-nums">{formatGameTime(game.game_time) ?? ""}</span>
-      </header>
-
-      <div className="px-5 sm:px-7 py-7 sm:py-8">
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-4 sm:gap-10">
-            <div className="flex flex-col items-center gap-2 sm:gap-3">
-              <TeamLogo
-                abbr={game.away_team}
-                size={88}
-                className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]"
-              />
-              <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
-                {game.away_team}
+        <div className="px-5 sm:px-7 pt-6 sm:pt-7 pb-5">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-4 sm:gap-10">
+              <div className="flex flex-col items-center gap-2 sm:gap-3">
+                <TeamLogo
+                  abbr={game.away_team}
+                  size={88}
+                  className="!w-12 !h-12 sm:!w-[72px] sm:!h-[72px]"
+                />
+                <span className="text-[20px] sm:text-[26px] font-extrabold tracking-[-0.03em] leading-none">
+                  {game.away_team}
+                </span>
+              </div>
+              <span className="text-[11px] sm:text-[12px] uppercase tracking-[0.22em] font-bold text-[var(--color-text-muted)] mt-6 sm:mt-8">
+                vs
               </span>
+              <div className="flex flex-col items-center gap-2 sm:gap-3">
+                <TeamLogo
+                  abbr={game.home_team}
+                  size={88}
+                  className="!w-12 !h-12 sm:!w-[72px] sm:!h-[72px]"
+                />
+                <span className="text-[20px] sm:text-[26px] font-extrabold tracking-[-0.03em] leading-none">
+                  {game.home_team}
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] sm:text-[12px] uppercase tracking-[0.22em] font-bold text-[var(--color-text-muted)] mt-7 sm:mt-10">
-              vs
-            </span>
-            <div className="flex flex-col items-center gap-2 sm:gap-3">
-              <TeamLogo
-                abbr={game.home_team}
-                size={88}
-                className="!w-14 !h-14 sm:!w-[88px] sm:!h-[88px]"
-              />
-              <span className="text-[24px] sm:text-[30px] font-extrabold tracking-[-0.03em] leading-none">
-                {game.home_team}
-              </span>
-            </div>
-          </div>
-          {lifecycle !== "pre" && (
-            <div className="mt-6 sm:mt-7">
+            <div className="mt-5 sm:mt-6">
               <ScoreStatus
                 state={lifecycle}
                 awayTeam={game.away_team}
@@ -232,13 +219,16 @@ export function GameBlock({ game }: { game: SlateGame }) {
                 gameTime={game.game_time}
               />
             </div>
-          )}
-          {pitchers && (
-            <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-4">
-              {pitchers}
-            </div>
-          )}
+            {pitchers && (
+              <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-3">
+                {pitchers}
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+
+      <div className="px-5 sm:px-7 pt-6 pb-7 sm:pb-8">
 
         {hasMlAction && (
           <div className="grid grid-cols-2 gap-x-3 sm:gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
