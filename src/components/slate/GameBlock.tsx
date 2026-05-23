@@ -1,11 +1,85 @@
 import { SlatePickRow } from "./SlatePickRow";
 import { VersusPickRow } from "./VersusPickRow";
 import { TeamLogo } from "./TeamLogo";
-import { ScoreStatus, type ScoreStatusState } from "./ScoreStatus";
+import { type ScoreStatusState } from "./ScoreStatus";
 import { BookieAction } from "./BookieAction";
 import { pickMlSide } from "@/lib/bet-format";
 import { teamColor } from "@/lib/mlb-teams";
-import type { SlateGame, SlatePick } from "@/lib/types";
+import type { InningHalf, SlateGame, SlatePick } from "@/lib/types";
+
+const HEADER_HALF_LABEL: Record<InningHalf, string> = {
+  top: "TOP",
+  bot: "BOT",
+  mid: "MID",
+  end: "END",
+};
+
+function formatGameTime(iso: string | null): string | null {
+  if (!iso) return null;
+  try {
+    const t = new Date(iso).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "America/New_York",
+    });
+    return `${t} ET`;
+  } catch {
+    return null;
+  }
+}
+
+function StatusChip({
+  lifecycle,
+  inningHalf,
+  inning,
+  gameTime,
+}: {
+  lifecycle: ScoreStatusState;
+  inningHalf: InningHalf | null;
+  inning: number | null;
+  gameTime: string | null;
+}) {
+  if (lifecycle === "pre") {
+    const time = formatGameTime(gameTime);
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] ring-1 ring-inset ring-[rgba(255,255,255,0.08)] text-[10px] uppercase tracking-[0.18em] font-bold tabular-nums whitespace-nowrap">
+        {time ?? ""}
+      </span>
+    );
+  }
+  if (lifecycle === "live") {
+    const label =
+      inningHalf && inning !== null
+        ? `${HEADER_HALF_LABEL[inningHalf]} ${inning}`
+        : "LIVE";
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--color-pos-soft)] text-[var(--color-pos)] ring-1 ring-inset ring-[rgba(25,245,124,0.25)] text-[10px] uppercase tracking-[0.18em] font-bold whitespace-nowrap">
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"
+          aria-hidden
+        />
+        {label}
+      </span>
+    );
+  }
+  if (lifecycle === "final_pending") {
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)] ring-1 ring-inset ring-[rgba(255,255,255,0.14)] text-[10px] uppercase tracking-[0.18em] font-bold">
+          FINAL
+        </span>
+        <span className="text-[10px] italic text-[var(--color-text-muted)] tracking-wider">
+          grading…
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)] ring-1 ring-inset ring-[rgba(255,255,255,0.14)] text-[10px] uppercase tracking-[0.18em] font-bold whitespace-nowrap">
+    FINAL
+    </span>
+  );
+}
 
 function shortPitcher(name: string | null): string | null {
   if (!name) return null;
@@ -163,68 +237,72 @@ export function GameBlock({ game }: { game: SlateGame }) {
                  border border-[rgba(255,255,255,0.07)]
                  shadow-[0_12px_32px_-16px_rgba(0,0,0,0.55)]"
     >
+      {/* Sticky matchup: compact scoreboard pins to the top of the viewport
+          (below the global TopNav at top-16) as the user scrolls through
+          this card's picks. iOS section-header pattern. */}
       <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-[2px] flex rounded-t-2xl overflow-hidden z-10"
-      >
-        <span className="flex-1" style={{ backgroundColor: awayColor }} />
-        <span className="flex-1" style={{ backgroundColor: homeColor }} />
-      </div>
-
-      {/* Sticky matchup: logos, team abbreviations, and score stay pinned
-          below the top nav as the user scrolls through this card's picks.
-          Each game card has its own sticky region; scrolling past a card
-          swaps to the next card's sticky region (iOS section-header pattern). */}
-      <div
-        className="sticky top-16 z-20 rounded-t-2xl
+        className="sticky top-16 z-20 rounded-t-2xl overflow-hidden
                    bg-[#13131a]/95 backdrop-blur-md
                    border-b border-[rgba(255,255,255,0.06)]"
       >
-        <div className="px-5 sm:px-7 pt-6 sm:pt-7 pb-5">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-4 sm:gap-10">
-              <div className="flex flex-col items-center gap-2 sm:gap-3">
-                <TeamLogo
-                  abbr={game.away_team}
-                  size={88}
-                  className="!w-12 !h-12 sm:!w-[72px] sm:!h-[72px]"
-                />
-                <span className="text-[20px] sm:text-[26px] font-extrabold tracking-[-0.03em] leading-none">
+        <div className="px-4 sm:px-6 py-4 sm:py-5">
+          <div className="flex items-center justify-center gap-3 sm:gap-5">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <TeamLogo
+                abbr={game.away_team}
+                size={88}
+                className="!w-10 !h-10 sm:!w-12 sm:!h-12"
+              />
+              <div className="flex flex-col items-end leading-none gap-0.5">
+                <span className="text-[13px] sm:text-[14px] font-extrabold tracking-tight">
                   {game.away_team}
                 </span>
-              </div>
-              <span className="text-[11px] sm:text-[12px] uppercase tracking-[0.22em] font-bold text-[var(--color-text-muted)] mt-6 sm:mt-8">
-                vs
-              </span>
-              <div className="flex flex-col items-center gap-2 sm:gap-3">
-                <TeamLogo
-                  abbr={game.home_team}
-                  size={88}
-                  className="!w-12 !h-12 sm:!w-[72px] sm:!h-[72px]"
-                />
-                <span className="text-[20px] sm:text-[26px] font-extrabold tracking-[-0.03em] leading-none">
-                  {game.home_team}
-                </span>
+                {lifecycle !== "pre" && (
+                  <span
+                    className="text-[24px] sm:text-[30px] font-extrabold tabular-nums leading-none"
+                    style={{ color: awayColor }}
+                  >
+                    {game.away_score ?? "—"}
+                  </span>
+                )}
               </div>
             </div>
-            <div className="mt-5 sm:mt-6">
-              <ScoreStatus
-                state={lifecycle}
-                awayTeam={game.away_team}
-                homeTeam={game.home_team}
-                awayScore={game.away_score}
-                homeScore={game.home_score}
-                inning={game.inning}
+
+            <div className="flex flex-col items-center gap-1 px-1 sm:px-2 shrink-0">
+              <StatusChip
+                lifecycle={lifecycle}
                 inningHalf={game.inning_half}
+                inning={game.inning}
                 gameTime={game.game_time}
               />
             </div>
-            {pitchers && (
-              <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-3">
-                {pitchers}
+
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="flex flex-col items-start leading-none gap-0.5">
+                <span className="text-[13px] sm:text-[14px] font-extrabold tracking-tight">
+                  {game.home_team}
+                </span>
+                {lifecycle !== "pre" && (
+                  <span
+                    className="text-[24px] sm:text-[30px] font-extrabold tabular-nums leading-none"
+                    style={{ color: homeColor }}
+                  >
+                    {game.home_score ?? "—"}
+                  </span>
+                )}
               </div>
-            )}
+              <TeamLogo
+                abbr={game.home_team}
+                size={88}
+                className="!w-10 !h-10 sm:!w-12 sm:!h-12"
+              />
+            </div>
           </div>
+          {pitchers && (
+            <div className="text-[11px] text-[var(--color-text-muted)] font-medium mt-3 text-center">
+              {pitchers}
+            </div>
+          )}
         </div>
       </div>
 
