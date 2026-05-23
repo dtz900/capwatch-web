@@ -238,14 +238,14 @@ export function GameBlock({ game }: { game: SlateGame }) {
                  shadow-[0_12px_32px_-16px_rgba(0,0,0,0.55)]"
     >
       {/* Sticky matchup: compact scoreboard pins flush below the global
-          TopNav (top-16). The bar carries its OWN card chrome — opaque
-          bg, rounded-t corners, hairline border on top + sides — so the
-          rounded edges read as a self-contained scoreboard while picks
-          scroll behind it. Team-color split divider at the bottom marks
-          the boundary between sticky chrome and scrolling picks. */}
+          TopNav (top-16). bg matches the section gradient's top color
+          (#15151a) so the rounded-corner cutouts don't show a slightly
+          lighter section bg "peeking" through against the darker bar.
+          Team-color split divider at the bottom marks the boundary
+          between sticky chrome and the scrolling picks below. */}
       <div
         className="sticky top-16 z-20 rounded-t-2xl overflow-hidden
-                   bg-[#13131a]
+                   bg-[#15151a]
                    border-t border-x border-[rgba(255,255,255,0.07)]"
       >
         <div className="px-4 sm:px-6 py-4 sm:py-5">
