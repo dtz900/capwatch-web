@@ -189,6 +189,10 @@ export interface HistoryPick {
   parlay_id: number | null;
   leg_count?: number | null;
   game_label: string | null;
+  /** Date the bet plays/settles (YYYY-MM-DD, ET). For multi-leg parlays
+   * spanning days, the earliest leg's game_date. Prefer this over posted_at
+   * for display so a Friday-night tweet for Saturday's slate shows Saturday. */
+  game_date: string | null;
   market: string | null;
   selection: string | null;
   line: number | null;

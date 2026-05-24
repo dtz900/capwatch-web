@@ -9,7 +9,12 @@ import type { CapperProfile, CapperAggregate, Window } from "@/lib/types";
 
 function formatMonth(iso: string | null): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  // Pin to ET so SSR and client hydrate render the same string.
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "America/New_York",
+  });
 }
 
 function formatFollowers(n: number | null): string | null {

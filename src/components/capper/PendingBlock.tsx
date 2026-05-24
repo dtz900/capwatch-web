@@ -18,7 +18,11 @@ function formatPostedAt(iso: string | null): string | null {
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffH = Math.floor(diffMin / 60);
   if (diffH < 24) return `${diffH}h ago`;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/New_York",
+  });
 }
 
 function formatStakeUnits(u: number | null): string | null {

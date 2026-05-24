@@ -17,7 +17,33 @@ const DESKTOP_GRID =
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // Pin to ET so SSR (server default UTC) and client hydrate render the
+  // same string. Picks are graded against ET slate days on the backend;
+  // this keeps the displayed date consistent with that.
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/New_York",
+  });
+}
+
+/** YYYY-MM-DD dates from the API arrive without a time component. Parsing
+ * them as ISO defaults to UTC midnight, then formatting in ET would shift
+ * them back a day. Parse the y/m/d parts directly so the rendered date
+ * matches the backend's ET slate day exactly. */
+function formatGameDate(ymd: string | null): string | null {
+  if (!ymd) return null;
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!parts) return null;
+  const [, y, mo, d] = parts;
+  // Construct a UTC Date for the noon of the day so any TZ render keeps the
+  // calendar day stable, then format with the same options as formatDate.
+  const noonUtc = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d), 12));
+  return noonUtc.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 export function HistoryTable({
@@ -111,7 +137,10 @@ export function HistoryTable({
 }
 
 function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
-  const date = formatDate(pick.posted_at);
+  // Prefer game_date (the day the bet plays/settles) so a Friday-evening
+  // tweet for Saturday's slate shows Saturday. Fall back to posted_at for
+  // historical rows that don't yet have game_date (or whose game_id is null).
+  const date = formatGameDate(pick.game_date) ?? formatDate(pick.posted_at);
   const isParlay = pick.kind === "parlay";
   // Display grading_odds (the value the grader actually used) when present,
   // falling back to odds_taken for legacy rows. The (close) indicator marks
