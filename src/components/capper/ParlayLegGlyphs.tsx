@@ -4,6 +4,7 @@ const GLYPH_CONTENT: Record<string, string> = {
   W: "✓",        // check
   L: "✗",        // cross
   P: "–",        // en dash
+  V: "○",        // hollow circle = void (pre-postponement or other book-rules void)
   pending: "",        // empty tile with dashed outline
 };
 
@@ -11,6 +12,7 @@ const GLYPH_CLASS: Record<string, string> = {
   W: "bg-[rgba(72,213,151,0.15)] text-[var(--color-pos)]",
   L: "bg-[rgba(255,90,90,0.18)] text-[var(--color-neg)]",
   P: "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-muted)] font-bold",
+  V: "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-muted)]",
   pending: "bg-[rgba(255,255,255,0.04)] border border-dashed border-[rgba(255,255,255,0.22)]",
 };
 

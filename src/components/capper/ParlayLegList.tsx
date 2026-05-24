@@ -11,13 +11,14 @@ function GlyphFor({ outcome }: { outcome: HistoryPickLeg["outcome"] }) {
       ? "text-[var(--color-pos)]"
       : outcome === "L"
         ? "text-[var(--color-neg)]"
-        : outcome === "P"
+        : outcome === "P" || outcome === "V"
           ? "text-[var(--color-text-muted)] font-bold"
           : "text-[var(--color-text-muted)] opacity-40";
   const glyph =
     outcome === "W" ? "✓"
       : outcome === "L" ? "✗"
       : outcome === "P" ? "–"
+      : outcome === "V" ? "○"
       : "·";
   return <span className={`inline-block w-3 text-[11px] ${cls}`}>{glyph}</span>;
 }

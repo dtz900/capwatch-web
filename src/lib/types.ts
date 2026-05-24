@@ -178,8 +178,11 @@ export interface HistoryPickLeg {
   selection: string | null;
   line: number | null;
   odds_taken: number | null;
-  /** W / L / P, or null when the leg is still undecided (live parlay). */
-  outcome: "W" | "L" | "P" | null;
+  /** W / L / P / V, or null when the leg is still undecided (live parlay).
+   * V appears when the leg was voided per book rules (e.g. a pre-
+   * postponement bet on a game that got rescheduled). The parlay still
+   * settles on the surviving legs. */
+  outcome: "W" | "L" | "P" | "V" | null;
   game_label: string | null;
 }
 
