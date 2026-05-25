@@ -17,14 +17,28 @@ import { XIcon } from "@/components/icons/XIcon";
 export const revalidate = 60;
 export const maxDuration = 30;
 
-interface PageProps { params: Promise<{ slug: string }>; }
+interface PageProps {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ v?: string }>;
+}
+
+const PALACE_OG_CARD_VERSION = "2";
 
 export async function generateMetadata(
-  { params }: PageProps): Promise<Metadata> {
+  { params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const sp = searchParams ? await searchParams : {};
   try {
     const entry = await fetchPalaceEntry(slug);
     if (!entry) return { title: "Parlay Palace | TailSlips" };
+    const ogQs = new URLSearchParams();
+    ogQs.set("v", PALACE_OG_CARD_VERSION);
+    if (entry.published_at) ogQs.set("t", String(Date.parse(entry.published_at) || 0));
+    if (entry.units_profit != null) ogQs.set("p", String(Math.round(entry.units_profit * 100)));
+    if (entry.combined_odds != null) ogQs.set("o", String(entry.combined_odds));
+    ogQs.set("h", palaceEntryHash(entry));
+    if (sp.v && /^[0-9]{8,}$/.test(sp.v)) ogQs.set("sv", sp.v);
+    const ogImage = `/parlay-palace/${slug}/og?${ogQs.toString()}`;
     return {
       title: `${entry.title ?? "Winning parlay"} | TailSlips`,
       description: entry.recap_blurb ?? undefined,
@@ -35,22 +49,44 @@ export async function generateMetadata(
         url: `/parlay-palace/${slug}`,
         type: "article",
         siteName: SITE_NAME,
-        images: [{ url: `/parlay-palace/${slug}/opengraph-image`,
-                   width: 1200, height: 630 }],
+        images: [{ url: ogImage, width: 1200, height: 630 }],
       },
       twitter: {
         card: "summary_large_image",
         title: entry.title ?? "Winning parlay",
         description: entry.recap_blurb ?? undefined,
         site: "@FadeAI_",
-        images: [{ url: `/parlay-palace/${slug}/opengraph-image`,
-                   alt: entry.title ?? "Winning parlay on TailSlips" }],
+        images: [{ url: ogImage, alt: entry.title ?? "Winning parlay on TailSlips" }],
       },
       robots: { index: true, follow: true },
     };
   } catch {
     return { title: "Parlay Palace | TailSlips" };
   }
+}
+
+function palaceEntryHash(entry: Awaited<ReturnType<typeof fetchPalaceEntry>>): string {
+  const input = JSON.stringify({
+    title: entry?.title,
+    capper: entry?.capper_handle,
+    units: entry?.units_profit,
+    odds: entry?.combined_odds,
+    legs: entry?.body?.legs?.map((leg) => [
+      leg.leg_index,
+      leg.player_name,
+      leg.selection,
+      leg.market,
+      leg.result_text,
+      leg.won,
+    ]),
+    hero: entry?.hero_url,
+  });
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
 }
 
 export default async function PalaceDetailPage({ params }: PageProps) {
@@ -80,7 +116,7 @@ export default async function PalaceDetailPage({ params }: PageProps) {
   );
   const attribution =
     entry.body?.media_attribution ?? "Media: MLB Advanced Media";
-  const shareUrl = `${SITE_URL}/parlay-palace/${slug}`;
+  const shareUrl = `${SITE_URL}/parlay-palace/${slug}?v=${PALACE_OG_CARD_VERSION}`;
   const shareText = `${entry.title ?? "Winning parlay"}. Every leg graded on TailSlips.`;
   const shareHref =
     `https://x.com/intent/post?text=${encodeURIComponent(shareText)}` +
