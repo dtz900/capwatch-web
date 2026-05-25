@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchLeaderboard } from "@/lib/api";
-import type { CapperRow } from "@/lib/types";
+import type { BetTypeFilter, CapperRow, Sort, Window } from "@/lib/types";
 
 // Shared renderer for the homepage OG card. Used by both the file-convention
 // route (app/opengraph-image.tsx) and the explicit Route Handler at
@@ -27,6 +27,21 @@ const ROW_BORDER = "rgba(255, 255, 255, 0.06)";
 
 const PRIMARY_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
 const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
+export const ROOT_OG_CARD_VERSION = "2";
+
+export interface RootOgFilters {
+  window: Window;
+  sort: Sort;
+  bet_type: BetTypeFilter;
+  active_only: boolean;
+}
+
+export const DEFAULT_ROOT_OG_FILTERS: RootOgFilters = {
+  window: "last_30",
+  sort: "units_profit",
+  bet_type: "all",
+  active_only: true,
+};
 
 async function readLogoDataUri(): Promise<string | null> {
   try {
@@ -70,14 +85,14 @@ function formatGradedTotal(n: number | null | undefined): string {
   return n.toLocaleString("en-US");
 }
 
-async function fetchTop5(): Promise<{ rows: TopRow[]; stats: PlatformStats }> {
+async function fetchTop5(filters: RootOgFilters): Promise<{ rows: TopRow[]; stats: PlatformStats }> {
   try {
     const data = await fetchLeaderboard({
-      window: "season",
-      sort: "units_profit",
-      bet_type: "straights",
+      window: filters.window,
+      sort: filters.sort,
+      bet_type: filters.bet_type,
       min_picks: 10,
-      active_only: true,
+      active_only: filters.active_only,
     });
     const rows: TopRow[] = data.leaderboard.slice(0, 5).map((r) => ({
       handle: r.handle ?? "?",
@@ -92,14 +107,14 @@ async function fetchTop5(): Promise<{ rows: TopRow[]; stats: PlatformStats }> {
   }
 }
 
-export async function renderRootOg(): Promise<Response> {
+export async function renderRootOg(filters: RootOgFilters = DEFAULT_ROOT_OG_FILTERS): Promise<Response> {
   const [{ rows, stats }, logoDataUri] = await Promise.all([
-    fetchTop5(),
+    fetchTop5(filters),
     readLogoDataUri(),
   ]);
 
   try {
-    const primary = new ImageResponse(buildJsx({ rows, stats, logoDataUri }), { ...size });
+    const primary = new ImageResponse(buildJsx({ rows, stats, logoDataUri, filters }), { ...size });
     const buf = await primary.arrayBuffer();
     return new Response(buf, {
       headers: { "content-type": "image/png", "cache-control": PRIMARY_CACHE },
@@ -132,41 +147,97 @@ export async function renderRootOg(): Promise<Response> {
  * busts the cache. Date is included as a daily fallback in case the API
  * returns null stats (so X still re-scrapes at least once per day).
  */
-export async function buildRootOgFingerprint(): Promise<{
+export async function buildRootOgFingerprint(filters: RootOgFilters = DEFAULT_ROOT_OG_FILTERS): Promise<{
   ptDate: string;
   picks: number;
   cappers: number;
+  contentHash: string;
 }> {
   let picks = 0;
   let cappers = 0;
+  let contentHash = "";
   try {
     const data = await fetchLeaderboard({
-      window: "season",
-      sort: "units_profit",
-      bet_type: "straights",
+      window: filters.window,
+      sort: filters.sort,
+      bet_type: filters.bet_type,
       min_picks: 10,
-      active_only: true,
+      active_only: filters.active_only,
     });
     picks = data.platform_stats?.graded_picks_total ?? 0;
     cappers = data.platform_stats?.cappers_tracked ?? 0;
+    contentHash = hashRootFingerprint(
+      data.leaderboard.slice(0, 10).map((r) => [
+        r.capper_id,
+        r.handle,
+        r.wins,
+        r.losses,
+        r.pushes,
+        r.units_profit,
+        r.roi_pct,
+        r.win_rate,
+        r.picks_count,
+        r.live_picks_count,
+      ]),
+    );
   } catch {
     // Falls back to date-only fingerprint when the API is unreachable.
   }
   const ptDate = new Date()
     .toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-  return { ptDate, picks, cappers };
+  return { ptDate, picks, cappers, contentHash };
+}
+
+function hashRootFingerprint(value: unknown): string {
+  const input = JSON.stringify(value);
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function windowLabel(w: Window): string {
+  if (w === "last_7") return "Last 7";
+  if (w === "last_30") return "Last 30";
+  if (w === "season") return "Season";
+  return "All-time";
+}
+
+function sortLabel(sort: Sort): string {
+  if (sort === "roi_pct") return "By ROI";
+  if (sort === "win_rate") return "By Win Rate";
+  if (sort === "picks_count") return "By Volume";
+  return "By Units";
+}
+
+function betTypeLabel(bt: BetTypeFilter): string | null {
+  if (bt === "straights") return "Straights";
+  if (bt === "parlays") return "Parlays";
+  return null;
 }
 
 function buildJsx({
   rows,
   stats,
   logoDataUri,
+  filters,
 }: {
   rows: TopRow[];
   stats: PlatformStats;
   logoDataUri: string | null;
+  filters: RootOgFilters;
 }) {
   const hasRows = rows.length > 0;
+  const filterLine = [
+    "Top Cappers",
+    "MLB",
+    windowLabel(filters.window),
+    betTypeLabel(filters.bet_type),
+    sortLabel(filters.sort),
+    filters.active_only ? null : "All Accounts",
+  ].filter(Boolean).join(" - ");
 
   return (
     <div
@@ -260,7 +331,7 @@ function buildJsx({
           display: "flex",
         }}
       >
-        Top Cappers · MLB · Season · By Units
+        {filterLine}
       </div>
 
       {hasRows ? (

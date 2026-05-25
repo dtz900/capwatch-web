@@ -17,10 +17,10 @@ import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import type { Window, Sort, BetTypeFilter } from "@/lib/types";
-import { buildRootOgFingerprint } from "./_root-og";
+import { buildRootOgFingerprint, ROOT_OG_CARD_VERSION } from "./_root-og";
 
 interface PageProps {
-  searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string }>;
+  searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string; v?: string }>;
 }
 
 const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
@@ -44,16 +44,33 @@ export const maxDuration = 30;
  * grade event) and today's PT date (daily floor) so reposts of the same
  * tailslips.com URL after data changes get scraped fresh.
  */
-export async function generateMetadata(): Promise<Metadata> {
-  const fp = await buildRootOgFingerprint();
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = await searchParams;
+  const filters: LeaderboardFilters = {
+    window: VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30",
+    sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
+    bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
+    min_picks: MIN_PICKS,
+    active_only: sp.active_only !== "false",
+  };
+  const fp = await buildRootOgFingerprint(filters);
   const q = new URLSearchParams();
+  q.set("w", filters.window);
+  q.set("sort", filters.sort);
+  q.set("bt", filters.bet_type);
+  if (!filters.active_only) q.set("ao", "false");
   q.set("d", fp.ptDate);
   if (fp.picks > 0) q.set("p", String(fp.picks));
   if (fp.cappers > 0) q.set("c", String(fp.cappers));
+  if (fp.contentHash) q.set("h", fp.contentHash);
+  q.set("v", ROOT_OG_CARD_VERSION);
+  if (sp.v && /^[0-9]{8,}$/.test(sp.v)) q.set("sv", sp.v);
   const ogUrl = `/og/home?${q.toString()}`;
-  const title = `MLB Twitter Capper Rankings · ${SITE_NAME}`;
+  const title = `${windowTitle(filters.window)} MLB Twitter Capper Rankings · ${SITE_NAME}`;
   return {
+    title,
     openGraph: {
+      title,
       images: [{ url: ogUrl, width: 1200, height: 630, alt: "TailSlips · MLB Capper Scoreboard" }],
     },
     twitter: {
@@ -62,6 +79,13 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [{ url: ogUrl, alt: "TailSlips · MLB Capper Scoreboard" }],
     },
   };
+}
+
+function windowTitle(w: Window): string {
+  if (w === "last_7") return "Last 7";
+  if (w === "season") return "Season";
+  if (w === "all_time") return "All-time";
+  return "Last 30";
 }
 
 export default async function Home({ searchParams }: PageProps) {
