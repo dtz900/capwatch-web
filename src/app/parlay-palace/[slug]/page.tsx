@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
@@ -89,8 +89,10 @@ function palaceEntryHash(entry: Awaited<ReturnType<typeof fetchPalaceEntry>>): s
   return (hash >>> 0).toString(36);
 }
 
-export default async function PalaceDetailPage({ params }: PageProps) {
+export default async function PalaceDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const sp = searchParams ? await searchParams : {};
+  if (!sp.v) redirect(`/parlay-palace/${slug}?v=${PALACE_OG_CARD_VERSION}`);
 
   let entry;
   try {
