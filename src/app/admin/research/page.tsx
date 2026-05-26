@@ -65,6 +65,19 @@ function fmtSelection(r: {
   return parts.join(" ");
 }
 
+function fmtUnitsCell(n: number | null, priced: number = 1): string {
+  // Page-level units renderer that respects "no posted odds = no units".
+  // priced is the bucket's priced_picks count; if zero, the bucket itself
+  // contributed no priced legs and we show a dash instead of "+0.00u".
+  if (n === null || priced === 0) return "n/a"; // explicit "no posted odds" rather than misleading 0u
+  return formatUnitsSmart(n) + "u";
+}
+
+function fmtRoiCell(pct: number, priced: number): string {
+  if (priced === 0) return "n/a";
+  return formatRoi(pct);
+}
+
 export default async function AdminResearchPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
@@ -136,11 +149,74 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
             </div>
             <div className="flex flex-wrap gap-x-8 gap-y-3">
               <Stat label="Record" value={recordStr(data.totals.wins, data.totals.losses, data.totals.pushes)} />
-              <Stat label="Units" value={formatUnitsSmart(data.totals.units) + "u"} accent={data.totals.units} />
-              <Stat label="ROI" value={formatRoi(data.totals.roi_pct)} accent={data.totals.roi_pct} />
+              <Stat
+                label="Units"
+                value={fmtUnitsCell(data.totals.units, data.totals.priced_picks)}
+                accent={data.totals.priced_picks > 0 ? data.totals.units : undefined}
+              />
+              <Stat
+                label="ROI"
+                value={fmtRoiCell(data.totals.roi_pct, data.totals.priced_picks)}
+                accent={data.totals.priced_picks > 0 ? data.totals.roi_pct : undefined}
+              />
               <Stat label="Picks" value={String(data.totals.picks)} />
+              {data.totals.priced_picks < data.totals.picks && (
+                <Stat
+                  label="Priced"
+                  value={`${data.totals.priced_picks}/${data.totals.picks}`}
+                />
+              )}
             </div>
+            {data.totals.priced_picks < data.totals.picks && (
+              <div className="text-[11px] text-[var(--color-text-muted)] mt-3">
+                Units + ROI are computed over priced legs only (1u flat per leg from odds). The {data.totals.picks - data.totals.priced_picks} unpriced legs count toward the record but not the money math.
+              </div>
+            )}
           </section>
+
+          {/* Per-stat breakdown (player mode only) */}
+          {mode === "player" && data.by_stat.length > 0 && (
+            <section>
+              <h2 className="text-[11px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-extrabold mb-3">
+                Per market
+              </h2>
+              <div className="rounded-lg border border-[rgba(255,255,255,0.06)] overflow-hidden">
+                <table className="w-full text-[13px]">
+                  <thead className="bg-[rgba(255,255,255,0.03)] text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-bold">Market</th>
+                      <th className="text-right px-4 py-2 font-bold">Record</th>
+                      <th className="text-right px-4 py-2 font-bold">Units</th>
+                      <th className="text-right px-4 py-2 font-bold">ROI</th>
+                      <th className="text-right px-4 py-2 font-bold">Picks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.by_stat.map((s) => (
+                      <tr
+                        key={s.stat_name ?? "__other__"}
+                        className="border-t border-[rgba(255,255,255,0.05)]"
+                      >
+                        <td className="px-4 py-2 font-bold">{s.label}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">
+                          {recordStr(s.wins, s.losses, s.pushes)}
+                        </td>
+                        <td className={`px-4 py-2 text-right tabular-nums font-bold ${unitsClass(s.priced_picks > 0 ? s.units : 0)}`}>
+                          {fmtUnitsCell(s.units, s.priced_picks)}
+                        </td>
+                        <td className={`px-4 py-2 text-right tabular-nums ${unitsClass(s.priced_picks > 0 ? s.roi_pct : 0)}`}>
+                          {fmtRoiCell(s.roi_pct, s.priced_picks)}
+                        </td>
+                        <td className="px-4 py-2 text-right tabular-nums text-[var(--color-text-muted)]">
+                          {s.picks}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           {/* Per-capper breakdown */}
           <section>
@@ -170,11 +246,11 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                       <td className="px-4 py-2 text-right tabular-nums">
                         {recordStr(c.wins, c.losses, c.pushes)}
                       </td>
-                      <td className={`px-4 py-2 text-right tabular-nums font-bold ${unitsClass(c.units)}`}>
-                        {formatUnitsSmart(c.units)}u
+                      <td className={`px-4 py-2 text-right tabular-nums font-bold ${unitsClass(c.priced_picks > 0 ? c.units : 0)}`}>
+                        {fmtUnitsCell(c.units, c.priced_picks)}
                       </td>
-                      <td className={`px-4 py-2 text-right tabular-nums ${unitsClass(c.roi_pct)}`}>
-                        {formatRoi(c.roi_pct)}
+                      <td className={`px-4 py-2 text-right tabular-nums ${unitsClass(c.priced_picks > 0 ? c.roi_pct : 0)}`}>
+                        {fmtRoiCell(c.roi_pct, c.priced_picks)}
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums text-[var(--color-text-muted)]">
                         {c.picks}
@@ -220,8 +296,8 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                       <td className={`px-4 py-2 text-center font-bold uppercase text-[11px] tracking-[0.10em] ${outcomeClass(r.outcome)}`}>
                         {r.outcome}
                       </td>
-                      <td className={`px-4 py-2 text-right tabular-nums font-bold ${unitsClass(r.profit_units)}`}>
-                        {formatUnitsSmart(r.profit_units)}u
+                      <td className={`px-4 py-2 text-right tabular-nums font-bold ${unitsClass(r.units_synth ?? 0)}`}>
+                        {fmtUnitsCell(r.units_synth, r.units_synth !== null ? 1 : 0)}
                       </td>
                     </tr>
                   ))}

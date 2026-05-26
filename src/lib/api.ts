@@ -458,11 +458,15 @@ async function adminPalaceHeaders(): Promise<HeadersInit> {
 export type ResearchWindow = "L7" | "L30" | "season" | "all";
 export type ResearchMode = "player" | "team";
 
+/** Aggregated stats. `priced_picks` is the subset that had odds_taken set,
+ * which is the denominator the units + roi numbers are computed against.
+ * `picks - priced_picks` = legs where the capper posted only W/L, no price. */
 export interface ResearchTotals {
   picks: number;
   wins: number;
   losses: number;
   pushes: number;
+  priced_picks: number;
   units: number;
   roi_pct: number;
 }
@@ -471,6 +475,11 @@ export interface ResearchCapperRow extends ResearchTotals {
   capper_id: number;
   handle: string | null;
   display_name: string | null;
+}
+
+export interface ResearchStatRow extends ResearchTotals {
+  stat_name: string | null;
+  label: string;
 }
 
 export interface ResearchRecentPick {
@@ -485,7 +494,8 @@ export interface ResearchRecentPick {
   stat_name: string | null;
   direction: string | null;
   outcome: "win" | "loss" | "push";
-  profit_units: number;
+  /** Synthesized 1u-flat per-leg units (null when odds_taken was null). */
+  units_synth: number | null;
 }
 
 export interface ResearchResponse {
@@ -494,6 +504,7 @@ export interface ResearchResponse {
   window: ResearchWindow;
   totals: ResearchTotals;
   by_capper: ResearchCapperRow[];
+  by_stat: ResearchStatRow[];
   recent: ResearchRecentPick[];
 }
 
