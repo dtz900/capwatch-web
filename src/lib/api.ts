@@ -455,6 +455,80 @@ async function adminPalaceHeaders(): Promise<HeadersInit> {
   return { Authorization: `Bearer ${secret}` };
 }
 
+export type ResearchWindow = "L7" | "L30" | "season" | "all";
+export type ResearchMode = "player" | "team";
+
+export interface ResearchTotals {
+  picks: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  units: number;
+  roi_pct: number;
+}
+
+export interface ResearchCapperRow extends ResearchTotals {
+  capper_id: number;
+  handle: string | null;
+  display_name: string | null;
+}
+
+export interface ResearchRecentPick {
+  posted_at: string | null;
+  handle: string | null;
+  selection: string | null;
+  player_name: string | null;
+  line: number | null;
+  odds_taken: number | null;
+  market: string | null;
+  bet_kind: string | null;
+  stat_name: string | null;
+  direction: string | null;
+  outcome: "win" | "loss" | "push";
+  profit_units: number;
+}
+
+export interface ResearchResponse {
+  subject: string;
+  mode: ResearchMode;
+  window: ResearchWindow;
+  totals: ResearchTotals;
+  by_capper: ResearchCapperRow[];
+  recent: ResearchRecentPick[];
+}
+
+/** Server-only. Pulls per-subject record from the Railway research endpoint. */
+export async function fetchResearch(
+  mode: ResearchMode,
+  q: string,
+  window: ResearchWindow,
+  recentLimit: number = 10,
+): Promise<ResearchResponse> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error("CRON_SECRET not set on server");
+  const params = new URLSearchParams({
+    q,
+    window,
+    recent_limit: String(recentLimit),
+  });
+  const url = `${API_BASE}/api/admin/research/${mode}?${params}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${secret}` },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = (await res.json()) as { detail?: string };
+      detail = body?.detail ?? "";
+    } catch {
+      // fall through
+    }
+    throw new Error(`Research fetch failed: ${res.status}${detail ? ` - ${detail}` : ""}`);
+  }
+  return res.json() as Promise<ResearchResponse>;
+}
+
 export async function fetchPalaceCandidates(): Promise<PalaceCandidate[]> {
   const res = await fetch(
     `${API_BASE}/api/admin/parlay-palace/candidates`,

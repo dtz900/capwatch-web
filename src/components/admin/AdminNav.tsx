@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/admin/audit", label: "Audit" },
   { href: "/admin/cappers", label: "Cappers" },
   { href: "/admin/pipeline", label: "Pipeline" },
+  { href: "/admin/research", label: "Research" },
   { href: "/admin/parlay-palace", label: "Parlay Palace" },
 ];
 
