@@ -1,8 +1,20 @@
-import { fetchResearch, type ResearchMode, type ResearchWindow } from "@/lib/api";
+import {
+  fetchResearch,
+  type ResearchCut,
+  type ResearchMode,
+  type ResearchStatRow,
+  type ResearchWindow,
+  type TeamCut,
+} from "@/lib/api";
 import { formatRoi, formatUnitsSmart, formatHandle } from "@/lib/formatters";
 import { SearchForm } from "./SearchForm";
 import { CopySnippetButton } from "./CopySnippetButton";
-import { buildSnippet } from "./_snippet";
+import {
+  buildPlayerSnippet,
+  buildPlayerStatSnippet,
+  buildTeamCutSnippet,
+  buildTeamSummarySnippet,
+} from "./_snippet";
 
 export const metadata = {
   title: "Research · TailSlips Admin",
@@ -108,7 +120,11 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
     }
   }
 
-  const snippet = data ? buildSnippet(data) : "";
+  const overallSnippet = data
+    ? data.mode === "team"
+      ? buildTeamSummarySnippet(data)
+      : buildPlayerSnippet(data)
+    : "";
 
   return (
     <main className="max-w-[1080px] mx-auto px-7 pb-16">
@@ -191,7 +207,21 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                 Units + ROI use 1u flat per leg from odds, limited to picks priced inside the tailable band (-2000 to +800). The {data.totals.picks - data.totals.priced_picks} excluded legs (no odds, or alt-line longshots) count toward the record but not the money math.
               </div>
             )}
+            {mode === "team" && data.resolved_abbrev === null && (
+              <div className="text-[11px] text-[#ffba6a] mt-3">
+                Team name did not resolve to an MLB abbreviation, so cuts below cannot split out backing vs fading vs totals. Try the team&apos;s canonical name (e.g. &quot;Astros&quot; instead of a misspelling) for the split view.
+              </div>
+            )}
           </section>
+
+          {/* Team-mode cuts: Backing, Fading, Totals, etc. */}
+          {mode === "team" && data.cuts.length > 0 && (
+            <>
+              {data.cuts.map((cut) => (
+                <CutSection key={cut.cut} cut={cut} cutSnippet={buildTeamCutSnippet(data, cut)} />
+              ))}
+            </>
+          )}
 
           {/* Per-stat breakdown (player mode only) */}
           {mode === "player" && data.by_stat.length > 0 && (
@@ -199,38 +229,50 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
               <h2 className="text-[11px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-extrabold mb-3">
                 Per market
               </h2>
-              <div className="rounded-lg border border-[rgba(255,255,255,0.06)] overflow-hidden">
-                <table className="w-full text-[13px]">
-                  <thead className="bg-[rgba(255,255,255,0.03)] text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+              <div className="space-y-3">
+                {data.by_stat.map((s) => (
+                  <StatBlock
+                    key={s.stat_name ?? "__other__"}
+                    stat={s}
+                    snippet={buildPlayerStatSnippet(data, s)}
+                  />
+                ))}
+              </div>
+              {/* Legacy compact summary table for quick scanning. Kept as
+                  a footer beneath the expanded blocks so a glance still
+                  shows the full market list at one density. */}
+              <div className="mt-4 rounded-md border border-[rgba(255,255,255,0.05)] overflow-hidden">
+                <table className="w-full text-[12px]">
+                  <thead className="bg-[rgba(255,255,255,0.02)] text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
                     <tr>
-                      <th className="text-left px-4 py-2 font-bold">Market</th>
-                      <th className="text-right px-4 py-2 font-bold">Record</th>
-                      <th className="text-right px-4 py-2 font-bold">Win rate</th>
-                      <th className="text-right px-4 py-2 font-bold">Units</th>
-                      <th className="text-right px-4 py-2 font-bold">ROI</th>
-                      <th className="text-right px-4 py-2 font-bold">Picks</th>
+                      <th className="text-left px-3 py-1.5 font-bold">Summary</th>
+                      <th className="text-right px-3 py-1.5 font-bold">Record</th>
+                      <th className="text-right px-3 py-1.5 font-bold">Win rate</th>
+                      <th className="text-right px-3 py-1.5 font-bold">Units</th>
+                      <th className="text-right px-3 py-1.5 font-bold">ROI</th>
+                      <th className="text-right px-3 py-1.5 font-bold">Picks</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.by_stat.map((s) => (
                       <tr
                         key={s.stat_name ?? "__other__"}
-                        className="border-t border-[rgba(255,255,255,0.05)]"
+                        className="border-t border-[rgba(255,255,255,0.04)]"
                       >
-                        <td className="px-4 py-2 font-bold">{s.label}</td>
-                        <td className="px-4 py-2 text-right tabular-nums">
+                        <td className="px-3 py-1.5 font-bold">{s.label}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">
                           {recordStr(s.wins, s.losses, s.pushes)}
                         </td>
-                        <td className={`px-4 py-2 text-right tabular-nums font-bold ${winRateClass(s.win_rate, s.picks - s.pushes)}`}>
+                        <td className={`px-3 py-1.5 text-right tabular-nums font-bold ${winRateClass(s.win_rate, s.picks - s.pushes)}`}>
                           {fmtWinRateCell(s.win_rate, s.picks - s.pushes)}
                         </td>
-                        <td className={`px-4 py-2 text-right tabular-nums font-bold ${unitsClass(s.priced_picks > 0 ? s.units : 0)}`}>
+                        <td className={`px-3 py-1.5 text-right tabular-nums font-bold ${unitsClass(s.priced_picks > 0 ? s.units : 0)}`}>
                           {fmtUnitsCell(s.units, s.priced_picks)}
                         </td>
-                        <td className={`px-4 py-2 text-right tabular-nums ${unitsClass(s.priced_picks > 0 ? s.roi_pct : 0)}`}>
+                        <td className={`px-3 py-1.5 text-right tabular-nums ${unitsClass(s.priced_picks > 0 ? s.roi_pct : 0)}`}>
                           {fmtRoiCell(s.roi_pct, s.priced_picks)}
                         </td>
-                        <td className="px-4 py-2 text-right tabular-nums text-[var(--color-text-muted)]">
+                        <td className="px-3 py-1.5 text-right tabular-nums text-[var(--color-text-muted)]">
                           {s.picks}
                         </td>
                       </tr>
@@ -301,6 +343,9 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                     <th className="text-left px-4 py-2 font-bold">Date</th>
                     <th className="text-left px-4 py-2 font-bold">Handle</th>
                     <th className="text-left px-4 py-2 font-bold">Selection</th>
+                    {mode === "team" && (
+                      <th className="text-left px-4 py-2 font-bold">Cut</th>
+                    )}
                     <th className="text-right px-4 py-2 font-bold">Odds</th>
                     <th className="text-center px-4 py-2 font-bold">Result</th>
                     <th className="text-right px-4 py-2 font-bold">Units</th>
@@ -319,6 +364,11 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                         {r.handle ? formatHandle(r.handle) : ""}
                       </td>
                       <td className="px-4 py-2">{fmtSelection(r)}</td>
+                      {mode === "team" && (
+                        <td className="px-4 py-2 text-[11px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] whitespace-nowrap">
+                          {r.cut ? CUT_SHORT_LABEL[r.cut] : ""}
+                        </td>
+                      )}
                       <td className="px-4 py-2 text-right tabular-nums">{fmtOdds(r.odds_taken)}</td>
                       <td className={`px-4 py-2 text-center font-bold uppercase text-[11px] tracking-[0.10em] ${outcomeClass(r.outcome)}`}>
                         {r.outcome}
@@ -333,17 +383,22 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
             </div>
           </section>
 
-          {/* Snippet + copy */}
+          {/* Overall snippet + copy */}
           <section className="rounded-lg bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] p-5">
             <div className="flex items-center justify-between gap-3 mb-3">
               <h2 className="text-[11px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-extrabold">
-                Reply snippet
+                Reply snippet · summary
               </h2>
-              <CopySnippetButton text={snippet} />
+              <CopySnippetButton text={overallSnippet} />
             </div>
             <pre className="whitespace-pre-wrap font-mono text-[13px] text-[var(--color-text)] bg-[rgba(0,0,0,0.30)] rounded p-3 border border-[rgba(255,255,255,0.04)]">
-              {snippet}
+              {overallSnippet}
             </pre>
+            {mode === "team" && data.cuts.length > 0 && (
+              <div className="text-[11px] text-[var(--color-text-muted)] mt-3">
+                Each cut below has its own targeted snippet. Copy the one that matches the angle of the parent tweet.
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -380,6 +435,169 @@ function outcomeClass(o: "win" | "loss" | "push"): string {
   if (o === "win") return "text-[#4ade80]";
   if (o === "loss") return "text-[#f87171]";
   return "text-[var(--color-text-muted)]";
+}
+
+const CUT_SHORT_LABEL: Record<TeamCut, string> = {
+  backing: "Backing",
+  fading: "Fading",
+  totals_over: "Game Over",
+  totals_under: "Game Under",
+  team_total: "Team total",
+  unknown: "Other",
+};
+
+const CUT_BLURB: Record<TeamCut, string> = {
+  backing: "Capper backed this team (Astros ML, Astros -1.5, ...).",
+  fading: "Capper backed the OPPONENT in a game involving this team.",
+  totals_over: "Capper picked the Over on a game total involving this team.",
+  totals_under: "Capper picked the Under on a game total involving this team.",
+  team_total: "Capper picked this team's team total (Over/Under team runs).",
+  unknown: "Pick mentioned this team but the side could not be classified. Exotics, weird selection text, or no game context.",
+};
+
+function StatBlock({ stat, snippet }: { stat: ResearchStatRow; snippet: string }) {
+  const directionsToShow = stat.directions.filter((d) => d.picks > 0);
+  return (
+    <div className="rounded-lg border border-[rgba(255,255,255,0.06)] overflow-hidden">
+      <div className="bg-[rgba(255,255,255,0.03)] px-4 py-3 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.05)]">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 items-center">
+          <div className="text-[15px] font-extrabold tracking-[-0.01em]">{stat.label}</div>
+          <div className="text-[12px] text-[var(--color-text-muted)] tabular-nums">
+            {recordStr(stat.wins, stat.losses, stat.pushes)}
+            <span className="ml-2">
+              {fmtWinRateCell(stat.win_rate, stat.picks - stat.pushes)}
+            </span>
+            <span className="ml-2">
+              {fmtUnitsCell(stat.units, stat.priced_picks)}
+            </span>
+            <span className="ml-2">{stat.picks} picks</span>
+          </div>
+        </div>
+        <CopySnippetButton text={snippet} />
+      </div>
+      {directionsToShow.length > 0 && (
+        <div className="px-4 py-2">
+          <table className="w-full text-[12px]">
+            <thead className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+              <tr>
+                <th className="text-left px-1 py-1 font-bold">Direction</th>
+                <th className="text-right px-1 py-1 font-bold">Record</th>
+                <th className="text-right px-1 py-1 font-bold">Win rate</th>
+                <th className="text-right px-1 py-1 font-bold">Units</th>
+                <th className="text-right px-1 py-1 font-bold">ROI</th>
+                <th className="text-right px-1 py-1 font-bold">Picks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {directionsToShow.map((d) => (
+                <tr key={d.direction} className="border-t border-[rgba(255,255,255,0.04)]">
+                  <td className="px-1 py-1 font-bold">{d.label}</td>
+                  <td className="px-1 py-1 text-right tabular-nums">
+                    {recordStr(d.wins, d.losses, d.pushes)}
+                  </td>
+                  <td className={`px-1 py-1 text-right tabular-nums font-bold ${winRateClass(d.win_rate, d.picks - d.pushes)}`}>
+                    {fmtWinRateCell(d.win_rate, d.picks - d.pushes)}
+                  </td>
+                  <td className={`px-1 py-1 text-right tabular-nums font-bold ${unitsClass(d.priced_picks > 0 ? d.units : 0)}`}>
+                    {fmtUnitsCell(d.units, d.priced_picks)}
+                  </td>
+                  <td className={`px-1 py-1 text-right tabular-nums ${unitsClass(d.priced_picks > 0 ? d.roi_pct : 0)}`}>
+                    {fmtRoiCell(d.roi_pct, d.priced_picks)}
+                  </td>
+                  <td className="px-1 py-1 text-right tabular-nums text-[var(--color-text-muted)]">
+                    {d.picks}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CutSection({ cut, cutSnippet }: { cut: ResearchCut; cutSnippet: string }) {
+  return (
+    <section className="rounded-lg border border-[rgba(255,255,255,0.06)] overflow-hidden">
+      <div className="bg-[rgba(255,255,255,0.03)] px-5 py-4 flex items-start justify-between gap-3 border-b border-[rgba(255,255,255,0.05)]">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-1">
+            Cut
+          </div>
+          <div className="text-[18px] font-extrabold tracking-[-0.01em]">{cut.label}</div>
+          <div className="text-[11px] text-[var(--color-text-muted)] mt-1 max-w-md">
+            {CUT_BLURB[cut.cut]}
+          </div>
+        </div>
+        <CopySnippetButton text={cutSnippet} />
+      </div>
+
+      <div className="px-5 py-4 flex flex-wrap gap-x-8 gap-y-3 border-b border-[rgba(255,255,255,0.05)]">
+        <Stat label="Record" value={recordStr(cut.wins, cut.losses, cut.pushes)} />
+        <Stat
+          label="Win rate"
+          value={fmtWinRateCell(cut.win_rate, cut.picks - cut.pushes)}
+          accent={cut.picks - cut.pushes >= 3 ? winRateAccent(cut.win_rate) : undefined}
+        />
+        <Stat
+          label="Units"
+          value={fmtUnitsCell(cut.units, cut.priced_picks)}
+          accent={cut.priced_picks > 0 ? cut.units : undefined}
+        />
+        <Stat
+          label="ROI"
+          value={fmtRoiCell(cut.roi_pct, cut.priced_picks)}
+          accent={cut.priced_picks > 0 ? cut.roi_pct : undefined}
+        />
+        <Stat label="Picks" value={String(cut.picks)} />
+      </div>
+
+      <div className="px-5 py-4">
+        <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-extrabold mb-2">
+          Per capper in this cut
+        </div>
+        <div className="rounded-md border border-[rgba(255,255,255,0.05)] overflow-hidden">
+          <table className="w-full text-[12px]">
+            <thead className="bg-[rgba(255,255,255,0.02)] text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+              <tr>
+                <th className="text-left px-3 py-1.5 font-bold">Handle</th>
+                <th className="text-right px-3 py-1.5 font-bold">Record</th>
+                <th className="text-right px-3 py-1.5 font-bold">Win rate</th>
+                <th className="text-right px-3 py-1.5 font-bold">Units</th>
+                <th className="text-right px-3 py-1.5 font-bold">ROI</th>
+                <th className="text-right px-3 py-1.5 font-bold">Picks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cut.by_capper.map((c) => (
+                <tr key={c.capper_id} className="border-t border-[rgba(255,255,255,0.04)]">
+                  <td className="px-3 py-1.5 font-bold">
+                    {c.handle ? formatHandle(c.handle) : `capper#${c.capper_id}`}
+                  </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">
+                    {recordStr(c.wins, c.losses, c.pushes)}
+                  </td>
+                  <td className={`px-3 py-1.5 text-right tabular-nums font-bold ${winRateClass(c.win_rate, c.picks - c.pushes)}`}>
+                    {fmtWinRateCell(c.win_rate, c.picks - c.pushes)}
+                  </td>
+                  <td className={`px-3 py-1.5 text-right tabular-nums font-bold ${unitsClass(c.priced_picks > 0 ? c.units : 0)}`}>
+                    {fmtUnitsCell(c.units, c.priced_picks)}
+                  </td>
+                  <td className={`px-3 py-1.5 text-right tabular-nums ${unitsClass(c.priced_picks > 0 ? c.roi_pct : 0)}`}>
+                    {fmtRoiCell(c.roi_pct, c.priced_picks)}
+                  </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-[var(--color-text-muted)]">
+                    {c.picks}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function winRateClass(rate: number, decided: number): string {

@@ -486,9 +486,35 @@ export interface ResearchCapperRow extends ResearchTotals {
   display_name: string | null;
 }
 
+export interface ResearchStatDirection extends ResearchTotals {
+  direction: "over" | "under" | "other";
+  label: string;
+}
+
 export interface ResearchStatRow extends ResearchTotals {
   stat_name: string | null;
   label: string;
+  directions: ResearchStatDirection[];
+}
+
+export type TeamCut =
+  | "backing"
+  | "fading"
+  | "totals_over"
+  | "totals_under"
+  | "team_total"
+  | "unknown";
+
+export interface ResearchCutCapperRow extends ResearchTotals {
+  capper_id: number;
+  handle: string | null;
+  display_name: string | null;
+}
+
+export interface ResearchCut extends ResearchTotals {
+  cut: TeamCut;
+  label: string;
+  by_capper: ResearchCutCapperRow[];
 }
 
 export interface ResearchRecentPick {
@@ -503,6 +529,8 @@ export interface ResearchRecentPick {
   stat_name: string | null;
   direction: string | null;
   outcome: "win" | "loss" | "push";
+  /** Team-mode cut label (backing/fading/...). null for player mode. */
+  cut: TeamCut | null;
   /** Synthesized 1u-flat per-leg units (null when odds_taken was null). */
   units_synth: number | null;
 }
@@ -514,6 +542,13 @@ export interface ResearchResponse {
   totals: ResearchTotals;
   by_capper: ResearchCapperRow[];
   by_stat: ResearchStatRow[];
+  /** Team-mode only. Backing/fading/totals_over/totals_under/team_total
+   * /unknown buckets, each with totals + per-capper breakdown. Empty for
+   * player mode and for team queries that didn't resolve to a known
+   * MLB abbreviation. */
+  cuts: ResearchCut[];
+  /** MLB abbreviation the team query resolved to. null when unresolved. */
+  resolved_abbrev: string | null;
   recent: ResearchRecentPick[];
 }
 
