@@ -458,9 +458,17 @@ async function adminPalaceHeaders(): Promise<HeadersInit> {
 export type ResearchWindow = "L7" | "L30" | "season" | "all";
 export type ResearchMode = "player" | "team";
 
-/** Aggregated stats. `priced_picks` is the subset that had odds_taken set,
- * which is the denominator the units + roi numbers are computed against.
- * `picks - priced_picks` = legs where the capper posted only W/L, no price. */
+/** Aggregated stats.
+ *
+ * `priced_picks` is the subset that had odds_taken set AND fell within the
+ * tailable price band (-2000 to +800). Units and roi_pct are computed
+ * against that subset. Legs outside the band (alt-line longshots, extreme
+ * favs) plus legs with null odds count toward the record but not the
+ * money math, so one +30000 alt-line winner can't define a season ROI.
+ *
+ * `win_rate` is fraction in [0,1], computed over wins / (picks - pushes).
+ * Denominator includes unpriced legs because record is recorded for all,
+ * priced or not. */
 export interface ResearchTotals {
   picks: number;
   wins: number;
@@ -469,6 +477,7 @@ export interface ResearchTotals {
   priced_picks: number;
   units: number;
   roi_pct: number;
+  win_rate: number;
 }
 
 export interface ResearchCapperRow extends ResearchTotals {

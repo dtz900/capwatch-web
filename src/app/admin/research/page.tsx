@@ -78,6 +78,20 @@ function fmtRoiCell(pct: number, priced: number): string {
   return formatRoi(pct);
 }
 
+function fmtWinRateCell(rate: number, decided: number): string {
+  // decided = picks - pushes. Below 3 the percentage swings on a single
+  // result and shouldn't be shown as if it were a meaningful number.
+  if (decided < 3) return "n/a";
+  return `${Math.round(rate * 100)}%`;
+}
+
+function winRateAccent(rate: number): number {
+  // Returns a signed magnitude relative to 50% so the Stat accent helper
+  // can color it green/red. Above 50% = green, below = red, near 50% =
+  // neutral white.
+  return (rate - 0.5) * 100;
+}
+
 export default async function AdminResearchPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
@@ -150,6 +164,11 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
             <div className="flex flex-wrap gap-x-8 gap-y-3">
               <Stat label="Record" value={recordStr(data.totals.wins, data.totals.losses, data.totals.pushes)} />
               <Stat
+                label="Win rate"
+                value={fmtWinRateCell(data.totals.win_rate, data.totals.picks - data.totals.pushes)}
+                accent={data.totals.picks - data.totals.pushes >= 3 ? winRateAccent(data.totals.win_rate) : undefined}
+              />
+              <Stat
                 label="Units"
                 value={fmtUnitsCell(data.totals.units, data.totals.priced_picks)}
                 accent={data.totals.priced_picks > 0 ? data.totals.units : undefined}
@@ -162,14 +181,14 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
               <Stat label="Picks" value={String(data.totals.picks)} />
               {data.totals.priced_picks < data.totals.picks && (
                 <Stat
-                  label="Priced"
+                  label="Tailable"
                   value={`${data.totals.priced_picks}/${data.totals.picks}`}
                 />
               )}
             </div>
             {data.totals.priced_picks < data.totals.picks && (
               <div className="text-[11px] text-[var(--color-text-muted)] mt-3">
-                Units + ROI are computed over priced legs only (1u flat per leg from odds). The {data.totals.picks - data.totals.priced_picks} unpriced legs count toward the record but not the money math.
+                Units + ROI use 1u flat per leg from odds, limited to picks priced inside the tailable band (-2000 to +800). The {data.totals.picks - data.totals.priced_picks} excluded legs (no odds, or alt-line longshots) count toward the record but not the money math.
               </div>
             )}
           </section>
@@ -186,6 +205,7 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                     <tr>
                       <th className="text-left px-4 py-2 font-bold">Market</th>
                       <th className="text-right px-4 py-2 font-bold">Record</th>
+                      <th className="text-right px-4 py-2 font-bold">Win rate</th>
                       <th className="text-right px-4 py-2 font-bold">Units</th>
                       <th className="text-right px-4 py-2 font-bold">ROI</th>
                       <th className="text-right px-4 py-2 font-bold">Picks</th>
@@ -200,6 +220,9 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                         <td className="px-4 py-2 font-bold">{s.label}</td>
                         <td className="px-4 py-2 text-right tabular-nums">
                           {recordStr(s.wins, s.losses, s.pushes)}
+                        </td>
+                        <td className={`px-4 py-2 text-right tabular-nums font-bold ${winRateClass(s.win_rate, s.picks - s.pushes)}`}>
+                          {fmtWinRateCell(s.win_rate, s.picks - s.pushes)}
                         </td>
                         <td className={`px-4 py-2 text-right tabular-nums font-bold ${unitsClass(s.priced_picks > 0 ? s.units : 0)}`}>
                           {fmtUnitsCell(s.units, s.priced_picks)}
@@ -229,6 +252,7 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                   <tr>
                     <th className="text-left px-4 py-2 font-bold">Handle</th>
                     <th className="text-right px-4 py-2 font-bold">Record</th>
+                    <th className="text-right px-4 py-2 font-bold">Win rate</th>
                     <th className="text-right px-4 py-2 font-bold">Units</th>
                     <th className="text-right px-4 py-2 font-bold">ROI</th>
                     <th className="text-right px-4 py-2 font-bold">Picks</th>
@@ -245,6 +269,9 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums">
                         {recordStr(c.wins, c.losses, c.pushes)}
+                      </td>
+                      <td className={`px-4 py-2 text-right tabular-nums font-bold ${winRateClass(c.win_rate, c.picks - c.pushes)}`}>
+                        {fmtWinRateCell(c.win_rate, c.picks - c.pushes)}
                       </td>
                       <td className={`px-4 py-2 text-right tabular-nums font-bold ${unitsClass(c.priced_picks > 0 ? c.units : 0)}`}>
                         {fmtUnitsCell(c.units, c.priced_picks)}
@@ -353,4 +380,13 @@ function outcomeClass(o: "win" | "loss" | "push"): string {
   if (o === "win") return "text-[#4ade80]";
   if (o === "loss") return "text-[#f87171]";
   return "text-[var(--color-text-muted)]";
+}
+
+function winRateClass(rate: number, decided: number): string {
+  if (decided < 3) return "text-[var(--color-text-muted)]";
+  // 5pp band around 50% reads as neutral so a 9-9 record doesn't get a
+  // false-green tint at 50%.
+  if (rate > 0.55) return "text-[#4ade80]";
+  if (rate < 0.45) return "text-[#f87171]";
+  return "text-[var(--color-text)]";
 }
