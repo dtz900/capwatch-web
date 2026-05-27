@@ -57,6 +57,7 @@ const TEAM_ALIASES: Array<[string, string]> = [
   ["Braves", "ATL"],
   ["Angels", "LAA"],
   ["Marlins", "MIA"],
+  ["Fish", "MIA"],
   ["Padres", "SD"],
   ["Giants", "SF"],
   ["Tigers", "DET"],
