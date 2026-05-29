@@ -338,7 +338,12 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
         </div>
 
         <div className="mb-6">
-          <StatBand agg={windowAgg} recentHistory={profile.history} />
+          <StatBand
+            agg={windowAgg}
+            recentHistory={profile.history}
+            trajectorySeries={profile.trajectory?.[window] ?? []}
+            window={window}
+          />
         </div>
 
         {(allTimeAgg?.picks_count ?? 0) === 0

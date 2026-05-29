@@ -6,14 +6,20 @@ import {
   formatUnitsSmart,
   formatWinRate,
 } from "@/lib/formatters";
-import type { CapperAggregate, FormOutcome, HistoryPick } from "@/lib/types";
+import { RecentTrajectory } from "@/components/capper/RecentTrajectory";
+import type { CapperAggregate, FormOutcome, HistoryPick, Window } from "@/lib/types";
 
 interface Props {
   agg: CapperAggregate | undefined;
   recentHistory?: HistoryPick[];
+  /** Cumulative profit_units series for the active window. Rendered as a
+   * full-width sparkline on mobile only (between ROI and LAST 10). Desktop
+   * keeps the existing CapperHero placement. */
+  trajectorySeries?: number[];
+  window?: Window;
 }
 
-export function StatBand({ agg, recentHistory = [] }: Props) {
+export function StatBand({ agg, recentHistory = [], trajectorySeries = [], window }: Props) {
   if (!agg) {
     return (
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-6 py-8 text-center text-[13px] text-[var(--color-text-muted)] italic">
@@ -42,6 +48,17 @@ export function StatBand({ agg, recentHistory = [] }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-[minmax(160px,1.1fr)_minmax(160px,1.1fr)_minmax(180px,1fr)] gap-x-9 gap-y-7 items-end">
         <Headline label="Net profit" value={`${formatUnits(agg.units_profit)}u`} positive={unitsPositive} />
         <Headline label="ROI" value={formatRoi(agg.roi_pct)} positive={roiPositive} />
+        {trajectorySeries.length >= 2 && (
+          <div className="md:hidden">
+            <RecentTrajectory
+              series={trajectorySeries}
+              window={window}
+              hideLabel
+              fullWidth
+              height={56}
+            />
+          </div>
+        )}
         <div className="md:text-right">
           <Eyebrow className="mb-2.5 md:text-right">Last 10</Eyebrow>
           <FormStrip cells={formCells} />

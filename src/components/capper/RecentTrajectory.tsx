@@ -11,6 +11,14 @@ interface Props {
   window?: Window;
   width?: number;
   height?: number;
+  /** Skip the picks-count + ending-value chip. Use when the same numbers
+   * are already rendered next to the sparkline (e.g. the mobile placement
+   * inside the StatBand, where NET PROFIT and ROI are right above). */
+  hideLabel?: boolean;
+  /** Stretch the SVG to its container width via CSS instead of using the
+   * pixel width prop. Lets the mobile placement go edge-to-edge inside
+   * the stat card. */
+  fullWidth?: boolean;
 }
 
 const WINDOW_LABEL: Record<Window, string> = {
@@ -25,6 +33,8 @@ export function RecentTrajectory({
   window,
   width = 320,
   height = 76,
+  hideLabel = false,
+  fullWidth = false,
 }: Props) {
   if (series.length < 2) return null;
 
@@ -64,20 +74,25 @@ export function RecentTrajectory({
     ? `${WINDOW_LABEL[window]} · ${series.length} picks`
     : `${series.length} picks`;
 
+  const svgProps = fullWidth
+    ? { width: "100%", height, preserveAspectRatio: "none" as const }
+    : { width, height };
+
   return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex items-baseline gap-2">
-        <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold">
-          {label}
+    <div className={fullWidth ? "flex flex-col gap-2 w-full" : "flex flex-col items-end gap-2"}>
+      {!hideLabel && (
+        <div className="flex items-baseline gap-2">
+          <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold">
+            {label}
+          </div>
+          <div className={`text-[13px] font-extrabold tabular-nums leading-none tracking-[-0.01em]
+                          ${positive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}>
+            {formatUnitsSmart(last)}u
+          </div>
         </div>
-        <div className={`text-[13px] font-extrabold tabular-nums leading-none tracking-[-0.01em]
-                        ${positive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}>
-          {formatUnitsSmart(last)}u
-        </div>
-      </div>
+      )}
       <svg
-        width={width}
-        height={height}
+        {...svgProps}
         viewBox={`0 0 ${width} ${height}`}
         aria-hidden="true"
         className="block"
