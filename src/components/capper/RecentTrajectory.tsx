@@ -66,6 +66,11 @@ export function RecentTrajectory({
   const stroke = positive ? "var(--color-pos)" : "var(--color-neg)";
   const fillId = positive ? "trajectory-fill-pos" : "trajectory-fill-neg";
   const fillStop = positive ? "rgba(25,245,124," : "rgba(239,68,68,";
+  // The full-width mobile placement gets a deeper, more saturated fill so
+  // the red/green tone reads at a glance against the dark card. The
+  // desktop hero variant keeps the subtle 0.18 -> 0 fade.
+  const fillTopAlpha = fullWidth ? "0.36" : "0.18";
+  const fillBottomAlpha = fullWidth ? "0.06" : "0";
   const lastX = padX + (points.length - 1) * stepX;
   const lastY = yFor(last);
 
@@ -99,8 +104,8 @@ export function RecentTrajectory({
       >
         <defs>
           <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={`${fillStop}0.18)`} />
-            <stop offset="100%" stopColor={`${fillStop}0)`} />
+            <stop offset="0%" stopColor={`${fillStop}${fillTopAlpha})`} />
+            <stop offset="100%" stopColor={`${fillStop}${fillBottomAlpha})`} />
           </linearGradient>
         </defs>
         <line

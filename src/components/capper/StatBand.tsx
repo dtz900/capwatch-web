@@ -45,21 +45,21 @@ export function StatBand({ agg, recentHistory = [], trajectorySeries = [], windo
 
   return (
     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-6 sm:px-7 sm:py-7">
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(160px,1.1fr)_minmax(160px,1.1fr)_minmax(180px,1fr)] gap-x-9 gap-y-7 items-end">
+      <div className="grid grid-cols-2 md:grid-cols-[minmax(160px,1.1fr)_minmax(160px,1.1fr)_minmax(180px,1fr)] gap-x-6 sm:gap-x-9 gap-y-6 sm:gap-y-7 items-end">
         <Headline label="Net profit" value={`${formatUnits(agg.units_profit)}u`} positive={unitsPositive} />
         <Headline label="ROI" value={formatRoi(agg.roi_pct)} positive={roiPositive} />
         {trajectorySeries.length >= 2 && (
-          <div className="md:hidden">
+          <div className="col-span-2 md:hidden">
             <RecentTrajectory
               series={trajectorySeries}
               window={window}
               hideLabel
               fullWidth
-              height={56}
+              height={120}
             />
           </div>
         )}
-        <div className="md:text-right">
+        <div className="col-span-2 md:col-span-1 md:text-right">
           <Eyebrow className="mb-2.5 md:text-right">Last 10</Eyebrow>
           <FormStrip cells={formCells} />
         </div>
