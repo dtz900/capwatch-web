@@ -23,6 +23,12 @@ interface PageProps {
 }
 
 const PALACE_OG_CARD_VERSION = "4";
+const STATIC_PALACE_OG: Record<string, { version: string; image: string }> = {
+  "moneyplayzz-3leg-2026-04-03-5617": {
+    version: "5",
+    image: "/og/palace-moneyplayzz-3leg-2026-04-03-5617-v5.png",
+  },
+};
 
 export async function generateMetadata(
   { params, searchParams }: PageProps): Promise<Metadata> {
@@ -31,14 +37,15 @@ export async function generateMetadata(
   try {
     const entry = await fetchPalaceEntry(slug);
     if (!entry) return { title: "Parlay Palace | TailSlips" };
+    const staticOg = STATIC_PALACE_OG[slug];
     const ogQs = new URLSearchParams();
-    ogQs.set("v", PALACE_OG_CARD_VERSION);
+    ogQs.set("v", staticOg?.version ?? PALACE_OG_CARD_VERSION);
     if (entry.published_at) ogQs.set("t", String(Date.parse(entry.published_at) || 0));
     if (entry.units_profit != null) ogQs.set("p", String(Math.round(entry.units_profit * 100)));
     if (entry.combined_odds != null) ogQs.set("o", String(entry.combined_odds));
     ogQs.set("h", palaceEntryHash(entry));
     if (sp.v && /^[0-9]{8,}$/.test(sp.v)) ogQs.set("sv", sp.v);
-    const ogImage = `/parlay-palace/${slug}/og?${ogQs.toString()}`;
+    const ogImage = staticOg?.image ?? `/parlay-palace/${slug}/og?${ogQs.toString()}`;
     return {
       title: `${entry.title ?? "Winning parlay"} | TailSlips`,
       description: entry.recap_blurb ?? undefined,
@@ -92,7 +99,8 @@ function palaceEntryHash(entry: Awaited<ReturnType<typeof fetchPalaceEntry>>): s
 export default async function PalaceDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const sp = searchParams ? await searchParams : {};
-  if (!sp.v) redirect(`/parlay-palace/${slug}?v=${PALACE_OG_CARD_VERSION}`);
+  const palaceVersion = STATIC_PALACE_OG[slug]?.version ?? PALACE_OG_CARD_VERSION;
+  if (sp.v !== palaceVersion) redirect(`/parlay-palace/${slug}?v=${palaceVersion}`);
 
   let entry;
   try {
@@ -118,7 +126,7 @@ export default async function PalaceDetailPage({ params, searchParams }: PagePro
   );
   const attribution =
     entry.body?.media_attribution ?? "Media: MLB Advanced Media";
-  const shareUrl = `${SITE_URL}/parlay-palace/${slug}?v=${PALACE_OG_CARD_VERSION}`;
+  const shareUrl = `${SITE_URL}/parlay-palace/${slug}?v=${palaceVersion}`;
   const shareText = `${entry.title ?? "Winning parlay"}. Every leg graded on TailSlips.`;
   const shareHref =
     `https://x.com/intent/post?text=${encodeURIComponent(shareText)}` +
