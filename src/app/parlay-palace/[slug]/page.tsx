@@ -22,7 +22,7 @@ interface PageProps {
   searchParams?: Promise<{ v?: string }>;
 }
 
-const PALACE_OG_CARD_VERSION = "3";
+const PALACE_OG_CARD_VERSION = "4";
 
 export async function generateMetadata(
   { params, searchParams }: PageProps): Promise<Metadata> {
