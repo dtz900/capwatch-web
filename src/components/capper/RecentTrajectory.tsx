@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { Window } from "@/lib/types";
 import { formatUnitsSmart } from "@/lib/formatters";
 
@@ -36,6 +37,8 @@ export function RecentTrajectory({
   hideLabel = false,
   fullWidth = false,
 }: Props) {
+  // Hook calls must precede any conditional return (rules-of-hooks).
+  const uid = useId();
   if (series.length < 2) return null;
 
   // The backend sends running totals only (no leading 0). Prepend 0 so the
@@ -64,7 +67,12 @@ export function RecentTrajectory({
 
   const positive = last >= 0;
   const stroke = positive ? "var(--color-pos)" : "var(--color-neg)";
-  const fillId = positive ? "trajectory-fill-pos" : "trajectory-fill-neg";
+  // Unique gradient id per instance (uid declared above the early return).
+  // The desktop hero sparkline and the mobile StatBand sparkline both mount
+  // (the desktop one is just CSS-hidden), so a shared id like
+  // "trajectory-fill-neg" would let the first-in-DOM gradient override the
+  // second -- a subtle bug that swallowed the mobile's deeper alpha values.
+  const fillId = `${uid}-${positive ? "pos" : "neg"}`;
   const fillStop = positive ? "rgba(25,245,124," : "rgba(239,68,68,";
   // The full-width mobile placement gets a deeper, more saturated fill so
   // the red/green tone reads at a glance against the dark card. The
