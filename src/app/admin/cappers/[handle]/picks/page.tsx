@@ -160,7 +160,7 @@ function ClvStrip({ agg }: { agg: CapperAggregate | undefined }) {
   if (!agg || n <= 0 || agg.clv_beat_pct == null) {
     return (
       <div className="mt-3 text-[11px] text-[var(--color-text-muted)] font-medium">
-        CLV: no graded ML picks matched to a close yet.
+        CLV: no graded ML / run-line picks matched to a close yet.
       </div>
     );
   }
@@ -176,7 +176,7 @@ function ClvStrip({ agg }: { agg: CapperAggregate | undefined }) {
         {pct}%
       </span>
       <span className="text-[var(--color-text-muted)]">
-        of {n} ML pick{n === 1 ? "" : "s"} (admin only)
+        of {n} ML / RL pick{n === 1 ? "" : "s"} with a Pinnacle close (admin only)
       </span>
     </div>
   );
