@@ -229,6 +229,11 @@ export interface CapperAggregate {
   roi_pct: number;
   win_rate: number;
   clv_avg: number | null;
+  /** Fraction (0..1) of CLV-eligible (posted ML) picks whose price beat the
+   * Pinnacle close. null when no eligible picks. Admin-only for now. */
+  clv_beat_pct: number | null;
+  /** Count of picks with a computed CLV in this slice (sample size). */
+  clv_count: number | null;
   current_streak: number;
   refreshed_at: string | null;
   bet_type_breakdown: Record<string, number> | null;

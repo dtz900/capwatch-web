@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { fetchCapperProfile } from "@/lib/api";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
-import type { HistoryPick } from "@/lib/types";
+import type { CapperAggregate, HistoryPick } from "@/lib/types";
 import { EditCapperPanel } from "./EditCapperPanel";
 
 interface PageProps {
@@ -89,6 +89,7 @@ export default async function AdminCapperPicksPage({ params, searchParams }: Pag
           <p className="text-[12px] text-[var(--color-text-soft)] font-medium mt-2">
             Every pick with its pick_id and a one-click link to edit it in the audit FixPanel.
           </p>
+          <ClvStrip agg={profile.aggregates["all_time"]} />
         </header>
 
         <EditCapperPanel
@@ -145,6 +146,39 @@ export default async function AdminCapperPicksPage({ params, searchParams }: Pag
         </div>
       </main>
     </>
+  );
+}
+
+/**
+ * Admin-only closing-line-value summary. CLV is computed on posted ML picks
+ * (capper stated their own price) vs the Pinnacle close. Beat-close % is the
+ * share of those picks whose price beat where the line settled. Kept admin-
+ * only until we decide on public positioning — most cappers read CLV-negative.
+ */
+function ClvStrip({ agg }: { agg: CapperAggregate | undefined }) {
+  const n = agg?.clv_count ?? 0;
+  if (!agg || n <= 0 || agg.clv_beat_pct == null) {
+    return (
+      <div className="mt-3 text-[11px] text-[var(--color-text-muted)] font-medium">
+        CLV: no graded ML picks matched to a close yet.
+      </div>
+    );
+  }
+  const pct = Math.round(agg.clv_beat_pct * 100);
+  const tone =
+    pct >= 50 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
+  return (
+    <div className="mt-3 flex items-center gap-2 text-[11px] font-medium">
+      <span className="uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold">
+        Beat close
+      </span>
+      <span className={`text-[14px] font-extrabold tabular-nums ${tone}`}>
+        {pct}%
+      </span>
+      <span className="text-[var(--color-text-muted)]">
+        of {n} ML pick{n === 1 ? "" : "s"} (admin only)
+      </span>
+    </div>
   );
 }
 
