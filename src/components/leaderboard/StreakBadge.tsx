@@ -69,14 +69,18 @@ export function StreakBadge({ streak, size = "sm" }: Props) {
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1.5 ${text} font-extrabold uppercase tracking-[0.06em] whitespace-nowrap leading-none`}
+      className={`inline-flex items-center gap-1.5 shrink-0 ${text} font-extrabold uppercase tracking-[0.06em] whitespace-nowrap leading-none`}
       style={{ color: tone.label }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={tier.icon} alt="" className="streak-icon shrink-0" style={iconStyle} />
       <span>
-        {tier.label}
-        <span className="opacity-50"> · </span>
+        {/* On the dense desktop rows show just the day count; mobile and the
+            podium (size md) have room for the full label. */}
+        <span className={size === "sm" ? "sm:hidden" : ""}>
+          {tier.label}
+          <span className="opacity-50"> · </span>
+        </span>
         {days}d
       </span>
     </span>
