@@ -55,8 +55,8 @@ export function StreakBadge({ streak, size = "sm" }: Props) {
   if (!tier) return null;
 
   const tone = TONE[tier.tone];
-  const dim = size === "md" ? 26 : 20;
-  const text = size === "md" ? "text-[11px]" : "text-[10px]";
+  const dim = size === "md" ? 44 : 32;
+  const text = size === "md" ? "text-[12px]" : "text-[11px]";
   const days = Math.abs(value);
   const title = `${days} ${tier.tone === "hot" ? "profitable" : "losing"} days in a row`;
 
@@ -69,12 +69,16 @@ export function StreakBadge({ streak, size = "sm" }: Props) {
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1 ${text} font-extrabold uppercase tracking-[0.06em] whitespace-nowrap leading-none`}
+      className={`inline-flex items-center gap-1.5 ${text} font-extrabold uppercase tracking-[0.06em] whitespace-nowrap leading-none`}
       style={{ color: tone.label }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={tier.icon} alt="" className="streak-icon shrink-0" style={iconStyle} />
-      <span>{tier.label}</span>
+      <span>
+        {tier.label}
+        <span className="opacity-50"> · </span>
+        {days}d
+      </span>
     </span>
   );
 }
