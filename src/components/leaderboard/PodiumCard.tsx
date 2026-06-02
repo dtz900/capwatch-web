@@ -139,8 +139,8 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
             apiIntegrated={isModel}
           />
           <div className="flex-1 min-w-0">
-            <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 flex-wrap tracking-[-0.02em] ${nameSize}`}>
-              {capper.display_name ?? capper.handle}
+            <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 min-w-0 tracking-[-0.02em] ${nameSize}`}>
+              <span className="truncate">{capper.display_name ?? capper.handle}</span>
               {capper.has_paid_program && <PaidProgramPill />}
               <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
               <StreakBadge streak={capper.current_day_streak} size="md" />
@@ -160,8 +160,8 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
             apiIntegrated={isModel}
           />
           <div className="flex-1 min-w-0">
-            <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 flex-wrap tracking-[-0.02em] ${nameSize}`}>
-              {capper.display_name ?? capper.handle}
+            <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 min-w-0 tracking-[-0.02em] ${nameSize}`}>
+              <span className="truncate">{capper.display_name ?? capper.handle}</span>
               {capper.has_paid_program && <PaidProgramPill />}
               <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
               <StreakBadge streak={capper.current_day_streak} size="md" />
