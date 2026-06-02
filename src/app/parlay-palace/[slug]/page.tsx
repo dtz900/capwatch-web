@@ -22,7 +22,7 @@ interface PageProps {
   searchParams?: Promise<{ v?: string }>;
 }
 
-const PALACE_OG_CARD_VERSION = "4";
+const PALACE_OG_CARD_VERSION = "6";
 const STATIC_PALACE_OG: Record<string, { version: string; image: string }> = {
   "moneyplayzz-3leg-2026-04-03-5617": {
     version: "5",
