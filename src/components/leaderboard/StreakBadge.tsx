@@ -34,8 +34,8 @@ function streakTier(streak: number): Tier | null {
 }
 
 const TONE = {
-  hot: { label: "#fb923c", glow: "rgba(249,115,22,0.80)" },
-  cold: { label: "#7dd3fc", glow: "rgba(125,211,252,0.75)" },
+  hot: { label: "#fb923c", glow: "rgba(249,115,22,0.50)" },
+  cold: { label: "#7dd3fc", glow: "rgba(125,211,252,0.50)" },
 } as const;
 
 interface Props {
