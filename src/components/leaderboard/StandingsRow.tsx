@@ -15,7 +15,7 @@ import type { CapperRow, Window } from "@/lib/types";
 interface Props { rank: number; capper: CapperRow; window?: Window }
 
 const DESKTOP_COLS =
-  "hidden sm:grid grid-cols-[40px_minmax(180px,1fr)_minmax(220px,1.4fr)_64px_64px_70px_80px_92px_44px] items-center gap-3 px-[22px] py-3.5 border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
+  "hidden sm:grid grid-cols-[40px_minmax(180px,1fr)_minmax(220px,1.4fr)_64px_64px_70px_80px_92px_44px] items-center gap-3 px-[22px] min-h-[76px] border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
 
 const MOBILE_CARD =
   "sm:hidden block px-4 py-3.5 border-b border-[rgba(255,255,255,0.03)] last:border-0";
@@ -39,6 +39,8 @@ export function StandingsRow({ rank, capper, window }: Props) {
           {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
           <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
           <LivePicksIndicator capperId={capper.capper_id} initialCount={capper.live_picks_count} />
+        </div>
+        <div className="mt-1 empty:hidden">
           <StreakBadge streak={capper.current_day_streak} />
         </div>
       </div>
