@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CapperAvatar } from "./CapperAvatar";
 import { RecentPicks } from "./RecentPicks";
+import { StreakBadge } from "./StreakBadge";
 import { BiggestWin } from "./BiggestWin";
 import { Sparkline } from "./Sparkline";
 import { PaidProgramPill } from "./PaidProgramPill";
@@ -142,6 +143,7 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
               {capper.display_name ?? capper.handle}
               {capper.has_paid_program && <PaidProgramPill />}
               <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
+              <StreakBadge streak={capper.current_day_streak} size="md" />
             </div>
             <div className="text-[var(--color-text-muted)] text-sm font-medium">
               {formatHandle(capper.handle)}
@@ -162,6 +164,7 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
               {capper.display_name ?? capper.handle}
               {capper.has_paid_program && <PaidProgramPill />}
               <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
+              <StreakBadge streak={capper.current_day_streak} size="md" />
             </div>
           </div>
         </div>

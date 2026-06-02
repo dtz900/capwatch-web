@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CapperAvatar } from "./CapperAvatar";
 import { PickTiles } from "./PickTiles";
+import { StreakBadge } from "./StreakBadge";
 import { StatusPill } from "./StatusPill";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
@@ -38,6 +39,7 @@ export function StandingsRow({ rank, capper, window }: Props) {
           {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
           <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
           <LivePicksIndicator capperId={capper.capper_id} initialCount={capper.live_picks_count} />
+          <StreakBadge streak={capper.current_day_streak} />
         </div>
       </div>
     </>

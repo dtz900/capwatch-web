@@ -54,6 +54,9 @@ export interface CapperRow {
   roi_pct: number;
   clv_avg: number | null;
   current_streak: number;
+  /** Signed count of consecutive profitable (>0) or losing (<0) settle-days,
+   * most recent first. 0 = no streak. Drives the hot/cold StreakBadge. */
+  current_day_streak?: number;
   bet_type_breakdown: Record<string, number>;
   biggest_win: BiggestWin | null;
   tracked_since: string | null;
