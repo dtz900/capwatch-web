@@ -434,9 +434,22 @@ export async function fetchPalaceList(
   });
 }
 
+async function fetchPalaceEntryFresh(slug: string): Promise<PalaceEntry | null> {
+  const res = await fetchWithRetry(
+    `${API_BASE}/api/public/parlay-palace/${encodeURIComponent(slug)}`,
+    { cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Palace entry failed: ${res.status}`);
+  const body = (await res.json()) as { entry: PalaceEntry };
+  return body.entry ?? null;
+}
+
 export async function fetchPalaceEntry(
   slug: string,
+  opts: { fresh?: boolean } = {},
 ): Promise<PalaceEntry | null> {
+  if (opts.fresh) return fetchPalaceEntryFresh(slug);
+
   const cacheKey = `pp:entry:v1:${slug}`;
   return withKvCache<PalaceEntry | null>(cacheKey, PALACE_TTL_SEC, async () => {
     const res = await fetchWithRetry(

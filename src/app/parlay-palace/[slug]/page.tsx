@@ -35,7 +35,7 @@ export async function generateMetadata(
   const { slug } = await params;
   const sp = searchParams ? await searchParams : {};
   try {
-    const entry = await fetchPalaceEntry(slug);
+    const entry = await fetchPalaceEntry(slug, { fresh: true });
     if (!entry) return { title: "Parlay Palace | TailSlips" };
     const staticOg = STATIC_PALACE_OG[slug];
     const ogQs = new URLSearchParams();
@@ -104,7 +104,7 @@ export default async function PalaceDetailPage({ params, searchParams }: PagePro
 
   let entry;
   try {
-    entry = await fetchPalaceEntry(slug);
+    entry = await fetchPalaceEntry(slug, { fresh: true });
   } catch {
     noStore();
     return (

@@ -20,10 +20,6 @@ const GOLD = "#caa45a";
 const GOLD_LIGHT = "#e3c787";
 const GOLD_DEEP = "#c7a259";
 
-const TRANSPARENT_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgAAIAAAUAAen63NgAAAAASUVORK5CYII=",
-  "base64");
-
 async function heroDataUri(url: string | null): Promise<string | null> {
   if (!url) return null;
   const ctrl = new AbortController();
@@ -56,12 +52,38 @@ async function readPublicPngDataUri(filename: string): Promise<string | null> {
 
 export async function renderPalaceOg(slug: string): Promise<Response> {
   let entry = null;
-  try { entry = await fetchPalaceEntry(slug); }
+  try { entry = await fetchPalaceEntry(slug, { fresh: true }); }
   catch (err) { console.error("[pp-og-renderer] fetchPalaceEntry failed", err); }
   if (!entry) {
-    return new Response(TRANSPARENT_PNG, {
+    const img = new ImageResponse((
+      <div style={{ width: "100%", height: "100%", display: "flex",
+        background: FOIL, padding: 6 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column",
+          position: "relative", background: BG, overflow: "hidden",
+          padding: 60, justifyContent: "center" }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex",
+            background:
+              "radial-gradient(circle at 22% 22%,rgba(202,164,90,0.24),transparent 28%),linear-gradient(135deg,#11141a,#07080b)" }} />
+          <div style={{ display: "flex", fontSize: 24, color: GOLD_LIGHT,
+            fontWeight: 900, letterSpacing: 6, textTransform: "uppercase",
+            position: "relative" }}>
+            TailSlips · Parlay Palace
+          </div>
+          <div style={{ display: "flex", marginTop: 28, fontSize: 78,
+            lineHeight: 1, fontWeight: 900, color: "#fff", position: "relative" }}>
+            Winning parlay
+          </div>
+          <div style={{ display: "flex", marginTop: 22, fontSize: 28,
+            color: "rgba(255,255,255,0.62)", position: "relative" }}>
+            This Palace card is being prepared.
+          </div>
+        </div>
+      </div>
+    ), { ...size });
+    const buf = await img.arrayBuffer();
+    return new Response(buf, {
       headers: { "content-type": "image/png",
-                 "cache-control": "public, max-age=30, s-maxage=30, stale-while-revalidate=120" } });
+                 "cache-control": "no-store, max-age=0" } });
   }
 
   const [heroUri, crownUri] = await Promise.all([
@@ -186,8 +208,19 @@ export async function renderPalaceOg(slug: string): Promise<Response> {
         "public, max-age=60, s-maxage=60, stale-while-revalidate=300" } });
   } catch (err) {
     console.error("[pp-og-renderer] ImageResponse failed", err);
-    return new Response(TRANSPARENT_PNG, {
+    const fallback = new ImageResponse((
+      <div style={{ width: "100%", height: "100%", display: "flex",
+        background: FOIL, padding: 6 }}>
+        <div style={{ flex: 1, display: "flex", background: BG,
+          color: "#fff", alignItems: "center", justifyContent: "center",
+          fontSize: 64, fontWeight: 900 }}>
+          TailSlips Parlay Palace
+        </div>
+      </div>
+    ), { ...size });
+    const buf = await fallback.arrayBuffer();
+    return new Response(buf, {
       headers: { "content-type": "image/png",
-                 "cache-control": "public, max-age=30, s-maxage=30, stale-while-revalidate=120" } });
+                 "cache-control": "no-store, max-age=0" } });
   }
 }
