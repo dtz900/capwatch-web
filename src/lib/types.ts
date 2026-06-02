@@ -260,6 +260,8 @@ export interface CapperProfile {
     has_paid_program: boolean;
     last_pick_at: string | null;
     last_tweet_at: string | null;
+    /** Signed per-day hot/cold streak; mirrors the leaderboard StreakBadge. */
+    current_day_streak?: number;
   };
   aggregates: Partial<Record<Window, CapperAggregate>>;
   pending: HistoryPick[];

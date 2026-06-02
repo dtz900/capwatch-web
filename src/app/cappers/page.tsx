@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
+import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { ChevronIcon } from "@/components/icons/ChevronIcon";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchLeaderboard } from "@/lib/api";
@@ -171,11 +172,12 @@ function CapperIndexRow({
       <div className={`${DESKTOP_GRID} px-6 py-[18px]`}>
         <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} />
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
               {c.display_name ?? c.handle}
             </span>
             {c.has_paid_program && <PaidProgramPill />}
+            <StreakBadge streak={c.current_day_streak} />
           </div>
           <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate mt-[3px]">
             {c.handle ? formatHandle(c.handle) : ""}
@@ -207,6 +209,7 @@ function CapperIndexRow({
                 {c.display_name ?? c.handle}
               </span>
               {c.has_paid_program && <PaidProgramPill />}
+              <StreakBadge streak={c.current_day_streak} />
             </div>
             <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate mt-[2px]">
               {c.handle ? formatHandle(c.handle) : ""}
