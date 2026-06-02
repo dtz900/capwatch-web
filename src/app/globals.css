@@ -60,6 +60,20 @@ html, body {
   .pp-rise { animation: none; opacity: 1; transform: none; }
 }
 
+/* Streak badge: a living glow + gentle pulse so a hot/cold run feels alive.
+   The element sets --streak-glow inline per tone (warm for hot, icy for cold). */
+@keyframes streak-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px var(--streak-glow)); transform: scale(1); }
+  50%      { filter: drop-shadow(0 0 8px var(--streak-glow)); transform: scale(1.09); }
+}
+.streak-icon {
+  animation: streak-pulse 2.2s ease-in-out infinite;
+  will-change: filter, transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .streak-icon { animation: none; filter: drop-shadow(0 0 4px var(--streak-glow)); }
+}
+
 .tap-target {
   min-height: 2.75rem;
   min-width: 2.75rem;

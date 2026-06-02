@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 type Tier = {
   label: string;
   icon: string;
@@ -31,41 +33,47 @@ function streakTier(streak: number): Tier | null {
     : { label: "cooled off", icon: "/streak/cooled-off.png", tone: "cold" };
 }
 
+const TONE = {
+  hot: { label: "#fb923c", glow: "rgba(249,115,22,0.80)" },
+  cold: { label: "#7dd3fc", glow: "rgba(125,211,252,0.75)" },
+} as const;
+
 interface Props {
   streak?: number | null;
   size?: "sm" | "md";
 }
 
 /**
- * Hot/cold day-streak badge for the leaderboard. Renders the tier icon plus its
- * label ("on fire", "ice cold", ...) in a flat chip. The icon carries the
- * warm/cold color so the label stays on the off-white palette. Renders nothing
- * when the capper is not on a 2+ day run.
+ * Hot/cold day-streak badge. The icon carries the heat/cold and breathes with a
+ * tonal glow (see .streak-icon in globals.css); the label is colored to match.
+ * No background chip, so transparent icons read clean against the row. Renders
+ * nothing when the capper is not on a 2+ day run.
  */
 export function StreakBadge({ streak, size = "sm" }: Props) {
   const value = streak ?? 0;
   const tier = streakTier(value);
   if (!tier) return null;
 
-  const dim = size === "md" ? 22 : 18;
+  const tone = TONE[tier.tone];
+  const dim = size === "md" ? 26 : 20;
   const text = size === "md" ? "text-[11px]" : "text-[10px]";
   const days = Math.abs(value);
   const title = `${days} ${tier.tone === "hot" ? "profitable" : "losing"} days in a row`;
 
+  const iconStyle = {
+    width: dim,
+    height: dim,
+    "--streak-glow": tone.glow,
+  } as CSSProperties;
+
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1 rounded-md bg-[rgba(255,255,255,0.04)] px-1.5 py-0.5 ${text} font-bold uppercase tracking-[0.05em] text-[var(--color-text-soft)] whitespace-nowrap leading-none`}
+      className={`inline-flex items-center gap-1 ${text} font-extrabold uppercase tracking-[0.06em] whitespace-nowrap leading-none`}
+      style={{ color: tone.label }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={tier.icon}
-        alt=""
-        width={dim}
-        height={dim}
-        style={{ width: dim, height: dim }}
-        className="shrink-0"
-      />
+      <img src={tier.icon} alt="" className="streak-icon shrink-0" style={iconStyle} />
       <span>{tier.label}</span>
     </span>
   );
