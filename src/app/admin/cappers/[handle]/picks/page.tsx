@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchCapperProfile } from "@/lib/api";
 import { formatBetDescriptor } from "@/lib/markets";
-import { formatUnitsSmart } from "@/lib/formatters";
+import { formatUnitsSmart, formatPickDate } from "@/lib/formatters";
 import type { CapperAggregate, HistoryPick } from "@/lib/types";
 import { EditCapperPanel } from "./EditCapperPanel";
 
@@ -19,11 +19,6 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
 
 function outcomeTone(outcome: string | null): string {
   if (outcome === "W") return "text-[var(--color-pos)]";
@@ -217,7 +212,7 @@ function PicksRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
                   ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
     >
       <div className="text-[var(--color-text-muted)] font-medium tabular-nums">
-        {formatDate(pick.posted_at)}
+        {formatPickDate(pick.game_date, pick.posted_at)}
       </div>
       <div className={`text-center font-extrabold uppercase tracking-[0.10em] text-[10px] ${outcomeTone(pick.outcome)}`}>
         {pick.outcome ?? "—"}

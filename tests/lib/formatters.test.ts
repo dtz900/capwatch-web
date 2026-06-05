@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatUnits, formatUnits2, formatRoi, formatWinRate, formatStreak, formatHandle } from "@/lib/formatters";
+import { formatUnits, formatUnits2, formatRoi, formatWinRate, formatStreak, formatHandle, formatPickDate } from "@/lib/formatters";
 
 describe("formatUnits", () => {
   it("formats positive with + and one decimal", () => {
@@ -52,5 +52,28 @@ describe("formatUnits2", () => {
     expect(formatUnits2(25.98)).toBe("+25.98");
     expect(formatUnits2(-1.5)).toBe("-1.50");
     expect(formatUnits2(0)).toBe("+0.00");
+  });
+});
+
+describe("formatPickDate", () => {
+  // pid 22560: D-backs F5 ML, an Arizona night game on Jun 4. The tweet was
+  // posted at 5:56pm MST, which is 2026-06-05T00:56Z, so posted_at's UTC
+  // calendar day is Jun 5. game_date carries the real ET play date (Jun 4).
+  it("prefers game_date over posted_at so a late-night tweet shows the play date", () => {
+    expect(formatPickDate("2026-06-04", "2026-06-05T00:56:05Z")).toBe("Jun 4, 2026");
+  });
+
+  it("anchors game_date at noon UTC so it never shifts a day on a UTC server", () => {
+    expect(formatPickDate("2026-06-04", null)).toBe("Jun 4, 2026");
+  });
+
+  it("falls back to posted_at in ET (not server UTC) when no game is linked", () => {
+    // 2026-06-05T00:56Z is 8:56pm ET on Jun 4.
+    expect(formatPickDate(null, "2026-06-05T00:56:05Z")).toBe("Jun 4, 2026");
+  });
+
+  it("returns empty string when both are missing", () => {
+    expect(formatPickDate(null, null)).toBe("");
+    expect(formatPickDate(undefined, undefined)).toBe("");
   });
 });
