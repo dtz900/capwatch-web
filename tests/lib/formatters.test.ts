@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatUnits, formatUnits2, formatRoi, formatWinRate, formatStreak, formatHandle, formatPickDate } from "@/lib/formatters";
+import { formatUnits, formatUnits2, formatRoi, formatWinRate, formatStreak, formatHandle, formatPickDate, displayUnits } from "@/lib/formatters";
 
 describe("formatUnits", () => {
   it("formats positive with + and one decimal", () => {
@@ -52,6 +52,26 @@ describe("formatUnits2", () => {
     expect(formatUnits2(25.98)).toBe("+25.98");
     expect(formatUnits2(-1.5)).toBe("-1.50");
     expect(formatUnits2(0)).toBe("+0.00");
+  });
+});
+
+describe("displayUnits", () => {
+  // ChalkItSpreads posted "Pete Alonso o0.5 Hits +100 6.4u". The display cap
+  // must honor that (the grader stores it at 6.4u), not collapse it to 1u.
+  it("honors declared stakes up to the grader cap (10u)", () => {
+    expect(displayUnits(6.4)).toBe(6.4);
+    expect(displayUnits(3.2)).toBe(3.2);
+    expect(displayUnits(10)).toBe(10);
+  });
+  it("clamps implausible stakes to 1u (e.g. a dollar figure misread as units)", () => {
+    expect(displayUnits(1000)).toBe(1);
+    expect(displayUnits(10.1)).toBe(1);
+  });
+  it("defaults missing or non-positive to 1u", () => {
+    expect(displayUnits(null)).toBe(1);
+    expect(displayUnits(undefined)).toBe(1);
+    expect(displayUnits(0)).toBe(1);
+    expect(displayUnits(-2)).toBe(1);
   });
 });
 

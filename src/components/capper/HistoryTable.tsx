@@ -5,7 +5,7 @@ import Link from "next/link";
 import { XIcon } from "@/components/icons/XIcon";
 import { ChevronIcon } from "@/components/icons/ChevronIcon";
 import { formatBetDescriptor } from "@/lib/markets";
-import { formatUnitsSmart } from "@/lib/formatters";
+import { formatUnitsSmart, displayUnits } from "@/lib/formatters";
 import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
@@ -174,8 +174,7 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
         : pick.outcome === "P"
           ? "bg-[rgba(255,255,255,0.28)]"
           : "bg-[rgba(255,255,255,0.06)]";
-  const unitsValue =
-    pick.units != null && pick.units > 0 ? (pick.units > 5 ? 1 : pick.units) : 1;
+  const unitsValue = displayUnits(pick.units);
 
   const hasExpandableLegs = isParlay && !!pick.legs && pick.legs.length > 0;
   const [expanded, setExpanded] = useState(false);

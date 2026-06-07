@@ -39,6 +39,21 @@ export function formatHandle(handle: string): string {
 }
 
 /**
+ * Largest stake we treat as a real unit declaration. Above this we assume a
+ * parser misread (e.g. a dollar figure like "$1,000" read as 1000 units) and
+ * fall back to 1u. Mirrors the backend grader's MAX_REASONABLE_UNITS (10.0,
+ * core/capper_grader.py) so the pick-history, pending, slate, and leaderboard
+ * surfaces all agree on a pick's stake. Keep in sync with that constant.
+ */
+export const MAX_DECLARED_UNITS = 10;
+
+/** Stake to show for a pick, clamping implausible values to the 1u baseline. */
+export function displayUnits(units: number | null | undefined): number {
+  if (units == null || units <= 0) return 1;
+  return units > MAX_DECLARED_UNITS ? 1 : units;
+}
+
+/**
  * Date to show for a pick row. Prefer game_date (the ET calendar day the bet
  * plays/settles) over posted_at: a tweet posted at 11pm ET Friday for
  * Saturday's slate should read Saturday, and an evening-Pacific tweet whose
