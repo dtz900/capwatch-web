@@ -405,8 +405,8 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
             This page reflects every publicly posted pick from @{handle} that declared a side,
             line where applicable, odds taken, and unit stake. Picks without those details are
             not gradeable and are not shown. Moneylines without posted odds are graded at the
-            Pinnacle close; spreads and totals default to -110. Player props without odds count
-            toward win rate but not units profit.
+            Pinnacle price from when they posted; spreads and totals default to -110. Player props
+            without odds count toward win rate but not units profit.
           </p>
           <p className="text-[13px] leading-relaxed text-[var(--color-text-soft)]">
             Full rules at{" "}

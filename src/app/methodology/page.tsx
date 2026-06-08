@@ -109,17 +109,25 @@ export default function Methodology() {
         <h2 className="text-[20px] font-bold mt-9 mb-3">When a capper doesn&apos;t post the odds</h2>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Some cappers post a moneyline pick without specifying the American odds they took.
-          Rather than fabricating a default, we grade those picks against the Pinnacle closing
-          line for the same game and side. Pinnacle is widely accepted as the sharpest book,
-          and the close is the consensus probability at first pitch, both factors that make it
-          the fairest available proxy when the capper has not given us a number.
+          Rather than fabricating a default, we grade those picks at the Pinnacle price from the
+          moment they posted: the snapshot nearest their tweet, the number a follower could
+          realistically have taken on seeing the pick. Pinnacle is widely accepted as the sharpest
+          book, so its price at post time is the fairest read on what the wager was actually worth
+          when it went out.
         </p>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
-          Picks graded this way are marked with a small &quot;(close)&quot; indicator next to the
-          odds in the history table, so you can see at a glance which lines were graded against
-          literal posted odds and which were graded against the Pinnacle close. This is moneyline
-          only. Spreads and totals cluster near -110 in practice, so when those markets are
-          posted without odds we use a -110 default and disclose it the same way.
+          This is deliberate. Grading those picks at the closing line instead would punish cappers
+          who post early on favorites, since favorites tend to shorten as first pitch approaches,
+          so the close is often a worse number than what was on the board when they tweeted. We
+          grade at the price they could have taken, and we still compute beat-close % alongside it
+          so you can see how their entry compared to the sharp closing number.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Picks graded this way are marked with a small &quot;(market)&quot; indicator next to the
+          odds in the history table, so you can see at a glance which lines were the capper&apos;s
+          own posted odds and which we derived from Pinnacle. This is moneyline only. When no
+          Pinnacle snapshot is available near the post we fall back to the closing line, and
+          spreads and totals posted without odds use a -110 default, all disclosed the same way.
         </p>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Player props are different. Prop odds vary widely between players (a star hitter&apos;s
@@ -196,11 +204,11 @@ export default function Methodology() {
           pick is detected and surfaced as a credibility signal of its own.
         </p>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
-          <strong className="text-[var(--color-text)] font-bold">Moneylines without posted odds are graded at the Pinnacle close.</strong>{" "}
-          Spreads and totals default to -110. Player props posted without odds count toward your
-          win rate but stay out of units profit. All three are disclosed on the row itself. See
-          the &quot;When a capper doesn&apos;t post the odds&quot; section above for the full
-          rationale.
+          <strong className="text-[var(--color-text)] font-bold">Moneylines without posted odds are graded at the Pinnacle price from when you posted</strong>{" "}
+          (the price a follower could have taken on your tweet), not the close. Spreads and totals
+          default to -110. Player props posted without odds count toward your win rate but stay out
+          of units profit. All disclosed on the row itself. See the &quot;When a capper doesn&apos;t
+          post the odds&quot; section above for the full rationale.
         </p>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           <strong className="text-[var(--color-text)] font-bold">If you find a genuinely misattributed pick</strong>{" "}
