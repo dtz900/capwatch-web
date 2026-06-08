@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import {
   patchPickAction,
   manualGradeAction,
@@ -61,9 +61,6 @@ export function FixPanel(props: Props) {
   // Player search state
   const [playerQuery, setPlayerQuery] = useState(props.selection ?? "");
   const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([]);
-
-  // Game search state
-  const [gameResults, setGameResults] = useState<GameSearchResult[]>([]);
 
   // Field overrides (only used by the "more options" lane)
   const [marketEdit, setMarketEdit] = useState(props.market ?? "");
@@ -175,26 +172,6 @@ export function FixPanel(props: Props) {
           return d.toISOString().slice(0, 10);
         })()
       : baseDate;
-  const [gameSearchDate, setGameSearchDate] = useState<string>(defaultGameDate);
-
-  const doListGames = (overrideDate?: string) => {
-    const ymd = overrideDate ?? gameSearchDate;
-    if (!ymd) {
-      flash("No date specified", false);
-      return;
-    }
-    if (overrideDate) setGameSearchDate(overrideDate);
-    startTransition(async () => {
-      const r = await searchGamesAction(ymd);
-      setGameResults(r);
-    });
-  };
-
-  const shiftDay = (delta: number): string => {
-    const d = new Date(gameSearchDate + "T12:00:00Z");
-    d.setUTCDate(d.getUTCDate() + delta);
-    return d.toISOString().slice(0, 10);
-  };
 
   if (!open) {
     return (
@@ -278,117 +255,21 @@ export function FixPanel(props: Props) {
           )}
 
           {lane === "game" && (
-            <div className="flex flex-col gap-2">
-              {props.reason === "player_did_not_play" && (
-                <div className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
-                  This player wasn&apos;t in the bound game&apos;s box score.
-                  Likely cause: tweet was for tomorrow&apos;s slate. Defaulted
-                  the search to the day after the tweet.
-                </div>
-              )}
-              <div className="flex items-center gap-2 flex-wrap">
-                <input
-                  type="date"
-                  value={gameSearchDate}
-                  onChange={(e) => setGameSearchDate(e.target.value)}
-                  className="bg-[rgba(0,0,0,0.30)] border border-[rgba(255,255,255,0.10)] rounded px-2 py-1 text-[11px] text-[var(--color-text)] outline-none focus:border-[rgba(255,255,255,0.25)]"
-                />
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => doListGames()}
-                  className="px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
-                >
-                  List games
-                </button>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => doListGames(shiftDay(-1))}
-                  title="Search the day before"
-                  className="px-2 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-muted)]"
-                >
-                  ← prev
-                </button>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => doListGames(shiftDay(1))}
-                  title="Search the day after"
-                  className="px-2 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-muted)]"
-                >
-                  next →
-                </button>
-              </div>
-              {gameResults.length > 0 && (
-                <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
-                  {(() => {
-                    // Doubleheader detection: a matchup that appears more than
-                    // once on the date. game_number comes from MLB Stats API
-                    // and is the canonical source for which is Game 1 vs 2.
-                    const matchupCount: Record<string, number> = {};
-                    for (const g of gameResults) {
-                      const key = `${g.away_team}@${g.home_team}`;
-                      matchupCount[key] = (matchupCount[key] ?? 0) + 1;
-                    }
-
-                    return gameResults.map((g) => {
-                      const matchupKey = `${g.away_team}@${g.home_team}`;
-                      const isDoubleheader = (matchupCount[matchupKey] ?? 0) > 1;
-                      const dhLabel = isDoubleheader
-                        ? g.game_number != null
-                          ? `Game ${g.game_number}`
-                          : "DH"
-                        : null;
-                      const timeLabel = g.commence_time
-                        ? new Date(g.commence_time).toLocaleTimeString("en-US", {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            timeZoneName: "short",
-                          })
-                        : null;
-                      return (
-                        <button
-                          key={g.game_pk}
-                          type="button"
-                          disabled={pending}
-                          onClick={() => onPickGame(g)}
-                          className="text-left px-2.5 py-1.5 rounded text-[11px] bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)] flex items-center gap-2"
-                        >
-                          <span className="font-semibold text-[var(--color-text)]">
-                            {g.away_team} @ {g.home_team}
-                          </span>
-                          {dhLabel && (
-                            <span
-                              className={`text-[9px] uppercase tracking-[0.10em] font-extrabold px-1.5 py-0.5 rounded ${
-                                dhLabel === "DH"
-                                  ? "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-muted)]"
-                                  : "bg-[rgba(245,197,74,0.14)] text-[var(--color-gold)]"
-                              }`}
-                              title={
-                                dhLabel === "DH"
-                                  ? "Doubleheader. MLB Stats API was unreachable so game order can't be confirmed right now."
-                                  : `Doubleheader ${dhLabel} (per MLB Stats API)`
-                              }
-                            >
-                              {dhLabel}
-                            </span>
-                          )}
-                          {timeLabel && (
-                            <span className="text-[var(--color-text-soft)] tabular-nums">
-                              {timeLabel}
-                            </span>
-                          )}
-                          <span className="text-[var(--color-text-muted)] ml-auto">
-                            id {g.game_pk}
-                          </span>
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-              )}
-            </div>
+            <GameFinder
+              initialDate={defaultGameDate}
+              onSelect={onPickGame}
+              disabled={pending}
+              selectedGamePk={props.gameId ?? undefined}
+              note={
+                props.reason === "player_did_not_play" ? (
+                  <div className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
+                    This player wasn&apos;t in the bound game&apos;s box score.
+                    Likely cause: tweet was for tomorrow&apos;s slate. Defaulted
+                    the search to the day after the tweet.
+                  </div>
+                ) : undefined
+              }
+            />
           )}
 
           {lane === "market" && (
@@ -491,6 +372,21 @@ export function FixPanel(props: Props) {
                 </div>
               </div>
 
+              <div className="border-t border-[rgba(255,255,255,0.06)] pt-3">
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold mb-1.5">
+                  Find game by date
+                </div>
+                <GameFinder
+                  initialDate={baseDate}
+                  onSelect={(g) => setGameIdEdit(String(g.game_pk))}
+                  disabled={pending}
+                  selectedGamePk={gameIdEdit || undefined}
+                />
+                <div className="text-[9px] text-[var(--color-text-muted)] mt-1.5">
+                  Click a result to populate game_id, then Save changes.
+                </div>
+              </div>
+
               <button
                 type="button"
                 disabled={pending}
@@ -546,6 +442,163 @@ export function FixPanel(props: Props) {
 
       {error && <div className="text-[11px] text-[var(--color-neg)]">Error: {error}</div>}
       {success && <div className="text-[11px] text-[var(--color-pos)]">{success}</div>}
+    </div>
+  );
+}
+
+/**
+ * Date-driven game picker. Lists every game on a date, with prev/next-day
+ * shuttles and doubleheader labeling. onSelect fires with the chosen game so
+ * the caller decides whether to save it (game lane) or just populate the
+ * game_id field (All Fields lane). Owns its own date + results state so it can
+ * be dropped into more than one lane without coupling.
+ */
+function GameFinder({
+  initialDate,
+  onSelect,
+  disabled,
+  selectedGamePk,
+  note,
+}: {
+  initialDate: string;
+  onSelect: (g: GameSearchResult) => void;
+  disabled: boolean;
+  selectedGamePk?: string;
+  note?: ReactNode;
+}) {
+  const [date, setDate] = useState(initialDate);
+  const [results, setResults] = useState<GameSearchResult[]>([]);
+  const [busy, startTransition] = useTransition();
+
+  const list = (overrideDate?: string) => {
+    const ymd = overrideDate ?? date;
+    if (!ymd) return;
+    if (overrideDate) setDate(overrideDate);
+    startTransition(async () => {
+      const r = await searchGamesAction(ymd);
+      setResults(r);
+    });
+  };
+
+  const shiftDay = (delta: number): string => {
+    const d = new Date(date + "T12:00:00Z");
+    d.setUTCDate(d.getUTCDate() + delta);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const isBusy = disabled || busy;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {note}
+      <div className="flex items-center gap-2 flex-wrap">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="bg-[rgba(0,0,0,0.30)] border border-[rgba(255,255,255,0.10)] rounded px-2 py-1 text-[11px] text-[var(--color-text)] outline-none focus:border-[rgba(255,255,255,0.25)]"
+        />
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => list()}
+          className="px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
+        >
+          List games
+        </button>
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => list(shiftDay(-1))}
+          title="Search the day before"
+          className="px-2 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-muted)]"
+        >
+          ← prev
+        </button>
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => list(shiftDay(1))}
+          title="Search the day after"
+          className="px-2 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-muted)]"
+        >
+          next →
+        </button>
+      </div>
+      {results.length > 0 && (
+        <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
+          {(() => {
+            // Doubleheader detection: a matchup that appears more than once on
+            // the date. game_number comes from MLB Stats API and is the
+            // canonical source for which is Game 1 vs 2.
+            const matchupCount: Record<string, number> = {};
+            for (const g of results) {
+              const key = `${g.away_team}@${g.home_team}`;
+              matchupCount[key] = (matchupCount[key] ?? 0) + 1;
+            }
+
+            return results.map((g) => {
+              const matchupKey = `${g.away_team}@${g.home_team}`;
+              const isDoubleheader = (matchupCount[matchupKey] ?? 0) > 1;
+              const dhLabel = isDoubleheader
+                ? g.game_number != null
+                  ? `Game ${g.game_number}`
+                  : "DH"
+                : null;
+              const timeLabel = g.commence_time
+                ? new Date(g.commence_time).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    timeZoneName: "short",
+                  })
+                : null;
+              const isSelected =
+                selectedGamePk != null && String(g.game_pk) === selectedGamePk;
+              return (
+                <button
+                  key={g.game_pk}
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => onSelect(g)}
+                  className={`text-left px-2.5 py-1.5 rounded text-[11px] flex items-center gap-2 ${
+                    isSelected
+                      ? "bg-[rgba(192,132,252,0.16)] ring-1 ring-[rgba(192,132,252,0.40)]"
+                      : "bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)]"
+                  }`}
+                >
+                  <span className="font-semibold text-[var(--color-text)]">
+                    {g.away_team} @ {g.home_team}
+                  </span>
+                  {dhLabel && (
+                    <span
+                      className={`text-[9px] uppercase tracking-[0.10em] font-extrabold px-1.5 py-0.5 rounded ${
+                        dhLabel === "DH"
+                          ? "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-muted)]"
+                          : "bg-[rgba(245,197,74,0.14)] text-[var(--color-gold)]"
+                      }`}
+                      title={
+                        dhLabel === "DH"
+                          ? "Doubleheader. MLB Stats API was unreachable so game order can't be confirmed right now."
+                          : `Doubleheader ${dhLabel} (per MLB Stats API)`
+                      }
+                    >
+                      {dhLabel}
+                    </span>
+                  )}
+                  {timeLabel && (
+                    <span className="text-[var(--color-text-soft)] tabular-nums">
+                      {timeLabel}
+                    </span>
+                  )}
+                  <span className="text-[var(--color-text-muted)] ml-auto">
+                    id {g.game_pk}
+                  </span>
+                </button>
+              );
+            });
+          })()}
+        </div>
+      )}
     </div>
   );
 }
