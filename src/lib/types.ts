@@ -172,6 +172,8 @@ export interface SlateResponse {
 export type GradingOddsSource =
   | "posted"
   | "pinnacle_close"
+  | "pinnacle_at_post"
+  | "consensus_at_post"
   | "no_close_available"
   | "fallback_-110";
 

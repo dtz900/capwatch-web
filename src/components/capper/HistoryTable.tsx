@@ -143,9 +143,10 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
   const date = formatGameDate(pick.game_date) ?? formatDate(pick.posted_at);
   const isParlay = pick.kind === "parlay";
   // Display grading_odds (the value the grader actually used) when present,
-  // falling back to odds_taken for legacy rows. The (close) indicator marks
-  // picks where the capper didn't post American odds and we graded against
-  // the Pinnacle moneyline close.
+  // falling back to odds_taken for legacy rows. The (market) indicator marks
+  // picks where the capper didn't post American odds and we derived the grading
+  // price from Pinnacle (the price nearest the post, consensus when Pinnacle was
+  // missing, or the close as a last-resort fallback).
   const displayedOdds = pick.grading_odds ?? pick.odds_taken;
   const oddsText =
     displayedOdds == null
@@ -153,7 +154,12 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
       : displayedOdds > 0
         ? `+${displayedOdds}`
         : String(displayedOdds);
-  const isPinnacleClose = pick.grading_odds_source === "pinnacle_close";
+  // Capper didn't post odds; grading_odds was derived from Pinnacle. All three
+  // derived rungs render the same "(market)" indicator.
+  const isDerivedOdds =
+    pick.grading_odds_source === "pinnacle_at_post" ||
+    pick.grading_odds_source === "consensus_at_post" ||
+    pick.grading_odds_source === "pinnacle_close";
   // outcome-only: capper posted no odds and we have no honest close-line
   // proxy (player props, or ML where Pinnacle is missing). Hide the odds
   // and profit cells; the row still shows W/L via the bar color.
@@ -275,12 +281,12 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
           ) : (
             <>
               {oddsText}
-              {isPinnacleClose && (
+              {isDerivedOdds && (
                 <span
                   className="ml-1 text-[10px] text-[var(--color-text-muted)] font-medium"
-                  title="Capper did not post odds. Graded at Pinnacle moneyline close."
+                  title="Capper did not post odds. Graded at the Pinnacle price from when they posted (the close when no snapshot was available)."
                 >
-                  (close)
+                  (market)
                 </span>
               )}
             </>
@@ -418,8 +424,13 @@ function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
           ) : oddsText ? (
             <span>
               {oddsText}
-              {isPinnacleClose && (
-                <span className="ml-1 text-[10px] opacity-75">(close)</span>
+              {isDerivedOdds && (
+                <span
+                  className="ml-1 text-[10px] opacity-75"
+                  title="Capper did not post odds. Graded at the Pinnacle price from when they posted."
+                >
+                  (market)
+                </span>
               )}
             </span>
           ) : null}
