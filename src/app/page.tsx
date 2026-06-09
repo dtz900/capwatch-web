@@ -13,7 +13,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1080x356 } from "@/lib/affiliates";
-import { fetchLeaderboard, type LeaderboardFilters } from "@/lib/api";
+import { fetchLeaderboard, minPicksForWindow, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import type { Window, Sort, BetTypeFilter } from "@/lib/types";
@@ -26,7 +26,6 @@ interface PageProps {
 const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
 const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
-const MIN_PICKS = 10;
 
 // ISR: render on first request, serve from edge cache for 5 minutes,
 // regenerate in background. Heavy aggregates only refresh once/day so 5 min
@@ -46,11 +45,12 @@ export const maxDuration = 30;
  */
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const sp = await searchParams;
+  const win: Window = VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30";
   const filters: LeaderboardFilters = {
-    window: VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30",
+    window: win,
     sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
     bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
-    min_picks: MIN_PICKS,
+    min_picks: minPicksForWindow(win),
     active_only: sp.active_only !== "false",
   };
   const fp = await buildRootOgFingerprint(filters);
@@ -90,11 +90,12 @@ function windowTitle(w: Window): string {
 
 export default async function Home({ searchParams }: PageProps) {
   const sp = await searchParams;
+  const win: Window = VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30";
   const filters: LeaderboardFilters = {
-    window: VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30",
+    window: win,
     sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
     bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
-    min_picks: MIN_PICKS,
+    min_picks: minPicksForWindow(win),
     active_only: sp.active_only !== "false",
   };
 
@@ -190,7 +191,7 @@ export default async function Home({ searchParams }: PageProps) {
           {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} />}
           <SuggestCapperSection />
           <footer className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
-            <div>Min {MIN_PICKS} graded picks · refreshed daily 6:00 AM PT.</div>
+            <div>Min {minPicksForWindow(filters.window)} graded picks · refreshed daily 6:00 AM PT.</div>
             <div>Operated by FADE AI · The model entry is graded identically</div>
           </footer>
         </main>

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { fetchLeaderboard } from "@/lib/api";
+import { fetchLeaderboard, minPicksForWindow } from "@/lib/api";
 import type { BetTypeFilter, CapperRow, Sort, Window } from "@/lib/types";
 
 // Shared renderer for the homepage OG card. Used by both the file-convention
@@ -91,7 +91,7 @@ async function fetchTop5(filters: RootOgFilters): Promise<{ rows: TopRow[]; stat
       window: filters.window,
       sort: filters.sort,
       bet_type: filters.bet_type,
-      min_picks: 10,
+      min_picks: minPicksForWindow(filters.window),
       active_only: filters.active_only,
     });
     const rows: TopRow[] = data.leaderboard.slice(0, 5).map((r) => ({
@@ -161,7 +161,7 @@ export async function buildRootOgFingerprint(filters: RootOgFilters = DEFAULT_RO
       window: filters.window,
       sort: filters.sort,
       bet_type: filters.bet_type,
-      min_picks: 10,
+      min_picks: minPicksForWindow(filters.window),
       active_only: filters.active_only,
     });
     picks = data.platform_stats?.graded_picks_total ?? 0;

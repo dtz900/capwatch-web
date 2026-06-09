@@ -72,6 +72,20 @@ export interface LeaderboardFilters {
   active_only: boolean;
 }
 
+/**
+ * Minimum graded picks for a capper to qualify on the leaderboard, by window.
+ * Mirrors the backend's WINDOW_MIN_PICKS in api/public_cappers.py: the 7-day
+ * board uses a lower floor of 5 so a genuine low-volume hot week still shows,
+ * while longer windows keep the 10-pick floor. The backend applies the same
+ * default, but an explicit ?min_picks= override always wins, so the frontend
+ * must send the window-aware value instead of a single hardcoded constant.
+ */
+export const WINDOW_MIN_PICKS: Partial<Record<Window, number>> = { last_7: 5 };
+export const DEFAULT_MIN_PICKS = 10;
+export function minPicksForWindow(window: Window): number {
+  return WINDOW_MIN_PICKS[window] ?? DEFAULT_MIN_PICKS;
+}
+
 export type SuggestionStatus = "queued" | "already_tracked" | "duplicate" | "invalid";
 
 export async function suggestCapper(input: { handle: string; reason?: string }): Promise<SuggestionStatus> {
