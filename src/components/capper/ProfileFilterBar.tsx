@@ -58,6 +58,7 @@ export function ProfileFilterBar() {
             value={market}
             onSelect={setMarket}
             wrap
+            disabled={marketDisabled}
           />
         </div>
       )}
@@ -71,12 +72,14 @@ function Seg<T extends string>({
   value,
   onSelect,
   wrap = false,
+  disabled = false,
 }: {
   ariaLabel: string;
   options: { value: T; label: string }[];
   value: T;
   onSelect: (v: T) => void;
   wrap?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div
@@ -92,6 +95,7 @@ function Seg<T extends string>({
             type="button"
             onClick={() => onSelect(o.value)}
             aria-pressed={active}
+            disabled={disabled}
             className={`px-3 py-2.5 sm:py-1.5 rounded-md text-[12px] sm:text-[11px] font-bold transition-colors ${
               active
                 ? "bg-[rgba(255,255,255,0.10)] text-[var(--color-text)]"

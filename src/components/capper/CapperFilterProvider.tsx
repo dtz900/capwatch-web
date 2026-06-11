@@ -152,7 +152,9 @@ export function CapperFilterProvider({
       let mk = next.market ?? market;
       const oc = next.outcome ?? outcome;
 
-      // Parlays cannot be market-scoped; clear the market.
+      // Parlays cannot be market-scoped; clear the market. This also covers the
+      // case where betType is already "parlays" and only a market update is
+      // passed (next.betType is undefined, so the second guard would not fire).
       if (bt === "parlays") mk = "";
       // Choosing All or Parlays from the bet-type toggle clears any market.
       if (next.betType && next.betType !== "straights") mk = "";
