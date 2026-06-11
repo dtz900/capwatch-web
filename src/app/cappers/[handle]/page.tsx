@@ -50,7 +50,7 @@ const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const PAGE_SIZE = 25;
 const DEFAULT_WINDOW: Window = "season";
-const OG_CARD_VERSION = "2";
+const OG_CARD_VERSION = "3";
 
 export const revalidate = 60;
 export const maxDuration = 30;
