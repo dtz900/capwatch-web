@@ -21,9 +21,11 @@ export function buildMarketOptions(
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
-/** Overlay a market slice's numbers onto the headline aggregate so the StatBand
- * can render a market-scoped view. Streak and biggest-win are not computed per
- * market, so they are cleared (the StatBand hides them when marketScoped). */
+/** Overlay a market slice's numeric stats onto the headline aggregate so the
+ * StatBand can render a market-scoped view. Trajectory is handled separately
+ * (see displayTrajectory in CapperFilterProvider). Streak and biggest-win are
+ * not computed per market, so they are cleared (the StatBand hides them when
+ * marketScoped). */
 export function marketSliceToAggregate(
   base: CapperAggregate,
   slice: MarketSlice,

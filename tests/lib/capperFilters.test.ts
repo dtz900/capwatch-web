@@ -38,6 +38,7 @@ describe("buildMarketOptions", () => {
   it("returns [] for null/empty slices", () => {
     expect(buildMarketOptions(null)).toEqual([]);
     expect(buildMarketOptions({})).toEqual([]);
+    expect(buildMarketOptions(undefined)).toEqual([]);
   });
 });
 
@@ -70,5 +71,8 @@ describe("scopeLabel", () => {
     expect(scopeLabel("last_30", "straights", null)).toBe("Last 30 · Straights");
     expect(scopeLabel("all_time", "parlays", null)).toBe("All-time · Parlays");
     expect(scopeLabel("season", "all", null)).toBe("Season");
+  });
+  it("handles last_7 window", () => {
+    expect(scopeLabel("last_7", "all", null)).toBe("Last 7");
   });
 });
