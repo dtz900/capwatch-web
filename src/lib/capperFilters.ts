@@ -1,13 +1,69 @@
 import type { BetTypeFilter, CapperAggregate, MarketSlice, Window } from "./types";
-import { normalizeMarket } from "./markets";
 
 export interface MarketOption {
   /** Raw display_market key. Doubles as the history `market` param value. */
   value: string;
-  /** Prettified bucket label for the button. */
+  /** Distinct readable label for the button. */
   label: string;
   /** Graded pick count, for ordering and display. */
   count: number;
+}
+
+const MARKET_LABELS: Record<string, string> = {
+  ml: "Moneyline",
+  f5_ml: "F5 ML",
+  spread: "Spread",
+  f5_spread: "F5 Spread",
+  run_line: "Run Line",
+  runline: "Run Line",
+  total: "Total",
+  f5_total: "F5 Total",
+  team_total: "Team Total",
+  f5_team_total: "F5 Team Total",
+  nrfi: "NRFI",
+  yrfi: "YRFI",
+  game_prop: "Game Prop",
+  player_prop: "Player Prop",
+  prop: "Prop",
+  first_5: "First 5",
+};
+
+const PROP_STAT_LABELS: Record<string, string> = {
+  h: "Hits",
+  hr: "Home Runs",
+  hrr: "Hits+Runs+RBI",
+  tb: "Total Bases",
+  k: "Strikeouts",
+  outs: "Outs",
+  er: "Earned Runs",
+  rbi: "RBI",
+  r: "Runs",
+  bb: "Walks",
+  sb: "Stolen Bases",
+};
+
+/** Distinct, readable label for a raw display_market value used as a Market
+ * filter button. Unlike normalizeMarket (which buckets team_total and total
+ * together for the market-mix bar), this keeps every market distinct so the
+ * filter never shows two buttons sharing one label (e.g. Total vs Team Total).
+ * The button value stays the raw key, so the history/slice lookups are
+ * unaffected. */
+export function marketFilterLabel(raw: string): string {
+  const key = raw.toLowerCase();
+  if (MARKET_LABELS[key]) return MARKET_LABELS[key];
+  const prop = /^prop_(batter|pitcher)_(.+)$/.exec(key);
+  if (prop) {
+    const role = prop[1] === "batter" ? "Batter" : "Pitcher";
+    const stat =
+      PROP_STAT_LABELS[prop[2]] ??
+      prop[2].replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return `${role} ${stat}`;
+  }
+  // Generic humanizer for any unmapped token; degrades gracefully.
+  return key
+    .replace(/^f5_/, "F5 ")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Build Market filter options from an aggregate's market_slices, ordered by
@@ -17,7 +73,7 @@ export function buildMarketOptions(
 ): MarketOption[] {
   if (!slices) return [];
   return Object.entries(slices)
-    .map(([value, s]) => ({ value, label: normalizeMarket(value), count: s.picks_count }))
+    .map(([value, s]) => ({ value, label: marketFilterLabel(value), count: s.picks_count }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 

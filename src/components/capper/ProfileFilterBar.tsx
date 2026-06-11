@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useCapperFilters } from "@/components/capper/CapperFilterProvider";
 import type { BetTypeFilter, Window } from "@/lib/types";
 
@@ -18,9 +19,12 @@ const BET_TYPES: { value: BetTypeFilter; label: string }[] = [
 
 /** The unified Window / Bet type / Market bar that drives the sparkline and
  * stat band. Controlled by the filter context (no URL navigation per click).
- * On mobile, this is rendered inside the FilterSheet (see Task 15); on >= sm
- * it sits below the hero. */
-export function ProfileFilterBar() {
+ *
+ * Two layouts:
+ *   - default (desktop): compact, left-aligned segmented pills in one row.
+ *   - stacked (mobile FilterSheet): each control on its own labeled row with
+ *     full-width equal segments, for a calmer, more premium sheet. */
+export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
   const {
     window,
     betType,
@@ -40,6 +44,36 @@ export function ProfileFilterBar() {
     { value: "", label: "All markets" },
     ...marketOptions.map((o) => ({ value: o.value, label: o.label })),
   ];
+
+  if (stacked) {
+    return (
+      <div className="flex flex-col gap-5">
+        <Group label="Window">
+          <Seg ariaLabel="Window" options={WINDOWS} value={window} onSelect={setWindow} fill />
+        </Group>
+        <Group label="Bet type">
+          <Seg ariaLabel="Bet type" options={BET_TYPES} value={betActive} onSelect={setBetType} fill />
+        </Group>
+        {marketOptions.length > 0 && (
+          <Group label="Market">
+            <div
+              className={marketDisabled ? "opacity-40 pointer-events-none" : ""}
+              aria-disabled={marketDisabled}
+            >
+              <Seg
+                ariaLabel="Market"
+                options={marketSegOptions}
+                value={market}
+                onSelect={setMarket}
+                wrap
+                disabled={marketDisabled}
+              />
+            </div>
+          </Group>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -66,12 +100,24 @@ export function ProfileFilterBar() {
   );
 }
 
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold">
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function Seg<T extends string>({
   ariaLabel,
   options,
   value,
   onSelect,
   wrap = false,
+  fill = false,
   disabled = false,
 }: {
   ariaLabel: string;
@@ -79,13 +125,17 @@ function Seg<T extends string>({
   value: T;
   onSelect: (v: T) => void;
   wrap?: boolean;
+  fill?: boolean;
   disabled?: boolean;
 }) {
   return (
     <div
       role="group"
       aria-label={ariaLabel}
-      className={`inline-flex ${wrap ? "flex-wrap" : ""} gap-1 rounded-lg bg-[rgba(255,255,255,0.04)] p-1`}
+      className={`gap-1 rounded-lg bg-[rgba(255,255,255,0.04)] p-1 ${
+        fill ? "grid" : `inline-flex ${wrap ? "flex-wrap" : ""}`
+      }`}
+      style={fill ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` } : undefined}
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -96,9 +146,11 @@ function Seg<T extends string>({
             onClick={() => onSelect(o.value)}
             aria-pressed={active}
             disabled={disabled}
-            className={`px-3 py-2.5 sm:py-1.5 rounded-md text-[12px] sm:text-[11px] font-bold transition-colors ${
+            className={`rounded-md text-[12px] sm:text-[11px] font-bold transition-colors ${
+              fill ? "w-full text-center py-2.5" : "px-3 py-2.5 sm:py-1.5"
+            } ${
               active
-                ? "bg-[rgba(255,255,255,0.10)] text-[var(--color-text)]"
+                ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)] shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >

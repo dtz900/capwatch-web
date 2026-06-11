@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useCapperFilters } from "@/components/capper/CapperFilterProvider";
 import { RecentTrajectory } from "@/components/capper/RecentTrajectory";
+import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { formatHandle, formatRoi, formatUnits } from "@/lib/formatters";
 
 /** Flat strip that pins below the nav once the hero scrolls out of view. Shows
- * the handle, the active scope, a mini sparkline, and the live net profit + ROI
- * for the current filters. Fixed-positioned so it never shifts page layout. */
+ * the avatar, handle, active scope, a mini sparkline, and the live net profit +
+ * ROI for the current filters. Fixed-positioned so it never shifts page layout. */
 export function StickyProfileStrip() {
-  const { heroRef, handle, displayAgg, displayTrajectory, label } = useCapperFilters();
+  const { heroRef, handle, displayAgg, displayTrajectory, label, profile } = useCapperFilters();
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -38,7 +39,13 @@ export function StickyProfileStrip() {
                   transition-all duration-200
                   ${revealed ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
     >
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-7 h-14 flex items-center gap-4">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-7 h-14 flex items-center gap-3 sm:gap-4">
+        <CapperAvatar
+          url={profile.capper.profile_image_url}
+          handle={profile.capper.handle}
+          size={26}
+          apiIntegrated={profile.capper.handle === "fadeai_"}
+        />
         <span className="text-[13px] font-extrabold tracking-[-0.01em] shrink-0">
           {formatHandle(handle)}
         </span>
@@ -46,8 +53,8 @@ export function StickyProfileStrip() {
           {label}
         </span>
         {displayTrajectory.length >= 2 && (
-          <div className="hidden md:block shrink-0">
-            <RecentTrajectory series={displayTrajectory} width={120} height={32} hideLabel />
+          <div className="shrink-0">
+            <RecentTrajectory series={displayTrajectory} width={104} height={30} hideLabel deepFill />
           </div>
         )}
         <div className="flex items-center gap-4 ml-auto shrink-0">

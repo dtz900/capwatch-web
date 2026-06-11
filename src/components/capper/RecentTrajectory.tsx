@@ -20,6 +20,9 @@ interface Props {
    * pixel width prop. Lets the mobile placement go edge-to-edge inside
    * the stat card. */
   fullWidth?: boolean;
+  /** Use a more saturated red/green area fill so the shading reads at small
+   * sizes (e.g. the sticky-strip mini sparkline). */
+  deepFill?: boolean;
 }
 
 const WINDOW_LABEL: Record<Window, string> = {
@@ -36,6 +39,7 @@ export function RecentTrajectory({
   height = 76,
   hideLabel = false,
   fullWidth = false,
+  deepFill = false,
 }: Props) {
   // Hook calls must precede any conditional return (rules-of-hooks).
   const uid = useId();
@@ -77,8 +81,8 @@ export function RecentTrajectory({
   // The full-width mobile placement gets a deeper, more saturated fill so
   // the red/green tone reads at a glance against the dark card. The
   // desktop hero variant keeps the subtle 0.18 -> 0 fade.
-  const fillTopAlpha = fullWidth ? "0.36" : "0.18";
-  const fillBottomAlpha = fullWidth ? "0.06" : "0";
+  const fillTopAlpha = fullWidth ? "0.36" : deepFill ? "0.30" : "0.18";
+  const fillBottomAlpha = fullWidth ? "0.06" : deepFill ? "0.05" : "0";
   const lastX = padX + (points.length - 1) * stepX;
   const lastY = yFor(last);
 

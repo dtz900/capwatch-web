@@ -1,28 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useCapperFilters } from "@/components/capper/CapperFilterProvider";
 import { HistoryRow, DESKTOP_GRID } from "@/components/capper/HistoryRow";
 
-/** Append-style pick history. Auto-fires load-more when a sentinel near the
- * bottom scrolls into view, with a manual "Load more" button as the accessible
- * / observer-unsupported fallback. Bound to the filter context. */
+/** Append-style pick history. Loads the next page only when the "Load more"
+ * button is clicked (no scroll auto-fire). Bound to the filter context. */
 export function HistoryList() {
   const { history, historyTotal, loadingHistory, hasMore, loadMore } = useCapperFilters();
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || !hasMore) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) loadMore();
-      },
-      { rootMargin: "400px 0px" },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasMore, loadMore, history.length]);
 
   if (historyTotal === 0) {
     return (
@@ -74,8 +58,6 @@ export function HistoryList() {
           </button>
         )}
       </div>
-
-      <div ref={sentinelRef} aria-hidden="true" className="h-px" />
     </div>
   );
 }
