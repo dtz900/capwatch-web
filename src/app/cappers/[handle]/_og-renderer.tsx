@@ -739,7 +739,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
 
               <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 20 }} />
 
-              <div style={{ display: "flex", gap: 14, marginTop: 18, width: "100%" }}>
+              <div style={{ display: "flex", gap: 14, marginTop: 16, width: "100%" }}>
                 <StatTile label="Record" value={record} valueColor={TEXT} />
                 <StatTile label="Win rate" value={`${winPct}%`} valueColor={winPct >= 50 ? POS : TEXT} />
                 <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
@@ -748,7 +748,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
               <div style={{
                 display: "flex",
                 flexDirection: "column",
-                marginTop: 18,
+                marginTop: 14,
                 padding: "14px 18px 10px",
                 borderRadius: 18,
                 background: "rgba(255,255,255,0.035)",
@@ -776,8 +776,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
             </div>
           )}
 
-          <div style={{ display: "flex", marginTop: "auto", alignItems: "center", justifyContent: "space-between", color: TEXT_MUTED, fontSize: 15, fontWeight: 800 }}>
-            <div style={{ display: "flex" }}>Verified MLB picks. Public tweets parsed and graded.</div>
+          <div style={{ display: "flex", marginTop: "auto", height: 30, alignItems: "flex-end", justifyContent: "flex-end", color: TEXT_MUTED, fontSize: 13, fontWeight: 800 }}>
             <div style={{ display: "flex", color: TEXT_SOFT }}>tailslips.com</div>
           </div>
         </div>
