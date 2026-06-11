@@ -737,18 +737,10 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                 </div>
               </div>
 
-              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 20 }} />
-
-              <div style={{ display: "flex", gap: 14, marginTop: 16, width: "100%" }}>
-                <StatTile label="Record" value={record} valueColor={TEXT} />
-                <StatTile label="Win rate" value={`${winPct}%`} valueColor={winPct >= 50 ? POS : TEXT} />
-                <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
-              </div>
-
               <div style={{
                 display: "flex",
                 flexDirection: "column",
-                marginTop: 14,
+                marginTop: 18,
                 padding: "14px 18px 10px",
                 borderRadius: 18,
                 background: "rgba(255,255,255,0.035)",
@@ -765,6 +757,14 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                 <div style={{ display: "flex", marginTop: 8 }}>
                   <OgSparkline series={trajectorySeries} />
                 </div>
+              </div>
+
+              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 14 }} />
+
+              <div style={{ display: "flex", gap: 14, marginTop: 14, width: "100%" }}>
+                <StatTile label="Record" value={record} valueColor={TEXT} />
+                <StatTile label="Win rate" value={`${winPct}%`} valueColor={winPct >= 50 ? POS : TEXT} />
+                <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
               </div>
             </div>
           ) : (
