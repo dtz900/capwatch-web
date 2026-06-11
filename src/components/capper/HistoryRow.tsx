@@ -1,0 +1,386 @@
+"use client";
+
+import { useState } from "react";
+import { XIcon } from "@/components/icons/XIcon";
+import { formatBetDescriptor } from "@/lib/markets";
+import { formatUnitsSmart, displayUnits } from "@/lib/formatters";
+import type { HistoryPick } from "@/lib/types";
+import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
+import { ParlayLegList } from "@/components/capper/ParlayLegList";
+
+export const DESKTOP_GRID =
+  "hidden sm:grid grid-cols-[64px_minmax(220px,1fr)_56px_72px_64px_80px_28px] gap-3 items-center";
+
+function formatDate(iso: string | null): string | null {
+  if (!iso) return null;
+  // Pin to ET so SSR (server default UTC) and client hydrate render the
+  // same string. Picks are graded against ET slate days on the backend;
+  // this keeps the displayed date consistent with that.
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/New_York",
+  });
+}
+
+/** YYYY-MM-DD dates from the API arrive without a time component. Parsing
+ * them as ISO defaults to UTC midnight, then formatting in ET would shift
+ * them back a day. Parse the y/m/d parts directly so the rendered date
+ * matches the backend's ET slate day exactly. */
+function formatGameDate(ymd: string | null): string | null {
+  if (!ymd) return null;
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!parts) return null;
+  const [, y, mo, d] = parts;
+  // Construct a UTC Date for the noon of the day so any TZ render keeps the
+  // calendar day stable, then format with the same options as formatDate.
+  const noonUtc = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d), 12));
+  return noonUtc.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
+  // Prefer game_date (the day the bet plays/settles) so a Friday-evening
+  // tweet for Saturday's slate shows Saturday. Fall back to posted_at for
+  // historical rows that don't yet have game_date (or whose game_id is null).
+  const date = formatGameDate(pick.game_date) ?? formatDate(pick.posted_at);
+  const isParlay = pick.kind === "parlay";
+  // Display grading_odds (the value the grader actually used) when present,
+  // falling back to odds_taken for legacy rows. The (market) indicator marks
+  // picks where the capper didn't post American odds and we derived the grading
+  // price from Pinnacle (the price nearest the post, consensus when Pinnacle was
+  // missing, or the close as a last-resort fallback).
+  const displayedOdds = pick.grading_odds ?? pick.odds_taken;
+  const oddsText =
+    displayedOdds == null
+      ? ""
+      : displayedOdds > 0
+        ? `+${displayedOdds}`
+        : String(displayedOdds);
+  // Capper didn't post odds; grading_odds was derived from Pinnacle. All three
+  // derived rungs render the same "(market)" indicator.
+  const isDerivedOdds =
+    pick.grading_odds_source === "pinnacle_at_post" ||
+    pick.grading_odds_source === "consensus_at_post" ||
+    pick.grading_odds_source === "pinnacle_close";
+  // outcome-only: capper posted no odds and we have no honest close-line
+  // proxy (player props, or ML where Pinnacle is missing). Hide the odds
+  // and profit cells; the row still shows W/L via the bar color.
+  const isOutcomeOnly = pick.grading_odds_source === "no_close_available";
+  const profitColor =
+    pick.profit_units == null
+      ? "text-[var(--color-text-muted)]"
+      : pick.profit_units > 0
+        ? "text-[var(--color-pos)]"
+        : pick.profit_units < 0
+          ? "text-[var(--color-neg)]"
+          : "text-[var(--color-text-muted)]";
+  const barColor =
+    pick.outcome === "W"
+      ? "bg-[var(--color-pos)]"
+      : pick.outcome === "L"
+        ? "bg-[var(--color-neg)]"
+        : pick.outcome === "P"
+          ? "bg-[rgba(255,255,255,0.28)]"
+          : "bg-[rgba(255,255,255,0.06)]";
+  const unitsValue = displayUnits(pick.units);
+
+  const hasExpandableLegs = isParlay && !!pick.legs && pick.legs.length > 0;
+  const [expanded, setExpanded] = useState(false);
+  const toggleExpanded = () => {
+    if (hasExpandableLegs) setExpanded((v) => !v);
+  };
+
+  const selectionNode = (
+    <>
+      <span className={`font-bold ${isParlay ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"}`}>
+        {formatBetDescriptor({
+          kind: isParlay ? "parlay" : "straight",
+          leg_count: pick.leg_count ?? null,
+          market: pick.market,
+          selection: pick.selection,
+          line: pick.line,
+          odds_taken: pick.odds_taken,
+        })}
+      </span>
+      {isParlay && pick.legs && pick.legs.length > 0 && (
+        <>
+          {" "}
+          <ParlayLegGlyphs legs={pick.legs} />
+        </>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      <div
+        onClick={hasExpandableLegs ? toggleExpanded : undefined}
+        onKeyDown={
+          hasExpandableLegs
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleExpanded();
+                }
+              }
+            : undefined
+        }
+        role={hasExpandableLegs ? "button" : undefined}
+        tabIndex={hasExpandableLegs ? 0 : undefined}
+        aria-expanded={hasExpandableLegs ? expanded : undefined}
+        className={`group/row relative ${DESKTOP_GRID} pl-[19px] pr-5 py-3.5
+                    hover:bg-[rgba(255,255,255,0.02)] transition-colors duration-150
+                    ${hasExpandableLegs ? "cursor-pointer" : ""}
+                    ${isLast && !expanded ? "" : "sm:border-b sm:border-[rgba(255,255,255,0.035)]"}`}
+      >
+        <span aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
+        <div className="text-[12px] text-[var(--color-text-muted)] font-medium tabular-nums">
+          {date ?? ""}
+        </div>
+        <div className="min-w-0 text-[13px] flex items-center gap-2">
+          <span className="truncate">
+            {pick.game_label && (
+              <span className="text-[var(--color-text-muted)] mr-2 font-medium">
+                {pick.game_label}
+              </span>
+            )}
+            {selectionNode}
+          </span>
+          {pick.deleted_after_game_start && (
+            <span
+              className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
+                         text-[9px] uppercase tracking-[0.12em] font-bold
+                         bg-[rgba(239,68,68,0.12)] border border-[rgba(239,68,68,0.55)]
+                         text-[#ef4444]"
+              title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+            >
+              Deleted after first pitch
+            </span>
+          )}
+          {pick.was_deleted_on_x && !pick.deleted_after_game_start && (
+            <span
+              className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
+                         text-[9px] uppercase tracking-[0.12em] font-bold
+                         bg-[rgba(245,158,11,0.10)] border border-[rgba(245,158,11,0.45)]
+                         text-[#f59e0b]"
+              title="The capper deleted this tweet from X. TailSlips kept the receipt."
+            >
+              Deleted on X
+            </span>
+          )}
+        </div>
+        <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
+          {pick.line != null ? pick.line : ""}
+        </div>
+        <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
+          {isOutcomeOnly ? (
+            <span
+              className="text-[10px] italic text-[var(--color-text-muted)]"
+              title="Capper did not post odds. Counted toward Win % only."
+            >
+              no odds
+            </span>
+          ) : (
+            <>
+              {oddsText}
+              {isDerivedOdds && (
+                <span
+                  className="ml-1 text-[10px] text-[var(--color-text-muted)] font-medium"
+                  title="Capper did not post odds. Graded at the Pinnacle price from when they posted (the close when no snapshot was available)."
+                >
+                  (market)
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)] font-medium">
+          {isOutcomeOnly ? "" : `${unitsValue}u`}
+        </div>
+        <div className={`text-right tabular-nums text-[13px] font-extrabold ${profitColor}`}>
+          {isOutcomeOnly
+            ? ""
+            : pick.profit_units != null
+              ? `${formatUnitsSmart(pick.profit_units)}u`
+              : ""}
+        </div>
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+          {pick.deleted_after_game_start ? (
+            <span
+              aria-label="Tweet deleted after first pitch"
+              title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+              className="inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(239,68,68,0.10)] text-[#ef4444] opacity-90"
+            >
+              <XIcon size={11} />
+            </span>
+          ) : pick.was_deleted_on_x ? (
+            <span
+              aria-label="Tweet deleted by capper"
+              title="The capper deleted this tweet. TailSlips kept the receipt."
+              className="inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(245,158,11,0.08)] text-[#f59e0b] opacity-90"
+            >
+              <XIcon size={11} />
+            </span>
+          ) : pick.tweet_url ? (
+            <a
+              href={pick.tweet_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View tweet"
+              className="inline-flex w-7 h-7 items-center justify-center rounded-md
+                         text-[var(--color-text-muted)]
+                         opacity-0 group-hover/row:opacity-100
+                         hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--color-text)]
+                         transition-all duration-150"
+            >
+              <XIcon size={11} />
+            </a>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+        </div>
+      </div>
+
+      {hasExpandableLegs && expanded && (
+        <div className="hidden sm:block">
+          <ParlayLegList legs={pick.legs!} />
+        </div>
+      )}
+
+      <div
+        onClick={hasExpandableLegs ? toggleExpanded : undefined}
+        onKeyDown={
+          hasExpandableLegs
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleExpanded();
+                }
+              }
+            : undefined
+        }
+        role={hasExpandableLegs ? "button" : undefined}
+        tabIndex={hasExpandableLegs ? 0 : undefined}
+        aria-expanded={hasExpandableLegs ? expanded : undefined}
+        className={`sm:hidden relative pl-4 pr-4 py-3
+                    ${hasExpandableLegs ? "cursor-pointer" : ""}
+                    ${isLast && !expanded ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
+      >
+        <span aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
+        <div className="flex items-baseline justify-between gap-3 mb-1.5">
+          <div className="text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums uppercase tracking-wide">
+            {date ?? ""}
+          </div>
+          <div className={`tabular-nums text-[14px] font-extrabold ${profitColor}`}>
+            {isOutcomeOnly
+              ? (pick.outcome === "W" ? <span className="text-[var(--color-pos)]">W</span>
+                : pick.outcome === "L" ? <span className="text-[var(--color-neg)]">L</span>
+                : pick.outcome === "P" ? <span className="text-[var(--color-text-muted)]">P</span>
+                : "")
+              : pick.profit_units != null
+                ? `${formatUnitsSmart(pick.profit_units)}u`
+                : ""}
+          </div>
+        </div>
+        <div className="text-[13px] leading-snug">
+          {pick.game_label && (
+            <span className="text-[var(--color-text-muted)] mr-1.5 font-medium">
+              {pick.game_label}
+            </span>
+          )}
+          {selectionNode}
+        </div>
+        {(pick.deleted_after_game_start || pick.was_deleted_on_x) && (
+          <div className="mt-1.5">
+            {pick.deleted_after_game_start ? (
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded
+                           text-[9px] uppercase tracking-[0.12em] font-bold
+                           bg-[rgba(239,68,68,0.12)] border border-[rgba(239,68,68,0.55)]
+                           text-[#ef4444]"
+                title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+              >
+                Deleted after first pitch
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded
+                           text-[9px] uppercase tracking-[0.12em] font-bold
+                           bg-[rgba(245,158,11,0.10)] border border-[rgba(245,158,11,0.45)]
+                           text-[#f59e0b]"
+                title="The capper deleted this tweet from X. TailSlips kept the receipt."
+              >
+                Deleted on X
+              </span>
+            )}
+          </div>
+        )}
+        <div className="mt-1 text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums flex items-center gap-3 flex-wrap">
+          {pick.line != null && <span>Line {pick.line}</span>}
+          {isOutcomeOnly ? (
+            <span className="italic opacity-75" title="No odds posted. Counts toward Win % only.">
+              no odds
+            </span>
+          ) : oddsText ? (
+            <span>
+              {oddsText}
+              {isDerivedOdds && (
+                <span
+                  className="ml-1 text-[10px] opacity-75"
+                  title="Capper did not post odds. Graded at the Pinnacle price from when they posted."
+                >
+                  (market)
+                </span>
+              )}
+            </span>
+          ) : null}
+          {!isOutcomeOnly && <span>{unitsValue}u</span>}
+          {pick.deleted_after_game_start ? (
+            <span
+              aria-label="Tweet deleted after first pitch"
+              title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
+              onClick={(e) => e.stopPropagation()}
+              className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(239,68,68,0.10)] text-[#ef4444] opacity-90"
+            >
+              <XIcon size={11} />
+            </span>
+          ) : pick.was_deleted_on_x ? (
+            <span
+              aria-label="Tweet deleted by capper"
+              title="The capper deleted this tweet. TailSlips kept the receipt."
+              onClick={(e) => e.stopPropagation()}
+              className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(245,158,11,0.08)] text-[#f59e0b] opacity-90"
+            >
+              <XIcon size={11} />
+            </span>
+          ) : pick.tweet_url ? (
+            <a
+              href={pick.tweet_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View tweet"
+              onClick={(e) => e.stopPropagation()}
+              className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
+                         bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)]"
+            >
+              <XIcon size={11} />
+            </a>
+          ) : null}
+        </div>
+        {hasExpandableLegs && expanded && (
+          <div className="-mx-4 mt-2 sm:hidden">
+            <ParlayLegList legs={pick.legs!} />
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
