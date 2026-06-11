@@ -446,6 +446,18 @@ function parseRecordLine(record: string): { wins: number; losses: number; pushes
   };
 }
 
+/**
+ * Shrink the @handle font so long handles fit their column instead of stretching
+ * into the stats. Satori cannot measure rendered text, so estimate width from
+ * character count (~0.6em per glyph at weight 900, plus the leading "@") and
+ * scale down from `base` toward `min` to keep the line within `maxWidth`.
+ */
+function fitHandleFontSize(handle: string, base: number, maxWidth: number, min: number): number {
+  const chars = handle.length + 1; // include the leading "@"
+  const estimate = Math.floor(maxWidth / (chars * 0.6));
+  return Math.max(min, Math.min(base, estimate));
+}
+
 function Capsule({ text, color }: { text: string; color: string }) {
   return (
     <div style={{
@@ -683,7 +695,14 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", marginTop: 30 }}>
-            <div style={{ display: "flex", fontSize: 46, fontWeight: 900, lineHeight: 1 }}>
+            <div
+              style={{
+                display: "flex",
+                fontSize: fitHandleFontSize(handle, 46, 272, 26),
+                fontWeight: 900,
+                lineHeight: 1,
+              }}
+            >
               @{handle}
             </div>
             {displayName && displayName !== handle ? (
