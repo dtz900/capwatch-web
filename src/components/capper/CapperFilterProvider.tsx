@@ -148,7 +148,7 @@ export function CapperFilterProvider({
       outcome?: string;
     }) => {
       const w = next.window ?? window;
-      let bt = next.betType ?? betType;
+      const bt = next.betType ?? betType;
       let mk = next.market ?? market;
       const oc = next.outcome ?? outcome;
 
