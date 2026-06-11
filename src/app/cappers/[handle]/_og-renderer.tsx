@@ -20,6 +20,8 @@ const TEXT_SOFT = "#d4d4d8";
 const TEXT_MUTED = "#71717a";
 const POS = "#19f57c";
 const NEG = "#ef4444";
+const AMBER = "#f5c54a";
+const CYAN = "#47c7ff";
 
 // Tier accents. Mirror the live site: top-3 use gold, the FADE AI model uses
 // premium blue, everyone else gets the muted treatment.
@@ -326,7 +328,7 @@ export async function renderCapperOg(
   };
 
   try {
-    const primary = new ImageResponse(buildOgJsx(inputs), { ...size });
+    const primary = new ImageResponse(buildPremiumOgJsx(inputs), { ...size });
     const buf = await primary.arrayBuffer();
     return new Response(buf, {
       headers: { "content-type": "image/png", "cache-control": PRIMARY_CACHE },
@@ -400,6 +402,275 @@ const TRANSPARENT_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   "base64",
 );
+
+function parseRecordLine(record: string): { wins: number; losses: number; pushes: number } {
+  const [wins, losses, pushes] = record.split("-").map((part) => Number.parseInt(part, 10));
+  return {
+    wins: Number.isFinite(wins) ? wins : 0,
+    losses: Number.isFinite(losses) ? losses : 0,
+    pushes: Number.isFinite(pushes) ? pushes : 0,
+  };
+}
+
+function Capsule({ text, color }: { text: string; color: string }) {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      padding: "7px 11px",
+      borderRadius: 999,
+      border: `1px solid ${color}`,
+      background: "rgba(255,255,255,0.035)",
+      color,
+      fontSize: 10,
+      fontWeight: 900,
+      textTransform: "uppercase",
+      letterSpacing: 1.6,
+      maxWidth: 285,
+    }}>
+      {text}
+    </div>
+  );
+}
+
+function buildPremiumOgJsx(inputs: RenderInputs) {
+  const {
+    handle,
+    displayName,
+    avatarDataUri,
+    logoDataUri,
+    hasData,
+    record,
+    unitsRaw,
+    roiPct,
+    picksCount,
+    trackedSinceLabel,
+    filterLabel,
+    tier,
+    rank,
+  } = inputs;
+  const unitsLabel = formatUnitsForTitle(unitsRaw);
+  const roiLabel = formatRoiNumeric(roiPct);
+  const unitsColor = unitsRaw >= 0 ? POS : NEG;
+  const roiColor = roiPct >= 0 ? POS : NEG;
+  const initial = handle.slice(0, 1).toUpperCase();
+  const visuals = tierVisuals(tier, rank);
+  const parsed = parseRecordLine(record);
+  const decisions = parsed.wins + parsed.losses;
+  const winPct = decisions > 0 ? Math.round((parsed.wins / decisions) * 100) : 0;
+  const strength = Math.max(8, Math.min(92, winPct));
+  const subline = filterLabel
+    ? `${filterLabel} - ${picksCount} graded picks`
+    : trackedSinceLabel
+      ? `Tracked since ${trackedSinceLabel} - ${picksCount} graded picks`
+      : `${picksCount} graded picks`;
+
+  return (
+    <div style={{
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      background:
+        "radial-gradient(circle at 18% 16%, rgba(71,199,255,0.18), transparent 30%), radial-gradient(circle at 82% 8%, rgba(245,197,74,0.16), transparent 28%), linear-gradient(135deg, #060709 0%, #11131a 52%, #07080b 100%)",
+      fontFamily: "system-ui, sans-serif",
+      color: TEXT,
+      padding: 34,
+      position: "relative",
+      overflow: "hidden",
+    }}>
+      <div style={{
+        position: "absolute",
+        left: -120,
+        bottom: -180,
+        width: 620,
+        height: 620,
+        borderRadius: 999,
+        border: "1px solid rgba(255,255,255,0.06)",
+        display: "flex",
+      }} />
+      <div style={{
+        position: "absolute",
+        right: -80,
+        top: 70,
+        width: 360,
+        height: 900,
+        transform: "rotate(20deg)",
+        background: "linear-gradient(180deg, rgba(25,245,124,0.14), rgba(71,199,255,0.05), transparent)",
+        display: "flex",
+      }} />
+      {visuals.ribbonRank !== null ? <CornerRibbon rank={visuals.ribbonRank} /> : null}
+
+      <div style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        border: "1px solid rgba(255,255,255,0.13)",
+        borderRadius: 28,
+        background: "rgba(8,10,14,0.78)",
+        boxShadow: "0 28px 80px rgba(0,0,0,0.58), inset 0 1px 0 rgba(255,255,255,0.08)",
+        overflow: "hidden",
+        position: "relative",
+      }}>
+        <div style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 5,
+          background: `linear-gradient(90deg, ${POS}, ${CYAN}, ${AMBER})`,
+          display: "flex",
+        }} />
+
+        <div style={{
+          width: 365,
+          display: "flex",
+          flexDirection: "column",
+          padding: "38px 34px",
+          borderRight: "1px solid rgba(255,255,255,0.08)",
+          background: "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015))",
+        }}>
+          {logoDataUri ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoDataUri} alt="TailSlips" height={46} style={{ height: 46, width: 183 }} />
+          ) : (
+            <div style={{ fontSize: 32, fontWeight: 900, display: "flex" }}>TAILSLIPS</div>
+          )}
+
+          <div style={{ display: "flex", marginTop: 50, alignItems: "center" }}>
+            {avatarDataUri ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarDataUri} alt="" width={132} height={132}
+                style={{
+                  width: 132,
+                  height: 132,
+                  borderRadius: 999,
+                  border: `4px solid ${tier === "standard" ? "rgba(255,255,255,0.16)" : visuals.avatarBorder}`,
+                  boxShadow: visuals.avatarShadow === "none"
+                    ? "0 16px 40px rgba(0,0,0,0.45)"
+                    : visuals.avatarShadow,
+                  objectFit: "cover",
+                }} />
+            ) : (
+              <div style={{
+                width: 132,
+                height: 132,
+                borderRadius: 999,
+                background: "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
+                border: "4px solid rgba(255,255,255,0.16)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 58,
+                fontWeight: 900,
+                color: TEXT_SOFT,
+              }}>
+                {initial}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", marginTop: 28 }}>
+            <div style={{ display: "flex", fontSize: 38, fontWeight: 900, lineHeight: 1 }}>
+              @{handle}
+            </div>
+            {displayName && displayName !== handle ? (
+              <div style={{ display: "flex", fontSize: 17, color: TEXT_MUTED, marginTop: 8, fontWeight: 700 }}>
+                {displayName}
+              </div>
+            ) : null}
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 28 }}>
+            {visuals.pill ? <Capsule text={visuals.pill.text} color={visuals.pill.color} /> : null}
+            {filterLabel ? <Capsule text={filterLabel} color={CYAN} /> : null}
+          </div>
+
+          <div style={{ display: "flex", marginTop: "auto", color: TEXT_MUTED, fontSize: 13, fontWeight: 700 }}>
+            {subline}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "42px 46px 36px", minWidth: 0 }}>
+          {hasData ? (
+            <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                  <div style={{ display: "flex", color: TEXT_MUTED, fontSize: 16, fontWeight: 900, textTransform: "uppercase", letterSpacing: 3 }}>
+                    Net profit
+                  </div>
+                  <div style={{
+                    display: "flex",
+                    marginTop: 8,
+                    fontSize: 106,
+                    fontWeight: 950,
+                    lineHeight: 0.92,
+                    color: unitsColor,
+                    textShadow: unitsRaw >= 0
+                      ? "0 0 34px rgba(25,245,124,0.24)"
+                      : "0 0 34px rgba(239,68,68,0.22)",
+                  }}>
+                    {unitsLabel}
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", paddingTop: 8, width: 170 }}>
+                  <div style={{ display: "flex", fontSize: 15, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 3 }}>
+                    ROI
+                  </div>
+                  <div style={{ display: "flex", marginTop: 8, fontSize: 44, fontWeight: 900, color: roiColor }}>
+                    {roiLabel}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 34 }} />
+
+              <div style={{ display: "flex", gap: 14, marginTop: 28, width: "100%" }}>
+                <StatTile label="Record" value={record} valueColor={TEXT} />
+                <StatTile label="Win rate" value={`${winPct}%`} valueColor={winPct >= 50 ? POS : TEXT} />
+                <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
+              </div>
+
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                marginTop: 28,
+                padding: "18px 20px",
+                borderRadius: 18,
+                background: "rgba(255,255,255,0.035)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", fontSize: 13, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 2.5 }}>
+                    Decision profile
+                  </div>
+                  <div style={{ display: "flex", fontSize: 14, color: TEXT_SOFT, fontWeight: 800 }}>
+                    {parsed.wins} wins / {parsed.losses} losses
+                  </div>
+                </div>
+                <div style={{ display: "flex", height: 14, borderRadius: 999, overflow: "hidden", background: "rgba(255,255,255,0.08)", marginTop: 14 }}>
+                  <div style={{ display: "flex", width: `${strength}%`, background: `linear-gradient(90deg, ${POS}, ${CYAN})` }} />
+                  <div style={{ display: "flex", flex: 1, background: "rgba(239,68,68,0.82)" }} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}>
+              <div style={{ display: "flex", fontSize: 64, fontWeight: 900 }}>Tracked on TailSlips</div>
+              <div style={{ display: "flex", marginTop: 18, fontSize: 26, color: TEXT_MUTED, fontWeight: 700 }}>
+                Pick history grading in progress.
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", marginTop: "auto", alignItems: "center", justifyContent: "space-between", color: TEXT_MUTED, fontSize: 15, fontWeight: 800 }}>
+            <div style={{ display: "flex" }}>Verified MLB picks. Public tweets parsed and graded.</div>
+            <div style={{ display: "flex", color: TEXT_SOFT }}>tailslips.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function buildOgJsx(inputs: RenderInputs) {
   const {
