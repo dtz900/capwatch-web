@@ -120,17 +120,6 @@ function formatTrackedSince(iso: string): string {
   }
 }
 
-/**
- * Map ROI to a stable 1-5 review scale. Anchors picked so the median capper
- * sits near 3.0 and the band rewards genuine edge without inflating noise.
- * 0% ROI = 3.0, +5% = 4.0, +15% = 5.0, -5% = 2.0, -15% = 1.0.
- */
-export function roiToReviewRating(roiPct: number): number {
-  const clamped = Math.max(-15, Math.min(15, roiPct));
-  const rating = 3 + clamped * 0.1333;
-  return Math.round(rating * 10) / 10;
-}
-
 interface FaqInputs {
   handle: string;
   displayName: string | null;

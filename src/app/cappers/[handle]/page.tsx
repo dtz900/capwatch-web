@@ -20,7 +20,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
-import { breadcrumbNode, capperPersonNode, capperReviewNode, faqNode } from "@/lib/jsonld";
+import { breadcrumbNode, capperPersonNode, faqNode } from "@/lib/jsonld";
 import { marketFilterLabel } from "@/lib/capperFilters";
 import {
   buildCapperDescription,
@@ -368,8 +368,6 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
     ]),
     capperPersonNode(profile),
   ];
-  const reviewNode = capperReviewNode(profile);
-  if (reviewNode) jsonLdNodes.push(reviewNode);
   if (faqItems.length > 0) jsonLdNodes.push(faqNode(faqItems));
 
   const showNoPublicPicks =
