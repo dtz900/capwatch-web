@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchCapperProfile, fetchLeaderboard } from "@/lib/api";
 import { formatRecord, formatRoiNumeric, formatUnitsForTitle } from "@/lib/seo";
+import { marketFilterLabel } from "@/lib/capperFilters";
 import type { BetTypeFilter, Window } from "@/lib/types";
 
 export const size = { width: 1200, height: 630 };
@@ -233,6 +234,9 @@ function buildFilterLabel(w: Window, bt: BetTypeFilter): string {
 export interface RenderOpts {
   window?: Window;
   bet_type?: BetTypeFilter;
+  /** When set, render the per-market straight-pick slice (e.g. "spread"),
+   * matching the page's Market filter. A market implies straights. */
+  market?: string;
 }
 
 const DEFAULT_OG_WINDOW: Window = "season";
@@ -242,7 +246,10 @@ export async function renderCapperOg(
   opts: RenderOpts = {},
 ): Promise<Response> {
   const window: Window = opts.window ?? DEFAULT_OG_WINDOW;
-  const bet_type: BetTypeFilter = opts.bet_type ?? "all";
+  const market = opts.market;
+  // A specific market scopes to straight picks; market_slices are identical on
+  // the all/straights rows, so fetch straights when a market is requested.
+  const bet_type: BetTypeFilter = market ? "straights" : opts.bet_type ?? "all";
 
   let displayName: string | null = null;
   let avatarSourceUrl: string | null = null;
@@ -252,6 +259,7 @@ export async function renderCapperOg(
   let picksCount = 0;
   let trackedSince: string | null = null;
   let hasData = false;
+  let marketLabel: string | null = null;
 
   try {
     const profile = await fetchCapperProfile(handle, {
@@ -262,18 +270,31 @@ export async function renderCapperOg(
     const agg = profile.aggregates[window] ?? profile.aggregates["all_time"];
     displayName = profile.capper.display_name;
     avatarSourceUrl = profile.capper.profile_image_url;
-    if (agg && agg.picks_count > 0) {
+    const slice = market ? agg?.market_slices?.[market] ?? null : null;
+    // tracked_since lives on the all-time aggregate. Pull it directly so the
+    // subline is consistent regardless of the requested filter window.
+    const trackedSinceSrc =
+      profile.aggregates["all_time"]?.tracked_since ?? agg?.tracked_since ?? null;
+    if (market && slice) {
+      marketLabel = marketFilterLabel(market);
+      if (slice.picks_count > 0) {
+        record = formatRecord(slice);
+        unitsRaw = slice.units_profit;
+        roiPct = slice.roi_pct ?? 0;
+        picksCount = slice.picks_count;
+        trackedSince = trackedSinceSrc;
+        hasData = true;
+      }
+    } else if (agg && agg.picks_count > 0) {
       record = formatRecord(agg);
       unitsRaw = agg.units_profit;
       roiPct = agg.roi_pct;
       picksCount = agg.picks_count;
-      // tracked_since lives on the all-time aggregate. Pull it directly so the
-      // subline is consistent regardless of the requested filter window.
-      trackedSince = profile.aggregates["all_time"]?.tracked_since ?? agg.tracked_since ?? null;
+      trackedSince = trackedSinceSrc;
       hasData = true;
     }
   } catch (err) {
-    console.error("[og-renderer] fetchCapperProfile failed", { handle, window, bet_type, err });
+    console.error("[og-renderer] fetchCapperProfile failed", { handle, window, bet_type, market, err });
   }
 
   const [avatarDataUri, logoDataUri, rank] = await Promise.all([
@@ -296,7 +317,10 @@ export async function renderCapperOg(
     roiPct,
     picksCount,
     trackedSinceLabel: trackedSince ? formatTrackedSince(trackedSince) : "",
-    filterLabel: buildFilterLabel(window, bet_type),
+    filterLabel:
+      market && marketLabel
+        ? [marketLabel, windowLabel(window)].filter(Boolean).join(" · ")
+        : buildFilterLabel(window, bet_type),
     tier,
     rank,
   };

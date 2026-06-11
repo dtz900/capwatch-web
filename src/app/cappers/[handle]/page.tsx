@@ -11,6 +11,7 @@ import { OutcomeFilter } from "@/components/capper/OutcomeFilter";
 import { StickyProfileStrip } from "@/components/capper/StickyProfileStrip";
 import { HistoryList } from "@/components/capper/HistoryList";
 import { FilterSheet } from "@/components/capper/FilterSheet";
+import { ShareFilteredButton } from "@/components/capper/ShareFilteredButton";
 import { PendingBlock } from "@/components/capper/PendingBlock";
 import { MarketMixBar } from "@/components/capper/MarketMixBar";
 import { FaqSection } from "@/components/capper/FaqSection";
@@ -20,6 +21,7 @@ import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, capperReviewNode, faqNode } from "@/lib/jsonld";
+import { marketFilterLabel } from "@/lib/capperFilters";
 import {
   buildCapperDescription,
   buildCapperFaq,
@@ -80,9 +82,12 @@ export async function generateMetadata({
   const requestedBetType = sp.bet_type as BetTypeFilter | undefined;
   const window: Window =
     requestedWindow && VALID_WINDOWS.includes(requestedWindow) ? requestedWindow : DEFAULT_WINDOW;
-  const betType: BetTypeFilter =
+  let betType: BetTypeFilter =
     requestedBetType && VALID_BET_TYPES.includes(requestedBetType) ? requestedBetType : "all";
-  const hasFilter = window !== DEFAULT_WINDOW || betType !== "all";
+  // A specific market scopes to straight picks; parlays cannot be market-scoped.
+  const market = betType === "parlays" ? "" : (sp.market ?? "").trim();
+  if (market) betType = "straights";
+  const hasFilter = window !== DEFAULT_WINDOW || betType !== "all" || !!market;
 
   // Canonical stays unfiltered for SEO; og:url reflects the actual shared
   // URL so social click-throughs land on the filtered view they were sold.
@@ -90,6 +95,8 @@ export async function generateMetadata({
   const sharedQs = new URLSearchParams();
   if (sp.window) sharedQs.set("window", sp.window);
   if (sp.bet_type) sharedQs.set("bet_type", sp.bet_type);
+  if (market) sharedQs.set("market", market);
+  if (sp.outcome) sharedQs.set("outcome", sp.outcome);
   const sharedUrl = sharedQs.toString() ? `${canonical}?${sharedQs.toString()}` : canonical;
 
   // OG image URL fingerprint. picks_count alone misses wins<->losses swaps
@@ -102,6 +109,7 @@ export async function generateMetadata({
     const q = new URLSearchParams();
     q.set("w", window);
     q.set("bt", betType);
+    if (market) q.set("mk", market);
     q.set("p", String(picksFp));
     q.set("v", OG_CARD_VERSION);
     if (sp.v && /^[0-9]{8,}$/.test(sp.v)) q.set("sv", sp.v);
@@ -140,23 +148,49 @@ export async function generateMetadata({
     // (season) but produces an empty label, and feeding that into the
     // filter-aware title format leaves a stray bullet ("@x ·  · 22-18 ..."),
     // so we fall through to the generic path in that case.
-    const fLabel = filterLabelFor(window, betType);
+    // When a market is active, the headline numbers come from that market's
+    // straight-pick slice (mirrors the page and the OG card). Falls back to the
+    // window/bet-type aggregate when the slice is absent.
+    const marketSlice =
+      market && filteredAgg?.market_slices ? filteredAgg.market_slices[market] ?? null : null;
+    const statAgg = marketSlice
+      ? {
+          wins: marketSlice.wins,
+          losses: marketSlice.losses,
+          pushes: marketSlice.pushes,
+          units_profit: marketSlice.units_profit,
+          roi_pct: marketSlice.roi_pct ?? 0,
+          picks_count: marketSlice.picks_count,
+        }
+      : filteredAgg;
+    const marketLabel = market ? marketFilterLabel(market) : null;
+    const windowWord =
+      window === "season"
+        ? "Season"
+        : window === "last_30"
+          ? "Last 30"
+          : window === "last_7"
+            ? "Last 7"
+            : null;
+    const fLabel = marketLabel
+      ? [marketLabel, windowWord].filter(Boolean).join(" · ")
+      : filterLabelFor(window, betType);
     let title: string;
     let description: string;
     let ogDescription: string;
-    if (hasFilter && fLabel && filteredAgg && filteredAgg.picks_count > 0) {
+    if (hasFilter && fLabel && statAgg && statAgg.picks_count > 0) {
       // Filter-aware text so the meta description matches the OG card image
       // rather than contradicting it with all-time numbers.
-      const r = formatRecord(filteredAgg);
-      const u = formatUnitsForTitle(filteredAgg.units_profit);
-      const ro = formatRoiForTitle(filteredAgg.roi_pct);
+      const r = formatRecord(statAgg);
+      const u = formatUnitsForTitle(statAgg.units_profit);
+      const ro = formatRoiForTitle(statAgg.roi_pct);
       const name =
         profile.capper.display_name && profile.capper.display_name !== handle
           ? `${profile.capper.display_name} (@${handle})`
           : `@${handle}`;
       title = `@${handle} · ${fLabel} · ${r} ${u} (${ro}) · ${SITE_NAME}`;
-      description = `${name} on ${fLabel.toLowerCase()}: ${r} (${u}, ${ro}) across ${filteredAgg.picks_count} graded picks. Verified on ${SITE_NAME}.`;
-      ogDescription = `${fLabel}: ${r} ${u} (${ro}) across ${filteredAgg.picks_count} graded picks.`;
+      description = `${name} on ${fLabel.toLowerCase()}: ${r} (${u}, ${ro}) across ${statAgg.picks_count} graded picks. Verified on ${SITE_NAME}.`;
+      ogDescription = `${fLabel}: ${r} ${u} (${ro}) across ${statAgg.picks_count} graded picks.`;
     } else {
       title = buildCapperTitle(baseInputs);
       description = buildCapperDescription(baseInputs);
@@ -166,7 +200,7 @@ export async function generateMetadata({
     // Fingerprint the OG image URL with picks_count + refreshed_at epoch.
     // See buildOgImageUrl for why both are needed; refreshed_at carries
     // wins<->losses shifts and post-write recomputes that picks_count misses.
-    const picksFp = filteredAgg?.picks_count ?? 0;
+    const picksFp = (marketSlice ? marketSlice.picks_count : filteredAgg?.picks_count) ?? 0;
     const refreshTs = toEpochSec(filteredAgg?.refreshed_at);
     const ogImage = buildOgImageUrl(picksFp, refreshTs);
 
@@ -324,11 +358,13 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <StickyProfileStrip />
           <CapperHeroLive />
 
-          <div className="hidden sm:block mb-5">
+          <div className="hidden sm:flex items-start justify-between gap-3 mb-5">
             <ProfileFilterBar />
+            <ShareFilteredButton />
           </div>
-          <div className="sm:hidden mb-5">
+          <div className="sm:hidden flex items-center justify-between gap-3 mb-5">
             <FilterSheet />
+            <ShareFilteredButton />
           </div>
 
           <div className="mb-6">
