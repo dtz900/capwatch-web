@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildMarketOptions,
+  marketFilterLabel,
   marketSliceToAggregate,
   scopeLabel,
 } from "@/lib/capperFilters";
@@ -24,7 +25,7 @@ const baseAgg: CapperAggregate = {
 };
 
 describe("buildMarketOptions", () => {
-  it("orders by picks_count desc and labels via normalizeMarket", () => {
+  it("orders by picks_count desc and labels via marketFilterLabel", () => {
     const opts = buildMarketOptions({
       spread: slice({ picks_count: 5 }),
       ML: slice({ picks_count: 12 }),
@@ -39,6 +40,37 @@ describe("buildMarketOptions", () => {
     expect(buildMarketOptions(null)).toEqual([]);
     expect(buildMarketOptions({})).toEqual([]);
     expect(buildMarketOptions(undefined)).toEqual([]);
+  });
+
+  it("keeps team_total and total as distinct labels", () => {
+    const opts = buildMarketOptions({
+      total: slice({ picks_count: 10 }),
+      team_total: slice({ picks_count: 6 }),
+    });
+    const labels = opts.map((o) => o.label);
+    expect(labels).toContain("Total");
+    expect(labels).toContain("Team Total");
+    // No two buttons share a label.
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+});
+
+describe("marketFilterLabel", () => {
+  it("distinguishes total vs team total and labels common markets", () => {
+    expect(marketFilterLabel("total")).toBe("Total");
+    expect(marketFilterLabel("team_total")).toBe("Team Total");
+    expect(marketFilterLabel("ML")).toBe("Moneyline");
+    expect(marketFilterLabel("nrfi")).toBe("NRFI");
+    expect(marketFilterLabel("f5_total")).toBe("F5 Total");
+  });
+
+  it("humanizes player prop markets", () => {
+    expect(marketFilterLabel("prop_batter_hr")).toBe("Batter Home Runs");
+    expect(marketFilterLabel("prop_pitcher_k")).toBe("Pitcher Strikeouts");
+  });
+
+  it("falls back to a humanized token for unknown markets", () => {
+    expect(marketFilterLabel("f5_team_total")).toBe("F5 Team Total");
   });
 });
 
