@@ -542,6 +542,12 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
     : trackedSinceLabel
       ? `Tracked since ${trackedSinceLabel} - ${picksCount} graded picks`
       : `${picksCount} graded picks`;
+  const primaryFilterLabel = filterLabel || "Season";
+  const marketContext = filterLabel.toLowerCase().includes("total")
+    ? "Market filter"
+    : filterLabel
+      ? "Filtered view"
+      : "All bets";
 
   return (
     <div style={{
@@ -660,7 +666,6 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 28 }}>
             {visuals.pill ? <Capsule text={visuals.pill.text} color={visuals.pill.color} /> : null}
-            {filterLabel ? <Capsule text={filterLabel} color={CYAN} /> : null}
           </div>
 
           <div style={{ display: "flex", marginTop: "auto", color: TEXT_MUTED, fontSize: 15, fontWeight: 800 }}>
@@ -671,6 +676,38 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "38px 44px 34px", minWidth: 0 }}>
           {hasData ? (
             <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 18,
+                padding: "13px 16px",
+                borderRadius: 16,
+                background: "linear-gradient(90deg, rgba(71,199,255,0.16), rgba(25,245,124,0.08))",
+                border: `1px solid ${CYAN}`,
+              }}>
+                <div style={{
+                  display: "flex",
+                  fontSize: 16,
+                  fontWeight: 900,
+                  color: CYAN,
+                  textTransform: "uppercase",
+                  letterSpacing: 2.8,
+                }}>
+                  {marketContext}
+                </div>
+                <div style={{
+                  display: "flex",
+                  fontSize: 28,
+                  fontWeight: 950,
+                  color: TEXT,
+                  textTransform: "uppercase",
+                  letterSpacing: 1.6,
+                }}>
+                  {primaryFilterLabel}
+                </div>
+              </div>
+
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
                   <div style={{ display: "flex", color: TEXT_MUTED, fontSize: 18, fontWeight: 900, textTransform: "uppercase", letterSpacing: 3 }}>
@@ -679,7 +716,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                   <div style={{
                     display: "flex",
                     marginTop: 8,
-                    fontSize: 122,
+                    fontSize: 108,
                     fontWeight: 950,
                     lineHeight: 0.92,
                     color: unitsColor,
@@ -700,9 +737,9 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                 </div>
               </div>
 
-              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 24 }} />
+              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 20 }} />
 
-              <div style={{ display: "flex", gap: 14, marginTop: 22, width: "100%" }}>
+              <div style={{ display: "flex", gap: 14, marginTop: 18, width: "100%" }}>
                 <StatTile label="Record" value={record} valueColor={TEXT} />
                 <StatTile label="Win rate" value={`${winPct}%`} valueColor={winPct >= 50 ? POS : TEXT} />
                 <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
@@ -711,8 +748,8 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
               <div style={{
                 display: "flex",
                 flexDirection: "column",
-                marginTop: 22,
-                padding: "16px 18px 12px",
+                marginTop: 18,
+                padding: "14px 18px 10px",
                 borderRadius: 18,
                 background: "rgba(255,255,255,0.035)",
                 border: "1px solid rgba(255,255,255,0.08)",
@@ -722,7 +759,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                     Profit trajectory
                   </div>
                   <div style={{ display: "flex", fontSize: 16, color: TEXT_SOFT, fontWeight: 900 }}>
-                    {filterLabel || "Season"}
+                    {primaryFilterLabel}
                   </div>
                 </div>
                 <div style={{ display: "flex", marginTop: 8 }}>
