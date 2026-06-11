@@ -153,6 +153,7 @@ interface RenderInputs {
   picksCount: number;
   trackedSinceLabel: string;
   filterLabel: string;
+  trajectorySeries: number[];
   tier: Tier;
   rank: number | null;
 }
@@ -262,6 +263,7 @@ export async function renderCapperOg(
   let trackedSince: string | null = null;
   let hasData = false;
   let marketLabel: string | null = null;
+  let trajectorySeries: number[] = [];
 
   try {
     const profile = await fetchCapperProfile(handle, {
@@ -279,6 +281,7 @@ export async function renderCapperOg(
       profile.aggregates["all_time"]?.tracked_since ?? agg?.tracked_since ?? null;
     if (market && slice) {
       marketLabel = marketFilterLabel(market);
+      trajectorySeries = slice.trajectory ?? [];
       if (slice.picks_count > 0) {
         record = formatRecord(slice);
         unitsRaw = slice.units_profit;
@@ -293,6 +296,7 @@ export async function renderCapperOg(
       roiPct = agg.roi_pct;
       picksCount = agg.picks_count;
       trackedSince = trackedSinceSrc;
+      trajectorySeries = profile.trajectory?.[window] ?? [];
       hasData = true;
     }
   } catch (err) {
@@ -323,6 +327,7 @@ export async function renderCapperOg(
       market && marketLabel
         ? [marketLabel, windowLabel(window)].filter(Boolean).join(" · ")
         : buildFilterLabel(window, bet_type),
+    trajectorySeries,
     tier,
     rank,
   };
@@ -433,6 +438,79 @@ function Capsule({ text, color }: { text: string; color: string }) {
   );
 }
 
+function sparklineGeometry(series: number[], width: number, height: number) {
+  const points = [0, ...series];
+  const min = Math.min(0, ...points);
+  const max = Math.max(0, ...points);
+  const range = max - min || 1;
+  const padX = 4;
+  const padY = 8;
+  const innerW = width - padX * 2;
+  const innerH = height - padY * 2;
+  const stepX = points.length > 1 ? innerW / (points.length - 1) : innerW;
+  const yFor = (value: number) => padY + innerH - ((value - min) / range) * innerH;
+  const zeroY = yFor(0);
+  const linePoints = points
+    .map((value, index) => `${padX + index * stepX},${yFor(value)}`)
+    .join(" ");
+  const areaPath =
+    `M ${padX},${zeroY} ` +
+    points.map((value, index) => `L ${padX + index * stepX},${yFor(value)}`).join(" ") +
+    ` L ${padX + (points.length - 1) * stepX},${zeroY} Z`;
+  const last = points[points.length - 1] ?? 0;
+  const lastX = padX + (points.length - 1) * stepX;
+  const lastY = yFor(last);
+  return { areaPath, last, lastX, lastY, linePoints, zeroY };
+}
+
+function OgSparkline({ series }: { series: number[] }) {
+  const width = 594;
+  const height = 116;
+  if (series.length < 2) {
+    return (
+      <div style={{
+        display: "flex",
+        height,
+        alignItems: "center",
+        justifyContent: "center",
+        color: TEXT_MUTED,
+        fontSize: 22,
+        fontWeight: 800,
+      }}>
+        Trajectory building
+      </div>
+    );
+  }
+  const geo = sparklineGeometry(series, width, height);
+  const positive = geo.last >= 0;
+  const stroke = positive ? POS : NEG;
+  const fill = positive ? "rgba(25,245,124,0.18)" : "rgba(239,68,68,0.16)";
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: "flex" }}>
+      <line
+        x1={4}
+        y1={geo.zeroY}
+        x2={width - 4}
+        y2={geo.zeroY}
+        stroke="rgba(255,255,255,0.10)"
+        strokeDasharray="5 5"
+      />
+      <path d={geo.areaPath} fill={fill} />
+      <polyline
+        points={geo.linePoints}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={4}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle cx={geo.lastX} cy={geo.lastY} r={7} fill={stroke} />
+      <circle cx={geo.lastX} cy={geo.lastY} r={13} fill={stroke} opacity={0.16} />
+    </svg>
+  );
+}
+
 function buildPremiumOgJsx(inputs: RenderInputs) {
   const {
     handle,
@@ -446,6 +524,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
     picksCount,
     trackedSinceLabel,
     filterLabel,
+    trajectorySeries,
     tier,
     rank,
   } = inputs;
@@ -458,7 +537,6 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
   const parsed = parseRecordLine(record);
   const decisions = parsed.wins + parsed.losses;
   const winPct = decisions > 0 ? Math.round((parsed.wins / decisions) * 100) : 0;
-  const strength = Math.max(8, Math.min(92, winPct));
   const subline = filterLabel
     ? `${filterLabel} - ${picksCount} graded picks`
     : trackedSinceLabel
@@ -522,27 +600,27 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
         }} />
 
         <div style={{
-          width: 365,
+          width: 345,
           display: "flex",
           flexDirection: "column",
-          padding: "38px 34px",
+          padding: "38px 32px",
           borderRight: "1px solid rgba(255,255,255,0.08)",
           background: "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015))",
         }}>
           {logoDataUri ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoDataUri} alt="TailSlips" height={46} style={{ height: 46, width: 183 }} />
+            <img src={logoDataUri} alt="TailSlips" height={50} style={{ height: 50, width: 199 }} />
           ) : (
             <div style={{ fontSize: 32, fontWeight: 900, display: "flex" }}>TAILSLIPS</div>
           )}
 
-          <div style={{ display: "flex", marginTop: 50, alignItems: "center" }}>
+          <div style={{ display: "flex", marginTop: 42, alignItems: "center" }}>
             {avatarDataUri ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarDataUri} alt="" width={132} height={132}
+              <img src={avatarDataUri} alt="" width={140} height={140}
                 style={{
-                  width: 132,
-                  height: 132,
+                  width: 140,
+                  height: 140,
                   borderRadius: 999,
                   border: `4px solid ${tier === "standard" ? "rgba(255,255,255,0.16)" : visuals.avatarBorder}`,
                   boxShadow: visuals.avatarShadow === "none"
@@ -552,8 +630,8 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                 }} />
             ) : (
               <div style={{
-                width: 132,
-                height: 132,
+                width: 140,
+                height: 140,
                 borderRadius: 999,
                 background: "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
                 border: "4px solid rgba(255,255,255,0.16)",
@@ -569,39 +647,39 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
             )}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", marginTop: 28 }}>
-            <div style={{ display: "flex", fontSize: 38, fontWeight: 900, lineHeight: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", marginTop: 30 }}>
+            <div style={{ display: "flex", fontSize: 46, fontWeight: 900, lineHeight: 1 }}>
               @{handle}
             </div>
             {displayName && displayName !== handle ? (
-              <div style={{ display: "flex", fontSize: 17, color: TEXT_MUTED, marginTop: 8, fontWeight: 700 }}>
+              <div style={{ display: "flex", fontSize: 20, color: TEXT_MUTED, marginTop: 8, fontWeight: 800 }}>
                 {displayName}
               </div>
             ) : null}
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 28 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 28 }}>
             {visuals.pill ? <Capsule text={visuals.pill.text} color={visuals.pill.color} /> : null}
             {filterLabel ? <Capsule text={filterLabel} color={CYAN} /> : null}
           </div>
 
-          <div style={{ display: "flex", marginTop: "auto", color: TEXT_MUTED, fontSize: 13, fontWeight: 700 }}>
+          <div style={{ display: "flex", marginTop: "auto", color: TEXT_MUTED, fontSize: 15, fontWeight: 800 }}>
             {subline}
           </div>
         </div>
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "42px 46px 36px", minWidth: 0 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "38px 44px 34px", minWidth: 0 }}>
           {hasData ? (
             <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                  <div style={{ display: "flex", color: TEXT_MUTED, fontSize: 16, fontWeight: 900, textTransform: "uppercase", letterSpacing: 3 }}>
+                  <div style={{ display: "flex", color: TEXT_MUTED, fontSize: 18, fontWeight: 900, textTransform: "uppercase", letterSpacing: 3 }}>
                     Net profit
                   </div>
                   <div style={{
                     display: "flex",
                     marginTop: 8,
-                    fontSize: 106,
+                    fontSize: 122,
                     fontWeight: 950,
                     lineHeight: 0.92,
                     color: unitsColor,
@@ -612,19 +690,19 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                     {unitsLabel}
                   </div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", paddingTop: 8, width: 170 }}>
-                  <div style={{ display: "flex", fontSize: 15, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 3 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", paddingTop: 8, width: 178 }}>
+                  <div style={{ display: "flex", fontSize: 17, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 3 }}>
                     ROI
                   </div>
-                  <div style={{ display: "flex", marginTop: 8, fontSize: 44, fontWeight: 900, color: roiColor }}>
+                  <div style={{ display: "flex", marginTop: 8, fontSize: 52, fontWeight: 900, color: roiColor }}>
                     {roiLabel}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 34 }} />
+              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 24 }} />
 
-              <div style={{ display: "flex", gap: 14, marginTop: 28, width: "100%" }}>
+              <div style={{ display: "flex", gap: 14, marginTop: 22, width: "100%" }}>
                 <StatTile label="Record" value={record} valueColor={TEXT} />
                 <StatTile label="Win rate" value={`${winPct}%`} valueColor={winPct >= 50 ? POS : TEXT} />
                 <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
@@ -633,23 +711,22 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
               <div style={{
                 display: "flex",
                 flexDirection: "column",
-                marginTop: 28,
-                padding: "18px 20px",
+                marginTop: 22,
+                padding: "16px 18px 12px",
                 borderRadius: 18,
                 background: "rgba(255,255,255,0.035)",
                 border: "1px solid rgba(255,255,255,0.08)",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", fontSize: 13, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 2.5 }}>
-                    Decision profile
+                  <div style={{ display: "flex", fontSize: 15, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 2.8 }}>
+                    Profit trajectory
                   </div>
-                  <div style={{ display: "flex", fontSize: 14, color: TEXT_SOFT, fontWeight: 800 }}>
-                    {parsed.wins} wins / {parsed.losses} losses
+                  <div style={{ display: "flex", fontSize: 16, color: TEXT_SOFT, fontWeight: 900 }}>
+                    {filterLabel || "Season"}
                   </div>
                 </div>
-                <div style={{ display: "flex", height: 14, borderRadius: 999, overflow: "hidden", background: "rgba(255,255,255,0.08)", marginTop: 14 }}>
-                  <div style={{ display: "flex", width: `${strength}%`, background: `linear-gradient(90deg, ${POS}, ${CYAN})` }} />
-                  <div style={{ display: "flex", flex: 1, background: "rgba(239,68,68,0.82)" }} />
+                <div style={{ display: "flex", marginTop: 8 }}>
+                  <OgSparkline series={trajectorySeries} />
                 </div>
               </div>
             </div>
@@ -927,12 +1004,12 @@ function StatTile({
         background: CARD,
         border: `1px solid ${BORDER}`,
         borderRadius: 16,
-        padding: "20px 22px",
+        padding: "18px 22px",
       }}
     >
       <div
         style={{
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: 700,
           color: TEXT_MUTED,
           letterSpacing: 2,
@@ -944,7 +1021,7 @@ function StatTile({
       </div>
       <div
         style={{
-          fontSize: 44,
+          fontSize: 48,
           fontWeight: 800,
           color: valueColor,
           marginTop: 8,
