@@ -3,18 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
-import { CapperHero } from "@/components/capper/CapperHero";
-import { StatBand } from "@/components/capper/StatBand";
-import { WindowToggle } from "@/components/capper/WindowToggle";
-import { BetTypeToggle } from "@/components/capper/BetTypeToggle";
+import { CapperFilterProvider } from "@/components/capper/CapperFilterProvider";
+import { CapperHeroLive } from "@/components/capper/CapperHeroLive";
+import { StatBandLive } from "@/components/capper/StatBandLive";
+import { ProfileFilterBar } from "@/components/capper/ProfileFilterBar";
+import { OutcomeFilter } from "@/components/capper/OutcomeFilter";
+import { StickyProfileStrip } from "@/components/capper/StickyProfileStrip";
+import { HistoryList } from "@/components/capper/HistoryList";
+import { FilterSheet } from "@/components/capper/FilterSheet";
 import { PendingBlock } from "@/components/capper/PendingBlock";
-import { HistoryFilters } from "@/components/capper/HistoryFilters";
-import { HistoryTable } from "@/components/capper/HistoryTable";
 import { MarketMixBar } from "@/components/capper/MarketMixBar";
 import { FaqSection } from "@/components/capper/FaqSection";
 import { SimilarCappers } from "@/components/capper/SimilarCappers";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
@@ -228,12 +229,15 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   const window: Window = VALID_WINDOWS.includes(sp.window as Window)
     ? (sp.window as Window)
     : DEFAULT_WINDOW;
-  const offset = Math.max(0, parseInt(sp.offset ?? "0", 10) || 0);
-  const market = (sp.market ?? "").trim();
-  const outcome = (sp.outcome ?? "").trim();
   const betType: BetTypeFilter = VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter)
     ? (sp.bet_type as BetTypeFilter)
     : "all";
+  let market = (sp.market ?? "").trim();
+  const outcome = (sp.outcome ?? "").trim();
+  // Parlays cannot be market-scoped; a market implies straight picks, so the
+  // effective bet type for the initial history slice is "straights".
+  if (betType === "parlays") market = "";
+  const effBetType: BetTypeFilter = market ? "straights" : betType;
 
   let profile;
   let sportsbooks;
@@ -242,10 +246,10 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
     const [profileResult, sportsbooksResult, leaderboardResult] = await Promise.all([
       fetchCapperProfile(handle, {
         history_limit: PAGE_SIZE,
-        history_offset: offset,
+        history_offset: 0,
         market: market || undefined,
         outcome: outcome || undefined,
-        bet_type: betType !== "all" ? betType : undefined,
+        bet_type: effBetType !== "all" ? effBetType : undefined,
       }),
       fetchEnabledSportsbooks(),
       fetchLeaderboard({
@@ -277,15 +281,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
     );
   }
 
-  const windowAgg = profile.aggregates[window];
   const allTimeAgg = profile.aggregates["all_time"];
-  const basePath = `/cappers/${encodeURIComponent(handle)}`;
-
-  const queryForPagination = new URLSearchParams();
-  if (window !== DEFAULT_WINDOW) queryForPagination.set("window", window);
-  if (market) queryForPagination.set("market", market);
-  if (outcome) queryForPagination.set("outcome", outcome);
-  if (betType !== "all") queryForPagination.set("bet_type", betType);
 
   const faqItems = buildCapperFaq({
     handle,
@@ -306,92 +302,79 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   if (reviewNode) jsonLdNodes.push(reviewNode);
   if (faqItems.length > 0) jsonLdNodes.push(faqNode(faqItems));
 
+  const showNoPublicPicks =
+    (allTimeAgg?.picks_count ?? 0) === 0
+    && profile.capper.has_paid_program
+    && profile.pending.length === 0;
+  const hasPicks = (allTimeAgg?.picks_count ?? 0) > 0;
+
   return (
     <>
       <JsonLd data={jsonLdNodes} />
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
-        <div className="pt-10">
-          <CapperHero
-            profile={profile}
-            windowAgg={windowAgg ?? allTimeAgg}
-            trajectorySeries={profile.trajectory?.[window] ?? []}
-            window={window}
-          />
-        </div>
+        <CapperFilterProvider
+          handle={handle}
+          initialProfile={profile}
+          initialWindow={window}
+          initialBetType={betType}
+          initialMarket={market}
+          initialOutcome={outcome}
+        >
+          <StickyProfileStrip />
+          <CapperHeroLive />
 
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <div className="text-[12px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
-            Performance window
+          <div className="hidden sm:block mb-5">
+            <ProfileFilterBar />
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <BetTypeToggle current={betType} basePath={basePath} />
-            <WindowToggle current={window} basePath={basePath} />
-            <ShareLinkButton
-              basePath={`/cappers/${handle}`}
-              queryParams={{
-                window: window !== DEFAULT_WINDOW ? window : undefined,
-                bet_type: betType !== "all" ? betType : undefined,
-              }}
-            />
+          <div className="sm:hidden mb-5">
+            <FilterSheet />
           </div>
-        </div>
 
-        <div className="mb-6">
-          <StatBand
-            agg={windowAgg}
-            recentHistory={profile.history}
-            trajectorySeries={profile.trajectory?.[window] ?? []}
-            window={window}
-          />
-        </div>
+          <div className="mb-6">
+            <StatBandLive />
+          </div>
 
-        {(allTimeAgg?.picks_count ?? 0) === 0
-          && profile.capper.has_paid_program
-          && profile.pending.length === 0
-          && (
-          <section className="mb-6 rounded-lg border border-[rgba(192,132,252,0.25)] bg-[rgba(192,132,252,0.05)] p-5 sm:p-6">
-            <h2 className="text-[12px] uppercase tracking-[0.18em] text-[#c084fc] font-bold mb-2">
-              No public picks
+          {showNoPublicPicks && (
+            <section className="mb-6 rounded-lg border border-[rgba(192,132,252,0.25)] bg-[rgba(192,132,252,0.05)] p-5 sm:p-6">
+              <h2 className="text-[12px] uppercase tracking-[0.18em] text-[#c084fc] font-bold mb-2">
+                No public picks
+              </h2>
+              <p className="text-[13px] leading-relaxed text-[var(--color-text-soft)]">
+                @{handle} does not post free picks publicly. Their picks are sold through a paid service.
+                TailSlips only tracks publicly-posted picks, so this profile carries no record.
+              </p>
+            </section>
+          )}
+
+          {profile.pending.length > 0 && (
+            <div className="mb-6">
+              <PendingBlock picks={profile.pending} sportsbooks={sportsbooks} />
+            </div>
+          )}
+
+          {(allTimeAgg?.bet_type_breakdown ?? null) && (
+            <div className="mb-6">
+              <MarketMixBar breakdown={allTimeAgg?.bet_type_breakdown ?? null} />
+            </div>
+          )}
+
+          {hasPicks && (
+            <div className="mb-8 flex justify-center">
+              <SportsbookAd creative={BETMGM_1080x356} placement="capper-inline" />
+            </div>
+          )}
+
+          <section>
+            <h2 className="text-[14px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-3">
+              Pick history
             </h2>
-            <p className="text-[13px] leading-relaxed text-[var(--color-text-soft)]">
-              @{handle} does not post free picks publicly. Their picks are sold through a paid service.
-              TailSlips only tracks publicly-posted picks, so this profile carries no record.
-            </p>
+            <div className="hidden sm:block">
+              <OutcomeFilter />
+            </div>
+            <HistoryList />
           </section>
-        )}
-
-        {profile.pending.length > 0 && (
-          <div className="mb-6">
-            <PendingBlock picks={profile.pending} sportsbooks={sportsbooks} />
-          </div>
-        )}
-
-        {(allTimeAgg?.bet_type_breakdown ?? null) && (
-          <div className="mb-6">
-            <MarketMixBar breakdown={allTimeAgg?.bet_type_breakdown ?? null} />
-          </div>
-        )}
-
-        {(allTimeAgg?.picks_count ?? 0) > 0 && (
-          <div className="mb-8 flex justify-center">
-            <SportsbookAd creative={BETMGM_1080x356} placement="capper-inline" />
-          </div>
-        )}
-
-        <section>
-          <h2 className="text-[14px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-3">
-            Pick history
-          </h2>
-          <HistoryFilters basePath={basePath} market={market} outcome={outcome} />
-          <HistoryTable
-            history={profile.history}
-            total={profile.history_total}
-            offset={offset}
-            basePath={basePath}
-            query={queryForPagination}
-          />
-        </section>
+        </CapperFilterProvider>
 
         <SimilarCappers rows={leaderboardRows} currentHandle={handle} />
 
