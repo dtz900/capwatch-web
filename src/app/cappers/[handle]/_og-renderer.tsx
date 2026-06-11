@@ -341,9 +341,57 @@ export async function renderCapperOg(
       });
     } catch (err2) {
       console.error("[og-renderer] fallback render failed", { handle, err2 });
-      return new Response(TRANSPARENT_PNG, {
-        headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
-      });
+      try {
+        const emergency = new ImageResponse((
+          <div style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            background: BG,
+            color: TEXT,
+            padding: 64,
+            fontFamily: "system-ui, sans-serif",
+          }}>
+            <div style={{
+              display: "flex",
+              fontSize: 24,
+              fontWeight: 900,
+              color: POS,
+              letterSpacing: 4,
+              textTransform: "uppercase",
+            }}>
+              TailSlips
+            </div>
+            <div style={{
+              display: "flex",
+              marginTop: 28,
+              fontSize: 76,
+              lineHeight: 1,
+              fontWeight: 900,
+            }}>
+              @{handle}
+            </div>
+            <div style={{
+              display: "flex",
+              marginTop: 22,
+              fontSize: 30,
+              color: TEXT_SOFT,
+            }}>
+              Verified MLB capper record
+            </div>
+          </div>
+        ), { ...size });
+        const buf = await emergency.arrayBuffer();
+        return new Response(buf, {
+          headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
+        });
+      } catch {
+        return new Response(TRANSPARENT_PNG, {
+          headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
+        });
+      }
     }
   }
 }

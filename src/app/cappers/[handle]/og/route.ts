@@ -22,7 +22,7 @@ export async function GET(
   const url = new URL(request.url);
   const w = url.searchParams.get("w");
   const bt = url.searchParams.get("bt");
-  const mk = url.searchParams.get("mk");
+  const mk = url.searchParams.get("mk") ?? url.searchParams.get("market");
   const window: Window = VALID_WINDOWS.includes(w as Window) ? (w as Window) : "season";
   const bet_type: BetTypeFilter = VALID_BET_TYPES.includes(bt as BetTypeFilter)
     ? (bt as BetTypeFilter)
