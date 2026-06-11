@@ -1,5 +1,5 @@
 import type { CapperProfile, CapperRow, PalaceEntry } from "./types";
-import { SITE_NAME, SITE_TAGLINE, SITE_URL, canonicalUrl, formatRecord, roiToReviewRating } from "./seo";
+import { SITE_NAME, SITE_TAGLINE, SITE_URL, canonicalUrl } from "./seo";
 
 interface JsonLdNode {
   "@context"?: string;
@@ -77,50 +77,6 @@ export function capperPersonNode(profile: CapperProfile): JsonLdNode {
   };
   if (c.profile_image_url) node.image = c.profile_image_url;
   return node;
-}
-
-export function capperReviewNode(profile: CapperProfile): JsonLdNode | null {
-  const allTime = profile.aggregates["all_time"];
-  if (!allTime || allTime.picks_count === 0) return null;
-
-  const handle = profile.capper.handle ?? "";
-  const url = canonicalUrl(`/cappers/${handle}`);
-  // Coalesce nullable aggregates: tortpicks-style cappers can have
-  // roi_pct=null when no graded pick had a usable odds source, and a
-  // theoretical 0-units row would crash the toFixed call below.
-  const safeRoi = allTime.roi_pct ?? 0;
-  const safeUnits = allTime.units_profit ?? 0;
-  const ratingValue = roiToReviewRating(safeRoi);
-  const record = formatRecord(allTime);
-  const units = safeUnits >= 0
-    ? `+${safeUnits.toFixed(1)}u`
-    : `${safeUnits.toFixed(1)}u`;
-  const roi = `${safeRoi >= 0 ? "+" : ""}${safeRoi.toFixed(1)}%`;
-
-  return {
-    "@context": "https://schema.org",
-    "@type": "Review",
-    itemReviewed: {
-      "@type": "Person",
-      "@id": `${url}#person`,
-      name: profile.capper.display_name ?? `@${handle}`,
-      url,
-    },
-    author: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: SITE_URL,
-    },
-    reviewRating: {
-      "@type": "Rating",
-      ratingValue,
-      bestRating: 5,
-      worstRating: 1,
-    },
-    name: `Verified record for @${handle}`,
-    reviewBody: `${record} (${units}, ${roi} ROI) across ${allTime.picks_count} graded MLB picks on ${SITE_NAME}. Every public pick is parsed within seconds of posting and graded against the final game outcome at the odds and stake the capper actually posted.`,
-    datePublished: allTime.refreshed_at ?? new Date().toISOString(),
-  };
 }
 
 export interface FaqEntry {
