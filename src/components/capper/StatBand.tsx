@@ -17,9 +17,21 @@ interface Props {
    * keeps the existing CapperHero placement. */
   trajectorySeries?: number[];
   window?: Window;
+  /** "Season · Spread" scope label rendered above the headline numbers. */
+  scopeLabel?: string;
+  /** When true, a specific market is active: hide Streak and Biggest win,
+   * which are not computed per market. */
+  marketScoped?: boolean;
 }
 
-export function StatBand({ agg, recentHistory = [], trajectorySeries = [], window }: Props) {
+export function StatBand({
+  agg,
+  recentHistory = [],
+  trajectorySeries = [],
+  window,
+  scopeLabel,
+  marketScoped = false,
+}: Props) {
   if (!agg) {
     return (
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-6 py-8 text-center text-[13px] text-[var(--color-text-muted)] italic">
@@ -45,6 +57,11 @@ export function StatBand({ agg, recentHistory = [], trajectorySeries = [], windo
 
   return (
     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-6 sm:px-7 sm:py-7">
+      {scopeLabel && (
+        <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold mb-4">
+          {scopeLabel}
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-[minmax(160px,1.1fr)_minmax(160px,1.1fr)_minmax(180px,1fr)] gap-x-6 sm:gap-x-9 gap-y-6 sm:gap-y-7 items-end">
         <Headline label="Net profit" value={`${formatUnits(agg.units_profit)}u`} positive={unitsPositive} />
         <Headline label="ROI" value={formatRoi(agg.roi_pct)} positive={roiPositive} />
@@ -69,10 +86,10 @@ export function StatBand({ agg, recentHistory = [], trajectorySeries = [], windo
         <Stat label="Record" value={recordText} />
         <Stat label="Picks" value={String(agg.picks_count)} />
         <Stat label="Win rate" value={formatWinRate(agg.win_rate)} />
-        <Stat label="Streak" value={streakValue} tone={streakTone} />
+        {!marketScoped && <Stat label="Streak" value={streakValue} tone={streakTone} />}
       </div>
 
-      {win && (
+      {!marketScoped && win && (
         <div className="mt-6 pt-5 border-t border-[var(--color-border)] flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-wrap">
             <Eyebrow>Biggest win</Eyebrow>

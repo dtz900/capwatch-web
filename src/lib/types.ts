@@ -224,6 +224,21 @@ export interface HistoryPick {
   deleted_after_game_start?: boolean;
 }
 
+/** Per-market straight-pick stats + cumulative trajectory, precomputed by the
+ * backend aggregate job. Keyed on the same display_market label the history
+ * `market` param matches, so a key doubles as the filter value. roi_pct /
+ * win_rate are null when the market has no risked units. */
+export interface MarketSlice {
+  picks_count: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  units_profit: number;
+  roi_pct: number | null;
+  win_rate: number | null;
+  trajectory: number[];
+}
+
 export interface CapperAggregate {
   time_window: Window;
   picks_count: number;
@@ -247,6 +262,10 @@ export interface CapperAggregate {
   tweets_parsed: number | null;
   parlay_share: number | null;
   deleted_picks_count: number | null;
+  /** Per-market straight-pick slices for this (window, bet_type) row.
+   * Present on the all/straights rows; null on parlays and on rows the
+   * aggregate job has not re-run since the column was added. */
+  market_slices?: Record<string, MarketSlice> | null;
 }
 
 export interface CapperProfile {
