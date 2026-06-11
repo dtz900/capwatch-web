@@ -17,21 +17,21 @@ import {
 import type { CapperRow } from "@/lib/types";
 
 export const metadata = {
-  title: "Capper Index",
+  title: "MLB Cappers · Verified Records & Leaderboard",
   description:
-    "Every tracked MLB Twitter capper on TailSlips. Click a row for the full pick history, units profit, ROI, and graded record.",
+    "Track every MLB Twitter capper's verified record, units profit, ROI, and full graded pick history. A daily-updated ledger of public picks, win or lose.",
   alternates: { canonical: "/cappers" },
   openGraph: {
-    title: "Capper Index · TailSlips",
+    title: "MLB Cappers · Verified Records & Leaderboard · TailSlips",
     description:
-      "Every tracked MLB Twitter capper on TailSlips with verified records and full pick histories.",
+      "Track every MLB Twitter capper's verified record, units, ROI, and full graded pick history on TailSlips. A daily-updated ledger of public picks.",
     url: "/cappers",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Capper Index · TailSlips",
-    description: "Every tracked MLB Twitter capper with verified records.",
+    title: "MLB Cappers · Verified Records & Leaderboard · TailSlips",
+    description: "Every tracked MLB Twitter capper, with verified records and full graded pick history.",
   },
 };
 
