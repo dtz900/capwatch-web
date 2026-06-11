@@ -51,7 +51,7 @@ const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const PAGE_SIZE = 25;
 const DEFAULT_WINDOW: Window = "season";
-const OG_CARD_VERSION = "9";
+const OG_CARD_VERSION = "10";
 
 export const revalidate = 60;
 export const maxDuration = 30;
@@ -221,8 +221,8 @@ export async function generateMetadata({
       },
       twitter: {
         card: "summary_large_image",
-        title,
-        description: ogDescription,
+        title: " ",
+        description: " ",
         site: "@FadeAI_",
         images: [ogImage],
       },
@@ -248,8 +248,8 @@ export async function generateMetadata({
       },
       twitter: {
         card: "summary_large_image",
-        title,
-        description,
+        title: " ",
+        description: " ",
         site: "@FadeAI_",
         images: [ogImage],
       },
