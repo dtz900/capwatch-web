@@ -51,7 +51,7 @@ const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const PAGE_SIZE = 25;
 const DEFAULT_WINDOW: Window = "season";
-const OG_CARD_VERSION = "11";
+const OG_CARD_VERSION = "13";
 
 export const revalidate = 60;
 export const maxDuration = 30;
@@ -106,7 +106,19 @@ export async function generateMetadata({
   // recomputed (daily cron + post-grade/regrade write triggers). Critical for
   // busting X's image CDN: it caches OG bytes per URL essentially forever, so
   // a URL that never changes pins a stale card to every share.
-  const buildOgImageUrl = (picksFp: number, refreshTs: number): string => {
+  const buildOgImageUrl = (
+    picksFp: number,
+    refreshTs: number,
+    seed?: {
+      record: string;
+      units: number;
+      roi: number;
+      picks: number;
+      filterLabel: string;
+      trajectory?: number[];
+      avatarUrl?: string | null;
+    },
+  ): string => {
     const q = new URLSearchParams();
     q.set("w", window);
     q.set("bt", betType);
@@ -115,6 +127,17 @@ export async function generateMetadata({
     q.set("v", OG_CARD_VERSION);
     if (sp.v && /^[0-9]{8,}$/.test(sp.v)) q.set("sv", sp.v);
     if (refreshTs > 0) q.set("r", String(refreshTs));
+    if (seed) {
+      q.set("rec", seed.record);
+      q.set("u", seed.units.toFixed(2));
+      q.set("roi", seed.roi.toFixed(2));
+      q.set("pc", String(seed.picks));
+      q.set("fl", seed.filterLabel);
+      if (seed.trajectory && seed.trajectory.length >= 2) {
+        q.set("tr", seed.trajectory.map((v) => v.toFixed(1)).join(","));
+      }
+      if (seed.avatarUrl) q.set("av", seed.avatarUrl);
+    }
     return `${SITE_URL}/cappers/${handle}/og?${q.toString()}`;
   };
 
@@ -203,7 +226,19 @@ export async function generateMetadata({
     // wins<->losses shifts and post-write recomputes that picks_count misses.
     const picksFp = (marketSlice ? marketSlice.picks_count : filteredAgg?.picks_count) ?? 0;
     const refreshTs = toEpochSec(filteredAgg?.refreshed_at);
-    const ogImage = buildOgImageUrl(picksFp, refreshTs);
+    const ogSeed =
+      statAgg && fLabel
+        ? {
+            record: formatRecord(statAgg),
+            units: statAgg.units_profit,
+            roi: statAgg.roi_pct,
+            picks: statAgg.picks_count,
+            filterLabel: fLabel,
+            trajectory: marketSlice?.trajectory ?? profile.trajectory?.[window] ?? undefined,
+            avatarUrl: profile.capper.profile_image_url,
+          }
+        : undefined;
+    const ogImage = buildOgImageUrl(picksFp, refreshTs, ogSeed);
 
     return {
       title,

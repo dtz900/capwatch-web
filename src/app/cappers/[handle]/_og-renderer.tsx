@@ -240,6 +240,15 @@ export interface RenderOpts {
   /** When set, render the per-market straight-pick slice (e.g. "spread"),
    * matching the page's Market filter. A market implies straights. */
   market?: string;
+  seed?: {
+    record?: string;
+    units?: number;
+    roi?: number;
+    picks?: number;
+    filterLabel?: string;
+    trajectory?: number[];
+    avatarUrl?: string;
+  };
 }
 
 const DEFAULT_OG_WINDOW: Window = "season";
@@ -250,6 +259,7 @@ export async function renderCapperOg(
 ): Promise<Response> {
   const window: Window = opts.window ?? DEFAULT_OG_WINDOW;
   const market = opts.market;
+  const seed = opts.seed;
   // A specific market scopes to straight picks; market_slices are identical on
   // the all/straights rows, so fetch straights when a market is requested.
   const bet_type: BetTypeFilter = market ? "straights" : opts.bet_type ?? "all";
@@ -265,6 +275,16 @@ export async function renderCapperOg(
   let marketLabel: string | null = null;
   let trajectorySeries: number[] = [];
 
+  if (seed?.record && seed.picks != null && seed.units != null && seed.roi != null) {
+    record = seed.record;
+    unitsRaw = seed.units;
+    roiPct = seed.roi;
+    picksCount = seed.picks;
+    marketLabel = null;
+    trajectorySeries = seed.trajectory ?? [];
+    avatarSourceUrl = seed.avatarUrl ?? null;
+    hasData = true;
+  } else {
   try {
     const profile = await fetchCapperProfile(handle, {
       history_limit: 1,
@@ -302,12 +322,19 @@ export async function renderCapperOg(
   } catch (err) {
     console.error("[og-renderer] fetchCapperProfile failed", { handle, window, bet_type, market, err });
   }
+  }
 
-  const [avatarDataUri, logoDataUri, rank] = await Promise.all([
-    fetchAvatarDataUri(avatarSourceUrl),
-    readLogoDataUri(),
-    fetchCapperRank(handle),
-  ]);
+  const [avatarDataUri, logoDataUri, rank] = seed
+    ? await Promise.all([
+        fetchAvatarDataUri(avatarSourceUrl),
+        readLogoDataUri(),
+        Promise.resolve(null),
+      ])
+    : await Promise.all([
+        fetchAvatarDataUri(avatarSourceUrl),
+        readLogoDataUri(),
+        fetchCapperRank(handle),
+      ]);
 
   const tier: Tier =
     handle === "fadeai_" ? "model" : rank !== null && rank <= 3 ? "top3" : "standard";
@@ -326,7 +353,9 @@ export async function renderCapperOg(
     filterLabel:
       market && marketLabel
         ? [marketLabel, windowLabel(window)].filter(Boolean).join(" · ")
-        : buildFilterLabel(window, bet_type),
+        : seed?.filterLabel
+          ? seed.filterLabel
+          : buildFilterLabel(window, bet_type),
     trajectorySeries,
     tier,
     rank,
@@ -465,7 +494,7 @@ function sparklineGeometry(series: number[], width: number, height: number) {
 
 function OgSparkline({ series }: { series: number[] }) {
   const width = 594;
-  const height = 116;
+  const height = 80;
   if (series.length < 2) {
     return (
       <div style={{
@@ -673,22 +702,22 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
           </div>
         </div>
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "38px 44px 34px", minWidth: 0 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 44px 24px", minWidth: 0 }}>
           {hasData ? (
             <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
               <div style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginBottom: 18,
-                padding: "13px 16px",
+                marginBottom: 12,
+                padding: "9px 16px",
                 borderRadius: 16,
                 background: "linear-gradient(90deg, rgba(71,199,255,0.16), rgba(25,245,124,0.08))",
                 border: `1px solid ${CYAN}`,
               }}>
                 <div style={{
                   display: "flex",
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: 900,
                   color: CYAN,
                   textTransform: "uppercase",
@@ -698,7 +727,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                 </div>
                 <div style={{
                   display: "flex",
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: 950,
                   color: TEXT,
                   textTransform: "uppercase",
@@ -716,7 +745,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                   <div style={{
                     display: "flex",
                     marginTop: 8,
-                    fontSize: 108,
+                    fontSize: 92,
                     fontWeight: 950,
                     lineHeight: 0.92,
                     color: unitsColor,
@@ -731,40 +760,40 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
                   <div style={{ display: "flex", fontSize: 17, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 3 }}>
                     ROI
                   </div>
-                  <div style={{ display: "flex", marginTop: 8, fontSize: 52, fontWeight: 900, color: roiColor }}>
+                  <div style={{ display: "flex", marginTop: 8, fontSize: 44, fontWeight: 900, color: roiColor }}>
                     {roiLabel}
                   </div>
                 </div>
               </div>
 
+              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 12 }} />
+
+              <div style={{ display: "flex", gap: 14, marginTop: 10, width: "100%" }}>
+                <StatTile label="Record" value={record} valueColor={TEXT} />
+                <StatTile label="Win rate" value={`${winPct}%`} valueColor={winPct >= 50 ? POS : TEXT} />
+                <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
+              </div>
+
               <div style={{
                 display: "flex",
                 flexDirection: "column",
-                marginTop: 18,
-                padding: "14px 18px 10px",
+                marginTop: 12,
+                padding: "10px 18px 8px",
                 borderRadius: 18,
                 background: "rgba(255,255,255,0.035)",
                 border: "1px solid rgba(255,255,255,0.08)",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", fontSize: 15, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 2.8 }}>
+                  <div style={{ display: "flex", fontSize: 13, color: TEXT_MUTED, fontWeight: 900, textTransform: "uppercase", letterSpacing: 2.4 }}>
                     Profit trajectory
                   </div>
-                  <div style={{ display: "flex", fontSize: 16, color: TEXT_SOFT, fontWeight: 900 }}>
+                  <div style={{ display: "flex", fontSize: 14, color: TEXT_SOFT, fontWeight: 900 }}>
                     {primaryFilterLabel}
                   </div>
                 </div>
-                <div style={{ display: "flex", marginTop: 8 }}>
+                <div style={{ display: "flex", marginTop: 4 }}>
                   <OgSparkline series={trajectorySeries} />
                 </div>
-              </div>
-
-              <div style={{ display: "flex", height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))", marginTop: 14 }} />
-
-              <div style={{ display: "flex", gap: 14, marginTop: 14, width: "100%" }}>
-                <StatTile label="Record" value={record} valueColor={TEXT} />
-                <StatTile label="Win rate" value={`${winPct}%`} valueColor={winPct >= 50 ? POS : TEXT} />
-                <StatTile label="Graded picks" value={String(picksCount)} valueColor={TEXT} />
               </div>
             </div>
           ) : (
@@ -776,7 +805,7 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
             </div>
           )}
 
-          <div style={{ display: "flex", marginTop: "auto", height: 30, alignItems: "flex-end", justifyContent: "flex-end", color: TEXT_MUTED, fontSize: 13, fontWeight: 800 }}>
+          <div style={{ display: "flex", marginTop: "auto", height: 78, alignItems: "flex-end", justifyContent: "flex-end", color: TEXT_MUTED, fontSize: 13, fontWeight: 800 }}>
             <div style={{ display: "flex", color: TEXT_SOFT }}>tailslips.com</div>
           </div>
         </div>
@@ -1040,12 +1069,12 @@ function StatTile({
         background: CARD,
         border: `1px solid ${BORDER}`,
         borderRadius: 16,
-        padding: "18px 22px",
+        padding: "12px 20px",
       }}
     >
       <div
         style={{
-          fontSize: 13,
+          fontSize: 11,
           fontWeight: 700,
           color: TEXT_MUTED,
           letterSpacing: 2,
@@ -1057,7 +1086,7 @@ function StatTile({
       </div>
       <div
         style={{
-          fontSize: 48,
+          fontSize: 40,
           fontWeight: 800,
           color: valueColor,
           marginTop: 8,

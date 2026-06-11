@@ -23,10 +23,24 @@ export async function GET(
   const w = url.searchParams.get("w");
   const bt = url.searchParams.get("bt");
   const mk = url.searchParams.get("mk") ?? url.searchParams.get("market");
+  const rec = url.searchParams.get("rec") ?? undefined;
+  const units = Number.parseFloat(url.searchParams.get("u") ?? "");
+  const roi = Number.parseFloat(url.searchParams.get("roi") ?? "");
+  const picks = Number.parseInt(url.searchParams.get("pc") ?? "", 10);
+  const fl = url.searchParams.get("fl") ?? undefined;
+  const av = url.searchParams.get("av") ?? undefined;
+  const trajectory = (url.searchParams.get("tr") ?? "")
+    .split(",")
+    .map((part) => Number.parseFloat(part))
+    .filter((value) => Number.isFinite(value));
   const window: Window = VALID_WINDOWS.includes(w as Window) ? (w as Window) : "season";
   const bet_type: BetTypeFilter = VALID_BET_TYPES.includes(bt as BetTypeFilter)
     ? (bt as BetTypeFilter)
     : "all";
   const market = mk ? mk.trim() : undefined;
-  return renderCapperOg(handle, { window, bet_type, market: market || undefined });
+  const seed =
+    rec && Number.isFinite(units) && Number.isFinite(roi) && Number.isFinite(picks)
+      ? { record: rec, units, roi, picks, filterLabel: fl, trajectory, avatarUrl: av }
+      : undefined;
+  return renderCapperOg(handle, { window, bet_type, market: market || undefined, seed });
 }
