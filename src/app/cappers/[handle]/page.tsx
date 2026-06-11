@@ -31,6 +31,7 @@ import {
   formatRoiForTitle,
   formatUnitsForTitle,
   SITE_NAME,
+  SITE_URL,
 } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Window } from "@/lib/types";
 
@@ -50,7 +51,7 @@ const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const PAGE_SIZE = 25;
 const DEFAULT_WINDOW: Window = "season";
-const OG_CARD_VERSION = "5";
+const OG_CARD_VERSION = "6";
 
 export const revalidate = 60;
 export const maxDuration = 30;
@@ -114,7 +115,7 @@ export async function generateMetadata({
     q.set("v", OG_CARD_VERSION);
     if (sp.v && /^[0-9]{8,}$/.test(sp.v)) q.set("sv", sp.v);
     if (refreshTs > 0) q.set("r", String(refreshTs));
-    return `/cappers/${handle}/og?${q.toString()}`;
+    return `${SITE_URL}/cappers/${handle}/og?${q.toString()}`;
   };
 
   const toEpochSec = (iso: string | null | undefined): number => {
@@ -223,7 +224,7 @@ export async function generateMetadata({
         title,
         description: ogDescription,
         site: "@FadeAI_",
-        images: [{ url: ogImage, alt: "Verified MLB capper record on TailSlips" }],
+        images: [ogImage],
       },
       robots: { index: true, follow: true },
     };
@@ -250,7 +251,7 @@ export async function generateMetadata({
         title,
         description,
         site: "@FadeAI_",
-        images: [{ url: ogImage, alt: "Verified MLB capper record on TailSlips" }],
+        images: [ogImage],
       },
     };
   }
