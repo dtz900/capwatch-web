@@ -44,6 +44,8 @@ interface PageProps {
     outcome?: string;
     bet_type?: string;
     v?: string;
+    start?: string;
+    end?: string;
   }>;
 }
 
@@ -304,6 +306,13 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
     : "all";
   let market = (sp.market ?? "").trim();
   const outcome = (sp.outcome ?? "").trim();
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+  const startRaw = (sp.start ?? "").trim();
+  const endRaw = (sp.end ?? "").trim();
+  const initialRange =
+    isoDate.test(startRaw) && isoDate.test(endRaw) && startRaw <= endRaw
+      ? { start: startRaw, end: endRaw }
+      : null;
   // Parlays cannot be market-scoped; a market implies straight picks, so the
   // effective bet type for the initial history slice is "straights".
   if (betType === "parlays") market = "";
@@ -320,6 +329,8 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
         market: market || undefined,
         outcome: outcome || undefined,
         bet_type: effBetType !== "all" ? effBetType : undefined,
+        start: initialRange?.start,
+        end: initialRange?.end,
       }),
       fetchEnabledSportsbooks(),
       fetchLeaderboard({
@@ -388,6 +399,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           initialBetType={betType}
           initialMarket={market}
           initialOutcome={outcome}
+          initialRange={initialRange}
         >
           <StickyProfileStrip />
           <CapperHeroLive />
