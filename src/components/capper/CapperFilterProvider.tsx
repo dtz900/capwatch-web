@@ -13,6 +13,7 @@ import { fetchCapperSlice } from "@/lib/capperClient";
 import {
   buildMarketOptions,
   marketSliceToAggregate,
+  rangeScopeLabel,
   scopeLabel,
 } from "@/lib/capperFilters";
 import type { MarketOption } from "@/lib/capperFilters";
@@ -34,6 +35,9 @@ interface FilterContextValue {
   betType: BetTypeFilter;
   market: string;
   outcome: string;
+  range: { start: string; end: string } | null;
+  setRange: (start: string, end: string) => void;
+  clearRange: () => void;
   /** Aggregate to render: market slice overlay when a market is active,
    * otherwise the headline aggregate for the window. */
   displayAgg: CapperAggregate | undefined;
@@ -81,6 +85,7 @@ export function CapperFilterProvider({
   initialBetType,
   initialMarket,
   initialOutcome,
+  initialRange = null,
   children,
 }: {
   handle: string;
@@ -89,6 +94,7 @@ export function CapperFilterProvider({
   initialBetType: BetTypeFilter;
   initialMarket: string;
   initialOutcome: string;
+  initialRange?: { start: string; end: string } | null;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -106,13 +112,17 @@ export function CapperFilterProvider({
   const [betType, setBetTypeState] = useState<BetTypeFilter>(initialBetType);
   const [market, setMarketState] = useState<string>(initialMarket);
   const [outcome, setOutcomeState] = useState<string>(initialOutcome);
+  const [range, setRangeState] = useState<{ start: string; end: string } | null>(initialRange);
   const [history, setHistory] = useState<HistoryPick[]>(initialProfile.history);
   const [historyTotal, setHistoryTotal] = useState<number>(initialProfile.history_total);
   const [offset, setOffset] = useState<number>(initialProfile.history.length);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
 
-  const baseAgg = profile.aggregates[window] ?? profile.aggregates["all_time"];
+  const rangeAgg = profile.range_aggregate ?? undefined;
+  const baseAgg = range
+    ? rangeAgg
+    : profile.aggregates[window] ?? profile.aggregates["all_time"];
   const marketSlices = baseAgg?.market_slices ?? null;
   const marketOptions = useMemo(() => buildMarketOptions(marketSlices), [marketSlices]);
   const activeSlice = market && marketSlices ? marketSlices[market] : undefined;
@@ -120,16 +130,25 @@ export function CapperFilterProvider({
     activeSlice && baseAgg ? marketSliceToAggregate(baseAgg, activeSlice) : baseAgg;
   const displayTrajectory = activeSlice
     ? activeSlice.trajectory
-    : profile.trajectory?.[window] ?? [];
+    : range
+      ? []
+      : profile.trajectory?.[window] ?? [];
   const marketLabel = market
     ? marketOptions.find((o) => o.value === market)?.label ?? null
     : null;
-  const label = scopeLabel(window, market ? "straights" : betType, marketLabel);
+  const label = range
+    ? rangeScopeLabel(range.start, range.end, market ? "straights" : betType, marketLabel)
+    : scopeLabel(window, market ? "straights" : betType, marketLabel);
 
   const syncUrl = useCallback(
-    (w: Window, bt: BetTypeFilter, mk: string, oc: string) => {
+    (w: Window, bt: BetTypeFilter, mk: string, oc: string, rg: { start: string; end: string } | null) => {
       const params = new URLSearchParams();
-      if (w !== DEFAULT_WINDOW) params.set("window", w);
+      if (rg) {
+        params.set("start", rg.start);
+        params.set("end", rg.end);
+      } else if (w !== DEFAULT_WINDOW) {
+        params.set("window", w);
+      }
       if (bt !== "all") params.set("bet_type", bt);
       if (mk) params.set("market", mk);
       if (oc) params.set("outcome", oc);
@@ -163,7 +182,9 @@ export function CapperFilterProvider({
       setBetTypeState(bt);
       setMarketState(mk);
       setOutcomeState(oc);
-      syncUrl(w, bt, mk, oc);
+      // Choosing a window/bet-type/market exits range mode.
+      setRangeState(null);
+      syncUrl(w, bt, mk, oc, null);
 
       const histBetType = effectiveBetType(mk, bt);
       // A fresh profile (aggregates) is needed only when the data we render
@@ -206,6 +227,51 @@ export function CapperFilterProvider({
     [handle, window, betType, market, outcome, loadedBetType, syncUrl],
   );
 
+  const setRange = useCallback(
+    async (start: string, end: string) => {
+      const bt = betType;
+      const mk = market;
+      const oc = outcome;
+      setRangeState({ start, end });
+      syncUrl(window, bt, mk, oc, { start, end });
+      const histBetType = effectiveBetType(mk, bt);
+      const seq = ++reqSeq.current;
+      setLoadingStats(true);
+      setLoadingHistory(true);
+      try {
+        const fetched = await fetchCapperSlice(handle, {
+          window,
+          betType: histBetType,
+          market: mk || undefined,
+          outcome: oc || undefined,
+          start,
+          end,
+          offset: 0,
+          limit: PAGE_SIZE,
+        });
+        if (seq !== reqSeq.current) return;
+        setProfile(fetched);
+        setLoadedBetType(histBetType);
+        setHistory(fetched.history);
+        setHistoryTotal(fetched.history_total);
+        setOffset(fetched.history.length);
+      } catch {
+        // keep prior view
+      } finally {
+        if (seq === reqSeq.current) {
+          setLoadingStats(false);
+          setLoadingHistory(false);
+        }
+      }
+    },
+    [handle, window, betType, market, outcome, syncUrl],
+  );
+
+  const clearRange = useCallback(() => {
+    setRangeState(null);
+    applyFilters({ window });
+  }, [applyFilters, window]);
+
   const loadMore = useCallback(async () => {
     if (loadingHistory || history.length >= historyTotal) return;
     const histBetType = effectiveBetType(market, betType);
@@ -217,6 +283,8 @@ export function CapperFilterProvider({
         betType: histBetType,
         market: market || undefined,
         outcome: outcome || undefined,
+        start: range?.start,
+        end: range?.end,
         offset,
         limit: PAGE_SIZE,
       });
@@ -230,7 +298,7 @@ export function CapperFilterProvider({
     } finally {
       if (seq === reqSeq.current) setLoadingHistory(false);
     }
-  }, [handle, window, betType, market, outcome, offset, history.length, historyTotal, loadingHistory]);
+  }, [handle, window, betType, market, outcome, range, offset, history.length, historyTotal, loadingHistory]);
 
   const value: FilterContextValue = {
     handle,
@@ -239,6 +307,9 @@ export function CapperFilterProvider({
     betType,
     market,
     outcome,
+    range,
+    setRange,
+    clearRange,
     displayAgg,
     displayTrajectory,
     label,
