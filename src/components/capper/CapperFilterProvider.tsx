@@ -131,7 +131,7 @@ export function CapperFilterProvider({
   const displayTrajectory = activeSlice
     ? activeSlice.trajectory
     : range
-      ? []
+      ? rangeAgg?.trajectory ?? []
       : profile.trajectory?.[window] ?? [];
   const marketLabel = market
     ? marketOptions.find((o) => o.value === market)?.label ?? null

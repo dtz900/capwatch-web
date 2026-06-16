@@ -266,6 +266,10 @@ export interface CapperAggregate {
    * Present on the all/straights rows; null on parlays and on rows the
    * aggregate job has not re-run since the column was added. */
   market_slices?: Record<string, MarketSlice> | null;
+  /** Cumulative profit_units series. Present on range_aggregate (custom date
+   * range) and on aggregate rows that carry it; the per-window hero sparkline
+   * also reads CapperProfile.trajectory[window]. */
+  trajectory?: number[];
 }
 
 export interface CapperProfile {
