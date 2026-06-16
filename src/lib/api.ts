@@ -178,6 +178,8 @@ export interface CapperProfileFilters {
   market?: string;
   outcome?: string;
   bet_type?: BetTypeFilter;
+  start?: string;
+  end?: string;
 }
 
 export interface AuditFilters {
@@ -339,6 +341,8 @@ export async function fetchCapperProfile(
   if (filters.market) params.set("market", filters.market);
   if (filters.outcome) params.set("outcome", filters.outcome);
   if (filters.bet_type) params.set("bet_type", filters.bet_type);
+  if (filters.start) params.set("start", filters.start);
+  if (filters.end) params.set("end", filters.end);
   const qs = params.toString();
   const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}${qs ? `?${qs}` : ""}`;
   const cacheKey = `profile:v1:${handle.toLowerCase()}:${qs}`;

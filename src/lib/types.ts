@@ -240,7 +240,7 @@ export interface MarketSlice {
 }
 
 export interface CapperAggregate {
-  time_window: Window;
+  time_window: Window | "custom";
   picks_count: number;
   wins: number;
   losses: number;
@@ -294,6 +294,10 @@ export interface CapperProfile {
    * hero sparkline so the trajectory reflects the selected window without
    * needing the table-paginated history array to contain enough depth. */
   trajectory?: Partial<Record<Window, number[]>>;
+  /** Present only when the request carried start/end. Capper's stats over the
+   * arbitrary game-date range. time_window === "custom". */
+  range_aggregate?: CapperAggregate | null;
+  range_meta?: { start: string; end: string } | null;
 }
 
 export interface PalaceLeg {
