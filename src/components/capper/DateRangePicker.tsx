@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // ── pure date utilities (exported for tests) ──────────────────────────────
 export function ymd(d: Date): string {
@@ -79,18 +79,41 @@ export function DateRangePicker({
   initialEnd,
   onApply,
   onClear,
+  onDismiss,
 }: {
   todayStr: string;
   initialStart: string | null;
   initialEnd: string | null;
   onApply: (start: string, end: string) => void;
   onClear: () => void;
+  onDismiss?: () => void;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const init = parseYmd(initialStart ?? todayStr);
   const [viewY, setViewY] = useState(init.getUTCFullYear());
   const [viewM, setViewM] = useState(init.getUTCMonth() + 1); // 1-based
   const [anchor, setAnchor] = useState<string | null>(initialStart);
   const [hoverEnd, setHoverEnd] = useState<string | null>(initialEnd);
+
+  useEffect(() => {
+    if (!onDismiss) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onDismiss();
+    };
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (rootRef.current?.contains(target)) return;
+      if (target.closest("[data-range-trigger]")) return; // let the toggle button handle itself
+      onDismiss();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [onDismiss]);
 
   const weeks = monthMatrix(viewY, viewM);
 
@@ -121,7 +144,7 @@ export function DateRangePicker({
     anchor && hoverEnd && day >= anchor && day <= hoverEnd;
 
   return (
-    <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1a1a1a] p-3 w-[300px]">
+    <div ref={rootRef} className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1a1a1a] p-3 w-[300px]">
       <div className="flex flex-wrap gap-1 mb-3">
         {SHORTCUTS.map((s) => (
           <button

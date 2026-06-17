@@ -82,6 +82,7 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
           <div className="relative">
             <button
               type="button"
+              data-range-trigger
               onClick={() => setPickerOpen((o) => !o)}
               aria-pressed={!!range}
               className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors ${
@@ -95,11 +96,12 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
             {pickerOpen && (
               <div className="absolute z-20 mt-1">
                 <DateRangePicker
-                  todayStr={new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" })}
+                  todayStr={new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" })}
                   initialStart={range?.start ?? null}
                   initialEnd={range?.end ?? null}
                   onApply={(s, e) => { setRange(s, e); setPickerOpen(false); }}
                   onClear={() => { clearRange(); setPickerOpen(false); }}
+                  onDismiss={() => setPickerOpen(false)}
                 />
               </div>
             )}
@@ -117,6 +119,7 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
         <div className="relative">
           <button
             type="button"
+            data-range-trigger
             onClick={() => setPickerOpen((o) => !o)}
             aria-pressed={!!range}
             className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors ${
@@ -130,11 +133,12 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
           {pickerOpen && (
             <div className="absolute z-20 mt-1">
               <DateRangePicker
-                todayStr={new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" })}
+                todayStr={new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" })}
                 initialStart={range?.start ?? null}
                 initialEnd={range?.end ?? null}
                 onApply={(s, e) => { setRange(s, e); setPickerOpen(false); }}
                 onClear={() => { clearRange(); setPickerOpen(false); }}
+                onDismiss={() => setPickerOpen(false)}
               />
             </div>
           )}
