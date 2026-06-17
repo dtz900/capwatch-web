@@ -7,6 +7,8 @@ export interface CapperSliceQuery {
   outcome?: string;
   offset?: number;
   limit?: number;
+  start?: string;
+  end?: string;
 }
 
 /** Fetch a capper profile slice via the internal route handler. Callable from
@@ -22,6 +24,8 @@ export async function fetchCapperSlice(
   params.set("bet_type", q.betType);
   if (q.market) params.set("market", q.market);
   if (q.outcome) params.set("outcome", q.outcome);
+  if (q.start) params.set("start", q.start);
+  if (q.end) params.set("end", q.end);
   params.set("offset", String(q.offset ?? 0));
   params.set("limit", String(q.limit ?? 25));
   const res = await fetch(

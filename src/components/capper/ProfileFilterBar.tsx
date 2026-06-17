@@ -1,7 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { useCapperFilters } from "@/components/capper/CapperFilterProvider";
+import { DateRangePicker } from "@/components/capper/DateRangePicker";
+import { formatRangeLabel } from "@/lib/capperFilters";
 import type { BetTypeFilter, Window } from "@/lib/types";
 
 const WINDOWS: { value: Window; label: string }[] = [
@@ -34,7 +37,11 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
     setWindow,
     setBetType,
     setMarket,
+    range,
+    setRange,
+    clearRange,
   } = useCapperFilters();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // The Bet type chip shows Straights as active when a market is selected,
   // so the user never sees "All bets · Spread" with fewer picks than expected.
@@ -49,7 +56,7 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
     return (
       <div className="flex flex-col gap-5">
         <Group label="Window">
-          <Seg ariaLabel="Window" options={WINDOWS} value={window} onSelect={setWindow} fill />
+          <Seg ariaLabel="Window" options={WINDOWS} value={(range ? "" : window) as Window} onSelect={setWindow} fill />
         </Group>
         <Group label="Bet type">
           <Seg ariaLabel="Bet type" options={BET_TYPES} value={betActive} onSelect={setBetType} fill />
@@ -71,6 +78,35 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
             </div>
           </Group>
         )}
+        <Group label="Date range">
+          <div className="relative">
+            <button
+              type="button"
+              data-range-trigger
+              onClick={() => setPickerOpen((o) => !o)}
+              aria-pressed={!!range}
+              className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors ${
+                range
+                  ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)]"
+                  : "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              }`}
+            >
+              {range ? formatRangeLabel(range.start, range.end) : "Custom range"}
+            </button>
+            {pickerOpen && (
+              <div className="absolute z-20 mt-1">
+                <DateRangePicker
+                  todayStr={new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" })}
+                  initialStart={range?.start ?? null}
+                  initialEnd={range?.end ?? null}
+                  onApply={(s, e) => { setRange(s, e); setPickerOpen(false); }}
+                  onClear={() => { clearRange(); setPickerOpen(false); }}
+                  onDismiss={() => setPickerOpen(false)}
+                />
+              </div>
+            )}
+          </div>
+        </Group>
       </div>
     );
   }
@@ -78,8 +114,35 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <Seg ariaLabel="Window" options={WINDOWS} value={window} onSelect={setWindow} />
+        <Seg ariaLabel="Window" options={WINDOWS} value={(range ? "" : window) as Window} onSelect={setWindow} />
         <Seg ariaLabel="Bet type" options={BET_TYPES} value={betActive} onSelect={setBetType} />
+        <div className="relative">
+          <button
+            type="button"
+            data-range-trigger
+            onClick={() => setPickerOpen((o) => !o)}
+            aria-pressed={!!range}
+            className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors ${
+              range
+                ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)]"
+                : "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            }`}
+          >
+            {range ? formatRangeLabel(range.start, range.end) : "Custom range"}
+          </button>
+          {pickerOpen && (
+            <div className="absolute z-20 mt-1">
+              <DateRangePicker
+                todayStr={new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" })}
+                initialStart={range?.start ?? null}
+                initialEnd={range?.end ?? null}
+                onApply={(s, e) => { setRange(s, e); setPickerOpen(false); }}
+                onClear={() => { clearRange(); setPickerOpen(false); }}
+                onDismiss={() => setPickerOpen(false)}
+              />
+            </div>
+          )}
+        </div>
       </div>
       {marketOptions.length > 0 && (
         <div

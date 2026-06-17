@@ -24,6 +24,12 @@ export async function GET(
   const betType = (VALID_BET_TYPES.has(btRaw as BetTypeFilter) ? btRaw : "all") as BetTypeFilter;
   const market = (sp.get("market") ?? "").trim();
   const outcome = (sp.get("outcome") ?? "").trim();
+  const startRaw = (sp.get("start") ?? "").trim();
+  const endRaw = (sp.get("end") ?? "").trim();
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+  const rangeValid = isoDate.test(startRaw) && isoDate.test(endRaw) && startRaw <= endRaw;
+  const start = rangeValid ? startRaw : undefined;
+  const end = rangeValid ? endRaw : undefined;
   const offset = Math.max(0, parseInt(sp.get("offset") ?? "0", 10) || 0);
   const rawLimit = parseInt(sp.get("limit") ?? "25", 10) || 25;
   const limit = Math.min(200, Math.max(1, rawLimit));
@@ -35,6 +41,8 @@ export async function GET(
       market: market || undefined,
       outcome: outcome || undefined,
       bet_type: betType !== "all" ? betType : undefined,
+      start,
+      end,
     });
     return NextResponse.json(profile);
   } catch (err) {

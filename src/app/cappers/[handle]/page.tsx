@@ -21,7 +21,7 @@ import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, faqNode } from "@/lib/jsonld";
-import { marketFilterLabel } from "@/lib/capperFilters";
+import { formatRangeLabel, marketFilterLabel } from "@/lib/capperFilters";
 import {
   buildCapperDescription,
   buildCapperFaq,
@@ -44,6 +44,8 @@ interface PageProps {
     outcome?: string;
     bet_type?: string;
     v?: string;
+    start?: string;
+    end?: string;
   }>;
 }
 
@@ -51,7 +53,7 @@ const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const PAGE_SIZE = 25;
 const DEFAULT_WINDOW: Window = "season";
-const OG_CARD_VERSION = "14";
+const OG_CARD_VERSION = "15";
 
 export const revalidate = 60;
 export const maxDuration = 30;
@@ -90,6 +92,14 @@ export async function generateMetadata({
   if (market) betType = "straights";
   const hasFilter = window !== DEFAULT_WINDOW || betType !== "all" || !!market;
 
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+  const startRaw = (sp.start ?? "").trim();
+  const endRaw = (sp.end ?? "").trim();
+  const range =
+    isoDate.test(startRaw) && isoDate.test(endRaw) && startRaw <= endRaw
+      ? { start: startRaw, end: endRaw }
+      : null;
+
   // Canonical stays unfiltered for SEO; og:url reflects the actual shared
   // URL so social click-throughs land on the filtered view they were sold.
   const canonical = `/cappers/${handle}`;
@@ -98,6 +108,7 @@ export async function generateMetadata({
   if (sp.bet_type) sharedQs.set("bet_type", sp.bet_type);
   if (market) sharedQs.set("market", market);
   if (sp.outcome) sharedQs.set("outcome", sp.outcome);
+  if (range) { sharedQs.set("start", range.start); sharedQs.set("end", range.end); }
   const sharedUrl = sharedQs.toString() ? `${canonical}?${sharedQs.toString()}` : canonical;
 
   // OG image URL fingerprint. picks_count alone misses wins<->losses swaps
@@ -120,6 +131,7 @@ export async function generateMetadata({
     },
   ): string => {
     const q = new URLSearchParams();
+    if (range) { q.set("rs", range.start); q.set("re", range.end); }
     q.set("w", window);
     q.set("bt", betType);
     if (market) q.set("mk", market);
@@ -154,9 +166,12 @@ export async function generateMetadata({
       history_limit: 1,
       history_offset: 0,
       bet_type: betType !== "all" ? betType : undefined,
+      start: range?.start,
+      end: range?.end,
     });
     const allTimeAgg = profile.aggregates["all_time"];
     const filteredAgg = profile.aggregates[window] ?? allTimeAgg;
+    const rangeAgg = range ? profile.range_aggregate ?? null : null;
     const windowAgg = profile.aggregates[DEFAULT_WINDOW] ?? allTimeAgg;
 
     const baseInputs = {
@@ -199,22 +214,25 @@ export async function generateMetadata({
     const fLabel = marketLabel
       ? [marketLabel, windowWord].filter(Boolean).join(" · ")
       : filterLabelFor(window, betType);
+    const effectiveLabel = range ? formatRangeLabel(range.start, range.end) : fLabel;
+    const effectiveAgg = range ? rangeAgg : statAgg;
+    const effectiveHasFilter = range ? !!rangeAgg : hasFilter;
     let title: string;
     let description: string;
     let ogDescription: string;
-    if (hasFilter && fLabel && statAgg && statAgg.picks_count > 0) {
+    if (effectiveHasFilter && effectiveLabel && effectiveAgg && effectiveAgg.picks_count > 0) {
       // Filter-aware text so the meta description matches the OG card image
       // rather than contradicting it with all-time numbers.
-      const r = formatRecord(statAgg);
-      const u = formatUnitsForTitle(statAgg.units_profit);
-      const ro = formatRoiForTitle(statAgg.roi_pct);
+      const r = formatRecord(effectiveAgg);
+      const u = formatUnitsForTitle(effectiveAgg.units_profit);
+      const ro = formatRoiForTitle(effectiveAgg.roi_pct);
       const name =
         profile.capper.display_name && profile.capper.display_name !== handle
           ? `${profile.capper.display_name} (@${handle})`
           : `@${handle}`;
-      title = `@${handle} · ${fLabel} · ${r} ${u} (${ro}) · ${SITE_NAME}`;
-      description = `${name} on ${fLabel.toLowerCase()}: ${r} (${u}, ${ro}) across ${statAgg.picks_count} graded picks. Verified on ${SITE_NAME}.`;
-      ogDescription = `${fLabel}: ${r} ${u} (${ro}) across ${statAgg.picks_count} graded picks.`;
+      title = `@${handle} · ${effectiveLabel} · ${r} ${u} (${ro}) · ${SITE_NAME}`;
+      description = `${name} on ${effectiveLabel.toLowerCase()}: ${r} (${u}, ${ro}) across ${effectiveAgg.picks_count} graded picks. Verified on ${SITE_NAME}.`;
+      ogDescription = `${effectiveLabel}: ${r} ${u} (${ro}) across ${effectiveAgg.picks_count} graded picks.`;
     } else {
       title = buildCapperTitle(baseInputs);
       description = buildCapperDescription(baseInputs);
@@ -224,17 +242,19 @@ export async function generateMetadata({
     // Fingerprint the OG image URL with picks_count + refreshed_at epoch.
     // See buildOgImageUrl for why both are needed; refreshed_at carries
     // wins<->losses shifts and post-write recomputes that picks_count misses.
-    const picksFp = (marketSlice ? marketSlice.picks_count : filteredAgg?.picks_count) ?? 0;
-    const refreshTs = toEpochSec(filteredAgg?.refreshed_at);
+    const picksFp = (range ? rangeAgg?.picks_count : marketSlice ? marketSlice.picks_count : filteredAgg?.picks_count) ?? 0;
+    const refreshTs = range ? 0 : toEpochSec(filteredAgg?.refreshed_at);
     const ogSeed =
-      statAgg && fLabel
+      effectiveAgg && effectiveLabel
         ? {
-            record: formatRecord(statAgg),
-            units: statAgg.units_profit,
-            roi: statAgg.roi_pct,
-            picks: statAgg.picks_count,
-            filterLabel: fLabel,
-            trajectory: marketSlice?.trajectory ?? profile.trajectory?.[window] ?? undefined,
+            record: formatRecord(effectiveAgg),
+            units: effectiveAgg.units_profit,
+            roi: effectiveAgg.roi_pct,
+            picks: effectiveAgg.picks_count,
+            filterLabel: effectiveLabel,
+            trajectory: range
+              ? rangeAgg?.trajectory ?? undefined
+              : marketSlice?.trajectory ?? profile.trajectory?.[window] ?? undefined,
             avatarUrl: profile.capper.profile_image_url,
           }
         : undefined;
@@ -304,6 +324,13 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
     : "all";
   let market = (sp.market ?? "").trim();
   const outcome = (sp.outcome ?? "").trim();
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+  const startRaw = (sp.start ?? "").trim();
+  const endRaw = (sp.end ?? "").trim();
+  const initialRange =
+    isoDate.test(startRaw) && isoDate.test(endRaw) && startRaw <= endRaw
+      ? { start: startRaw, end: endRaw }
+      : null;
   // Parlays cannot be market-scoped; a market implies straight picks, so the
   // effective bet type for the initial history slice is "straights".
   if (betType === "parlays") market = "";
@@ -320,6 +347,8 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
         market: market || undefined,
         outcome: outcome || undefined,
         bet_type: effBetType !== "all" ? effBetType : undefined,
+        start: initialRange?.start,
+        end: initialRange?.end,
       }),
       fetchEnabledSportsbooks(),
       fetchLeaderboard({
@@ -388,6 +417,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           initialBetType={betType}
           initialMarket={market}
           initialOutcome={outcome}
+          initialRange={initialRange}
         >
           <StickyProfileStrip />
           <CapperHeroLive />

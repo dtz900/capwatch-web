@@ -121,3 +121,32 @@ export function scopeLabel(
   else if (betType === "parlays") parts.push("Parlays");
   return parts.join(" · ");
 }
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/** "Jun 8 - 14" (same month), "May 28 - Jun 3" (cross month), "Jun 8" (one day).
+ * Inputs are YYYY-MM-DD (ET game_date). Parsed as plain calendar parts, no
+ * timezone math. Uses a single hyphen only (no em dash / double hyphen). */
+export function formatRangeLabel(start: string, end: string): string {
+  const [sy, sm, sd] = start.split("-").map((n) => parseInt(n, 10));
+  const [ey, em, ed] = end.split("-").map((n) => parseInt(n, 10));
+  const s = `${MONTHS[sm - 1]} ${sd}`;
+  if (sy === ey && sm === em && sd === ed) return s;
+  if (sy === ey && sm === em) return `${s} - ${ed}`;
+  return `${s} - ${MONTHS[em - 1]} ${ed}`;
+}
+
+/** Range scope label for the stat band / sticky strip, e.g. "Jun 8 - 14 ·
+ * Straights". Market scoping mirrors scopeLabel's bullet style. */
+export function rangeScopeLabel(
+  start: string,
+  end: string,
+  betType: BetTypeFilter,
+  marketLabel: string | null = null,
+): string {
+  const parts: string[] = [formatRangeLabel(start, end)];
+  if (marketLabel) parts.push(marketLabel);
+  else if (betType === "straights") parts.push("Straights");
+  else if (betType === "parlays") parts.push("Parlays");
+  return parts.join(" · ");
+}
