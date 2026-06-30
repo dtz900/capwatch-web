@@ -9,6 +9,12 @@ function fmt(v: number): string {
 // missing (many cappers only post combined odds), which previously collapsed
 // the ladder to a flat 1.00u. A geometric ramp always tells the real story
 // and stays consistent with the hero.
+//
+// Voided/pushed legs dropped out of the parlay and did NOT grow the payout,
+// so they are excluded from the ramp (otherwise the curve spreads the growth
+// across a leg that never counted). Each surviving rung keeps its real leg
+// position so the bars still line up with the rows above; a voided leg's rung
+// is simply absent.
 export function PayoutLadder({
   legs,
   finalUnits,
@@ -16,11 +22,15 @@ export function PayoutLadder({
   legs: PalaceLeg[];
   finalUnits: number;
 }) {
-  const n = legs.length;
+  const active = legs
+    .map((l, idx) => ({ position: idx + 1, oc: (l.outcome ?? "").toLowerCase() }))
+    .filter((l) => l.oc !== "void" && l.oc !== "push");
+  const n = active.length;
   if (n === 0 || !Number.isFinite(finalUnits) || finalUnits <= 1) return null;
 
-  const steps = Array.from({ length: n }, (_, i) => ({
-    i,
+  const steps = active.map((l, i) => ({
+    position: l.position,
+    last: i === n - 1,
     value: Math.pow(finalUnits, (i + 1) / n),
   }));
   const max = finalUnits;
@@ -40,10 +50,10 @@ export function PayoutLadder({
       <div className="flex items-end gap-2.5 h-[84px]">
         {steps.map((s) => {
           const pct = Math.max(12, Math.round((s.value / max) * 100));
-          const last = s.i === steps.length - 1;
+          const last = s.last;
           return (
             <div
-              key={s.i}
+              key={s.position}
               className="flex-1 flex flex-col justify-end items-center h-full"
             >
               <span
@@ -69,10 +79,10 @@ export function PayoutLadder({
       <div className="flex gap-2.5 mt-2">
         {steps.map((s) => (
           <span
-            key={s.i}
+            key={s.position}
             className="flex-1 text-center text-[9px] font-bold uppercase tracking-wide text-[rgba(255,255,255,0.3)]"
           >
-            L{s.i + 1}
+            L{s.position}
           </span>
         ))}
       </div>
