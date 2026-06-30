@@ -317,6 +317,10 @@ export interface PalaceLeg {
   result_text: string | null;
   score_text: string | null;
   won: boolean | null;
+  /** capper_grades.outcome for this leg: "win" | "loss" | "push" | "void" | ...
+   * Drives the explicit VOID / PUSH treatment. Optional for back-compat with
+   * entries enriched before this field existed. */
+  outcome?: string | null;
   team_logo_url: string | null;
   team_abbr: string | null;
   away_logo_url: string | null;
