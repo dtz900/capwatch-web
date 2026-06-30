@@ -85,6 +85,7 @@ function palaceEntryHash(entry: Awaited<ReturnType<typeof fetchPalaceEntry>>): s
       leg.market,
       leg.result_text,
       leg.won,
+      leg.outcome,
     ]),
     hero: entry?.hero_url,
   });
