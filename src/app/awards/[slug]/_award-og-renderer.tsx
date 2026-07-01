@@ -1,22 +1,57 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { getAward, type MonthlyAward } from "@/lib/awards";
+import { AWARD_CATEGORIES, getAward, type MonthlyAward } from "@/lib/awards";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "TailSlips monthly capper award";
 
-// Gold-foil family shared with Parlay Palace: awards are the other
-// hall-of-fame surface, so they speak the same visual language.
 const BG = "#0b0d11";
-const FOIL =
-  "linear-gradient(135deg,#caa45a 0%,#f3e3b3 22%,#9c7a36 46%,#e9cf93 68%,#8a6e3a 100%)";
-const UNITS_GRADIENT =
-  "linear-gradient(180deg,#fdf3d6 0%,#e9cf93 42%,#c7a259 100%)";
-const GOLD = "#caa45a";
-const GOLD_LIGHT = "#e3c787";
-const GOLD_DEEP = "#c7a259";
+
+/** Podium metals. #1 shares the Parlay Palace gold-foil family (gold surface =
+ * hall of fame); #2 and #3 step down to silver and bronze, mirroring the
+ * leaderboard podium so climbing to the gold card means something. */
+interface Metal {
+  foil: string;
+  unitsGradient: string;
+  accent: string;
+  light: string;
+  deep: string;
+  badgeText: string;
+  glow: string;
+}
+
+const METALS: Record<number, Metal> = {
+  1: {
+    foil: "linear-gradient(135deg,#caa45a 0%,#f3e3b3 22%,#9c7a36 46%,#e9cf93 68%,#8a6e3a 100%)",
+    unitsGradient: "linear-gradient(180deg,#fdf3d6 0%,#e9cf93 42%,#c7a259 100%)",
+    accent: "#caa45a",
+    light: "#e3c787",
+    deep: "#c7a259",
+    badgeText: "#241a08",
+    glow: "202,164,90",
+  },
+  2: {
+    foil: "linear-gradient(135deg,#8f97a3 0%,#eef1f5 22%,#666e79 46%,#d9dee5 68%,#565d66 100%)",
+    unitsGradient: "linear-gradient(180deg,#ffffff 0%,#d9dee5 42%,#98a1ad 100%)",
+    accent: "#aab2bd",
+    light: "#d3d9e0",
+    deep: "#8f97a3",
+    badgeText: "#14171c",
+    glow: "170,178,189",
+  },
+  3: {
+    foil: "linear-gradient(135deg,#a2683a 0%,#e7b98c 22%,#7d4e28 46%,#d9a06b 68%,#66421f 100%)",
+    unitsGradient: "linear-gradient(180deg,#f6e2cd 0%,#d9a06b 42%,#a2683a 100%)",
+    accent: "#c8814a",
+    light: "#dfb088",
+    deep: "#a2683a",
+    badgeText: "#241304",
+    glow: "200,129,74",
+  },
+};
+
 const TEXT_SOFT = "rgba(255,255,255,0.82)";
 const TEXT_FAINT = "rgba(255,255,255,0.45)";
 
@@ -58,14 +93,16 @@ function formatUnits(u: number): string {
 }
 
 function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: string | null) {
-  const record = `${award.wins}-${award.losses}-${award.pushes}`;
+  const metal = METALS[award.rank] ?? METALS[3];
+  const category = AWARD_CATEGORIES[award.category];
+  const record = `${award.wins}-${award.losses}${award.pushes ? `-${award.pushes}` : ""}`;
   const winPct = `${(award.winRate * 100).toFixed(1)}%`;
   const roi = `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}% ROI`;
   const metaParts = [record, `${winPct} WIN`, roi, `${award.picksCount} GRADED PICKS`];
 
   return (
     // foil frame
-    <div style={{ width: "100%", height: "100%", display: "flex", background: FOIL, padding: 6 }}>
+    <div style={{ width: "100%", height: "100%", display: "flex", background: metal.foil, padding: 6 }}>
       {/* inner card */}
       <div
         style={{
@@ -83,8 +120,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
             position: "absolute",
             inset: 0,
             display: "flex",
-            background:
-              "radial-gradient(circle at 18% 12%,rgba(202,164,90,0.20),transparent 34%),radial-gradient(circle at 88% 92%,rgba(202,164,90,0.12),transparent 40%),linear-gradient(135deg,#11141a,#07080b)",
+            background: `radial-gradient(circle at 18% 12%,rgba(${metal.glow},0.20),transparent 34%),radial-gradient(circle at 88% 92%,rgba(${metal.glow},0.12),transparent 40%),linear-gradient(135deg,#11141a,#07080b)`,
           }}
         />
 
@@ -94,7 +130,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
             style={{
               display: "flex",
               fontSize: 20,
-              color: GOLD_LIGHT,
+              color: metal.light,
               fontWeight: 800,
               letterSpacing: 5,
               textTransform: "uppercase",
@@ -102,7 +138,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
           >
             TailSlips · Monthly Award
           </div>
-          <div style={{ display: "flex", marginTop: 10, width: 56, height: 2, background: GOLD }} />
+          <div style={{ display: "flex", marginTop: 10, width: 56, height: 2, background: metal.accent }} />
           <div
             style={{
               display: "flex",
@@ -125,7 +161,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
             top: 56,
             right: 60,
             fontSize: 18,
-            color: GOLD,
+            color: metal.accent,
             fontWeight: 800,
             letterSpacing: 4,
             textTransform: "uppercase",
@@ -135,7 +171,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
           tailslips.com
         </div>
 
-        {/* avatar with crown (right side) */}
+        {/* avatar with rank badge (right side) */}
         <div
           style={{
             position: "absolute",
@@ -158,9 +194,8 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
                 height: 216,
                 borderRadius: 999,
                 objectFit: "cover",
-                border: "5px solid #caa45a",
-                boxShadow:
-                  "0 0 0 10px rgba(202,164,90,0.14), 0 0 60px rgba(202,164,90,0.35)",
+                border: `5px solid ${metal.accent}`,
+                boxShadow: `0 0 0 10px rgba(${metal.glow},0.14), 0 0 60px rgba(${metal.glow},0.35)`,
               }}
             />
           ) : (
@@ -170,19 +205,19 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
                 height: 216,
                 borderRadius: 999,
                 background: "#171b22",
-                border: "5px solid #caa45a",
+                border: `5px solid ${metal.accent}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 84,
-                color: GOLD_LIGHT,
+                color: metal.light,
                 fontWeight: 900,
               }}
             >
               {award.displayName.slice(0, 1).toUpperCase()}
             </div>
           )}
-          {crownUri ? (
+          {crownUri && award.rank === 1 ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={crownUri}
@@ -212,8 +247,8 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
               width: 74,
               height: 74,
               borderRadius: 999,
-              background: FOIL,
-              color: "#241a08",
+              background: metal.foil,
+              color: metal.badgeText,
               fontSize: 34,
               fontWeight: 900,
               boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
@@ -235,7 +270,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
               lineHeight: 1,
             }}
           >
-            {`#${award.rank} MLB Capper`}
+            {`#${award.rank} ${category.headline}`}
           </div>
           <div
             style={{
@@ -243,7 +278,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
               marginTop: 10,
               fontSize: 34,
               fontWeight: 800,
-              color: GOLD_LIGHT,
+              color: metal.light,
             }}
           >
             {`@${award.handle}`}
@@ -257,7 +292,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
                 fontWeight: 900,
                 letterSpacing: -6,
                 lineHeight: 0.9,
-                backgroundImage: UNITS_GRADIENT,
+                backgroundImage: metal.unitsGradient,
                 backgroundClip: "text",
                 color: "transparent",
                 display: "flex",
@@ -272,7 +307,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
                 fontWeight: 900,
                 marginLeft: 10,
                 marginBottom: 18,
-                color: GOLD_DEEP,
+                color: metal.deep,
               }}
             >
               u
@@ -312,7 +347,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
               textTransform: "uppercase",
             }}
           >
-            Straight bets only · Every pick graded from the original tweet
+            {category.footnote}
           </div>
         </div>
       </div>
@@ -325,7 +360,15 @@ export async function renderAwardOg(slug: string): Promise<Response> {
   if (!award) {
     const img = new ImageResponse(
       (
-        <div style={{ width: "100%", height: "100%", display: "flex", background: FOIL, padding: 6 }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            background: METALS[1].foil,
+            padding: 6,
+          }}
+        >
           <div
             style={{
               flex: 1,
