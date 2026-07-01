@@ -350,10 +350,14 @@ export async function renderAwardOg(slug: string): Promise<Response> {
     });
   }
 
-  const [avatarUri, crownUri] = await Promise.all([
+  const [avatarUri, crownFsUri] = await Promise.all([
     imageDataUri(award.avatarUrl),
     readPublicPngDataUri("parlay-palace-crown.png"),
   ]);
+  // The fs read can miss in the serverless bundle (public/ isn't traced for
+  // this route); fall back to fetching the deployed asset.
+  const crownUri =
+    crownFsUri ?? (await imageDataUri("https://tailslips.com/parlay-palace-crown.png"));
 
   const img = new ImageResponse(awardCard(award, avatarUri, crownUri), { ...size });
   const buf = await img.arrayBuffer();
