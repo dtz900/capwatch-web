@@ -105,7 +105,7 @@ function trajectoryChartUri(series: number[], w: number, h: number): string | nu
     `</linearGradient></defs>` +
     `<path d="${area}" fill="url(#g)"/>` +
     `<path d="${line}" fill="none" stroke="rgba(${fillRgb},0.48)" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>` +
-    `<line x1="0" y1="${zeroY.toFixed(2)}" x2="${w}" y2="${zeroY.toFixed(2)}" stroke="rgba(247,243,233,0.30)" stroke-width="2"/>` +
+    `<line x1="0" y1="${zeroY.toFixed(2)}" x2="${w}" y2="${zeroY.toFixed(2)}" stroke="rgba(247,243,233,0.55)" stroke-width="2.5"/>` +
     `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="4.5" fill="${stroke}"/>` +
     `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="10" fill="${stroke}" opacity="0.18"/>` +
     `</svg>`;
