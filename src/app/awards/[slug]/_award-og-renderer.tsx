@@ -48,6 +48,86 @@ const MEDALS: Record<number, { grad: string; ring: string; numeral: string; labe
   },
 };
 
+/** Metallic medallion as an SVG data-uri: sunburst rim, laurel wreath, star,
+ * radial sheen. Shapes only (the OG renderer can't lay out SVG <text>); the
+ * rank numeral is layered over it as real text in the card. */
+const MEDAL_METALS: Record<number, { light: string; base: string; dark: string; deep: string; rim1: string; rim2: string; leaf: string }> = {
+  1: { light: "#fff2c8", base: "#f3c34a", dark: "#b3810f", deep: "#7a5608", rim1: "#ecc05a", rim2: "#a9760c", leaf: "#f0d488" },
+  2: { light: "#ffffff", base: "#d6dae0", dark: "#8b93a0", deep: "#565d68", rim1: "#e2e6ea", rim2: "#8b93a0", leaf: "#eef1f4" },
+  3: { light: "#f8ddbb", base: "#cf8850", dark: "#8a5227", deep: "#5c3416", rim1: "#dda06a", rim2: "#8a5227", leaf: "#e6b384" },
+};
+
+function buildMedalSvg(rank: number): string {
+  const m = MEDAL_METALS[rank] ?? MEDAL_METALS[3];
+  const S = 120;
+  const cx = 60;
+  const cy = 60;
+  const outerR = 55;
+  const innerR = 47;
+  const discR = 44;
+
+  // sunburst rim
+  const teeth = 22;
+  const total = teeth * 2;
+  const rimPts: string[] = [];
+  for (let i = 0; i < total; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const a = (i / total) * Math.PI * 2 - Math.PI / 2;
+    rimPts.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`);
+  }
+
+  // laurel wreath: five leaves per side, mirrored across the vertical axis
+  const leafR = 31;
+  const leafAngles = [118, 140, 162, 184, 206];
+  const leaves: string[] = [];
+  for (const A of leafAngles) {
+    const rad = (A * Math.PI) / 180;
+    const x = cx + leafR * Math.cos(rad);
+    const y = cy + leafR * Math.sin(rad);
+    const rot = A + 90;
+    leaves.push(
+      `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="7" ry="3" fill="${m.leaf}" opacity="0.92" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`,
+    );
+    const x2 = 2 * cx - x;
+    leaves.push(
+      `<ellipse cx="${x2.toFixed(1)}" cy="${y.toFixed(1)}" rx="7" ry="3" fill="${m.leaf}" opacity="0.92" transform="rotate(${(-rot).toFixed(1)} ${x2.toFixed(1)} ${y.toFixed(1)})"/>`,
+    );
+  }
+
+  // star at top center
+  const starPts: string[] = [];
+  const scx = cx;
+  const scy = cy - 31;
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? 7 : 3;
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    starPts.push(`${(scx + r * Math.cos(a)).toFixed(1)},${(scy + r * Math.sin(a)).toFixed(1)}`);
+  }
+
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}">` +
+    `<defs>` +
+    `<radialGradient id="disc" cx="38%" cy="32%" r="72%">` +
+    `<stop offset="0%" stop-color="${m.light}"/>` +
+    `<stop offset="52%" stop-color="${m.base}"/>` +
+    `<stop offset="100%" stop-color="${m.dark}"/>` +
+    `</radialGradient>` +
+    `<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0%" stop-color="${m.rim1}"/>` +
+    `<stop offset="100%" stop-color="${m.rim2}"/>` +
+    `</linearGradient>` +
+    `</defs>` +
+    `<polygon points="${rimPts.join(" ")}" fill="url(#rim)" stroke="${m.rim2}" stroke-width="1"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="${discR}" fill="url(#disc)" stroke="${m.deep}" stroke-width="1.5"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="36" fill="none" stroke="${m.deep}" stroke-width="1.5" opacity="0.5"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="33.5" fill="none" stroke="${m.light}" stroke-width="1" opacity="0.5"/>` +
+    leaves.join("") +
+    `<polygon points="${starPts.join(" ")}" fill="${m.light}"/>` +
+    `<ellipse cx="44" cy="40" rx="22" ry="13" fill="#ffffff" opacity="0.16"/>` +
+    `</svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
 async function imageDataUri(url: string | null): Promise<string | null> {
   if (!url) return null;
   const ctrl = new AbortController();
@@ -100,8 +180,8 @@ function trajectoryChart(
   const min = Math.min(0, ...points);
   const max = Math.max(0.001, ...points);
 
-  const padX = 2;
-  const padRight = 16;
+  const padX = 0;
+  const padRight = 6;
   const padTop = 20;
   const labelStrip = 34; // reserved at the bottom for JUN 1 / JUN 30
   const drawdownRoom = 46; // space below the axis for losing stretches
@@ -150,6 +230,7 @@ function awardCard(
 ) {
   const pill = RANK_PILLS[award.rank] ?? RANK_PILLS[3];
   const medal = MEDALS[award.rank] ?? MEDALS[3];
+  const medalUri = buildMedalSvg(award.rank);
   const category = AWARD_CATEGORIES[award.category];
   const units = `${award.unitsProfit >= 0 ? "+" : ""}${award.unitsProfit.toFixed(1)}`;
   const unitsColor = award.unitsProfit >= 0 ? POS : NEG;
@@ -240,27 +321,25 @@ function awardCard(
           }}
         >
           <div style={{ display: "flex", alignItems: "center" }}>
-            {/* podium medallion */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 92,
-                height: 92,
-                borderRadius: 999,
-                background: medal.grad,
-                border: `3px solid ${medal.ring}`,
-                boxShadow: "0 6px 18px rgba(0,0,0,0.5)",
-              }}
-            >
+            {/* podium medallion (SVG art + numeral overlay) */}
+            <div style={{ position: "relative", display: "flex", width: 104, height: 104 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={medalUri} alt="" width={104} height={104} style={{ width: 104, height: 104 }} />
               <div
                 style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: 104,
+                  height: 104,
                   display: "flex",
-                  fontSize: 46,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 44,
                   fontWeight: 900,
                   letterSpacing: -2,
                   color: medal.numeral,
+                  textShadow: "0 1px 0 rgba(255,255,255,0.45)",
                 }}
               >
                 {award.rank}
