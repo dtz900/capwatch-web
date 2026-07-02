@@ -63,36 +63,48 @@ function formatUnits(u: number): string {
   return `${sign}${u.toFixed(1)}`;
 }
 
-/** Frozen trajectory -> SVG area chart data-uri. The capper's actual month,
- * drawn in the site's sparkline language at poster scale. */
+/** Frozen trajectory -> SVG data-uri, mirroring the profile hero sparkline
+ * (RecentTrajectory) exactly, scaled to card size: full-resolution series with
+ * a prepended 0, zero-anchored area fill, thin line, dashed zero baseline,
+ * dot + halo endpoint. The ceiling (padTop) keeps any line out of the
+ * headline zone. */
 function trajectoryChartUri(series: number[], w: number, h: number): string | null {
   if (series.length < 2) return null;
-  const values = [...series, 0];
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const padTop = 132;
-  const padBottom = 6;
-  const span = max - min || 1;
-  const padRight = 20;
-  const yOf = (v: number) => padTop + ((max - v) / span) * (h - padTop - padBottom);
-  const xOf = (i: number) => (i / (series.length - 1)) * (w - padRight);
-  const pts = series.map((v, i) => `${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`);
-  const line = "M" + pts.join(" L");
-  const area = `${line} L${(w - padRight).toFixed(1)},${h} L0,${h} Z`;
-  const zeroY = yOf(0).toFixed(1);
-  const lastX = xOf(series.length - 1);
-  const lastY = yOf(series[series.length - 1]);
+  const points = [0, ...series];
+  const last = points[points.length - 1];
+  const min = Math.min(0, ...points);
+  const max = Math.max(0, ...points);
+  const range = max - min || 1;
+  const padX = 2;
+  const padRight = 22;
+  const padTop = 136;
+  const padBottom = 10;
+  const innerW = w - padX - padRight;
+  const innerH = h - padTop - padBottom;
+  const stepX = innerW / (points.length - 1);
+  const yFor = (v: number) => padTop + innerH - ((v - min) / range) * innerH;
+  const zeroY = yFor(0);
+  const linePts = points.map((v, i) => `${(padX + i * stepX).toFixed(2)},${yFor(v).toFixed(2)}`);
+  const line = "M" + linePts.join(" L");
+  const lastX = padX + (points.length - 1) * stepX;
+  const area =
+    `M${padX},${zeroY.toFixed(2)} L` + linePts.join(" L") + ` L${lastX.toFixed(2)},${zeroY.toFixed(2)} Z`;
+  const lastY = yFor(last);
+  const posColor = "#19f57c";
+  const negColor = "#ef4444";
+  const stroke = last >= 0 ? posColor : negColor;
+  const fillRgb = last >= 0 ? "25,245,124" : "239,68,68";
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
     `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">` +
-    `<stop offset="0%" stop-color="#19f57c" stop-opacity="0.24"/>` +
-    `<stop offset="100%" stop-color="#19f57c" stop-opacity="0"/>` +
+    `<stop offset="0%" stop-color="rgba(${fillRgb},0.20)"/>` +
+    `<stop offset="100%" stop-color="rgba(${fillRgb},0)"/>` +
     `</linearGradient></defs>` +
+    `<line x1="${padX}" y1="${zeroY.toFixed(2)}" x2="${(w - padRight).toFixed(2)}" y2="${zeroY.toFixed(2)}" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="3 3"/>` +
     `<path d="${area}" fill="url(#g)"/>` +
-    `<line x1="0" y1="${zeroY}" x2="${w}" y2="${zeroY}" stroke="rgba(247,243,233,0.13)" stroke-width="1" stroke-dasharray="3 7"/>` +
-    `<path d="${line}" fill="none" stroke="#19f57c" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>` +
-    `<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="13" fill="rgba(25,245,124,0.22)"/>` +
-    `<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="5.5" fill="#19f57c"/>` +
+    `<path d="${line}" fill="none" stroke="${stroke}" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>` +
+    `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="4.5" fill="${stroke}"/>` +
+    `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="10" fill="${stroke}" opacity="0.18"/>` +
     `</svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
