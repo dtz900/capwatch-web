@@ -94,15 +94,18 @@ function trajectoryChartUri(series: number[], w: number, h: number): string | nu
   const negColor = "#ef4444";
   const stroke = last >= 0 ? posColor : negColor;
   const fillRgb = last >= 0 ? "25,245,124" : "239,68,68";
+  // The draw sits behind the content: line and fill at reduced alpha, a
+  // clear solid x-axis anchoring it, and only the endpoint dot at full
+  // brightness so the month still "arrives" at the number.
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
     `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">` +
-    `<stop offset="0%" stop-color="rgba(${fillRgb},0.20)"/>` +
+    `<stop offset="0%" stop-color="rgba(${fillRgb},0.11)"/>` +
     `<stop offset="100%" stop-color="rgba(${fillRgb},0)"/>` +
     `</linearGradient></defs>` +
-    `<line x1="${padX}" y1="${zeroY.toFixed(2)}" x2="${(w - padRight).toFixed(2)}" y2="${zeroY.toFixed(2)}" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="3 3"/>` +
     `<path d="${area}" fill="url(#g)"/>` +
-    `<path d="${line}" fill="none" stroke="${stroke}" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>` +
+    `<path d="${line}" fill="none" stroke="rgba(${fillRgb},0.48)" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>` +
+    `<line x1="0" y1="${zeroY.toFixed(2)}" x2="${w}" y2="${zeroY.toFixed(2)}" stroke="rgba(247,243,233,0.30)" stroke-width="2"/>` +
     `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="4.5" fill="${stroke}"/>` +
     `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="10" fill="${stroke}" opacity="0.18"/>` +
     `</svg>`;
@@ -157,28 +160,16 @@ function awardCard(
         />
       ) : null}
 
-      {/* light scrims: keep type legible without erasing the draw */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          bottom: 0,
-          width: 620,
-          height: 360,
-          display: "flex",
-          background:
-            "linear-gradient(90deg, rgba(10,10,12,0.52) 0%, rgba(10,10,12,0.26) 55%, rgba(10,10,12,0) 100%)",
-        }}
-      />
+      {/* gentle bottom scrim for the stat row */}
       <div
         style={{
           position: "absolute",
           left: 0,
           bottom: 0,
           width: 1200,
-          height: 92,
+          height: 84,
           display: "flex",
-          background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.78) 80%)",
+          background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.62) 85%)",
         }}
       />
 
