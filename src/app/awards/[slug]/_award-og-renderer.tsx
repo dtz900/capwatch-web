@@ -76,7 +76,7 @@ function trajectoryChartUri(series: number[], w: number, h: number): string | nu
   const max = Math.max(0, ...points);
   const range = max - min || 1;
   const padX = 2;
-  const padRight = 22;
+  const padRight = 9;
   const padTop = 136;
   const padBottom = 10;
   const innerW = w - padX - padRight;
@@ -157,20 +157,7 @@ function awardCard(
         />
       ) : null}
 
-      {/* scrims: quiet the chart under the headline (left) and the stat row
-          (bottom) so type never fights the line */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          bottom: 0,
-          width: 760,
-          height: 330,
-          display: "flex",
-          background:
-            "linear-gradient(90deg, rgba(10,10,12,0.94) 0%, rgba(10,10,12,0.62) 48%, rgba(10,10,12,0) 100%)",
-        }}
-      />
+      {/* bottom scrim keeps the stat row readable over the line */}
       <div
         style={{
           position: "absolute",
