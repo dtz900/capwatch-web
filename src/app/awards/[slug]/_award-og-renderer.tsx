@@ -77,7 +77,7 @@ function trajectoryChartUri(series: number[], w: number, h: number): string | nu
   const range = max - min || 1;
   const padX = 2;
   const padRight = 9;
-  const padTop = 12;
+  const padTop = 24;
   const padBottom = 8;
   const innerW = w - padX - padRight;
   const innerH = h - padTop - padBottom;
@@ -128,7 +128,7 @@ function awardCard(
     `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}% ROI`,
     `${award.picksCount} GRADED PICKS`,
   ];
-  const chartUri = trajectoryChartUri(award.trajectory, 1200, 130);
+  const chartUri = trajectoryChartUri(award.trajectory, 1200, 360);
   const bigAvatar = variant === "b";
   const avatarSize = bigAvatar ? 208 : 120;
 
@@ -152,11 +152,35 @@ function awardCard(
           src={chartUri}
           alt=""
           width={1200}
-          height={130}
-          style={{ position: "absolute", left: 0, bottom: 0, width: 1200, height: 130 }}
+          height={360}
+          style={{ position: "absolute", left: 0, bottom: 0, width: 1200, height: 360 }}
         />
       ) : null}
 
+      {/* light scrims: keep type legible without erasing the draw */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          bottom: 0,
+          width: 620,
+          height: 360,
+          display: "flex",
+          background:
+            "linear-gradient(90deg, rgba(10,10,12,0.52) 0%, rgba(10,10,12,0.26) 55%, rgba(10,10,12,0) 100%)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          bottom: 0,
+          width: 1200,
+          height: 92,
+          display: "flex",
+          background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.78) 80%)",
+        }}
+      />
 
       {/* brand bar */}
       <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
@@ -317,8 +341,17 @@ function awardCard(
         ) : null}
       </div>
 
-      {/* stat line + footnote, in flow under the number; the chart strip below stays clear */}
-      <div style={{ display: "flex", flexDirection: "column", padding: "24px 60px 0 60px" }}>
+      {/* stat line + footnote pinned to the bottom, riding over the draw */}
+      <div
+        style={{
+          position: "absolute",
+          left: 60,
+          right: 60,
+          bottom: 26,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -337,7 +370,7 @@ function awardCard(
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", marginTop: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", marginTop: 9, alignItems: "center" }}>
           <div
             style={{
               display: "flex",
