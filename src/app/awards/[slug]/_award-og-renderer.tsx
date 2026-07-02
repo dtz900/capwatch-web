@@ -74,6 +74,11 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
     { label: "ROI", value: `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}%` },
     { label: "Graded picks", value: String(award.picksCount) },
   ];
+  // Ticket geometry. The card IS the slip: main section + perforated stub.
+  const STUB_W = 312;
+  const PUNCH = "#040508";
+  const TICKET = "#0e1218";
+  const perforation = Array.from({ length: 24 });
 
   return (
     <div
@@ -81,243 +86,333 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
         width: "100%",
         height: "100%",
         display: "flex",
-        flexDirection: "column",
-        background: BG,
+        position: "relative",
+        background: TICKET,
         color: TEXT,
+        overflow: "hidden",
       }}
     >
-      {/* brand bar */}
-      <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
-
-      {/* header */}
+      {/* main section */}
       <div
         style={{
+          flex: 1,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "34px 64px",
-          borderBottom: `1px solid ${BORDER}`,
+          flexDirection: "column",
+          padding: "48px 56px 40px 60px",
         }}
       >
-        {logoUri ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUri} alt="TailSlips" height={42} style={{ height: 42 }} />
-        ) : (
-          <div style={{ display: "flex", fontSize: 28, fontWeight: 900, color: MINT }}>TAILSLIPS</div>
-        )}
-        <div
-          style={{
-            display: "flex",
-            fontSize: 17,
-            color: TEXT_MUTED,
-            fontWeight: 700,
-            letterSpacing: 3,
-            textTransform: "uppercase",
-          }}
-        >
-          {`Monthly Award · ${award.monthLabel}`}
-        </div>
-      </div>
-
-      {/* body */}
-      <div style={{ flex: 1, display: "flex", padding: "38px 64px 30px 64px" }}>
-        {/* left: identity on top, focal number pinned to the bottom */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {/* rank pill */}
-            <div style={{ display: "flex" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "10px 18px",
-                  borderRadius: 8,
-                  background: pill.bg,
-                  border: `1px solid ${pill.border}`,
-                  color: pill.color,
-                  fontSize: 22,
-                  fontWeight: 800,
-                  letterSpacing: 2.5,
-                  textTransform: "uppercase",
-                }}
-              >
-                {`#${award.rank} ${category.headline}`}
-              </div>
-            </div>
-
-            {/* handle */}
-            <div style={{ display: "flex", marginTop: 20 }}>
-              <div style={{ display: "flex", fontSize: 46, fontWeight: 900, letterSpacing: -1, color: TEXT }}>
-                {`@${award.handle}`}
-              </div>
-            </div>
-          </div>
-
-          {/* focal units: label-over-value, site StatBand convention */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div
-              style={{
-                display: "flex",
-                fontSize: 16,
-                color: TEXT_MUTED,
-                fontWeight: 700,
-                letterSpacing: 2.6,
-                textTransform: "uppercase",
-              }}
-            >
-              Net profit
-            </div>
-            <div style={{ display: "flex", marginTop: 4 }}>
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 110,
-                  fontWeight: 900,
-                  letterSpacing: -4,
-                  lineHeight: 1,
-                  color: unitsColor,
-                }}
-              >
-                {`${units}u`}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* right: avatar plaque */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-          {avatarUri ? (
+        {/* header: logo + award line */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {logoUri ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUri}
-              alt=""
-              width={184}
-              height={184}
-              style={{
-                width: 184,
-                height: 184,
-                borderRadius: 16,
-                objectFit: "cover",
-                border: `1px solid ${BORDER}`,
-              }}
-            />
+            <img src={logoUri} alt="TailSlips" height={40} style={{ height: 40 }} />
           ) : (
-            <div
-              style={{
-                width: 184,
-                height: 184,
-                borderRadius: 16,
-                background: "rgba(255,255,255,0.03)",
-                border: `1px solid ${BORDER}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 72,
-                color: TEXT_MUTED,
-                fontWeight: 900,
-              }}
-            >
-              {award.displayName.slice(0, 1).toUpperCase()}
-            </div>
+            <div style={{ display: "flex", fontSize: 26, fontWeight: 900, color: MINT }}>TAILSLIPS</div>
           )}
           <div
             style={{
               display: "flex",
-              marginTop: 14,
-              fontSize: 17,
+              fontSize: 15,
               color: TEXT_MUTED,
               fontWeight: 700,
-              letterSpacing: 2,
+              letterSpacing: 3,
               textTransform: "uppercase",
             }}
           >
-            {`Awarded ${award.issuedAt}`}
+            Monthly Award
+          </div>
+        </div>
+
+        {/* identity */}
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 42 }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 20,
+              fontWeight: 800,
+              color: pill.color,
+              letterSpacing: 3,
+              textTransform: "uppercase",
+            }}
+          >
+            {`#${award.rank} ${category.headline} · ${award.monthLabel}`}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 10,
+              fontSize: 62,
+              fontWeight: 900,
+              letterSpacing: -1.5,
+              color: TEXT,
+            }}
+          >
+            {`@${award.handle}`}
+          </div>
+        </div>
+
+        {/* focal number */}
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 34 }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 15,
+              color: TEXT_MUTED,
+              fontWeight: 700,
+              letterSpacing: 2.6,
+              textTransform: "uppercase",
+            }}
+          >
+            Net profit
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 4,
+              fontSize: 116,
+              fontWeight: 900,
+              letterSpacing: -4,
+              lineHeight: 1,
+              color: unitsColor,
+            }}
+          >
+            {`${units}u`}
+          </div>
+        </div>
+
+        {/* stat row */}
+        <div
+          style={{
+            display: "flex",
+            marginTop: 34,
+            paddingTop: 26,
+            borderTop: `1px solid ${BORDER}`,
+          }}
+        >
+          {stats.map((stat, i) => (
+            <div
+              key={stat.label}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                paddingRight: 44,
+                paddingLeft: i > 0 ? 44 : 0,
+                ...(i > 0 ? { borderLeft: `1px solid ${BORDER}` } : {}),
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 14,
+                  color: TEXT_MUTED,
+                  fontWeight: 700,
+                  letterSpacing: 2.2,
+                  textTransform: "uppercase",
+                }}
+              >
+                {stat.label}
+              </div>
+              <div style={{ display: "flex", marginTop: 7, fontSize: 32, fontWeight: 800, color: TEXT }}>
+                {stat.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* footer */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 30,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontSize: 14,
+              color: TEXT_MUTED,
+              letterSpacing: 1.8,
+              textTransform: "uppercase",
+            }}
+          >
+            {category.footnote}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 15,
+              color: MINT,
+              fontWeight: 800,
+              letterSpacing: 2.4,
+              textTransform: "uppercase",
+            }}
+          >
+            tailslips.com
           </div>
         </div>
       </div>
 
-      {/* stat band */}
+      {/* stub */}
       <div
         style={{
+          width: STUB_W,
           display: "flex",
-          margin: "0 64px",
-          borderTop: `1px solid ${BORDER}`,
-          padding: "26px 0",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: pill.bg,
+          position: "relative",
         }}
       >
-        {stats.map((stat, i) => (
-          <div
-            key={stat.label}
+        {avatarUri ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUri}
+            alt=""
+            width={158}
+            height={158}
             style={{
+              width: 158,
+              height: 158,
+              borderRadius: 16,
+              objectFit: "cover",
+              border: `2px solid ${pill.border}`,
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 158,
+              height: 158,
+              borderRadius: 16,
+              background: "rgba(255,255,255,0.04)",
+              border: `2px solid ${pill.border}`,
               display: "flex",
-              flexDirection: "column",
-              paddingRight: 56,
-              paddingLeft: i > 0 ? 56 : 0,
-              // satori calls .trim() on border values; an undefined key crashes
-              // the whole render, so only set the property when it exists.
-              ...(i > 0 ? { borderLeft: `1px solid ${BORDER}` } : {}),
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 64,
+              color: pill.color,
+              fontWeight: 900,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                fontSize: 15,
-                color: TEXT_MUTED,
-                fontWeight: 700,
-                letterSpacing: 2.4,
-                textTransform: "uppercase",
-              }}
-            >
-              {stat.label}
-            </div>
-            <div style={{ display: "flex", marginTop: 8, fontSize: 36, fontWeight: 800, color: TEXT }}>
-              {stat.value}
-            </div>
+            {award.displayName.slice(0, 1).toUpperCase()}
           </div>
+        )}
+        <div
+          style={{
+            display: "flex",
+            marginTop: 26,
+            fontSize: 92,
+            fontWeight: 900,
+            lineHeight: 1,
+            color: pill.color,
+          }}
+        >
+          {`#${award.rank}`}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 12,
+            fontSize: 16,
+            fontWeight: 800,
+            color: TEXT,
+            letterSpacing: 3,
+            textTransform: "uppercase",
+          }}
+        >
+          {category.headline}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 6,
+            fontSize: 14,
+            fontWeight: 700,
+            color: TEXT_MUTED,
+            letterSpacing: 2.4,
+            textTransform: "uppercase",
+          }}
+        >
+          {award.monthLabel}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 22,
+            fontSize: 12,
+            fontWeight: 700,
+            color: TEXT_MUTED,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+          }}
+        >
+          {`Awarded ${award.issuedAt}`}
+        </div>
+      </div>
+
+      {/* perforation dots along the stub edge */}
+      <div
+        style={{
+          position: "absolute",
+          top: 30,
+          bottom: 30,
+          left: 1200 - STUB_W - 3,
+          width: 6,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        {perforation.map((_, i) => (
+          <div
+            key={i}
+            style={{ display: "flex", width: 6, height: 6, borderRadius: 999, background: PUNCH }}
+          />
         ))}
       </div>
 
-      {/* footer */}
+      {/* punched ticket notches at the stub boundary */}
       <div
         style={{
+          position: "absolute",
+          top: -16,
+          left: 1200 - STUB_W - 16,
+          width: 32,
+          height: 32,
+          borderRadius: 999,
+          background: PUNCH,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "20px 64px 30px 64px",
-          borderTop: `1px solid ${BORDER}`,
         }}
-      >
-        <div
-          style={{
-            display: "flex",
-            fontSize: 15,
-            color: TEXT_MUTED,
-            letterSpacing: 1.8,
-            textTransform: "uppercase",
-          }}
-        >
-          {category.footnote}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 16,
-            color: MINT,
-            fontWeight: 800,
-            letterSpacing: 2.5,
-            textTransform: "uppercase",
-          }}
-        >
-          tailslips.com
-        </div>
-      </div>
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: -16,
+          left: 1200 - STUB_W - 16,
+          width: 32,
+          height: 32,
+          borderRadius: 999,
+          background: PUNCH,
+          display: "flex",
+        }}
+      />
+
+      {/* brand bar pinned to the top of the main section only */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: 1200 - STUB_W,
+          height: 6,
+          background: BRAND_BAR,
+          display: "flex",
+        }}
+      />
     </div>
   );
 }
