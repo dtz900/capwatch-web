@@ -77,8 +77,8 @@ function trajectoryChartUri(series: number[], w: number, h: number): string | nu
   const range = max - min || 1;
   const padX = 2;
   const padRight = 9;
-  const padTop = 136;
-  const padBottom = 10;
+  const padTop = 12;
+  const padBottom = 8;
   const innerW = w - padX - padRight;
   const innerH = h - padTop - padBottom;
   const stepX = innerW / (points.length - 1);
@@ -128,7 +128,7 @@ function awardCard(
     `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}% ROI`,
     `${award.picksCount} GRADED PICKS`,
   ];
-  const chartUri = trajectoryChartUri(award.trajectory, 1200, 330);
+  const chartUri = trajectoryChartUri(award.trajectory, 1200, 130);
   const bigAvatar = variant === "b";
   const avatarSize = bigAvatar ? 208 : 120;
 
@@ -152,23 +152,11 @@ function awardCard(
           src={chartUri}
           alt=""
           width={1200}
-          height={330}
-          style={{ position: "absolute", left: 0, bottom: 0, width: 1200, height: 330 }}
+          height={130}
+          style={{ position: "absolute", left: 0, bottom: 0, width: 1200, height: 130 }}
         />
       ) : null}
 
-      {/* bottom scrim keeps the stat row readable over the line */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          bottom: 0,
-          width: 1200,
-          height: 128,
-          display: "flex",
-          background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.94) 72%)",
-        }}
-      />
 
       {/* brand bar */}
       <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
@@ -329,61 +317,51 @@ function awardCard(
         ) : null}
       </div>
 
-      {/* bottom row over the chart */}
-      <div
-        style={{
-          position: "absolute",
-          left: 60,
-          right: 60,
-          bottom: 28,
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column" }}>
+      {/* stat line + footnote, in flow under the number; the chart strip below stays clear */}
+      <div style={{ display: "flex", flexDirection: "column", padding: "24px 60px 0 60px" }}>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 21,
+            fontWeight: 800,
+            color: TEXT,
+            letterSpacing: 2.2,
+          }}
+        >
+          {statLine.map((part, i) => (
+            <div key={i} style={{ display: "flex" }}>
+              {i > 0 ? (
+                <div style={{ display: "flex", margin: "0 14px", color: "rgba(255,255,255,0.30)" }}>·</div>
+              ) : null}
+              {part}
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", marginTop: 10, alignItems: "center" }}>
           <div
             style={{
               display: "flex",
-              fontSize: 21,
-              fontWeight: 800,
-              color: TEXT,
-              letterSpacing: 2.2,
-            }}
-          >
-            {statLine.map((part, i) => (
-              <div key={i} style={{ display: "flex" }}>
-                {i > 0 ? (
-                  <div style={{ display: "flex", margin: "0 14px", color: "rgba(255,255,255,0.30)" }}>·</div>
-                ) : null}
-                {part}
-              </div>
-            ))}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: 9,
               fontSize: 13,
               color: TEXT_MUTED,
               letterSpacing: 1.7,
               textTransform: "uppercase",
             }}
           >
-            {`${category.footnote} · Awarded ${award.issuedAt}`}
+            {`${category.footnote} · Awarded ${award.issuedAt} ·`}
           </div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 15,
-            color: MINT,
-            fontWeight: 800,
-            letterSpacing: 2.4,
-            textTransform: "uppercase",
-          }}
-        >
-          tailslips.com
+          <div
+            style={{
+              display: "flex",
+              marginLeft: 8,
+              fontSize: 13,
+              color: MINT,
+              fontWeight: 800,
+              letterSpacing: 1.9,
+              textTransform: "uppercase",
+            }}
+          >
+            tailslips.com
+          </div>
         </div>
       </div>
     </div>
