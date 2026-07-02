@@ -120,76 +120,73 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
       </div>
 
       {/* body */}
-      <div style={{ flex: 1, display: "flex", padding: "44px 64px 0 64px" }}>
-        {/* left: identity + focal number */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          {/* rank pill */}
-          <div style={{ display: "flex" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "10px 18px",
-                borderRadius: 8,
-                background: pill.bg,
-                border: `1px solid ${pill.border}`,
-                color: pill.color,
-                fontSize: 22,
-                fontWeight: 800,
-                letterSpacing: 2.5,
-                textTransform: "uppercase",
-              }}
-            >
-              {`#${award.rank} ${category.headline}`}
+      <div style={{ flex: 1, display: "flex", padding: "38px 64px 30px 64px" }}>
+        {/* left: identity on top, focal number pinned to the bottom */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {/* rank pill */}
+            <div style={{ display: "flex" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "10px 18px",
+                  borderRadius: 8,
+                  background: pill.bg,
+                  border: `1px solid ${pill.border}`,
+                  color: pill.color,
+                  fontSize: 22,
+                  fontWeight: 800,
+                  letterSpacing: 2.5,
+                  textTransform: "uppercase",
+                }}
+              >
+                {`#${award.rank} ${category.headline}`}
+              </div>
             </div>
-          </div>
 
-          {/* handle */}
-          <div style={{ display: "flex", marginTop: 22 }}>
-            <div style={{ display: "flex", fontSize: 48, fontWeight: 900, letterSpacing: -1, color: TEXT }}>
-              {`@${award.handle}`}
+            {/* handle */}
+            <div style={{ display: "flex", marginTop: 20 }}>
+              <div style={{ display: "flex", fontSize: 46, fontWeight: 900, letterSpacing: -1, color: TEXT }}>
+                {`@${award.handle}`}
+              </div>
             </div>
           </div>
 
           {/* focal units: label-over-value, site StatBand convention */}
-          <div
-            style={{
-              display: "flex",
-              marginTop: 26,
-              fontSize: 16,
-              color: TEXT_MUTED,
-              fontWeight: 700,
-              letterSpacing: 2.6,
-              textTransform: "uppercase",
-            }}
-          >
-            Net profit
-          </div>
-          <div style={{ display: "flex", alignItems: "flex-end", marginTop: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             <div
               style={{
                 display: "flex",
-                fontSize: 126,
-                fontWeight: 900,
-                letterSpacing: -5,
-                lineHeight: 1,
-                color: unitsColor,
+                fontSize: 16,
+                color: TEXT_MUTED,
+                fontWeight: 700,
+                letterSpacing: 2.6,
+                textTransform: "uppercase",
               }}
             >
-              {units}
+              Net profit
             </div>
-            <div
-              style={{
-                display: "flex",
-                fontSize: 44,
-                fontWeight: 800,
-                marginLeft: 8,
-                marginBottom: 10,
-                color: unitsColor,
-                opacity: 0.75,
-              }}
-            >
-              u
+            <div style={{ display: "flex", marginTop: 4 }}>
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 110,
+                  fontWeight: 900,
+                  letterSpacing: -4,
+                  lineHeight: 1,
+                  color: unitsColor,
+                }}
+              >
+                {`${units}u`}
+              </div>
             </div>
           </div>
         </div>
