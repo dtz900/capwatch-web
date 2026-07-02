@@ -145,20 +145,33 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
           </div>
 
           {/* handle */}
-          <div style={{ display: "flex", marginTop: 24 }}>
-            <div style={{ display: "flex", fontSize: 52, fontWeight: 900, letterSpacing: -1, color: TEXT }}>
+          <div style={{ display: "flex", marginTop: 22 }}>
+            <div style={{ display: "flex", fontSize: 48, fontWeight: 900, letterSpacing: -1, color: TEXT }}>
               {`@${award.handle}`}
             </div>
           </div>
 
-          {/* focal units */}
-          <div style={{ display: "flex", alignItems: "flex-end", marginTop: 8 }}>
+          {/* focal units: label-over-value, site StatBand convention */}
+          <div
+            style={{
+              display: "flex",
+              marginTop: 26,
+              fontSize: 16,
+              color: TEXT_MUTED,
+              fontWeight: 700,
+              letterSpacing: 2.6,
+              textTransform: "uppercase",
+            }}
+          >
+            Net profit
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", marginTop: 6 }}>
             <div
               style={{
                 display: "flex",
-                fontSize: 172,
+                fontSize: 126,
                 fontWeight: 900,
-                letterSpacing: -7,
+                letterSpacing: -5,
                 lineHeight: 1,
                 color: unitsColor,
               }}
@@ -168,29 +181,15 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
             <div
               style={{
                 display: "flex",
-                fontSize: 56,
+                fontSize: 44,
                 fontWeight: 800,
                 marginLeft: 8,
-                marginBottom: 16,
+                marginBottom: 10,
                 color: unitsColor,
                 opacity: 0.75,
               }}
             >
               u
-            </div>
-            <div
-              style={{
-                display: "flex",
-                fontSize: 20,
-                fontWeight: 700,
-                marginLeft: 22,
-                marginBottom: 26,
-                color: TEXT_MUTED,
-                letterSpacing: 2.5,
-                textTransform: "uppercase",
-              }}
-            >
-              Net profit
             </div>
           </div>
         </div>
