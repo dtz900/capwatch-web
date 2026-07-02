@@ -63,27 +63,61 @@ function formatUnits(u: number): string {
   return `${sign}${u.toFixed(1)}`;
 }
 
-function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: string | null) {
+/** Frozen trajectory -> SVG area chart data-uri. The capper's actual month,
+ * drawn in the site's sparkline language at poster scale. */
+function trajectoryChartUri(series: number[], w: number, h: number): string | null {
+  if (series.length < 2) return null;
+  const values = [...series, 0];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const padTop = 16;
+  const padBottom = 6;
+  const span = max - min || 1;
+  const yOf = (v: number) => padTop + ((max - v) / span) * (h - padTop - padBottom);
+  const xOf = (i: number) => (i / (series.length - 1)) * w;
+  const pts = series.map((v, i) => `${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`);
+  const line = "M" + pts.join(" L");
+  const area = `${line} L${w},${h} L0,${h} Z`;
+  const zeroY = yOf(0).toFixed(1);
+  const lastX = Math.min(xOf(series.length - 1), w - 8);
+  const lastY = yOf(series[series.length - 1]);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0%" stop-color="#19f57c" stop-opacity="0.24"/>` +
+    `<stop offset="100%" stop-color="#19f57c" stop-opacity="0"/>` +
+    `</linearGradient></defs>` +
+    `<path d="${area}" fill="url(#g)"/>` +
+    `<line x1="0" y1="${zeroY}" x2="${w}" y2="${zeroY}" stroke="rgba(247,243,233,0.13)" stroke-width="1" stroke-dasharray="3 7"/>` +
+    `<path d="${line}" fill="none" stroke="#19f57c" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>` +
+    `<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="13" fill="rgba(25,245,124,0.22)"/>` +
+    `<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="5.5" fill="#19f57c"/>` +
+    `</svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+export type AwardVariant = "a" | "b";
+
+function awardCard(
+  award: MonthlyAward,
+  avatarUri: string | null,
+  logoUri: string | null,
+  variant: AwardVariant = "a",
+) {
   const pill = RANK_PILLS[award.rank] ?? RANK_PILLS[3];
   const category = AWARD_CATEGORIES[award.category];
   const units = `${award.unitsProfit >= 0 ? "+" : ""}${award.unitsProfit.toFixed(1)}`;
   const unitsColor = award.unitsProfit >= 0 ? POS : NEG;
-  const stats = [
-    { label: "Record", value: `${award.wins}-${award.losses}${award.pushes ? `-${award.pushes}` : ""}` },
-    { label: "Win rate", value: `${(award.winRate * 100).toFixed(1)}%` },
-    { label: "ROI", value: `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}%` },
-    { label: "Graded picks", value: String(award.picksCount) },
+  const record = `${award.wins}-${award.losses}${award.pushes ? `-${award.pushes}` : ""}`;
+  const statLine = [
+    `${record} RECORD`,
+    `${(award.winRate * 100).toFixed(1)}% WIN`,
+    `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}% ROI`,
+    `${award.picksCount} GRADED PICKS`,
   ];
-  // Ticket geometry. The slip sits inset on its own canvas so the punched
-  // notches and perforation always cut into a surface we control, regardless
-  // of where the image is displayed (feed, page, DM, light mode).
-  const CANVAS = "#04070b";
-  const CANVAS_PAD = 26;
-  const TICKET_W = 1200 - CANVAS_PAD * 2;
-  const STUB_W = 300;
-  const PUNCH = CANVAS;
-  const TICKET = "#0e1218";
-  const perforation = Array.from({ length: 22 });
+  const chartUri = trajectoryChartUri(award.trajectory, 1200, 330);
+  const bigAvatar = variant === "b";
+  const avatarSize = bigAvatar ? 208 : 120;
 
   return (
     <div
@@ -91,195 +125,140 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
         width: "100%",
         height: "100%",
         display: "flex",
-        background: CANVAS,
-        padding: CANVAS_PAD,
-      }}
-    >
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
+        flexDirection: "column",
         position: "relative",
-        background: TICKET,
+        background: BG,
         color: TEXT,
         overflow: "hidden",
-        borderRadius: 18,
-        border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      {/* main section */}
+      {/* the capper's actual month, full-bleed along the bottom */}
+      {chartUri ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={chartUri}
+          alt=""
+          width={1200}
+          height={330}
+          style={{ position: "absolute", left: 0, bottom: 0, width: 1200, height: 330 }}
+        />
+      ) : null}
+
+      {/* legibility scrim under the bottom text row */}
       <div
         style={{
-          flex: 1,
+          position: "absolute",
+          left: 0,
+          bottom: 0,
+          width: 1200,
+          height: 110,
           display: "flex",
-          flexDirection: "column",
-          padding: "40px 52px 34px 54px",
+          background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.9) 78%)",
+        }}
+      />
+
+      {/* brand bar */}
+      <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
+
+      {/* header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "38px 60px 0 60px",
         }}
       >
-        {/* header: logo + award line */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {logoUri ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUri} alt="TailSlips" height={40} style={{ height: 40 }} />
-          ) : (
-            <div style={{ display: "flex", fontSize: 26, fontWeight: 900, color: MINT }}>TAILSLIPS</div>
-          )}
-          <div
-            style={{
-              display: "flex",
-              fontSize: 15,
-              color: TEXT_MUTED,
-              fontWeight: 700,
-              letterSpacing: 3,
-              textTransform: "uppercase",
-            }}
-          >
-            Monthly Award
-          </div>
-        </div>
-
-        {/* identity */}
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 32 }}>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 20,
-              fontWeight: 800,
-              color: pill.color,
-              letterSpacing: 3,
-              textTransform: "uppercase",
-            }}
-          >
-            {`#${award.rank} ${category.headline} · ${award.monthLabel}`}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: 10,
-              fontSize: 56,
-              fontWeight: 900,
-              letterSpacing: -1.5,
-              color: TEXT,
-            }}
-          >
-            {`@${award.handle}`}
-          </div>
-        </div>
-
-        {/* focal number */}
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 30 }}>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 15,
-              color: TEXT_MUTED,
-              fontWeight: 700,
-              letterSpacing: 2.6,
-              textTransform: "uppercase",
-            }}
-          >
-            Net profit
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: 4,
-              fontSize: 106,
-              fontWeight: 900,
-              letterSpacing: -4,
-              lineHeight: 1,
-              color: unitsColor,
-            }}
-          >
-            {`${units}u`}
-          </div>
-        </div>
-
-        {/* stat row */}
+        {logoUri ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUri} alt="TailSlips" height={42} style={{ height: 42 }} />
+        ) : (
+          <div style={{ display: "flex", fontSize: 28, fontWeight: 900, color: MINT }}>TAILSLIPS</div>
+        )}
         <div
           style={{
             display: "flex",
-            marginTop: 30,
-            paddingTop: 24,
-            borderTop: `1px solid ${BORDER}`,
+            fontSize: 16,
+            color: TEXT_MUTED,
+            fontWeight: 700,
+            letterSpacing: 3,
+            textTransform: "uppercase",
           }}
         >
-          {stats.map((stat, i) => (
-            <div
-              key={stat.label}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                paddingRight: 44,
-                paddingLeft: i > 0 ? 44 : 0,
-                ...(i > 0 ? { borderLeft: `1px solid ${BORDER}` } : {}),
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 14,
-                  color: TEXT_MUTED,
-                  fontWeight: 700,
-                  letterSpacing: 2.2,
-                  textTransform: "uppercase",
-                }}
-              >
-                {stat.label}
-              </div>
-              <div style={{ display: "flex", marginTop: 7, fontSize: 32, fontWeight: 800, color: TEXT }}>
-                {stat.value}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* footer */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: 26,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              fontSize: 13,
-              color: TEXT_MUTED,
-              letterSpacing: 1.6,
-              textTransform: "uppercase",
-              marginRight: 28,
-            }}
-          >
-            {category.footnote}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 14,
-              color: MINT,
-              fontWeight: 800,
-              letterSpacing: 2.2,
-              textTransform: "uppercase",
-            }}
-          >
-            tailslips.com
-          </div>
+          {`Monthly Award · ${award.monthLabel}`}
         </div>
       </div>
 
-      {/* stub */}
+      {/* headline block */}
       <div
         style={{
-          width: STUB_W,
+          display: "flex",
+          flexDirection: "column",
+          padding: "36px 60px 0 60px",
+          paddingRight: bigAvatar ? 320 : 60,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            fontSize: 22,
+            fontWeight: 800,
+            color: pill.color,
+            letterSpacing: 3.2,
+            textTransform: "uppercase",
+          }}
+        >
+          {`#${award.rank} ${category.headline}`}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 8,
+            fontSize: 64,
+            fontWeight: 900,
+            letterSpacing: -1.5,
+            color: TEXT,
+          }}
+        >
+          {`@${award.handle}`}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 26,
+            fontSize: 16,
+            color: TEXT_MUTED,
+            fontWeight: 700,
+            letterSpacing: 2.8,
+            textTransform: "uppercase",
+          }}
+        >
+          {`Net profit · ${award.monthLabel}`}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 2,
+            fontSize: 132,
+            fontWeight: 900,
+            letterSpacing: -5,
+            lineHeight: 1,
+            color: unitsColor,
+          }}
+        >
+          {`${units}u`}
+        </div>
+      </div>
+
+      {/* avatar */}
+      <div
+        style={{
+          position: "absolute",
+          top: bigAvatar ? 148 : 122,
+          right: 60,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          background: pill.bg,
-          position: "relative",
         }}
       >
         {avatarUri ? (
@@ -287,156 +266,120 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
           <img
             src={avatarUri}
             alt=""
-            width={158}
-            height={158}
+            width={avatarSize}
+            height={avatarSize}
             style={{
-              width: 158,
-              height: 158,
-              borderRadius: 16,
+              width: avatarSize,
+              height: avatarSize,
+              borderRadius: 18,
               objectFit: "cover",
-              border: `2px solid ${pill.border}`,
+              border: bigAvatar ? `2px solid ${pill.border}` : `1px solid ${BORDER}`,
             }}
           />
         ) : (
           <div
             style={{
-              width: 158,
-              height: 158,
-              borderRadius: 16,
-              background: "rgba(255,255,255,0.04)",
-              border: `2px solid ${pill.border}`,
+              width: avatarSize,
+              height: avatarSize,
+              borderRadius: 18,
+              background: "rgba(255,255,255,0.03)",
+              border: `1px solid ${BORDER}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 64,
-              color: pill.color,
+              fontSize: avatarSize / 2.4,
+              color: TEXT_MUTED,
               fontWeight: 900,
             }}
           >
             {award.displayName.slice(0, 1).toUpperCase()}
           </div>
         )}
-        <div
-          style={{
-            display: "flex",
-            marginTop: 26,
-            fontSize: 92,
-            fontWeight: 900,
-            lineHeight: 1,
-            color: pill.color,
-          }}
-        >
-          {`#${award.rank}`}
+        {bigAvatar ? (
+          <div
+            style={{
+              display: "flex",
+              marginTop: 12,
+              padding: "8px 14px",
+              borderRadius: 8,
+              background: pill.bg,
+              border: `1px solid ${pill.border}`,
+              color: pill.color,
+              fontSize: 18,
+              fontWeight: 800,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+            }}
+          >
+            {`#${award.rank}`}
+          </div>
+        ) : null}
+      </div>
+
+      {/* bottom row over the chart */}
+      <div
+        style={{
+          position: "absolute",
+          left: 60,
+          right: 60,
+          bottom: 28,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 21,
+              fontWeight: 800,
+              color: TEXT,
+              letterSpacing: 2.2,
+            }}
+          >
+            {statLine.map((part, i) => (
+              <div key={i} style={{ display: "flex" }}>
+                {i > 0 ? (
+                  <div style={{ display: "flex", margin: "0 14px", color: "rgba(255,255,255,0.30)" }}>·</div>
+                ) : null}
+                {part}
+              </div>
+            ))}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 9,
+              fontSize: 13,
+              color: TEXT_MUTED,
+              letterSpacing: 1.7,
+              textTransform: "uppercase",
+            }}
+          >
+            {`${category.footnote} · Awarded ${award.issuedAt}`}
+          </div>
         </div>
         <div
           style={{
             display: "flex",
-            marginTop: 12,
-            fontSize: 16,
+            fontSize: 15,
+            color: MINT,
             fontWeight: 800,
-            color: TEXT,
-            letterSpacing: 3,
-            textTransform: "uppercase",
-          }}
-        >
-          {category.headline}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 6,
-            fontSize: 14,
-            fontWeight: 700,
-            color: TEXT_MUTED,
             letterSpacing: 2.4,
             textTransform: "uppercase",
           }}
         >
-          {award.monthLabel}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 22,
-            fontSize: 12,
-            fontWeight: 700,
-            color: TEXT_MUTED,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-          }}
-        >
-          {`Awarded ${award.issuedAt}`}
+          tailslips.com
         </div>
       </div>
-
-      {/* perforation dots along the stub edge */}
-      <div
-        style={{
-          position: "absolute",
-          top: 30,
-          bottom: 30,
-          left: TICKET_W - STUB_W - 3,
-          width: 6,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        {perforation.map((_, i) => (
-          <div
-            key={i}
-            style={{ display: "flex", width: 6, height: 6, borderRadius: 999, background: PUNCH }}
-          />
-        ))}
-      </div>
-
-      {/* punched ticket notches at the stub boundary */}
-      <div
-        style={{
-          position: "absolute",
-          top: -16,
-          left: TICKET_W - STUB_W - 16,
-          width: 32,
-          height: 32,
-          borderRadius: 999,
-          background: PUNCH,
-          display: "flex",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: -16,
-          left: TICKET_W - STUB_W - 16,
-          width: 32,
-          height: 32,
-          borderRadius: 999,
-          background: PUNCH,
-          display: "flex",
-        }}
-      />
-
-      {/* brand bar pinned to the top of the main section only */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: TICKET_W - STUB_W,
-          height: 6,
-          background: BRAND_BAR,
-          display: "flex",
-        }}
-      />
-    </div>
     </div>
   );
 }
 
 export async function renderAwardOg(
   slug: string,
-  opts: { debug?: boolean } = {},
+  opts: { debug?: boolean; variant?: AwardVariant } = {},
 ): Promise<Response> {
   const award = getAward(slug);
   if (!award) {
@@ -485,7 +428,7 @@ export async function renderAwardOg(
     logoFsUri ?? (await imageDataUri("https://tailslips.com/logo-horizontal-aligned-tight.png"));
 
   try {
-    const img = new ImageResponse(awardCard(award, avatarUri, logoUri), { ...size });
+    const img = new ImageResponse(awardCard(award, avatarUri, logoUri, opts.variant ?? "a"), { ...size });
     const buf = await img.arrayBuffer();
     return new Response(buf, {
       headers: {
