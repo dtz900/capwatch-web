@@ -324,7 +324,10 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
   );
 }
 
-export async function renderAwardOg(slug: string): Promise<Response> {
+export async function renderAwardOg(
+  slug: string,
+  opts: { debug?: boolean } = {},
+): Promise<Response> {
   const award = getAward(slug);
   if (!award) {
     const img = new ImageResponse(
@@ -383,6 +386,13 @@ export async function renderAwardOg(slug: string): Promise<Response> {
     });
   } catch (err) {
     console.error("[award-og-renderer] ImageResponse failed", err);
+    if (opts.debug) {
+      const msg = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
+      return new Response(msg, {
+        status: 500,
+        headers: { "content-type": "text/plain", "cache-control": "no-store, max-age=0" },
+      });
+    }
     const fallback = new ImageResponse(
       (
         <div
