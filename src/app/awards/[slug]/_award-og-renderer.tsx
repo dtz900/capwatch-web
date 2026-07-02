@@ -7,61 +7,24 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "TailSlips monthly capper award";
 
-const BG = "#0b0d11";
-
-// TailSlips brand: mint-to-green gradient (the crown logo's own ramp). The
-// frame and identity layer are brand teal on every card; the podium metals
-// below carry the rank signal (units, ring, badge).
+// Site design tokens (globals.css). The card is a flat scoreboard plaque in
+// the site's own language: near-black, off-white, thin borders, P&L green,
+// one brand-gradient bar. No foil, no glows.
+const BG = "#0a0a0c";
+const TEXT = "#f7f3e9";
+const TEXT_MUTED = "#71717a";
+const BORDER = "rgba(255,255,255,0.10)";
+const POS = "#19f57c";
+const NEG = "#ef4444";
 const MINT = "#5eead4";
-const BRAND_FOIL =
-  "linear-gradient(135deg,#5eead4 0%,#c4f9ec 22%,#0f9e6e 46%,#7cf0c9 68%,#0b7a58 100%)";
-const BRAND_GLOW = "94,234,212";
+const BRAND_BAR = "linear-gradient(90deg,#5eead4 0%,#19f57c 100%)";
 
-/** Podium metals. #1 shares the Parlay Palace gold-foil family (gold surface =
- * hall of fame); #2 and #3 step down to silver and bronze, mirroring the
- * leaderboard podium so climbing to the gold card means something. */
-interface Metal {
-  foil: string;
-  unitsGradient: string;
-  accent: string;
-  light: string;
-  deep: string;
-  badgeText: string;
-  glow: string;
-}
-
-const METALS: Record<number, Metal> = {
-  1: {
-    foil: "linear-gradient(135deg,#caa45a 0%,#f3e3b3 22%,#9c7a36 46%,#e9cf93 68%,#8a6e3a 100%)",
-    unitsGradient: "linear-gradient(180deg,#fdf3d6 0%,#e9cf93 42%,#c7a259 100%)",
-    accent: "#caa45a",
-    light: "#e3c787",
-    deep: "#c7a259",
-    badgeText: "#241a08",
-    glow: "202,164,90",
-  },
-  2: {
-    foil: "linear-gradient(135deg,#8f97a3 0%,#eef1f5 22%,#666e79 46%,#d9dee5 68%,#565d66 100%)",
-    unitsGradient: "linear-gradient(180deg,#ffffff 0%,#d9dee5 42%,#98a1ad 100%)",
-    accent: "#aab2bd",
-    light: "#d3d9e0",
-    deep: "#8f97a3",
-    badgeText: "#14171c",
-    glow: "170,178,189",
-  },
-  3: {
-    foil: "linear-gradient(135deg,#a2683a 0%,#e7b98c 22%,#7d4e28 46%,#d9a06b 68%,#66421f 100%)",
-    unitsGradient: "linear-gradient(180deg,#f6e2cd 0%,#d9a06b 42%,#a2683a 100%)",
-    accent: "#c8814a",
-    light: "#dfb088",
-    deep: "#a2683a",
-    badgeText: "#241304",
-    glow: "200,129,74",
-  },
+/** Podium rank pill, exactly the leaderboard PodiumCard tokens. */
+const RANK_PILLS: Record<number, { color: string; bg: string; border: string }> = {
+  1: { color: "#f5c54a", bg: "rgba(245,197,74,0.10)", border: "rgba(245,197,74,0.30)" },
+  2: { color: "#d4d4d8", bg: "rgba(212,212,216,0.06)", border: "rgba(212,212,216,0.18)" },
+  3: { color: "#c8814a", bg: "rgba(200,129,74,0.06)", border: "rgba(200,129,74,0.20)" },
 };
-
-const TEXT_SOFT = "rgba(255,255,255,0.82)";
-const TEXT_FAINT = "rgba(255,255,255,0.45)";
 
 async function imageDataUri(url: string | null): Promise<string | null> {
   if (!url) return null;
@@ -101,249 +64,260 @@ function formatUnits(u: number): string {
 }
 
 function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: string | null) {
-  const metal = METALS[award.rank] ?? METALS[3];
+  const pill = RANK_PILLS[award.rank] ?? RANK_PILLS[3];
   const category = AWARD_CATEGORIES[award.category];
-  const record = `${award.wins}-${award.losses}${award.pushes ? `-${award.pushes}` : ""}`;
-  const winPct = `${(award.winRate * 100).toFixed(1)}%`;
-  const roi = `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}% ROI`;
-  const metaParts = [record, `${winPct} WIN`, roi, `${award.picksCount} GRADED PICKS`];
+  const units = `${award.unitsProfit >= 0 ? "+" : ""}${award.unitsProfit.toFixed(1)}`;
+  const unitsColor = award.unitsProfit >= 0 ? POS : NEG;
+  const stats = [
+    { label: "Record", value: `${award.wins}-${award.losses}${award.pushes ? `-${award.pushes}` : ""}` },
+    { label: "Win rate", value: `${(award.winRate * 100).toFixed(1)}%` },
+    { label: "ROI", value: `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}%` },
+    { label: "Graded picks", value: String(award.picksCount) },
+  ];
 
   return (
-    // foil frame
-    <div style={{ width: "100%", height: "100%", display: "flex", background: BRAND_FOIL, padding: 6 }}>
-      {/* inner card */}
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: BG,
+        color: TEXT,
+      }}
+    >
+      {/* brand bar */}
+      <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
+
+      {/* header */}
       <div
         style={{
-          flex: 1,
           display: "flex",
-          flexDirection: "column",
-          position: "relative",
-          background: BG,
-          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "34px 64px",
+          borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        {/* atmosphere */}
+        {logoUri ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUri} alt="TailSlips" height={42} style={{ height: 42 }} />
+        ) : (
+          <div style={{ display: "flex", fontSize: 28, fontWeight: 900, color: MINT }}>TAILSLIPS</div>
+        )}
         <div
           style={{
-            position: "absolute",
-            inset: 0,
             display: "flex",
-            background: `radial-gradient(circle at 18% 12%,rgba(${BRAND_GLOW},0.16),transparent 34%),radial-gradient(circle at 88% 92%,rgba(${BRAND_GLOW},0.10),transparent 40%),linear-gradient(135deg,#10141a,#07080b)`,
+            fontSize: 17,
+            color: TEXT_MUTED,
+            fontWeight: 700,
+            letterSpacing: 3,
+            textTransform: "uppercase",
           }}
-        />
+        >
+          {`Monthly Award · ${award.monthLabel}`}
+        </div>
+      </div>
 
-        {/* brand block (top-left): crown logo, then the award line */}
-        <div style={{ position: "absolute", top: 48, left: 60, display: "flex", flexDirection: "column" }}>
-          {logoUri ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUri} alt="TailSlips" height={54} style={{ height: 54 }} />
-          ) : (
+      {/* body */}
+      <div style={{ flex: 1, display: "flex", padding: "44px 64px 0 64px" }}>
+        {/* left: identity + focal number */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          {/* rank pill */}
+          <div style={{ display: "flex" }}>
             <div
               style={{
                 display: "flex",
-                fontSize: 30,
-                color: MINT,
-                fontWeight: 900,
-                letterSpacing: 2,
+                alignItems: "center",
+                padding: "10px 18px",
+                borderRadius: 8,
+                background: pill.bg,
+                border: `1px solid ${pill.border}`,
+                color: pill.color,
+                fontSize: 22,
+                fontWeight: 800,
+                letterSpacing: 2.5,
                 textTransform: "uppercase",
               }}
             >
-              TailSlips
+              {`#${award.rank} ${category.headline}`}
             </div>
-          )}
-          <div style={{ display: "flex", marginTop: 16, width: 56, height: 2, background: MINT }} />
-          <div
-            style={{
-              display: "flex",
-              marginTop: 12,
-              fontSize: 18,
-              color: MINT,
-              fontWeight: 800,
-              letterSpacing: 4.5,
-              textTransform: "uppercase",
-            }}
-          >
-            {`Monthly Award · ${award.monthLabel}`}
+          </div>
+
+          {/* handle */}
+          <div style={{ display: "flex", alignItems: "baseline", marginTop: 24 }}>
+            <div style={{ display: "flex", fontSize: 52, fontWeight: 900, letterSpacing: -1, color: TEXT }}>
+              {`@${award.handle}`}
+            </div>
+          </div>
+
+          {/* focal units */}
+          <div style={{ display: "flex", alignItems: "flex-end", marginTop: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 172,
+                fontWeight: 900,
+                letterSpacing: -7,
+                lineHeight: 1,
+                color: unitsColor,
+              }}
+            >
+              {units}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 56,
+                fontWeight: 800,
+                marginLeft: 8,
+                marginBottom: 16,
+                color: unitsColor,
+                opacity: 0.75,
+              }}
+            >
+              u
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 20,
+                fontWeight: 700,
+                marginLeft: 22,
+                marginBottom: 26,
+                color: TEXT_MUTED,
+                letterSpacing: 2.5,
+                textTransform: "uppercase",
+              }}
+            >
+              Net profit
+            </div>
           </div>
         </div>
 
-        {/* tailslips.com (top-right) */}
-        <div
-          style={{
-            position: "absolute",
-            top: 56,
-            right: 60,
-            fontSize: 18,
-            color: MINT,
-            fontWeight: 800,
-            letterSpacing: 4,
-            textTransform: "uppercase",
-            display: "flex",
-          }}
-        >
-          tailslips.com
-        </div>
-
-        {/* avatar with rank badge (right side) */}
-        <div
-          style={{
-            position: "absolute",
-            top: 178,
-            right: 96,
-            display: "flex",
-            width: 216,
-            height: 216,
-          }}
-        >
+        {/* right: avatar plaque */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
           {avatarUri ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={avatarUri}
               alt=""
-              width={216}
-              height={216}
+              width={184}
+              height={184}
               style={{
-                width: 216,
-                height: 216,
-                borderRadius: 999,
+                width: 184,
+                height: 184,
+                borderRadius: 16,
                 objectFit: "cover",
-                border: `5px solid ${metal.accent}`,
-                boxShadow: `0 0 0 10px rgba(${metal.glow},0.14), 0 0 60px rgba(${metal.glow},0.35)`,
+                border: `1px solid ${BORDER}`,
               }}
             />
           ) : (
             <div
               style={{
-                width: 216,
-                height: 216,
-                borderRadius: 999,
-                background: "#171b22",
-                border: `5px solid ${metal.accent}`,
+                width: 184,
+                height: 184,
+                borderRadius: 16,
+                background: "rgba(255,255,255,0.03)",
+                border: `1px solid ${BORDER}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 84,
-                color: metal.light,
+                fontSize: 72,
+                color: TEXT_MUTED,
                 fontWeight: 900,
               }}
             >
               {award.displayName.slice(0, 1).toUpperCase()}
             </div>
           )}
-          {/* rank badge pinned to the avatar */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: -6,
-              right: -6,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 74,
-              height: 74,
-              borderRadius: 999,
-              background: metal.foil,
-              color: metal.badgeText,
-              fontSize: 34,
-              fontWeight: 900,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
-            }}
-          >
-            {`#${award.rank}`}
-          </div>
-        </div>
-
-        {/* headline block (left, bottom-anchored) */}
-        <div style={{ position: "absolute", left: 60, right: 380, bottom: 52, display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 58,
-              fontWeight: 900,
-              color: "#fff",
-              letterSpacing: -1,
-              lineHeight: 1,
-            }}
-          >
-            {`#${award.rank} ${category.headline}`}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: 10,
-              fontSize: 34,
-              fontWeight: 800,
-              color: metal.light,
-            }}
-          >
-            {`@${award.handle}`}
-          </div>
-
-          {/* focal units */}
-          <div style={{ display: "flex", alignItems: "flex-end", marginTop: 18 }}>
-            <div
-              style={{
-                fontSize: 168,
-                fontWeight: 900,
-                letterSpacing: -6,
-                lineHeight: 0.9,
-                backgroundImage: metal.unitsGradient,
-                backgroundClip: "text",
-                color: "transparent",
-                display: "flex",
-              }}
-            >
-              {formatUnits(award.unitsProfit)}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                fontSize: 60,
-                fontWeight: 900,
-                marginLeft: 10,
-                marginBottom: 18,
-                color: metal.deep,
-              }}
-            >
-              u
-            </div>
-          </div>
-
-          {/* meta row */}
-          <div
-            style={{
-              display: "flex",
-              marginTop: 16,
-              fontSize: 21,
-              color: TEXT_SOFT,
-              fontWeight: 800,
-              letterSpacing: 3,
-              textTransform: "uppercase",
-            }}
-          >
-            {metaParts.map((part, i) => (
-              <div key={i} style={{ display: "flex" }}>
-                {i > 0 ? (
-                  <div style={{ display: "flex", margin: "0 14px", color: "rgba(255,255,255,0.32)" }}>·</div>
-                ) : null}
-                {part}
-              </div>
-            ))}
-          </div>
-
-          {/* footnote */}
           <div
             style={{
               display: "flex",
               marginTop: 14,
-              fontSize: 15,
-              color: TEXT_FAINT,
-              letterSpacing: 2.2,
+              fontSize: 17,
+              color: TEXT_MUTED,
+              fontWeight: 700,
+              letterSpacing: 2,
               textTransform: "uppercase",
             }}
           >
-            {category.footnote}
+            {`Awarded ${award.issuedAt}`}
           </div>
+        </div>
+      </div>
+
+      {/* stat band */}
+      <div
+        style={{
+          display: "flex",
+          margin: "0 64px",
+          borderTop: `1px solid ${BORDER}`,
+          padding: "26px 0",
+        }}
+      >
+        {stats.map((stat, i) => (
+          <div
+            key={stat.label}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              paddingRight: 56,
+              paddingLeft: i > 0 ? 56 : 0,
+              borderLeft: i > 0 ? `1px solid ${BORDER}` : undefined,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                fontSize: 15,
+                color: TEXT_MUTED,
+                fontWeight: 700,
+                letterSpacing: 2.4,
+                textTransform: "uppercase",
+              }}
+            >
+              {stat.label}
+            </div>
+            <div style={{ display: "flex", marginTop: 8, fontSize: 36, fontWeight: 800, color: TEXT }}>
+              {stat.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* footer */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "20px 64px 30px 64px",
+          borderTop: `1px solid ${BORDER}`,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            fontSize: 15,
+            color: TEXT_MUTED,
+            letterSpacing: 1.8,
+            textTransform: "uppercase",
+          }}
+        >
+          {category.footnote}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 16,
+            color: MINT,
+            fontWeight: 800,
+            letterSpacing: 2.5,
+            textTransform: "uppercase",
+          }}
+        >
+          tailslips.com
         </div>
       </div>
     </div>
@@ -360,16 +334,16 @@ export async function renderAwardOg(slug: string): Promise<Response> {
             width: "100%",
             height: "100%",
             display: "flex",
-            background: BRAND_FOIL,
-            padding: 6,
+            flexDirection: "column",
+            background: BG,
           }}
         >
+          <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
           <div
             style={{
               flex: 1,
               display: "flex",
-              background: BG,
-              color: "#fff",
+              color: TEXT,
               alignItems: "center",
               justifyContent: "center",
               fontSize: 56,
