@@ -9,6 +9,14 @@ export const alt = "TailSlips monthly capper award";
 
 const BG = "#0b0d11";
 
+// TailSlips brand: mint-to-green gradient (the crown logo's own ramp). The
+// frame and identity layer are brand teal on every card; the podium metals
+// below carry the rank signal (units, ring, badge).
+const MINT = "#5eead4";
+const BRAND_FOIL =
+  "linear-gradient(135deg,#5eead4 0%,#c4f9ec 22%,#0f9e6e 46%,#7cf0c9 68%,#0b7a58 100%)";
+const BRAND_GLOW = "94,234,212";
+
 /** Podium metals. #1 shares the Parlay Palace gold-foil family (gold surface =
  * hall of fame); #2 and #3 step down to silver and bronze, mirroring the
  * leaderboard podium so climbing to the gold card means something. */
@@ -92,7 +100,7 @@ function formatUnits(u: number): string {
   return `${sign}${u.toFixed(1)}`;
 }
 
-function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: string | null) {
+function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: string | null) {
   const metal = METALS[award.rank] ?? METALS[3];
   const category = AWARD_CATEGORIES[award.category];
   const record = `${award.wins}-${award.losses}${award.pushes ? `-${award.pushes}` : ""}`;
@@ -102,7 +110,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
 
   return (
     // foil frame
-    <div style={{ width: "100%", height: "100%", display: "flex", background: metal.foil, padding: 6 }}>
+    <div style={{ width: "100%", height: "100%", display: "flex", background: BRAND_FOIL, padding: 6 }}>
       {/* inner card */}
       <div
         style={{
@@ -120,37 +128,42 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
             position: "absolute",
             inset: 0,
             display: "flex",
-            background: `radial-gradient(circle at 18% 12%,rgba(${metal.glow},0.20),transparent 34%),radial-gradient(circle at 88% 92%,rgba(${metal.glow},0.12),transparent 40%),linear-gradient(135deg,#11141a,#07080b)`,
+            background: `radial-gradient(circle at 18% 12%,rgba(${BRAND_GLOW},0.16),transparent 34%),radial-gradient(circle at 88% 92%,rgba(${BRAND_GLOW},0.10),transparent 40%),linear-gradient(135deg,#10141a,#07080b)`,
           }}
         />
 
-        {/* kicker (top-left) */}
-        <div style={{ position: "absolute", top: 52, left: 60, display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 20,
-              color: metal.light,
-              fontWeight: 800,
-              letterSpacing: 5,
-              textTransform: "uppercase",
-            }}
-          >
-            TailSlips · Monthly Award
-          </div>
-          <div style={{ display: "flex", marginTop: 10, width: 56, height: 2, background: metal.accent }} />
+        {/* brand block (top-left): crown logo, then the award line */}
+        <div style={{ position: "absolute", top: 48, left: 60, display: "flex", flexDirection: "column" }}>
+          {logoUri ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUri} alt="TailSlips" height={54} style={{ height: 54 }} />
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                fontSize: 30,
+                color: MINT,
+                fontWeight: 900,
+                letterSpacing: 2,
+                textTransform: "uppercase",
+              }}
+            >
+              TailSlips
+            </div>
+          )}
+          <div style={{ display: "flex", marginTop: 16, width: 56, height: 2, background: MINT }} />
           <div
             style={{
               display: "flex",
               marginTop: 12,
-              fontSize: 17,
-              color: "#fff",
-              fontWeight: 700,
-              letterSpacing: 3.5,
+              fontSize: 18,
+              color: MINT,
+              fontWeight: 800,
+              letterSpacing: 4.5,
               textTransform: "uppercase",
             }}
           >
-            {award.monthLabel}
+            {`Monthly Award · ${award.monthLabel}`}
           </div>
         </div>
 
@@ -161,7 +174,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
             top: 56,
             right: 60,
             fontSize: 18,
-            color: metal.accent,
+            color: MINT,
             fontWeight: 800,
             letterSpacing: 4,
             textTransform: "uppercase",
@@ -217,24 +230,6 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, crownUri: stri
               {award.displayName.slice(0, 1).toUpperCase()}
             </div>
           )}
-          {crownUri && award.rank === 1 ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={crownUri}
-              alt=""
-              width={96}
-              height={96}
-              style={{
-                position: "absolute",
-                top: -58,
-                left: -30,
-                width: 96,
-                height: 96,
-                transform: "rotate(-24deg)",
-                filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.7))",
-              }}
-            />
-          ) : null}
           {/* rank badge pinned to the avatar */}
           <div
             style={{
@@ -365,7 +360,7 @@ export async function renderAwardOg(slug: string): Promise<Response> {
             width: "100%",
             height: "100%",
             display: "flex",
-            background: METALS[1].foil,
+            background: BRAND_FOIL,
             padding: 6,
           }}
         >
@@ -393,16 +388,16 @@ export async function renderAwardOg(slug: string): Promise<Response> {
     });
   }
 
-  const [avatarUri, crownFsUri] = await Promise.all([
+  const [avatarUri, logoFsUri] = await Promise.all([
     imageDataUri(award.avatarUrl),
-    readPublicPngDataUri("parlay-palace-crown.png"),
+    readPublicPngDataUri("logo-horizontal-aligned-tight.png"),
   ]);
   // The fs read can miss in the serverless bundle (public/ isn't traced for
   // this route); fall back to fetching the deployed asset.
-  const crownUri =
-    crownFsUri ?? (await imageDataUri("https://tailslips.com/parlay-palace-crown.png"));
+  const logoUri =
+    logoFsUri ?? (await imageDataUri("https://tailslips.com/logo-horizontal-aligned-tight.png"));
 
-  const img = new ImageResponse(awardCard(award, avatarUri, crownUri), { ...size });
+  const img = new ImageResponse(awardCard(award, avatarUri, logoUri), { ...size });
   const buf = await img.arrayBuffer();
   return new Response(buf, {
     headers: {
