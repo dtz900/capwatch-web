@@ -74,11 +74,16 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
     { label: "ROI", value: `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}%` },
     { label: "Graded picks", value: String(award.picksCount) },
   ];
-  // Ticket geometry. The card IS the slip: main section + perforated stub.
-  const STUB_W = 312;
-  const PUNCH = "#040508";
+  // Ticket geometry. The slip sits inset on its own canvas so the punched
+  // notches and perforation always cut into a surface we control, regardless
+  // of where the image is displayed (feed, page, DM, light mode).
+  const CANVAS = "#04070b";
+  const CANVAS_PAD = 26;
+  const TICKET_W = 1200 - CANVAS_PAD * 2;
+  const STUB_W = 300;
+  const PUNCH = CANVAS;
   const TICKET = "#0e1218";
-  const perforation = Array.from({ length: 24 });
+  const perforation = Array.from({ length: 22 });
 
   return (
     <div
@@ -86,10 +91,20 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
         width: "100%",
         height: "100%",
         display: "flex",
+        background: CANVAS,
+        padding: CANVAS_PAD,
+      }}
+    >
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
         position: "relative",
         background: TICKET,
         color: TEXT,
         overflow: "hidden",
+        borderRadius: 18,
+        border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
       {/* main section */}
@@ -98,7 +113,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          padding: "48px 56px 40px 60px",
+          padding: "40px 52px 34px 54px",
         }}
       >
         {/* header: logo + award line */}
@@ -124,7 +139,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
         </div>
 
         {/* identity */}
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 42 }}>
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 32 }}>
           <div
             style={{
               display: "flex",
@@ -141,7 +156,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
             style={{
               display: "flex",
               marginTop: 10,
-              fontSize: 62,
+              fontSize: 56,
               fontWeight: 900,
               letterSpacing: -1.5,
               color: TEXT,
@@ -152,7 +167,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
         </div>
 
         {/* focal number */}
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 34 }}>
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 30 }}>
           <div
             style={{
               display: "flex",
@@ -169,7 +184,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
             style={{
               display: "flex",
               marginTop: 4,
-              fontSize: 116,
+              fontSize: 106,
               fontWeight: 900,
               letterSpacing: -4,
               lineHeight: 1,
@@ -184,8 +199,8 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
         <div
           style={{
             display: "flex",
-            marginTop: 34,
-            paddingTop: 26,
+            marginTop: 30,
+            paddingTop: 24,
             borderTop: `1px solid ${BORDER}`,
           }}
         >
@@ -225,7 +240,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginTop: 30,
+            marginTop: 26,
           }}
         >
           <div
@@ -359,7 +374,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
           position: "absolute",
           top: 30,
           bottom: 30,
-          left: 1200 - STUB_W - 3,
+          left: TICKET_W - STUB_W - 3,
           width: 6,
           display: "flex",
           flexDirection: "column",
@@ -380,7 +395,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
         style={{
           position: "absolute",
           top: -16,
-          left: 1200 - STUB_W - 16,
+          left: TICKET_W - STUB_W - 16,
           width: 32,
           height: 32,
           borderRadius: 999,
@@ -392,7 +407,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
         style={{
           position: "absolute",
           bottom: -16,
-          left: 1200 - STUB_W - 16,
+          left: TICKET_W - STUB_W - 16,
           width: 32,
           height: 32,
           borderRadius: 999,
@@ -407,12 +422,13 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
           position: "absolute",
           top: 0,
           left: 0,
-          width: 1200 - STUB_W,
+          width: TICKET_W - STUB_W,
           height: 6,
           background: BRAND_BAR,
           display: "flex",
         }}
       />
+    </div>
     </div>
   );
 }
