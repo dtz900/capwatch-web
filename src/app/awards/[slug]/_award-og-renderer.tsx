@@ -246,10 +246,11 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
           <div
             style={{
               display: "flex",
-              fontSize: 14,
+              fontSize: 13,
               color: TEXT_MUTED,
-              letterSpacing: 1.8,
+              letterSpacing: 1.6,
               textTransform: "uppercase",
+              marginRight: 28,
             }}
           >
             {category.footnote}
@@ -257,10 +258,10 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
           <div
             style={{
               display: "flex",
-              fontSize: 15,
+              fontSize: 14,
               color: MINT,
               fontWeight: 800,
-              letterSpacing: 2.4,
+              letterSpacing: 2.2,
               textTransform: "uppercase",
             }}
           >
