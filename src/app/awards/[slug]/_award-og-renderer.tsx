@@ -73,13 +73,14 @@ function trajectoryChartUri(series: number[], w: number, h: number): string | nu
   const padTop = 16;
   const padBottom = 6;
   const span = max - min || 1;
+  const padRight = 20;
   const yOf = (v: number) => padTop + ((max - v) / span) * (h - padTop - padBottom);
-  const xOf = (i: number) => (i / (series.length - 1)) * w;
+  const xOf = (i: number) => (i / (series.length - 1)) * (w - padRight);
   const pts = series.map((v, i) => `${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`);
   const line = "M" + pts.join(" L");
-  const area = `${line} L${w},${h} L0,${h} Z`;
+  const area = `${line} L${(w - padRight).toFixed(1)},${h} L0,${h} Z`;
   const zeroY = yOf(0).toFixed(1);
-  const lastX = Math.min(xOf(series.length - 1), w - 8);
+  const lastX = xOf(series.length - 1);
   const lastY = yOf(series[series.length - 1]);
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
@@ -144,16 +145,29 @@ function awardCard(
         />
       ) : null}
 
-      {/* legibility scrim under the bottom text row */}
+      {/* scrims: quiet the chart under the headline (left) and the stat row
+          (bottom) so type never fights the line */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          bottom: 0,
+          width: 760,
+          height: 330,
+          display: "flex",
+          background:
+            "linear-gradient(90deg, rgba(10,10,12,0.94) 0%, rgba(10,10,12,0.62) 48%, rgba(10,10,12,0) 100%)",
+        }}
+      />
       <div
         style={{
           position: "absolute",
           left: 0,
           bottom: 0,
           width: 1200,
-          height: 110,
+          height: 128,
           display: "flex",
-          background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.9) 78%)",
+          background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.94) 72%)",
         }}
       />
 
