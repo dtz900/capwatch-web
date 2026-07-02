@@ -101,7 +101,7 @@ function trajectoryChart(
   const max = Math.max(0.001, ...points);
 
   const padX = 2;
-  const padRight = 10;
+  const padRight = 16;
   const padTop = 20;
   const labelStrip = 34; // reserved at the bottom for JUN 1 / JUN 30
   const drawdownRoom = 46; // space below the axis for losing stretches
