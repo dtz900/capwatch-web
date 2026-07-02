@@ -26,6 +26,28 @@ const RANK_PILLS: Record<number, { color: string; bg: string; border: string }> 
   3: { color: "#c8814a", bg: "rgba(200,129,74,0.06)", border: "rgba(200,129,74,0.20)" },
 };
 
+/** Podium medals: metallic medallion disc per rank. */
+const MEDALS: Record<number, { grad: string; ring: string; numeral: string; label: string }> = {
+  1: {
+    grad: "linear-gradient(135deg,#ffe9a8 0%,#f5c54a 46%,#a9760c 100%)",
+    ring: "#ffe9a8",
+    numeral: "#4a3608",
+    label: "#f5c54a",
+  },
+  2: {
+    grad: "linear-gradient(135deg,#ffffff 0%,#cfd4da 46%,#7c848f 100%)",
+    ring: "#ffffff",
+    numeral: "#2c3038",
+    label: "#d4d4d8",
+  },
+  3: {
+    grad: "linear-gradient(135deg,#f3d3b0 0%,#c8814a 46%,#78451f 100%)",
+    ring: "#f3d3b0",
+    numeral: "#3a2210",
+    label: "#c8814a",
+  },
+};
+
 async function imageDataUri(url: string | null): Promise<string | null> {
   if (!url) return null;
   const ctrl = new AbortController();
@@ -127,6 +149,7 @@ function awardCard(
   _variant: AwardVariant = "a",
 ) {
   const pill = RANK_PILLS[award.rank] ?? RANK_PILLS[3];
+  const medal = MEDALS[award.rank] ?? MEDALS[3];
   const category = AWARD_CATEGORIES[award.category];
   const units = `${award.unitsProfit >= 0 ? "+" : ""}${award.unitsProfit.toFixed(1)}`;
   const unitsColor = award.unitsProfit >= 0 ? POS : NEG;
@@ -216,36 +239,58 @@ function awardCard(
             marginTop: 30,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex" }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {/* podium medallion */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 92,
+                height: 92,
+                borderRadius: 999,
+                background: medal.grad,
+                border: `3px solid ${medal.ring}`,
+                boxShadow: "0 6px 18px rgba(0,0,0,0.5)",
+              }}
+            >
               <div
                 style={{
                   display: "flex",
-                  padding: "8px 16px",
-                  borderRadius: 8,
-                  background: pill.bg,
-                  border: `1px solid ${pill.border}`,
-                  color: pill.color,
-                  fontSize: 20,
+                  fontSize: 46,
+                  fontWeight: 900,
+                  letterSpacing: -2,
+                  color: medal.numeral,
+                }}
+              >
+                {award.rank}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", marginLeft: 22 }}>
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 18,
                   fontWeight: 800,
-                  letterSpacing: 2.5,
+                  color: medal.label,
+                  letterSpacing: 3,
                   textTransform: "uppercase",
                 }}
               >
                 {`#${award.rank} ${category.headline}`}
               </div>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                marginTop: 14,
-                fontSize: 52,
-                fontWeight: 900,
-                letterSpacing: -1.5,
-                color: TEXT,
-              }}
-            >
-              {`@${award.handle}`}
+              <div
+                style={{
+                  display: "flex",
+                  marginTop: 6,
+                  fontSize: 52,
+                  fontWeight: 900,
+                  letterSpacing: -1.5,
+                  color: TEXT,
+                }}
+              >
+                {`@${award.handle}`}
+              </div>
             </div>
           </div>
           {avatarUri ? (
@@ -376,10 +421,10 @@ function awardCard(
               position: "absolute",
               left: 0,
               width: 1200,
-              top: chart.zeroY - 1,
-              height: 2,
+              top: chart.zeroY,
+              height: 1,
               display: "flex",
-              background: "rgba(247,243,233,0.5)",
+              background: "rgba(247,243,233,0.16)",
             }}
           />
         ) : null}
