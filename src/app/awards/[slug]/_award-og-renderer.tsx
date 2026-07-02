@@ -264,7 +264,9 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
               flexDirection: "column",
               paddingRight: 56,
               paddingLeft: i > 0 ? 56 : 0,
-              borderLeft: i > 0 ? `1px solid ${BORDER}` : undefined,
+              // satori calls .trim() on border values; an undefined key crashes
+              // the whole render, so only set the property when it exists.
+              ...(i > 0 ? { borderLeft: `1px solid ${BORDER}` } : {}),
             }}
           >
             <div
