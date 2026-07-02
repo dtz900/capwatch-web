@@ -77,17 +77,21 @@ function trajectoryChart(
   const points = [0, ...series];
   const last = points[points.length - 1];
   const min = Math.min(0, ...points);
-  const max = Math.max(0, ...points);
-  const range = max - min || 1;
+  const max = Math.max(0.001, ...points);
   const padX = 2;
   const padRight = 9;
   const padTop = 24;
-  const padBottom = 8;
+  // The x-axis (zero line) sits at a FIXED elevation on every card so it is
+  // always clearly visible above the stat block. Wins climb above it;
+  // drawdowns poke below it (scaled 1:1 with the positive side, capped so a
+  // deep crash can't run off the card).
+  const AXIS_FROM_BOTTOM = 118;
+  const zeroY = h - AXIS_FROM_BOTTOM;
+  const posScale = (zeroY - padTop) / max;
+  const negScale = min < 0 ? Math.min(posScale, (AXIS_FROM_BOTTOM - 10) / -min) : 0;
   const innerW = w - padX - padRight;
-  const innerH = h - padTop - padBottom;
   const stepX = innerW / (points.length - 1);
-  const yFor = (v: number) => padTop + innerH - ((v - min) / range) * innerH;
-  const zeroY = yFor(0);
+  const yFor = (v: number) => (v >= 0 ? zeroY - v * posScale : zeroY - v * negScale);
   const linePts = points.map((v, i) => `${(padX + i * stepX).toFixed(2)},${yFor(v).toFixed(2)}`);
   const line = "M" + linePts.join(" L");
   const lastX = padX + (points.length - 1) * stepX;
@@ -181,7 +185,7 @@ function awardCard(
             position: "absolute",
             left: 0,
             width: 1200,
-            bottom: 360 - chart.zeroY - 2,
+            bottom: 360 - chart.zeroY - 1,
             height: 2,
             display: "flex",
             background: "rgba(247,243,233,0.55)",
