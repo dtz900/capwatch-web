@@ -15,6 +15,10 @@
 
 export type AwardCategory = "straights" | "ml" | "parlays";
 
+/** Bump on award-card design changes; busts the page inline image and OG URL
+ * past the CDN's long cache (see the OG Card Caching lesson). */
+export const AWARD_CARD_VERSION = "7";
+
 export interface AwardCategoryMeta {
   /** Card headline after the rank, e.g. "#1 Moneyline Capper" */
   headline: string;

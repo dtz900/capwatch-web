@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import {
+  AWARD_CARD_VERSION,
   AWARD_CATEGORIES,
   MONTHLY_AWARDS,
   awardVerifyHref,
@@ -38,13 +39,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: `/awards/${slug}`,
       type: "article",
       siteName: SITE_NAME,
-      images: [{ url: `/awards/${slug}/og`, width: 1200, height: 630 }],
+      images: [{ url: `/awards/${slug}/og?cv=${AWARD_CARD_VERSION}`, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [`/awards/${slug}/og`],
+      images: [`/awards/${slug}/og?cv=${AWARD_CARD_VERSION}`],
     },
   };
 }
@@ -76,7 +77,7 @@ export default async function AwardPage({ params }: PageProps) {
           {/* The card itself, rendered by the OG route. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/awards/${slug}/og`}
+            src={`/awards/${slug}/og?cv=${AWARD_CARD_VERSION}`}
             alt={`${award.monthLabel} #${award.rank} ${category.headline} award for @${award.handle}`}
             width={1200}
             height={630}

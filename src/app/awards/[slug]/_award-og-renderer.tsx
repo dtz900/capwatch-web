@@ -70,7 +70,7 @@ function trajectoryChartUri(series: number[], w: number, h: number): string | nu
   const values = [...series, 0];
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const padTop = 16;
+  const padTop = 132;
   const padBottom = 6;
   const span = max - min || 1;
   const padRight = 20;
