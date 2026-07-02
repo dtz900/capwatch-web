@@ -68,7 +68,11 @@ function formatUnits(u: number): string {
  * a prepended 0, zero-anchored area fill, thin line, dashed zero baseline,
  * dot + halo endpoint. The ceiling (padTop) keeps any line out of the
  * headline zone. */
-function trajectoryChartUri(series: number[], w: number, h: number): string | null {
+function trajectoryChart(
+  series: number[],
+  w: number,
+  h: number,
+): { uri: string; zeroY: number } | null {
   if (series.length < 2) return null;
   const points = [0, ...series];
   const last = points[points.length - 1];
@@ -105,11 +109,10 @@ function trajectoryChartUri(series: number[], w: number, h: number): string | nu
     `</linearGradient></defs>` +
     `<path d="${area}" fill="url(#g)"/>` +
     `<path d="${line}" fill="none" stroke="rgba(${fillRgb},0.48)" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>` +
-    `<line x1="0" y1="${zeroY.toFixed(2)}" x2="${w}" y2="${zeroY.toFixed(2)}" stroke="rgba(247,243,233,0.55)" stroke-width="2.5"/>` +
     `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="4.5" fill="${stroke}"/>` +
     `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="10" fill="${stroke}" opacity="0.18"/>` +
     `</svg>`;
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  return { uri: `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`, zeroY };
 }
 
 export type AwardVariant = "a" | "b";
@@ -131,7 +134,7 @@ function awardCard(
     `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}% ROI`,
     `${award.picksCount} GRADED PICKS`,
   ];
-  const chartUri = trajectoryChartUri(award.trajectory, 1200, 360);
+  const chart = trajectoryChart(award.trajectory, 1200, 360);
   const bigAvatar = variant === "b";
   const avatarSize = bigAvatar ? 208 : 120;
 
@@ -149,10 +152,10 @@ function awardCard(
       }}
     >
       {/* the capper's actual month, full-bleed along the bottom */}
-      {chartUri ? (
+      {chart ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={chartUri}
+          src={chart.uri}
           alt=""
           width={1200}
           height={360}
@@ -172,6 +175,19 @@ function awardCard(
           background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.62) 85%)",
         }}
       />
+      {chart ? (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            width: 1200,
+            bottom: 360 - chart.zeroY - 2,
+            height: 2,
+            display: "flex",
+            background: "rgba(247,243,233,0.55)",
+          }}
+        />
+      ) : null}
 
       {/* brand bar */}
       <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
