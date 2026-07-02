@@ -63,11 +63,10 @@ function formatUnits(u: number): string {
   return `${sign}${u.toFixed(1)}`;
 }
 
-/** Frozen trajectory -> SVG data-uri, mirroring the profile hero sparkline
- * (RecentTrajectory) exactly, scaled to card size: full-resolution series with
- * a prepended 0, zero-anchored area fill, thin line, dashed zero baseline,
- * dot + halo endpoint. The ceiling (padTop) keeps any line out of the
- * headline zone. */
+/** Frozen trajectory -> SVG data-uri for a dedicated chart BAND of height h.
+ * The zero line sits at a fixed elevation inside the band so wins climb and
+ * drawdowns dip, with a reserved label strip at the very bottom. Returns the
+ * zero-line y so the card can draw a crisp axis + labels over the band. */
 function trajectoryChart(
   series: number[],
   w: number,
@@ -78,69 +77,75 @@ function trajectoryChart(
   const last = points[points.length - 1];
   const min = Math.min(0, ...points);
   const max = Math.max(0.001, ...points);
+
   const padX = 2;
-  const padRight = 9;
-  const padTop = 24;
-  // The x-axis (zero line) sits at a FIXED elevation on every card so it is
-  // always clearly visible above the stat block. Wins climb above it;
-  // drawdowns poke below it (scaled 1:1 with the positive side, capped so a
-  // deep crash can't run off the card).
-  const AXIS_FROM_BOTTOM = 118;
-  const zeroY = h - AXIS_FROM_BOTTOM;
+  const padRight = 10;
+  const padTop = 20;
+  const labelStrip = 34; // reserved at the bottom for JUN 1 / JUN 30
+  const drawdownRoom = 46; // space below the axis for losing stretches
+  const zeroY = h - labelStrip - drawdownRoom;
   const posScale = (zeroY - padTop) / max;
-  const negScale = min < 0 ? Math.min(posScale, (AXIS_FROM_BOTTOM - 10) / -min) : 0;
+  const negScale = min < 0 ? Math.min(posScale, (drawdownRoom - 6) / -min) : 0;
   const innerW = w - padX - padRight;
   const stepX = innerW / (points.length - 1);
   const yFor = (v: number) => (v >= 0 ? zeroY - v * posScale : zeroY - v * negScale);
+
   const linePts = points.map((v, i) => `${(padX + i * stepX).toFixed(2)},${yFor(v).toFixed(2)}`);
   const line = "M" + linePts.join(" L");
   const lastX = padX + (points.length - 1) * stepX;
+  const lastY = yFor(last);
   const area =
     `M${padX},${zeroY.toFixed(2)} L` + linePts.join(" L") + ` L${lastX.toFixed(2)},${zeroY.toFixed(2)} Z`;
-  const lastY = yFor(last);
-  const posColor = "#19f57c";
-  const negColor = "#ef4444";
-  const stroke = last >= 0 ? posColor : negColor;
+  const stroke = last >= 0 ? "#19f57c" : "#ef4444";
   const fillRgb = last >= 0 ? "25,245,124" : "239,68,68";
-  // The draw sits behind the content: line and fill at reduced alpha, a
-  // clear solid x-axis anchoring it, and only the endpoint dot at full
-  // brightness so the month still "arrives" at the number.
+
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
     `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">` +
-    `<stop offset="0%" stop-color="rgba(${fillRgb},0.11)"/>` +
-    `<stop offset="100%" stop-color="rgba(${fillRgb},0)"/>` +
+    `<stop offset="0%" stop-color="rgba(${fillRgb},0.28)"/>` +
+    `<stop offset="100%" stop-color="rgba(${fillRgb},0.02)"/>` +
     `</linearGradient></defs>` +
     `<path d="${area}" fill="url(#g)"/>` +
-    `<path d="${line}" fill="none" stroke="rgba(${fillRgb},0.48)" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>` +
-    `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="4.5" fill="${stroke}"/>` +
-    `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="10" fill="${stroke}" opacity="0.18"/>` +
+    `<path d="${line}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>` +
+    `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="5" fill="${stroke}"/>` +
+    `<circle cx="${lastX.toFixed(2)}" cy="${lastY.toFixed(2)}" r="11" fill="${stroke}" opacity="0.2"/>` +
     `</svg>`;
   return { uri: `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`, zeroY };
 }
 
 export type AwardVariant = "a" | "b";
 
+const MONTH_ABBR = [
+  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+];
+
 function awardCard(
   award: MonthlyAward,
   avatarUri: string | null,
   logoUri: string | null,
-  variant: AwardVariant = "a",
+  _variant: AwardVariant = "a",
 ) {
   const pill = RANK_PILLS[award.rank] ?? RANK_PILLS[3];
   const category = AWARD_CATEGORIES[award.category];
   const units = `${award.unitsProfit >= 0 ? "+" : ""}${award.unitsProfit.toFixed(1)}`;
   const unitsColor = award.unitsProfit >= 0 ? POS : NEG;
   const record = `${award.wins}-${award.losses}${award.pushes ? `-${award.pushes}` : ""}`;
-  const statLine = [
-    `${record} RECORD`,
-    `${(award.winRate * 100).toFixed(1)}% WIN`,
-    `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}% ROI`,
-    `${award.picksCount} GRADED PICKS`,
+  const stats = [
+    { label: "Record", value: record },
+    { label: "Win rate", value: `${(award.winRate * 100).toFixed(1)}%` },
+    { label: "ROI", value: `${award.roiPct >= 0 ? "+" : ""}${award.roiPct.toFixed(1)}%` },
+    { label: "Graded picks", value: String(award.picksCount) },
   ];
-  const chart = trajectoryChart(award.trajectory, 1200, 360);
-  const bigAvatar = variant === "b";
-  const avatarSize = bigAvatar ? 208 : 120;
+
+  const CHART_H = 250;
+  const chart = trajectoryChart(award.trajectory, 1200, CHART_H);
+
+  // Axis labels: first and last day of the award month.
+  const [y, m] = award.month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const startLabel = `${MONTH_ABBR[m - 1]} 1`;
+  const endLabel = `${MONTH_ABBR[m - 1]} ${lastDay}`;
 
   return (
     <div
@@ -149,263 +154,280 @@ function awardCard(
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        position: "relative",
         background: BG,
         color: TEXT,
-        overflow: "hidden",
       }}
     >
-      {/* the capper's actual month, full-bleed along the bottom */}
-      {chart ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={chart.uri}
-          alt=""
-          width={1200}
-          height={360}
-          style={{ position: "absolute", left: 0, bottom: 0, width: 1200, height: 360 }}
-        />
-      ) : null}
-
-      {/* gentle bottom scrim for the stat row */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          bottom: 0,
-          width: 1200,
-          height: 84,
-          display: "flex",
-          background: "linear-gradient(180deg, rgba(10,10,12,0) 0%, rgba(10,10,12,0.62) 85%)",
-        }}
-      />
-      {chart ? (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            width: 1200,
-            bottom: 360 - chart.zeroY - 1,
-            height: 2,
-            display: "flex",
-            background: "rgba(247,243,233,0.55)",
-          }}
-        />
-      ) : null}
-
       {/* brand bar */}
       <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
 
-      {/* header */}
+      {/* ===== TEXT ZONE (solid black, nothing overlaps the chart) ===== */}
       <div
         style={{
+          flex: 1,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "38px 60px 0 60px",
+          flexDirection: "column",
+          padding: "40px 60px 26px 60px",
         }}
       >
-        {logoUri ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUri} alt="TailSlips" height={42} style={{ height: 42 }} />
-        ) : (
-          <div style={{ display: "flex", fontSize: 28, fontWeight: 900, color: MINT }}>TAILSLIPS</div>
-        )}
+        {/* header */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+          {logoUri ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUri} alt="TailSlips" height={40} style={{ height: 40 }} />
+          ) : (
+            <div style={{ display: "flex", fontSize: 28, fontWeight: 900, color: MINT }}>TAILSLIPS</div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 16,
+                color: TEXT_MUTED,
+                fontWeight: 700,
+                letterSpacing: 3,
+                textTransform: "uppercase",
+              }}
+            >
+              {`Monthly Award · ${award.monthLabel}`}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                marginTop: 7,
+                fontSize: 15,
+                color: MINT,
+                fontWeight: 800,
+                letterSpacing: 2.4,
+                textTransform: "uppercase",
+              }}
+            >
+              tailslips.com
+            </div>
+          </div>
+        </div>
+
+        {/* identity + avatar */}
         <div
           style={{
             display: "flex",
-            fontSize: 16,
-            color: TEXT_MUTED,
-            fontWeight: 700,
-            letterSpacing: 3,
-            textTransform: "uppercase",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 30,
           }}
         >
-          {`Monthly Award · ${award.monthLabel}`}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex" }}>
+              <div
+                style={{
+                  display: "flex",
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  background: pill.bg,
+                  border: `1px solid ${pill.border}`,
+                  color: pill.color,
+                  fontSize: 20,
+                  fontWeight: 800,
+                  letterSpacing: 2.5,
+                  textTransform: "uppercase",
+                }}
+              >
+                {`#${award.rank} ${category.headline}`}
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                marginTop: 14,
+                fontSize: 52,
+                fontWeight: 900,
+                letterSpacing: -1.5,
+                color: TEXT,
+              }}
+            >
+              {`@${award.handle}`}
+            </div>
+          </div>
+          {avatarUri ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUri}
+              alt=""
+              width={104}
+              height={104}
+              style={{ width: 104, height: 104, borderRadius: 16, objectFit: "cover", border: `1px solid ${BORDER}` }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 104,
+                height: 104,
+                borderRadius: 16,
+                background: "rgba(255,255,255,0.03)",
+                border: `1px solid ${BORDER}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 44,
+                color: TEXT_MUTED,
+                fontWeight: 900,
+              }}
+            >
+              {award.displayName.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        {/* net profit + inline stats, pinned to the bottom of the text zone */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            marginTop: "auto",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 15,
+                color: TEXT_MUTED,
+                fontWeight: 700,
+                letterSpacing: 2.8,
+                textTransform: "uppercase",
+              }}
+            >
+              Net profit
+            </div>
+            <div
+              style={{
+                display: "flex",
+                marginTop: 2,
+                fontSize: 92,
+                fontWeight: 900,
+                letterSpacing: -4,
+                lineHeight: 1,
+                color: unitsColor,
+              }}
+            >
+              {`${units}u`}
+            </div>
+          </div>
+          <div style={{ display: "flex", marginBottom: 8 }}>
+            {stats.map((stat, i) => (
+              <div
+                key={stat.label}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  paddingLeft: i > 0 ? 34 : 0,
+                  marginLeft: i > 0 ? 34 : 0,
+                  ...(i > 0 ? { borderLeft: `1px solid ${BORDER}` } : {}),
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    fontSize: 13,
+                    color: TEXT_MUTED,
+                    fontWeight: 700,
+                    letterSpacing: 1.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {stat.label}
+                </div>
+                <div style={{ display: "flex", marginTop: 6, fontSize: 30, fontWeight: 800, color: TEXT }}>
+                  {stat.value}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* headline block */}
+      {/* ===== CHART ZONE (its own band; only the draw + axis live here) ===== */}
       <div
         style={{
+          position: "relative",
           display: "flex",
-          flexDirection: "column",
-          padding: "36px 60px 0 60px",
-          paddingRight: bigAvatar ? 320 : 60,
+          width: 1200,
+          height: CHART_H,
+          borderTop: `1px solid ${BORDER}`,
+          overflow: "hidden",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            fontSize: 22,
-            fontWeight: 800,
-            color: pill.color,
-            letterSpacing: 3.2,
-            textTransform: "uppercase",
-          }}
-        >
-          {`#${award.rank} ${category.headline}`}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 8,
-            fontSize: 64,
-            fontWeight: 900,
-            letterSpacing: -1.5,
-            color: TEXT,
-          }}
-        >
-          {`@${award.handle}`}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 26,
-            fontSize: 16,
-            color: TEXT_MUTED,
-            fontWeight: 700,
-            letterSpacing: 2.8,
-            textTransform: "uppercase",
-          }}
-        >
-          {`Net profit · ${award.monthLabel}`}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 2,
-            fontSize: 132,
-            fontWeight: 900,
-            letterSpacing: -5,
-            lineHeight: 1,
-            color: unitsColor,
-          }}
-        >
-          {`${units}u`}
-        </div>
-      </div>
-
-      {/* avatar */}
-      <div
-        style={{
-          position: "absolute",
-          top: bigAvatar ? 148 : 122,
-          right: 60,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        {avatarUri ? (
+        {chart ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={avatarUri}
+            src={chart.uri}
             alt=""
-            width={avatarSize}
-            height={avatarSize}
+            width={1200}
+            height={CHART_H}
+            style={{ position: "absolute", left: 0, top: 0, width: 1200, height: CHART_H }}
+          />
+        ) : null}
+        {/* crisp x-axis at zero */}
+        {chart ? (
+          <div
             style={{
-              width: avatarSize,
-              height: avatarSize,
-              borderRadius: 18,
-              objectFit: "cover",
-              border: bigAvatar ? `2px solid ${pill.border}` : `1px solid ${BORDER}`,
+              position: "absolute",
+              left: 0,
+              width: 1200,
+              top: chart.zeroY - 1,
+              height: 2,
+              display: "flex",
+              background: "rgba(247,243,233,0.5)",
             }}
           />
-        ) : (
-          <div
-            style={{
-              width: avatarSize,
-              height: avatarSize,
-              borderRadius: 18,
-              background: "rgba(255,255,255,0.03)",
-              border: `1px solid ${BORDER}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: avatarSize / 2.4,
-              color: TEXT_MUTED,
-              fontWeight: 900,
-            }}
-          >
-            {award.displayName.slice(0, 1).toUpperCase()}
-          </div>
-        )}
-        {bigAvatar ? (
-          <div
-            style={{
-              display: "flex",
-              marginTop: 12,
-              padding: "8px 14px",
-              borderRadius: 8,
-              background: pill.bg,
-              border: `1px solid ${pill.border}`,
-              color: pill.color,
-              fontSize: 18,
-              fontWeight: 800,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-            }}
-          >
-            {`#${award.rank}`}
-          </div>
         ) : null}
-      </div>
-
-      {/* stat line + footnote pinned to the bottom, riding over the draw */}
-      <div
-        style={{
-          position: "absolute",
-          left: 60,
-          right: 60,
-          bottom: 26,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+        {/* axis labels */}
         <div
           style={{
+            position: "absolute",
+            left: 60,
+            bottom: 12,
             display: "flex",
-            fontSize: 21,
-            fontWeight: 800,
-            color: TEXT,
-            letterSpacing: 2.2,
+            fontSize: 14,
+            color: TEXT_MUTED,
+            fontWeight: 700,
+            letterSpacing: 2,
+            textTransform: "uppercase",
           }}
         >
-          {statLine.map((part, i) => (
-            <div key={i} style={{ display: "flex" }}>
-              {i > 0 ? (
-                <div style={{ display: "flex", margin: "0 14px", color: "rgba(255,255,255,0.30)" }}>·</div>
-              ) : null}
-              {part}
-            </div>
-          ))}
+          {startLabel}
         </div>
-        <div style={{ display: "flex", marginTop: 9, alignItems: "center" }}>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 13,
-              color: TEXT_MUTED,
-              letterSpacing: 1.7,
-              textTransform: "uppercase",
-            }}
-          >
-            {`${category.footnote} · Awarded ${award.issuedAt} ·`}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginLeft: 8,
-              fontSize: 13,
-              color: MINT,
-              fontWeight: 800,
-              letterSpacing: 1.9,
-              textTransform: "uppercase",
-            }}
-          >
-            tailslips.com
-          </div>
+        <div
+          style={{
+            position: "absolute",
+            right: 60,
+            bottom: 12,
+            display: "flex",
+            fontSize: 14,
+            color: TEXT_MUTED,
+            fontWeight: 700,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+          }}
+        >
+          {endLabel}
+        </div>
+        {/* footnote sits on the divider, left side */}
+        <div
+          style={{
+            position: "absolute",
+            left: 60,
+            top: 14,
+            display: "flex",
+            fontSize: 13,
+            color: TEXT_MUTED,
+            letterSpacing: 1.6,
+            textTransform: "uppercase",
+          }}
+        >
+          {`${category.footnote} · Awarded ${award.issuedAt}`}
         </div>
       </div>
     </div>
