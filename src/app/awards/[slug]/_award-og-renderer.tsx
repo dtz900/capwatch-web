@@ -145,7 +145,7 @@ function awardCard(award: MonthlyAward, avatarUri: string | null, logoUri: strin
           </div>
 
           {/* handle */}
-          <div style={{ display: "flex", alignItems: "baseline", marginTop: 24 }}>
+          <div style={{ display: "flex", marginTop: 24 }}>
             <div style={{ display: "flex", fontSize: 52, fontWeight: 900, letterSpacing: -1, color: TEXT }}>
               {`@${award.handle}`}
             </div>
@@ -371,13 +371,50 @@ export async function renderAwardOg(slug: string): Promise<Response> {
   const logoUri =
     logoFsUri ?? (await imageDataUri("https://tailslips.com/logo-horizontal-aligned-tight.png"));
 
-  const img = new ImageResponse(awardCard(award, avatarUri, logoUri), { ...size });
-  const buf = await img.arrayBuffer();
-  return new Response(buf, {
-    headers: {
-      "content-type": "image/png",
-      // Award data is frozen in the registry, so long cache is safe.
-      "cache-control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
-    },
-  });
+  try {
+    const img = new ImageResponse(awardCard(award, avatarUri, logoUri), { ...size });
+    const buf = await img.arrayBuffer();
+    return new Response(buf, {
+      headers: {
+        "content-type": "image/png",
+        // Award data is frozen in the registry, so long cache is safe.
+        "cache-control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+      },
+    });
+  } catch (err) {
+    console.error("[award-og-renderer] ImageResponse failed", err);
+    const fallback = new ImageResponse(
+      (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            background: BG,
+          }}
+        >
+          <div style={{ display: "flex", height: 6, background: BRAND_BAR }} />
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              color: TEXT,
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 48,
+              fontWeight: 900,
+            }}
+          >
+            {`TailSlips Monthly Award · @${award.handle}`}
+          </div>
+        </div>
+      ),
+      { ...size },
+    );
+    const buf = await fallback.arrayBuffer();
+    return new Response(buf, {
+      headers: { "content-type": "image/png", "cache-control": "no-store, max-age=0" },
+    });
+  }
 }
