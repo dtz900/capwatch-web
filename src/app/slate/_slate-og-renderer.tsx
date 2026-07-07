@@ -2,40 +2,47 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchLeaderboard, fetchSlate } from "@/lib/api";
-import { pickMlSide } from "@/lib/bet-format";
+import { inferMarketBucket, pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
-import type { CapperRow, SlateGame, SlatePick } from "@/lib/types";
+import type { SlateGame, SlatePick } from "@/lib/types";
 
-export const size = { width: 1200, height: 630 };
+// Rendered at 2x (2400x1260) for sharpness. X downscales the card to ~500px
+// wide in the feed, so a 1200px source blurs; a 2400px source stays crisp.
+// The declared og:image dimensions stay 1200x630 (2:1), which is advisory.
+const SCALE = 2;
+export const size = { width: 1200 * SCALE, height: 630 * SCALE };
 export const contentType = "image/png";
 export const alt = "Tonight's MLB slate on TailSlips";
+
+// px() scales a design-space value (authored against the 1200x630 frame) up to
+// the 2x render canvas so every size, gap, and radius stays proportional.
+const px = (n: number): number => n * SCALE;
 
 // Color tokens. Kept in sync with the root opengraph-image so shared cards
 // across the site read as one visual identity.
 const BG = "#0a0a0c";
 const TEXT = "#fafafa";
 const TEXT_SOFT = "#d4d4d8";
-const TEXT_MUTED = "#71717a";
-const POS = "#19f57c";
-const NEG = "#ef4444";
+const TEXT_MUTED = "#8b8b93";
 const MINT = "#5eead4";
 const GOLD = "#f5c54a";
-const ROW_BORDER = "rgba(255, 255, 255, 0.06)";
-const CARD_BG = "rgba(255, 255, 255, 0.025)";
+const ROW_BORDER = "rgba(255, 255, 255, 0.08)";
+const CARD_BG = "rgba(255, 255, 255, 0.03)";
 
 const PRIMARY_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
 const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
-
-interface RosterRow {
-  handle: string;
-  unitsProfit: number;
-  picksTonight: number;
-}
 
 interface MarqueeSide {
   team: string | null;
   count: number;
   handles: string[];
+}
+
+interface MarketBreakdown {
+  total: number;
+  spread: number;
+  prop: number;
+  parlay: number;
 }
 
 interface MarqueeBlock {
@@ -47,9 +54,11 @@ interface MarqueeBlock {
   awayStarter: string | null;
   homeStarter: string | null;
   totalPicks: number;
+  sharpCount: number;
+  featuredLabel: string;
   away: MarqueeSide;
   home: MarqueeSide;
-  otherCount: number;
+  breakdown: MarketBreakdown;
 }
 
 interface RenderInputs {
@@ -59,7 +68,6 @@ interface RenderInputs {
   sharpsPosted: number;
   picksTotal: number;
   marquee: MarqueeBlock | null;
-  roster: RosterRow[];
   hasAnyPicks: boolean;
 }
 
@@ -106,11 +114,6 @@ async function fetchTeamLogosForGame(
   return { away, home };
 }
 
-function formatUnits(units: number): string {
-  const sign = units > 0 ? "+" : "";
-  return `${sign}${units.toFixed(2)}u`;
-}
-
 // Mirrors the slate page's pitcher name shortener so the OG card reads the
 // same way as the page it's previewing.
 function shortPitcher(name: string | null): string | null {
@@ -143,20 +146,65 @@ function pickMarqueeGame(games: SlateGame[]): SlateGame | null {
   return best;
 }
 
+/**
+ * Resolve a requested game from a share slug. Accepts a numeric game_id or an
+ * "AWAY-HOME" abbreviation pair in either order (case-insensitive, any non-
+ * alphanumeric separator). Returns null when nothing matches so callers fall
+ * back to the most-bet game. This is what powers ?game= on the OG URL: David
+ * can feature any matchup on the card, not just the most-picked one.
+ */
+function resolveRequestedGame(games: SlateGame[], slug: string | undefined): SlateGame | null {
+  if (!slug) return null;
+  const raw = slug.trim();
+  if (!raw) return null;
+
+  if (/^\d+$/.test(raw)) {
+    const byId = games.find((g) => g.game_id === Number(raw));
+    if (byId) return byId;
+  }
+
+  const parts = raw.toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const [a, b] = parts;
+    const match = games.find((g) => {
+      const away = (g.away_team ?? "").toUpperCase();
+      const home = (g.home_team ?? "").toUpperCase();
+      return (away === a && home === b) || (away === b && home === a);
+    });
+    if (match) return match;
+  }
+  return null;
+}
+
+function buildBreakdown(picks: SlatePick[]): MarketBreakdown {
+  const b: MarketBreakdown = { total: 0, spread: 0, prop: 0, parlay: 0 };
+  for (const p of picks) {
+    if (p.kind === "parlay_leg") {
+      b.parlay += 1;
+      continue;
+    }
+    const bucket = inferMarketBucket(p.market, p.selection);
+    if (bucket === "Total") b.total += 1;
+    else if (bucket === "Spread") b.spread += 1;
+    else if (bucket === "Player prop" || bucket === "Game prop") b.prop += 1;
+    // Moneyline is surfaced by the backing tiles; unknown buckets drop out.
+  }
+  return b;
+}
+
 function buildMarqueeBlock(
   game: SlateGame,
   awayLogoDataUri: string | null,
   homeLogoDataUri: string | null,
+  featuredLabel: string,
 ): MarqueeBlock {
   const awayHandles: string[] = [];
   const homeHandles: string[] = [];
-  let other = 0;
   for (const p of game.picks) {
     const side = pickMlSide(p, game.away_team, game.home_team);
     const h = p.handle;
     if (side === "away" && h) awayHandles.push(h);
     else if (side === "home" && h) homeHandles.push(h);
-    else other += 1;
   }
   return {
     awayTeam: game.away_team,
@@ -167,70 +215,42 @@ function buildMarqueeBlock(
     awayStarter: game.away_starter,
     homeStarter: game.home_starter,
     totalPicks: game.picks.length,
+    sharpCount: new Set(game.picks.map((p) => p.capper_id)).size,
+    featuredLabel,
     away: { team: game.away_team, count: awayHandles.length, handles: awayHandles },
     home: { team: game.home_team, count: homeHandles.length, handles: homeHandles },
-    otherCount: other,
+    breakdown: buildBreakdown(game.picks),
   };
-}
-
-function buildRoster(
-  allPicks: SlatePick[],
-  leaderboard: CapperRow[],
-  limit: number,
-): RosterRow[] {
-  const picksTonightByHandle = new Map<string, number>();
-  for (const p of allPicks) {
-    if (!p.handle) continue;
-    picksTonightByHandle.set(p.handle, (picksTonightByHandle.get(p.handle) ?? 0) + 1);
-  }
-  const rows: RosterRow[] = [];
-  for (const c of leaderboard) {
-    if (!c.handle) continue;
-    const count = picksTonightByHandle.get(c.handle);
-    if (!count) continue;
-    rows.push({
-      handle: c.handle,
-      unitsProfit: c.units_profit,
-      picksTonight: count,
-    });
-    if (rows.length >= limit) break;
-  }
-  return rows;
 }
 
 export interface RenderSlateOpts {
   dateParam?: "today" | "tomorrow";
+  gameSlug?: string;
 }
 
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
-  const [slateResult, lbResult, logoDataUri] = await Promise.allSettled([
+  const [slateResult, logoDataUri] = await Promise.allSettled([
     fetchSlate(dateParam),
-    fetchLeaderboard({
-      window: "season",
-      sort: "units_profit",
-      bet_type: "all",
-      min_picks: 10,
-      active_only: true,
-    }),
     readLogoDataUri(),
   ]);
 
   const slate = slateResult.status === "fulfilled" ? slateResult.value : null;
-  const lb = lbResult.status === "fulfilled" ? lbResult.value : null;
   const logo = logoDataUri.status === "fulfilled" ? logoDataUri.value : null;
 
   const games = slate?.games ?? [];
   const allPicks = games.flatMap((g) => g.picks);
   const sharpsPosted = new Set(allPicks.map((p) => p.capper_id)).size;
-  const marqueeGame = pickMarqueeGame(games);
-  const teamLogos = marqueeGame
-    ? await fetchTeamLogosForGame(marqueeGame.away_team, marqueeGame.home_team)
+
+  const requestedGame = resolveRequestedGame(games, opts.gameSlug);
+  const featuredGame = requestedGame ?? pickMarqueeGame(games);
+  const featuredLabel = requestedGame ? "Featured game" : "Most-bet game";
+  const teamLogos = featuredGame
+    ? await fetchTeamLogosForGame(featuredGame.away_team, featuredGame.home_team)
     : { away: null, home: null };
-  const marquee = marqueeGame
-    ? buildMarqueeBlock(marqueeGame, teamLogos.away, teamLogos.home)
+  const marquee = featuredGame
+    ? buildMarqueeBlock(featuredGame, teamLogos.away, teamLogos.home, featuredLabel)
     : null;
-  const roster = lb ? buildRoster(allPicks, lb.leaderboard, 3) : [];
 
   const inputs: RenderInputs = {
     logoDataUri: logo,
@@ -239,7 +259,6 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
     sharpsPosted,
     picksTotal: allPicks.length,
     marquee,
-    roster,
     hasAnyPicks: allPicks.length > 0,
   };
 
@@ -347,13 +366,13 @@ function LogoOrWordmark({ logo, height = 44 }: { logo: string | null; height?: n
   if (logo) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={logo} alt="TailSlips" height={height} style={{ height }} />
+      <img src={logo} alt="TailSlips" height={px(height)} style={{ height: px(height) }} />
     );
   }
   return (
     <div
       style={{
-        fontSize: 32,
+        fontSize: px(36),
         fontWeight: 800,
         letterSpacing: -0.5,
         color: MINT,
@@ -371,12 +390,13 @@ function LivePill() {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "8px 14px",
+        gap: px(10),
+        padding: `${px(10)}px ${px(16)}px`,
+        borderRadius: px(6),
         background: "rgba(94, 234, 212, 0.10)",
-        border: "1px solid rgba(94, 234, 212, 0.35)",
+        border: `${px(1)}px solid rgba(94, 234, 212, 0.35)`,
         color: MINT,
-        fontSize: 13,
+        fontSize: px(17),
         fontWeight: 800,
         letterSpacing: 1.6,
         textTransform: "uppercase",
@@ -384,9 +404,9 @@ function LivePill() {
     >
       <div
         style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
+          width: px(9),
+          height: px(9),
+          borderRadius: px(5),
           background: MINT,
           display: "flex",
         }}
@@ -397,8 +417,12 @@ function LivePill() {
 }
 
 function buildJsx(inputs: RenderInputs) {
-  const { logoDataUri, totalGames, sharpsPosted, picksTotal, marquee, roster, hasAnyPicks } =
+  const { logoDataUri, dateLabel, totalGames, sharpsPosted, picksTotal, marquee, hasAnyPicks } =
     inputs;
+
+  const contextLine = hasAnyPicks
+    ? `${dateLabel} · ${totalGames} ${totalGames === 1 ? "game" : "games"} · ${sharpsPosted} ${sharpsPosted === 1 ? "sharp" : "sharps"} · ${picksTotal} picks`
+    : `${dateLabel} · ${totalGames} ${totalGames === 1 ? "game" : "games"} · no picks tweeted yet`;
 
   return (
     <div
@@ -407,7 +431,7 @@ function buildJsx(inputs: RenderInputs) {
         height: "100%",
         background: BG,
         color: TEXT,
-        padding: "28px 56px 22px",
+        padding: `${px(30)}px ${px(52)}px ${px(26)}px`,
         display: "flex",
         flexDirection: "column",
         fontFamily: "system-ui, sans-serif",
@@ -421,7 +445,7 @@ function buildJsx(inputs: RenderInputs) {
           top: 0,
           left: 0,
           right: 0,
-          height: 3,
+          height: px(4),
           background: MINT,
           opacity: 0.7,
           display: "flex",
@@ -434,80 +458,54 @@ function buildJsx(inputs: RenderInputs) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 18,
+          marginBottom: px(10),
         }}
       >
-        <LogoOrWordmark logo={logoDataUri} />
+        <LogoOrWordmark logo={logoDataUri} height={46} />
         <LivePill />
       </div>
 
-      {/* Hero line: tonight's volume */}
+      {/* Slate-wide context, one small line. */}
       <div
         style={{
+          fontSize: px(19),
+          fontWeight: 800,
+          color: TEXT_MUTED,
+          letterSpacing: 1.6,
+          textTransform: "uppercase",
+          marginBottom: px(14),
           display: "flex",
-          alignItems: "baseline",
-          gap: 12,
-          marginBottom: 14,
         }}
       >
-        <div
-          style={{
-            fontSize: 32,
-            fontWeight: 800,
-            color: TEXT,
-            letterSpacing: -1,
-            display: "flex",
-          }}
-        >
-          Tonight
-        </div>
-        <div
-          style={{
-            fontSize: 16,
-            fontWeight: 700,
-            color: TEXT_MUTED,
-            letterSpacing: 1.4,
-            textTransform: "uppercase",
-            display: "flex",
-          }}
-        >
-          {totalGames} {totalGames === 1 ? "game" : "games"}
-          {hasAnyPicks
-            ? ` · ${sharpsPosted} ${sharpsPosted === 1 ? "sharp" : "sharps"} posted`
-            : " · no picks tweeted yet"}
-        </div>
+        {contextLine}
       </div>
 
-      {/* Marquee game block */}
-      {marquee ? <MarqueeBlockView marquee={marquee} /> : null}
-
-      {/* Roster block */}
-      {roster.length > 0 ? <RosterBlockView roster={roster} /> : null}
-
-      {/* Fallback content for no-picks state */}
-      {!hasAnyPicks ? (
+      {/* Featured game hero — fills the remaining frame. */}
+      {marquee ? (
+        <MarqueeBlockView marquee={marquee} />
+      ) : (
         <div
           style={{
             flex: 1,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 26,
-            fontWeight: 700,
+            fontSize: px(34),
+            fontWeight: 800,
             color: TEXT_SOFT,
             textAlign: "center",
           }}
         >
           Sharps haven't posted yet. Check back as picks hit Twitter.
         </div>
-      ) : null}
+      )}
 
       {/* Footer */}
       <div
         style={{
-          marginTop: "auto",
-          paddingTop: 14,
-          borderTop: `1px solid ${ROW_BORDER}`,
+          marginTop: px(16),
+          paddingTop: px(14),
+          borderTop: `${px(1)}px solid ${ROW_BORDER}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -517,8 +515,8 @@ function buildJsx(inputs: RenderInputs) {
           style={{
             display: "flex",
             alignItems: "baseline",
-            gap: 6,
-            fontSize: 15,
+            gap: px(8),
+            fontSize: px(20),
             color: TEXT_MUTED,
             fontWeight: 700,
             letterSpacing: 1.5,
@@ -532,7 +530,7 @@ function buildJsx(inputs: RenderInputs) {
         </div>
         <div
           style={{
-            fontSize: 20,
+            fontSize: px(26),
             fontWeight: 800,
             color: MINT,
             letterSpacing: 0.5,
@@ -546,14 +544,15 @@ function buildJsx(inputs: RenderInputs) {
   );
 }
 
-function TeamLogo({ src, size }: { src: string | null; size: number }) {
+function TeamLogo({ src, size: s }: { src: string | null; size: number }) {
+  const dim = px(s);
   if (!src) {
     return (
       <div
         style={{
-          width: size,
-          height: size,
-          borderRadius: size / 2,
+          width: dim,
+          height: dim,
+          borderRadius: dim / 2,
           background: "rgba(255, 255, 255, 0.05)",
           display: "flex",
         }}
@@ -565,9 +564,9 @@ function TeamLogo({ src, size }: { src: string | null; size: number }) {
     <img
       src={src}
       alt=""
-      width={size}
-      height={size}
-      style={{ width: size, height: size, objectFit: "contain", display: "flex" }}
+      width={dim}
+      height={dim}
+      style={{ width: dim, height: dim, objectFit: "contain", display: "flex" }}
     />
   );
 }
@@ -581,73 +580,85 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
   const pitcherLine =
     awayPitcher && homePitcher ? `${awayPitcher} vs ${homePitcher}` : awayPitcher ?? homePitcher;
 
+  const mlTotal = marquee.away.count + marquee.home.count;
+  const chips = buildChips(marquee.breakdown);
+
   return (
     <div
       style={{
+        flex: 1,
         display: "flex",
         flexDirection: "column",
         background: CARD_BG,
-        border: `1px solid ${ROW_BORDER}`,
-        borderRadius: 14,
-        marginBottom: 14,
+        border: `${px(1)}px solid ${ROW_BORDER}`,
+        borderRadius: px(18),
         position: "relative",
         overflow: "hidden",
       }}
     >
+      {/* Team-color glow wash: away brand on the left, home on the right. */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          opacity: 0.18,
+          display: "flex",
+          background: `radial-gradient(58% 130% at 0% 42%, ${awayColor} 0%, transparent 60%), radial-gradient(58% 130% at 100% 42%, ${homeColor} 0%, transparent 60%)`,
+        }}
+      />
+
       {/* Team-color hairline at the top, echoing the slate page matchup block. */}
       <div
         style={{
-          height: 3,
+          height: px(5),
           width: "100%",
           background: `linear-gradient(90deg, ${awayColor} 0%, ${awayColor} 50%, ${homeColor} 50%, ${homeColor} 100%)`,
-          opacity: 0.85,
+          opacity: 0.9,
           display: "flex",
         }}
       />
 
-      <div style={{ display: "flex", flexDirection: "column", padding: "10px 22px 12px" }}>
-        {/* Title bar: MATCHUP label + most-bet pill + game time */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: `${px(18)}px ${px(32)}px ${px(22)}px`,
+          position: "relative",
+        }}
+      >
+        {/* Title bar: featured pill + game time */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: 8,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: 2.4,
-                textTransform: "uppercase",
-                color: TEXT_MUTED,
-                display: "flex",
-              }}
-            >
-              Matchup
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: 2.4,
-                textTransform: "uppercase",
-                color: GOLD,
-                padding: "3px 8px",
-                border: `1px solid rgba(245, 197, 74, 0.45)`,
-                background: "rgba(245, 197, 74, 0.08)",
-                display: "flex",
-              }}
-            >
-              Most-bet · {marquee.totalPicks} sharps
-            </div>
+          <div
+            style={{
+              fontSize: px(18),
+              fontWeight: 800,
+              letterSpacing: 2.4,
+              textTransform: "uppercase",
+              color: GOLD,
+              padding: `${px(6)}px ${px(14)}px`,
+              borderRadius: px(6),
+              border: `${px(1)}px solid rgba(245, 197, 74, 0.5)`,
+              background: "rgba(245, 197, 74, 0.10)",
+              display: "flex",
+            }}
+          >
+            {marquee.featuredLabel}
           </div>
           {timeLabel ? (
             <div
               style={{
-                fontSize: 13,
+                fontSize: px(20),
                 fontWeight: 800,
                 color: TEXT_SOFT,
                 letterSpacing: 0.4,
@@ -659,83 +670,220 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           ) : null}
         </div>
 
-        {/* Center: logos + VS + abbrs */}
+        {/* Center: logos + @ + abbrs, with the big volume stat beneath. */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: px(44),
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <TeamLogo src={marquee.awayLogoDataUri} size={104} />
+              <div
+                style={{
+                  fontSize: px(52),
+                  fontWeight: 800,
+                  color: TEXT,
+                  letterSpacing: -1,
+                  marginTop: px(4),
+                  display: "flex",
+                }}
+              >
+                {marquee.awayTeam ?? "?"}
+              </div>
+            </div>
+            <div
+              style={{
+                fontSize: px(30),
+                fontWeight: 800,
+                color: TEXT_MUTED,
+                letterSpacing: 2,
+                textTransform: "uppercase",
+                display: "flex",
+              }}
+            >
+              @
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <TeamLogo src={marquee.homeLogoDataUri} size={104} />
+              <div
+                style={{
+                  fontSize: px(52),
+                  fontWeight: 800,
+                  color: TEXT,
+                  letterSpacing: -1,
+                  marginTop: px(4),
+                  display: "flex",
+                }}
+              >
+                {marquee.homeTeam ?? "?"}
+              </div>
+            </div>
+          </div>
+
+          {/* Big volume read — the headline number for this game. */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: px(10),
+              marginTop: px(10),
+            }}
+          >
+            <span style={{ fontSize: px(40), fontWeight: 800, color: MINT, display: "flex" }}>
+              {marquee.totalPicks}
+            </span>
+            <span
+              style={{
+                fontSize: px(24),
+                fontWeight: 700,
+                color: TEXT_SOFT,
+                letterSpacing: 0.4,
+                display: "flex",
+              }}
+            >
+              {marquee.totalPicks === 1 ? "pick" : "picks"} from {marquee.sharpCount}{" "}
+              {marquee.sharpCount === 1 ? "sharp" : "sharps"}
+            </span>
+          </div>
+
+          {pitcherLine ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                fontSize: px(19),
+                fontWeight: 600,
+                color: TEXT_MUTED,
+                letterSpacing: 0.2,
+                marginTop: px(6),
+              }}
+            >
+              {pitcherLine}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Bottom: moneyline lean bar + backing handles + market chips. */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {mlTotal > 0 ? (
+            <LeanBar away={marquee.away} home={marquee.home} awayColor={awayColor} homeColor={homeColor} />
+          ) : null}
+
+          <div style={{ display: "flex", gap: px(16), marginTop: mlTotal > 0 ? px(12) : 0 }}>
+            <BackingTile side={marquee.away} color={awayColor} />
+            <BackingTile side={marquee.home} color={homeColor} />
+          </div>
+
+          {chips.length > 0 ? (
+            <div style={{ display: "flex", gap: px(10), marginTop: px(12), flexWrap: "wrap" }}>
+              {chips.map((c) => (
+                <div
+                  key={c.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: px(7),
+                    padding: `${px(6)}px ${px(13)}px`,
+                    borderRadius: px(7),
+                    background: "rgba(255,255,255,0.05)",
+                    border: `${px(1)}px solid ${ROW_BORDER}`,
+                  }}
+                >
+                  <span style={{ fontSize: px(24), fontWeight: 800, color: TEXT, display: "flex" }}>
+                    {c.count}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: px(16),
+                      fontWeight: 700,
+                      letterSpacing: 1,
+                      textTransform: "uppercase",
+                      color: TEXT_MUTED,
+                      display: "flex",
+                    }}
+                  >
+                    {c.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface Chip {
+  label: string;
+  count: number;
+}
+
+function buildChips(b: MarketBreakdown): Chip[] {
+  const chips: Chip[] = [];
+  if (b.total > 0) chips.push({ label: b.total === 1 ? "Total" : "Totals", count: b.total });
+  if (b.spread > 0) chips.push({ label: b.spread === 1 ? "Spread" : "Spreads", count: b.spread });
+  if (b.prop > 0) chips.push({ label: b.prop === 1 ? "Prop" : "Props", count: b.prop });
+  if (b.parlay > 0) chips.push({ label: b.parlay === 1 ? "Parlay leg" : "Parlay legs", count: b.parlay });
+  return chips;
+}
+
+function LeanBar({
+  away,
+  home,
+  awayColor,
+  homeColor,
+}: {
+  away: MarqueeSide;
+  home: MarqueeSide;
+  awayColor: string;
+  homeColor: string;
+}) {
+  const a = away.count;
+  const h = home.count;
+  const tot = a + h;
+  const awayPct = tot === 0 ? 50 : Math.max(a === 0 ? 0 : 8, Math.round((a / tot) * 100));
+  const homePct = 100 - awayPct;
+  const awayLabel = awayColor === "#3b3b3b" ? TEXT_SOFT : awayColor;
+  const homeLabel = homeColor === "#3b3b3b" ? TEXT_SOFT : homeColor;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: px(6) }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ fontSize: px(24), fontWeight: 800, color: awayLabel, display: "flex" }}>
+          {a} on {away.team ?? "away"}
+        </div>
         <div
           style={{
+            fontSize: px(15),
+            fontWeight: 800,
+            letterSpacing: 1.8,
+            textTransform: "uppercase",
+            color: TEXT_MUTED,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 36,
-            marginTop: 4,
-            marginBottom: pitcherLine ? 4 : 10,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <TeamLogo src={marquee.awayLogoDataUri} size={64} />
-            <div
-              style={{
-                fontSize: 30,
-                fontWeight: 800,
-                color: TEXT,
-                letterSpacing: -0.5,
-                marginTop: 2,
-                display: "flex",
-              }}
-            >
-              {marquee.awayTeam ?? "?"}
-            </div>
-          </div>
-          <div
-            style={{
-              fontSize: 18,
-              fontWeight: 800,
-              color: TEXT_MUTED,
-              letterSpacing: 3,
-              textTransform: "uppercase",
-              display: "flex",
-            }}
-          >
-            VS
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <TeamLogo src={marquee.homeLogoDataUri} size={64} />
-            <div
-              style={{
-                fontSize: 30,
-                fontWeight: 800,
-                color: TEXT,
-                letterSpacing: -0.5,
-                marginTop: 2,
-                display: "flex",
-              }}
-            >
-              {marquee.homeTeam ?? "?"}
-            </div>
-          </div>
+          Moneyline lean
         </div>
-
-        {/* Pitcher line, centered. */}
-        {pitcherLine ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              fontSize: 14,
-              fontWeight: 600,
-              color: TEXT_MUTED,
-              letterSpacing: 0.2,
-              marginBottom: 10,
-            }}
-          >
-            {pitcherLine}
-          </div>
-        ) : null}
-
-        {/* Two BACKING tiles, mirroring the slate page Side component. */}
-        <div style={{ display: "flex", gap: 14 }}>
-          <BackingTile side={marquee.away} color={awayColor} />
-          <BackingTile side={marquee.home} color={homeColor} />
+        <div style={{ fontSize: px(24), fontWeight: 800, color: homeLabel, display: "flex" }}>
+          {h} on {home.team ?? "home"}
         </div>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          height: px(14),
+          borderRadius: px(7),
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.06)",
+        }}
+      >
+        <div style={{ display: "flex", width: `${awayPct}%`, background: awayColor }} />
+        <div style={{ display: "flex", width: `${homePct}%`, background: homeColor }} />
       </div>
     </div>
   );
@@ -746,33 +894,20 @@ function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
   const extra = side.handles.length - visible.length;
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-      {/* Header row with team-color underline, matching slate page Side. */}
       <div
         style={{
           display: "flex",
           alignItems: "baseline",
           justifyContent: "space-between",
-          paddingBottom: 4,
-          borderBottom: `2px solid ${color}`,
-          marginBottom: 6,
+          paddingBottom: px(5),
+          borderBottom: `${px(3)}px solid ${color}`,
+          marginBottom: px(7),
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: px(8) }}>
           <div
             style={{
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: 1.8,
-              textTransform: "uppercase",
-              color: TEXT_MUTED,
-              display: "flex",
-            }}
-          >
-            Backing
-          </div>
-          <div
-            style={{
-              fontSize: 18,
+              fontSize: px(28),
               fontWeight: 800,
               color,
               letterSpacing: -0.3,
@@ -783,7 +918,7 @@ function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
           </div>
           <div
             style={{
-              fontSize: 10,
+              fontSize: px(15),
               fontWeight: 700,
               letterSpacing: 1.2,
               textTransform: "uppercase",
@@ -796,7 +931,7 @@ function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
         </div>
         <div
           style={{
-            fontSize: 11,
+            fontSize: px(16),
             fontWeight: 800,
             color: TEXT_MUTED,
             letterSpacing: 1.2,
@@ -809,18 +944,18 @@ function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
       </div>
       <div
         style={{
-          fontSize: 15,
+          fontSize: px(21),
           fontWeight: 700,
           color: TEXT_SOFT,
           letterSpacing: -0.2,
           display: "flex",
           flexWrap: "wrap",
-          gap: 8,
+          gap: px(10),
         }}
       >
         {visible.length === 0 ? (
           <span style={{ color: TEXT_MUTED, fontStyle: "italic", display: "flex" }}>
-            no sharps on this side
+            no sharps this side
           </span>
         ) : (
           visible.map((h) => (
@@ -837,106 +972,6 @@ function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
   );
 }
 
-function RosterBlockView({ roster }: { roster: RosterRow[] }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        background: CARD_BG,
-        border: `1px solid ${ROW_BORDER}`,
-        borderRadius: 14,
-        padding: "10px 22px 12px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: 2.4,
-          textTransform: "uppercase",
-          color: MINT,
-          marginBottom: 4,
-          display: "flex",
-        }}
-      >
-        Top sharps on tonight's board · season units
-      </div>
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        {roster.map((row, i) => {
-          const unitsColor = row.unitsProfit > 0 ? POS : row.unitsProfit < 0 ? NEG : TEXT_MUTED;
-          return (
-            <div
-              key={row.handle}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "5px 0",
-                borderBottom: i < roster.length - 1 ? `1px solid ${ROW_BORDER}` : "none",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: GOLD,
-                    width: 24,
-                    display: "flex",
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  {i + 1}
-                </div>
-                <div
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 800,
-                    color: TEXT,
-                    letterSpacing: -0.4,
-                    display: "flex",
-                  }}
-                >
-                  @{row.handle}
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 22 }}>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: unitsColor,
-                    width: 100,
-                    display: "flex",
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  {formatUnits(row.unitsProfit)}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: TEXT_MUTED,
-                    letterSpacing: 1.2,
-                    textTransform: "uppercase",
-                    width: 150,
-                    display: "flex",
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  {row.picksTonight} {row.picksTonight === 1 ? "pick" : "picks"} tonight
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function buildFallbackJsx(logo: string | null) {
   return (
     <div
@@ -945,7 +980,7 @@ function buildFallbackJsx(logo: string | null) {
         height: "100%",
         background: BG,
         color: TEXT,
-        padding: "72px 80px",
+        padding: `${px(72)}px ${px(80)}px`,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -959,17 +994,17 @@ function buildFallbackJsx(logo: string | null) {
           top: 0,
           left: 0,
           right: 0,
-          height: 3,
+          height: px(3),
           background: MINT,
           opacity: 0.7,
           display: "flex",
         }}
       />
-      <LogoOrWordmark logo={logo} height={52} />
+      <LogoOrWordmark logo={logo} height={54} />
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div
           style={{
-            fontSize: 80,
+            fontSize: px(84),
             fontWeight: 800,
             lineHeight: 1.0,
             letterSpacing: -3,
@@ -980,9 +1015,9 @@ function buildFallbackJsx(logo: string | null) {
         </div>
         <div
           style={{
-            fontSize: 26,
+            fontSize: px(28),
             color: TEXT_MUTED,
-            marginTop: 24,
+            marginTop: px(24),
             fontWeight: 600,
             display: "flex",
           }}
@@ -995,7 +1030,7 @@ function buildFallbackJsx(logo: string | null) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          fontSize: 18,
+          fontSize: px(20),
           color: TEXT_MUTED,
           fontWeight: 600,
         }}

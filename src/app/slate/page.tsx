@@ -15,7 +15,7 @@ import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { buildSlateOgFingerprint } from "./_slate-og-renderer";
 
 interface PageProps {
-  searchParams: Promise<{ date?: string; v?: string }>;
+  searchParams: Promise<{ date?: string; v?: string; game?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -49,10 +49,14 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // produces a new URL that X is forced to re-fetch. OG_CARD_VERSION stays
   // as a manual escape hatch for layout-only redesigns where the data
   // hasn't changed but we still want X to refresh.
-  const OG_CARD_VERSION = "7"; // bump on any _slate-og-renderer.tsx redesign
+  const OG_CARD_VERSION = "8"; // bump on any _slate-og-renderer.tsx redesign
   const fp = await buildSlateOgFingerprint(dateParam);
   const ogQs = new URLSearchParams();
   ogQs.set("date", dateParam);
+  // ?game=AWAY-HOME (or a game_id) features that matchup on the OG card;
+  // omitted, the card falls back to the most-bet game.
+  const gameParam = typeof sp.game === "string" ? sp.game.trim() : "";
+  if (gameParam) ogQs.set("game", gameParam);
   ogQs.set("d", fp.etDay);
   if (fp.picks > 0) ogQs.set("p", String(fp.picks));
   if (fp.sharps > 0) ogQs.set("s", String(fp.sharps));
