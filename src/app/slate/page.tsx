@@ -15,7 +15,7 @@ import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { buildSlateOgFingerprint } from "./_slate-og-renderer";
 
 interface PageProps {
-  searchParams: Promise<{ date?: string; v?: string; game?: string }>;
+  searchParams: Promise<{ date?: string; v?: string; game?: string; name?: string; matchup?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -54,8 +54,10 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const ogQs = new URLSearchParams();
   ogQs.set("date", dateParam);
   // ?game=AWAY-HOME (or a game_id) features that matchup on the OG card;
-  // omitted, the card falls back to the most-bet game.
-  const gameParam = typeof sp.game === "string" ? sp.game.trim() : "";
+  // omitted, the card falls back to the most-bet game. name/matchup are
+  // accepted as aliases so a mistyped param still works.
+  const rawGame = sp.game ?? sp.name ?? sp.matchup;
+  const gameParam = typeof rawGame === "string" ? rawGame.trim() : "";
   if (gameParam) ogQs.set("game", gameParam);
   ogQs.set("d", fp.etDay);
   if (fp.picks > 0) ogQs.set("p", String(fp.picks));

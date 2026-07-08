@@ -21,6 +21,12 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const dateParam = url.searchParams.get("date") === "tomorrow" ? "tomorrow" : "today";
-  const gameSlug = url.searchParams.get("game") ?? undefined;
+  // Accept game / name / matchup interchangeably so a mistyped param still
+  // resolves the requested matchup instead of silently falling back.
+  const gameSlug =
+    url.searchParams.get("game") ??
+    url.searchParams.get("name") ??
+    url.searchParams.get("matchup") ??
+    undefined;
   return renderSlateOg({ dateParam, gameSlug });
 }
