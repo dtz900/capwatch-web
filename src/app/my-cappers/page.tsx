@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { vipEnabled } from "@/lib/flags";
@@ -17,6 +17,7 @@ export default function MyCappersPage() {
   const supabase = useMemo(() => createBrowserSupabase(), []);
   const router = useRouter();
   const [rows, setRows] = useState<FollowedCapper[] | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const enabled = vipEnabled();
 
   useEffect(() => {
@@ -25,19 +26,23 @@ export default function MyCappersPage() {
       .from("capper_follows")
       .select("capper_id, cappers(handle, display_name)")
       .eq("user_id", session.user.id)
-      .then(({ data }) =>
+      .then(({ data, error }) => {
+        if (error) {
+          setFetchError(error.message);
+          return;
+        }
         setRows(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (data ?? []).map((r: any) => ({
             capper_id: r.capper_id,
-            handle: r.cappers?.handle ?? "",
-            display_name: r.cappers?.display_name ?? null,
+            handle: Array.isArray(r.cappers) ? (r.cappers[0]?.handle ?? "") : (r.cappers?.handle ?? ""),
+            display_name: Array.isArray(r.cappers) ? (r.cappers[0]?.display_name ?? null) : (r.cappers?.display_name ?? null),
           }))
-        )
-      );
+        );
+      });
   }, [session, supabase]);
 
-  if (!enabled) notFound();
+  if (!enabled) redirect("/");
 
   if (!entitlements.isLoggedIn) {
     return (
@@ -56,7 +61,12 @@ export default function MyCappersPage() {
     <main className="mx-auto max-w-2xl px-4 py-10">
       <h1 className="text-2xl font-bold text-[var(--color-text)]">My Cappers</h1>
       <div className="mt-6 space-y-2">
-        {rows === null && <p className="text-[var(--color-text-muted)]">Loading...</p>}
+        {rows === null && !fetchError && (
+          <p className="text-[var(--color-text-muted)]">Loading...</p>
+        )}
+        {fetchError && (
+          <p className="text-[var(--color-neg)] text-sm">Could not load your follows. Try refreshing.</p>
+        )}
         {rows?.length === 0 && (
           <p className="text-[var(--color-text-soft)]">
             No follows yet. Hit Follow on any capper profile.
