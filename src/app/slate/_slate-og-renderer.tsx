@@ -683,10 +683,10 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <TeamLogo src={marquee.awayLogoDataUri} size={78} />
+              <TeamLogo src={marquee.awayLogoDataUri} size={72} />
               <div
                 style={{
-                  fontSize: px(46),
+                  fontSize: px(42),
                   fontWeight: 800,
                   color: TEXT,
                   letterSpacing: -1,
@@ -710,10 +710,10 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
               @
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <TeamLogo src={marquee.homeLogoDataUri} size={78} />
+              <TeamLogo src={marquee.homeLogoDataUri} size={72} />
               <div
                 style={{
-                  fontSize: px(46),
+                  fontSize: px(42),
                   fontWeight: 800,
                   color: TEXT,
                   letterSpacing: -1,
@@ -892,8 +892,10 @@ function LeanBar({
 }
 
 function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
-  const visible = side.handles.slice(0, 3);
+  const visible = side.handles.slice(0, 2);
   const extra = side.handles.length - visible.length;
+  // Single-line, capped: long handles wrapping to a 2nd line was pushing the
+  // market chips off the bottom of the 630px frame.
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
       <div
@@ -951,7 +953,8 @@ function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
           color: TEXT_SOFT,
           letterSpacing: -0.2,
           display: "flex",
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
+          overflow: "hidden",
           gap: px(10),
         }}
       >
@@ -960,8 +963,8 @@ function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
             no sharps this side
           </span>
         ) : (
-          visible.map((h) => (
-            <span key={h} style={{ display: "flex" }}>
+          visible.map((h, idx) => (
+            <span key={`${h}-${idx}`} style={{ display: "flex", whiteSpace: "nowrap" }}>
               @{h}
             </span>
           ))
