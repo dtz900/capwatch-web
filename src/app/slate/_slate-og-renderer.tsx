@@ -552,9 +552,11 @@ function Scoreboard({
   ].filter(Boolean);
 
   return (
+    // Card sizes to its content (not flex:1). The dark space below it is the
+    // reserve X's caption bar overlays in-feed; a content-height card avoids a
+    // big empty band inside the framed panels.
     <div
       style={{
-        flex: 1,
         display: "flex",
         flexDirection: "column",
         background: PANEL_BG,
@@ -603,7 +605,7 @@ function Scoreboard({
       </div>
 
       {/* Two team panels + center @ */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "row" }}>
+      <div style={{ display: "flex", flexDirection: "row" }}>
         <TeamPanel
           abbr={marquee.awayTeam}
           logo={marquee.awayLogoDataUri}
@@ -688,7 +690,7 @@ function TeamPanel({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          padding: `${px(16)}px ${px(18)}px 0`,
+          padding: `${px(20)}px ${px(18)}px ${px(26)}px`,
           position: "relative",
         }}
       >
