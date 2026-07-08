@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { redirect, useRouter } from "next/navigation";
+import { TopNav } from "@/components/nav/TopNav";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { vipEnabled } from "@/lib/flags";
@@ -33,11 +34,13 @@ export default function MyCappersPage() {
         }
         setRows(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (data ?? []).map((r: any) => ({
-            capper_id: r.capper_id,
-            handle: Array.isArray(r.cappers) ? (r.cappers[0]?.handle ?? "") : (r.cappers?.handle ?? ""),
-            display_name: Array.isArray(r.cappers) ? (r.cappers[0]?.display_name ?? null) : (r.cappers?.display_name ?? null),
-          }))
+          (data ?? [])
+            .map((r: any) => ({
+              capper_id: r.capper_id,
+              handle: Array.isArray(r.cappers) ? (r.cappers[0]?.handle ?? "") : (r.cappers?.handle ?? ""),
+              display_name: Array.isArray(r.cappers) ? (r.cappers[0]?.display_name ?? null) : (r.cappers?.display_name ?? null),
+            }))
+            .filter((c) => c.handle !== "")
         );
       });
   }, [session, supabase]);
@@ -46,19 +49,24 @@ export default function MyCappersPage() {
 
   if (!entitlements.isLoggedIn) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <p className="text-[var(--color-text-soft)]">
-          <button onClick={() => router.push("/login")} className="underline">
-            Sign in
-          </button>{" "}
-          to follow cappers and build your list.
-        </p>
-      </main>
+      <>
+        <TopNav />
+        <main className="mx-auto max-w-2xl px-4 py-16 text-center">
+          <p className="text-[var(--color-text-soft)]">
+            <button onClick={() => router.push("/login")} className="underline">
+              Sign in
+            </button>{" "}
+            to follow cappers and build your list.
+          </p>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10">
+    <>
+      <TopNav />
+      <main className="mx-auto max-w-2xl px-4 py-10">
       <h1 className="text-2xl font-bold text-[var(--color-text)]">My Cappers</h1>
       <div className="mt-6 space-y-2">
         {rows === null && !fetchError && (
@@ -83,6 +91,7 @@ export default function MyCappersPage() {
           </Link>
         ))}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
