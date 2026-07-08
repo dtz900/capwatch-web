@@ -6,30 +6,24 @@ import { pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
 import type { SlateGame } from "@/lib/types";
 
-// Rendered at 1x (1200x630). This is the proven config X's crawler scrapes
-// reliably: a 2x canvas made the cold render heavier (Twitterbot timed out and
-// cached a blank card) and mismatched the declared og:image dimensions. The
-// card's legibility comes from the font scale, not the pixel resolution, so 1x
-// reads the same in-feed. SCALE stays as a single knob if we revisit this.
+// Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
+// a 2x canvas made the cold render heavier (Twitterbot timed out and cached a
+// blank card) and mismatched the declared og:image dimensions.
 const SCALE = 1;
 export const size = { width: 1200 * SCALE, height: 630 * SCALE };
 export const contentType = "image/png";
 export const alt = "Tonight's MLB slate on TailSlips";
 
-// px() scales a design-space value (authored against the 1200x630 frame) up to
-// the 2x render canvas so every size, gap, and radius stays proportional.
 const px = (n: number): number => n * SCALE;
 
-// Color tokens. Kept in sync with the root opengraph-image so shared cards
-// across the site read as one visual identity.
+// Palette: the site's BetMGM off-white on near-black, team colors as the only
+// strong accents. No mint, no gold, no pure white on chrome.
 const BG = "#0a0a0c";
-const TEXT = "#fafafa";
-const TEXT_SOFT = "#d4d4d8";
-const TEXT_MUTED = "#8b8b93";
-const MINT = "#5eead4";
-const GOLD = "#f5c54a";
-const ROW_BORDER = "rgba(255, 255, 255, 0.08)";
-const CARD_BG = "rgba(255, 255, 255, 0.03)";
+const OFF = "#f7f3e9"; // primary light text
+const OFF_DIM = "rgba(247, 243, 233, 0.62)"; // secondary labels
+const OFF_FAINT = "rgba(247, 243, 233, 0.40)"; // tertiary
+const HAIR = "rgba(247, 243, 233, 0.12)"; // borders / seams
+const PANEL_BG = "rgba(255, 255, 255, 0.02)";
 
 const PRIMARY_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
 const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
@@ -63,6 +57,28 @@ interface RenderInputs {
   picksTotal: number;
   marquee: MarqueeBlock | null;
   hasAnyPicks: boolean;
+}
+
+// --- team color legibility -------------------------------------------------
+// Many MLB primaries are near-black (SD, CWS, TB, SEA, HOU...). Rendered raw
+// on the dark card they'd vanish. displayTeamColor lightens dark colors just
+// enough to stay legible while keeping the brand hue; bright colors pass
+// through untouched.
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  const n = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const int = parseInt(n, 16);
+  return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+}
+
+function displayTeamColor(hex: string): string {
+  if (!hex.startsWith("#")) return OFF;
+  const [r, g, b] = hexToRgb(hex);
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b; // 0..255
+  if (lum >= 105) return hex;
+  const t = ((105 - lum) / 105) * 0.7;
+  const mix = (c: number) => Math.round(c + (255 - c) * t);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
 
 async function readLogoDataUri(): Promise<string | null> {
@@ -108,8 +124,6 @@ async function fetchTeamLogosForGame(
   return { away, home };
 }
 
-// Mirrors the slate page's pitcher name shortener so the OG card reads the
-// same way as the page it's previewing.
 function shortPitcher(name: string | null): string | null {
   if (!name) return null;
   const parts = name.trim().split(/\s+/);
@@ -140,10 +154,8 @@ function pickMarqueeGame(games: SlateGame[]): SlateGame | null {
   return best;
 }
 
-// Maps common/natural team abbreviations (and a few nicknames) to the
-// canonical abbr the slate data actually uses. Without this, e.g. ?game=ARI-SD
-// fails to match because the data stores Arizona as "AZ" (only the ESPN logo
-// lookup uses "ari"). Keyed by uppercased input token.
+// Maps common/natural team abbreviations to the canonical abbr the slate data
+// uses. Without this, ?game=ARI-SD fails because Arizona is stored as "AZ".
 const SLUG_ABBR_ALIASES: Record<string, string> = {
   ARI: "AZ",
   ARIZONA: "AZ",
@@ -170,13 +182,10 @@ function normalizeSlugAbbr(token: string): string {
 }
 
 /**
- * Resolve a requested game from a share slug. Accepts a numeric game_id or an
- * "AWAY-HOME" abbreviation pair in either order (case-insensitive, any non-
- * alphanumeric separator). Common abbreviation variants (ARI, CHW, OAK, WAS…)
- * are normalized to the slate's canonical abbrs. Returns null when nothing
- * matches so callers fall back to the most-bet game. This is what powers
- * ?game= on the OG URL: David can feature any matchup on the card, not just
- * the most-picked one.
+ * Resolve a requested game from a share slug: a numeric game_id or an
+ * "AWAY-HOME" abbr pair in either order (case-insensitive). Common abbr
+ * variants (ARI, CHW, OAK, WAS...) are normalized. null => caller falls back
+ * to the most-bet game. Powers ?game= on the OG URL.
  */
 function resolveRequestedGame(games: SlateGame[], slug: string | undefined): SlateGame | null {
   if (!slug) return null;
@@ -298,11 +307,9 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
 }
 
 /**
- * Fingerprint inputs for the slate OG image URL. Date alone busts X's cache
- * once per day, but the slate updates intra-day as cappers tweet picks and as
- * the season leaderboard grades. Folding in pick volume + sharps + season
- * graded-total means the URL changes whenever the displayed card would
- * actually look different. Used by app/slate/page.tsx generateMetadata.
+ * Fingerprint inputs for the slate OG image URL. Folds in pick volume + sharps
+ * + season graded-total + a content hash so the URL changes whenever the card
+ * would actually look different, forcing X to re-scrape.
  */
 export async function buildSlateOgFingerprint(
   dateParam: "today" | "tomorrow",
@@ -348,7 +355,7 @@ export async function buildSlateOgFingerprint(
     });
     seasonPicks = lb.platform_stats?.graded_picks_total ?? 0;
   } catch {
-    // Leaderboard fingerprint is optional; date + picks already changes a lot.
+    // Leaderboard fingerprint is optional.
   }
   const etDay = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
@@ -374,7 +381,7 @@ const TRANSPARENT_PNG = Buffer.from(
   "base64",
 );
 
-function LogoOrWordmark({ logo, height = 44 }: { logo: string | null; height?: number }) {
+function Wordmark({ logo, height = 40 }: { logo: string | null; height?: number }) {
   if (logo) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -382,124 +389,8 @@ function LogoOrWordmark({ logo, height = 44 }: { logo: string | null; height?: n
     );
   }
   return (
-    <div
-      style={{
-        fontSize: px(36),
-        fontWeight: 800,
-        letterSpacing: -0.5,
-        color: MINT,
-        display: "flex",
-      }}
-    >
+    <div style={{ fontSize: px(32), fontWeight: 800, letterSpacing: -0.5, color: OFF, display: "flex" }}>
       TAILSLIPS
-    </div>
-  );
-}
-
-function LivePill() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: px(10),
-        padding: `${px(10)}px ${px(16)}px`,
-        borderRadius: px(6),
-        background: "rgba(94, 234, 212, 0.10)",
-        border: `${px(1)}px solid rgba(94, 234, 212, 0.35)`,
-        color: MINT,
-        fontSize: px(17),
-        fontWeight: 800,
-        letterSpacing: 1.6,
-        textTransform: "uppercase",
-      }}
-    >
-      <div
-        style={{
-          width: px(9),
-          height: px(9),
-          borderRadius: px(5),
-          background: MINT,
-          display: "flex",
-        }}
-      />
-      <div style={{ display: "flex" }}>Live · Pre-game</div>
-    </div>
-  );
-}
-
-function buildJsx(inputs: RenderInputs) {
-  // Only the wordmark + featured game render on-card. The slate-wide totals
-  // (games/sharps/picks) that used to sit here are dropped: X's own caption
-  // bar already reads "Tonight's MLB slate · N games, M picks from K sharps",
-  // so an on-card copy was redundant and cost a row we need for the matchup.
-  const { logoDataUri, marquee, hasAnyPicks } = inputs;
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: BG,
-        color: TEXT,
-        padding: `${px(20)}px ${px(48)}px ${px(16)}px`,
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "system-ui, sans-serif",
-        position: "relative",
-      }}
-    >
-      {/* Mint hairline matches the root OG card. */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: px(4),
-          background: MINT,
-          opacity: 0.7,
-          display: "flex",
-        }}
-      />
-
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: px(8),
-        }}
-      >
-        <LogoOrWordmark logo={logoDataUri} height={40} />
-        <LivePill />
-      </div>
-
-      {/* Featured game hero — fills the remaining frame. */}
-      {marquee ? (
-        <MarqueeBlockView marquee={marquee} />
-      ) : (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: px(34),
-            fontWeight: 800,
-            color: TEXT_SOFT,
-            textAlign: "center",
-          }}
-        >
-          Sharps haven't posted yet. Check back as picks hit Twitter.
-        </div>
-      )}
-
-      {/* No footer: X overlays its own title/domain bar across the bottom
-         ~70px of the card in-feed. The hero card reserves that space at the
-         bottom (see MarqueeBlockView inner paddingBottom) so nothing important
-         sits under X's caption. Branding is carried by the top wordmark. */}
     </div>
   );
 }
@@ -513,7 +404,7 @@ function TeamLogo({ src, size: s }: { src: string | null; size: number }) {
           width: dim,
           height: dim,
           borderRadius: dim / 2,
-          background: "rgba(255, 255, 255, 0.05)",
+          background: "rgba(255, 255, 255, 0.06)",
           display: "flex",
         }}
       />
@@ -531,16 +422,110 @@ function TeamLogo({ src, size: s }: { src: string | null; size: number }) {
   );
 }
 
-function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
-  const awayColor = teamColor(marquee.awayTeam);
-  const homeColor = teamColor(marquee.homeTeam);
-  const timeLabel = formatGameTime(marquee.gameTime);
+function buildJsx(inputs: RenderInputs) {
+  const { logoDataUri, marquee, hasAnyPicks } = inputs;
+
+  const awayC = marquee ? displayTeamColor(teamColor(marquee.awayTeam)) : OFF;
+  const homeC = marquee ? displayTeamColor(teamColor(marquee.homeTeam)) : OFF;
+  const timeLabel = marquee ? formatGameTime(marquee.gameTime) : null;
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        background: BG,
+        color: OFF,
+        padding: `${px(24)}px ${px(44)}px ${px(20)}px`,
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: "system-ui, sans-serif",
+        position: "relative",
+      }}
+    >
+      {/* Top hairline: team-color split when a game is featured, else off-white. */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: px(4),
+          display: "flex",
+          background: marquee
+            ? `linear-gradient(90deg, ${awayC} 0%, ${awayC} 50%, ${homeC} 50%, ${homeC} 100%)`
+            : OFF,
+          opacity: 0.9,
+        }}
+      />
+
+      {/* Header: wordmark + status/time */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: px(12),
+        }}
+      >
+        <Wordmark logo={logoDataUri} height={38} />
+        <div
+          style={{
+            fontSize: px(16),
+            fontWeight: 800,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            color: OFF_DIM,
+            display: "flex",
+          }}
+        >
+          {timeLabel ? `Pre-game · ${timeLabel}` : "Tonight's MLB slate"}
+        </div>
+      </div>
+
+      {marquee ? (
+        <Scoreboard marquee={marquee} awayC={awayC} homeC={homeC} />
+      ) : (
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: px(34),
+            fontWeight: 800,
+            color: OFF,
+            textAlign: "center",
+          }}
+        >
+          {hasAnyPicks
+            ? "Sharps are posting. Check the board."
+            : "Sharps haven't posted yet. Check back as picks hit Twitter."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Scoreboard({
+  marquee,
+  awayC,
+  homeC,
+}: {
+  marquee: MarqueeBlock;
+  awayC: string;
+  homeC: string;
+}) {
+  const awayWash = teamColor(marquee.awayTeam);
+  const homeWash = teamColor(marquee.homeTeam);
   const awayPitcher = shortPitcher(marquee.awayStarter);
   const homePitcher = shortPitcher(marquee.homeStarter);
   const pitcherLine =
     awayPitcher && homePitcher ? `${awayPitcher} vs ${homePitcher}` : awayPitcher ?? homePitcher;
-
-  const mlTotal = marquee.away.count + marquee.home.count;
+  const metaBits = [
+    `${marquee.totalPicks} ${marquee.totalPicks === 1 ? "pick" : "picks"} from ${marquee.sharpCount} ${marquee.sharpCount === 1 ? "sharp" : "sharps"}`,
+    pitcherLine,
+  ].filter(Boolean);
 
   return (
     <div
@@ -548,14 +533,117 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
         flex: 1,
         display: "flex",
         flexDirection: "column",
-        background: CARD_BG,
-        border: `${px(1)}px solid ${ROW_BORDER}`,
-        borderRadius: px(18),
+        background: PANEL_BG,
+        border: `${px(1)}px solid ${HAIR}`,
+        borderRadius: px(16),
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
+      {/* Card header strip: FEATURED tag + game meta line */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: `${px(12)}px ${px(22)}px`,
+          borderBottom: `${px(1)}px solid ${HAIR}`,
+        }}
+      >
+        <div
+          style={{
+            fontSize: px(13),
+            fontWeight: 800,
+            letterSpacing: 2.2,
+            textTransform: "uppercase",
+            color: OFF_DIM,
+            padding: `${px(4)}px ${px(10)}px`,
+            border: `${px(1)}px solid ${HAIR}`,
+            borderRadius: px(5),
+            display: "flex",
+          }}
+        >
+          {marquee.featuredLabel}
+        </div>
+        <div
+          style={{
+            fontSize: px(17),
+            fontWeight: 600,
+            color: OFF_DIM,
+            letterSpacing: 0.2,
+            display: "flex",
+          }}
+        >
+          {metaBits.join("  ·  ")}
+        </div>
+      </div>
+
+      {/* Two team panels + center @ */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "row" }}>
+        <TeamPanel
+          abbr={marquee.awayTeam}
+          logo={marquee.awayLogoDataUri}
+          color={awayC}
+          wash={awayWash}
+          count={marquee.away.count}
+          handles={marquee.away.handles}
+        />
+        <div
+          style={{
+            width: px(64),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            paddingTop: px(58),
+            borderLeft: `${px(1)}px solid ${HAIR}`,
+            borderRight: `${px(1)}px solid ${HAIR}`,
+          }}
+        >
+          <div style={{ fontSize: px(30), fontWeight: 700, color: OFF_FAINT, display: "flex" }}>@</div>
+        </div>
+        <TeamPanel
+          abbr={marquee.homeTeam}
+          logo={marquee.homeLogoDataUri}
+          color={homeC}
+          wash={homeWash}
+          count={marquee.home.count}
+          handles={marquee.home.handles}
+        />
+      </div>
+    </div>
+  );
+}
+
+function TeamPanel({
+  abbr,
+  logo,
+  color,
+  wash,
+  count,
+  handles,
+}: {
+  abbr: string | null;
+  logo: string | null;
+  color: string;
+  wash: string;
+  count: number;
+  handles: string[];
+}) {
+  const visible = handles.slice(0, 2);
+  const extra = handles.length - visible.length;
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Team-color glow wash: away brand on the left, home on the right. */}
+      {/* Team-color wash, strongest at the top, fading down. */}
       <div
         style={{
           position: "absolute",
@@ -563,216 +651,50 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           left: 0,
           right: 0,
           bottom: 0,
-          opacity: 0.18,
           display: "flex",
-          background: `radial-gradient(58% 130% at 0% 42%, ${awayColor} 0%, transparent 60%), radial-gradient(58% 130% at 100% 42%, ${homeColor} 0%, transparent 60%)`,
+          opacity: 0.2,
+          background: `linear-gradient(180deg, ${wash} 0%, transparent 62%)`,
         }}
       />
-
-      {/* Team-color hairline at the top, echoing the slate page matchup block. */}
-      <div
-        style={{
-          height: px(5),
-          width: "100%",
-          background: `linear-gradient(90deg, ${awayColor} 0%, ${awayColor} 50%, ${homeColor} 50%, ${homeColor} 100%)`,
-          opacity: 0.9,
-          display: "flex",
-        }}
-      />
+      {/* Solid team-color cap at the very top. */}
+      <div style={{ height: px(5), width: "100%", background: color, display: "flex" }} />
 
       <div
         style={{
-          flex: 1,
           display: "flex",
           flexDirection: "column",
-          // Top-anchor the content (do NOT stretch with space-between). X
-          // overlays its title/domain bar across the bottom ~90px of the card
-          // in-feed; stretching pushed the chips/handles down into it. Stacked
-          // from the top with fixed gaps, all content lives in the upper ~75%
-          // and the empty bottom band is what X's bar covers.
-          justifyContent: "flex-start",
-          gap: px(14),
-          padding: `${px(14)}px ${px(30)}px ${px(24)}px`,
+          alignItems: "center",
+          padding: `${px(16)}px ${px(18)}px 0`,
           position: "relative",
         }}
       >
-        {/* Title bar: featured pill + game time */}
+        <TeamLogo src={logo} size={68} />
         <div
           style={{
+            fontSize: px(50),
+            fontWeight: 800,
+            letterSpacing: -1,
+            color,
+            marginTop: px(4),
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
           }}
         >
-          <div
-            style={{
-              fontSize: px(18),
-              fontWeight: 800,
-              letterSpacing: 2.4,
-              textTransform: "uppercase",
-              color: GOLD,
-              padding: `${px(6)}px ${px(14)}px`,
-              borderRadius: px(6),
-              border: `${px(1)}px solid rgba(245, 197, 74, 0.5)`,
-              background: "rgba(245, 197, 74, 0.10)",
-              display: "flex",
-            }}
-          >
-            {marquee.featuredLabel}
-          </div>
-          {timeLabel ? (
-            <div
-              style={{
-                fontSize: px(20),
-                fontWeight: 800,
-                color: TEXT_SOFT,
-                letterSpacing: 0.4,
-                display: "flex",
-              }}
-            >
-              {timeLabel}
-            </div>
-          ) : null}
+          {abbr ?? "?"}
         </div>
 
-        {/* Center: logos + @ + abbrs, with the big volume stat beneath. */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: px(44),
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <TeamLogo src={marquee.awayLogoDataUri} size={60} />
-              <div
-                style={{
-                  fontSize: px(42),
-                  fontWeight: 800,
-                  color: TEXT,
-                  letterSpacing: -1,
-                  marginTop: px(4),
-                  display: "flex",
-                }}
-              >
-                {marquee.awayTeam ?? "?"}
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: px(30),
-                fontWeight: 800,
-                color: TEXT_MUTED,
-                letterSpacing: 2,
-                textTransform: "uppercase",
-                display: "flex",
-              }}
-            >
-              @
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <TeamLogo src={marquee.homeLogoDataUri} size={60} />
-              <div
-                style={{
-                  fontSize: px(42),
-                  fontWeight: 800,
-                  color: TEXT,
-                  letterSpacing: -1,
-                  marginTop: px(4),
-                  display: "flex",
-                }}
-              >
-                {marquee.homeTeam ?? "?"}
-              </div>
-            </div>
-          </div>
-
-          {/* Big volume read — the headline number for this game. */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: px(10),
-              marginTop: px(10),
-            }}
-          >
-            <span style={{ fontSize: px(40), fontWeight: 800, color: MINT, display: "flex" }}>
-              {marquee.totalPicks}
-            </span>
-            <span
-              style={{
-                fontSize: px(24),
-                fontWeight: 700,
-                color: TEXT_SOFT,
-                letterSpacing: 0.4,
-                display: "flex",
-              }}
-            >
-              {marquee.totalPicks === 1 ? "pick" : "picks"} from {marquee.sharpCount}{" "}
-              {marquee.sharpCount === 1 ? "sharp" : "sharps"}
-            </span>
-          </div>
-
-          {pitcherLine ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                fontSize: px(19),
-                fontWeight: 600,
-                color: TEXT_MUTED,
-                letterSpacing: 0.2,
-                marginTop: px(6),
-              }}
-            >
-              {pitcherLine}
-            </div>
-          ) : null}
-        </div>
-
-        {/* Bottom: moneyline lean bar + backing handles (who's on each side).
-           Market-breakdown chips were removed: with X's caption bar eating the
-           bottom ~90px, this row had to go so the handles clear the overlay. */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {mlTotal > 0 ? (
-            <LeanBar away={marquee.away} home={marquee.home} awayColor={awayColor} homeColor={homeColor} />
-          ) : null}
-
-          <div style={{ display: "flex", gap: px(16), marginTop: mlTotal > 0 ? px(10) : 0 }}>
-            <BackingTile side={marquee.away} color={awayColor} />
-            <BackingTile side={marquee.home} color={homeColor} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LeanBar({
-  away,
-  home,
-  awayColor,
-  homeColor,
-}: {
-  away: MarqueeSide;
-  home: MarqueeSide;
-  awayColor: string;
-  homeColor: string;
-}) {
-  const a = away.count;
-  const h = home.count;
-  const tot = a + h;
-  const awayPct = tot === 0 ? 50 : Math.max(a === 0 ? 0 : 8, Math.round((a / tot) * 100));
-  const homePct = 100 - awayPct;
-  const awayLabel = awayColor === "#3b3b3b" ? TEXT_SOFT : awayColor;
-  const homeLabel = homeColor === "#3b3b3b" ? TEXT_SOFT : homeColor;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: px(6) }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: px(24), fontWeight: 800, color: awayLabel, display: "flex" }}>
-          {a} on {away.team ?? "away"}
+        {/* Giant focal count. */}
+        <div
+          style={{
+            fontSize: px(104),
+            fontWeight: 800,
+            lineHeight: 1,
+            letterSpacing: -3,
+            color,
+            marginTop: px(6),
+            display: "flex",
+          }}
+        >
+          {count}
         </div>
         <div
           style={{
@@ -780,114 +702,38 @@ function LeanBar({
             fontWeight: 800,
             letterSpacing: 1.8,
             textTransform: "uppercase",
-            color: TEXT_MUTED,
+            color: OFF_DIM,
+            marginTop: px(2),
             display: "flex",
           }}
         >
-          Moneyline lean
+          {count === 1 ? "sharp" : "sharps"} on moneyline
         </div>
-        <div style={{ fontSize: px(24), fontWeight: 800, color: homeLabel, display: "flex" }}>
-          {h} on {home.team ?? "home"}
-        </div>
-      </div>
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          height: px(14),
-          borderRadius: px(7),
-          overflow: "hidden",
-          background: "rgba(255,255,255,0.06)",
-        }}
-      >
-        <div style={{ display: "flex", width: `${awayPct}%`, background: awayColor }} />
-        <div style={{ display: "flex", width: `${homePct}%`, background: homeColor }} />
-      </div>
-    </div>
-  );
-}
 
-function BackingTile({ side, color }: { side: MarqueeSide; color: string }) {
-  const visible = side.handles.slice(0, 2);
-  const extra = side.handles.length - visible.length;
-  // Single-line, capped: long handles wrapping to a 2nd line was pushing the
-  // market chips off the bottom of the 630px frame.
-  return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          paddingBottom: px(5),
-          borderBottom: `${px(3)}px solid ${color}`,
-          marginBottom: px(7),
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "baseline", gap: px(8) }}>
-          <div
-            style={{
-              fontSize: px(28),
-              fontWeight: 800,
-              color,
-              letterSpacing: -0.3,
-              display: "flex",
-            }}
-          >
-            {side.team ?? "—"}
-          </div>
-          <div
-            style={{
-              fontSize: px(15),
-              fontWeight: 700,
-              letterSpacing: 1.2,
-              textTransform: "uppercase",
-              color: TEXT_MUTED,
-              display: "flex",
-            }}
-          >
-            moneyline
-          </div>
-        </div>
+        {/* Who's backing this side. */}
         <div
           style={{
-            fontSize: px(16),
-            fontWeight: 800,
-            color: TEXT_MUTED,
-            letterSpacing: 1.2,
-            textTransform: "uppercase",
+            fontSize: px(20),
+            fontWeight: 700,
+            color: OFF,
+            marginTop: px(12),
             display: "flex",
+            flexWrap: "nowrap",
+            overflow: "hidden",
+            gap: px(10),
           }}
         >
-          {side.count} {side.count === 1 ? "sharp" : "sharps"}
+          {visible.length === 0 ? (
+            <span style={{ color: OFF_FAINT, fontStyle: "italic", display: "flex" }}>no sharps yet</span>
+          ) : (
+            visible.map((h, i) => (
+              <span key={`${h}-${i}`} style={{ display: "flex", whiteSpace: "nowrap" }}>
+                @{h}
+              </span>
+            ))
+          )}
+          {extra > 0 ? <span style={{ color: OFF_FAINT, display: "flex" }}>+{extra}</span> : null}
         </div>
-      </div>
-      <div
-        style={{
-          fontSize: px(21),
-          fontWeight: 700,
-          color: TEXT_SOFT,
-          letterSpacing: -0.2,
-          display: "flex",
-          flexWrap: "nowrap",
-          overflow: "hidden",
-          gap: px(10),
-        }}
-      >
-        {visible.length === 0 ? (
-          <span style={{ color: TEXT_MUTED, fontStyle: "italic", display: "flex" }}>
-            no sharps this side
-          </span>
-        ) : (
-          visible.map((h, idx) => (
-            <span key={`${h}-${idx}`} style={{ display: "flex", whiteSpace: "nowrap" }}>
-              @{h}
-            </span>
-          ))
-        )}
-        {extra > 0 ? (
-          <span style={{ color: TEXT_MUTED, display: "flex" }}>+{extra}</span>
-        ) : null}
       </div>
     </div>
   );
@@ -900,7 +746,7 @@ function buildFallbackJsx(logo: string | null) {
         width: "100%",
         height: "100%",
         background: BG,
-        color: TEXT,
+        color: OFF,
         padding: `${px(72)}px ${px(80)}px`,
         display: "flex",
         flexDirection: "column",
@@ -915,34 +761,18 @@ function buildFallbackJsx(logo: string | null) {
           top: 0,
           left: 0,
           right: 0,
-          height: px(3),
-          background: MINT,
-          opacity: 0.7,
+          height: px(4),
+          background: OFF,
+          opacity: 0.8,
           display: "flex",
         }}
       />
-      <LogoOrWordmark logo={logo} height={54} />
+      <Wordmark logo={logo} height={50} />
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <div
-          style={{
-            fontSize: px(84),
-            fontWeight: 800,
-            lineHeight: 1.0,
-            letterSpacing: -3,
-            display: "flex",
-          }}
-        >
+        <div style={{ fontSize: px(84), fontWeight: 800, lineHeight: 1.0, letterSpacing: -3, display: "flex" }}>
           Tonight's MLB slate.
         </div>
-        <div
-          style={{
-            fontSize: px(28),
-            color: TEXT_MUTED,
-            marginTop: px(24),
-            fontWeight: 600,
-            display: "flex",
-          }}
-        >
+        <div style={{ fontSize: px(28), color: OFF_DIM, marginTop: px(24), fontWeight: 600, display: "flex" }}>
           Every tracked sharp's pick, grouped by game, ranked by leaderboard.
         </div>
       </div>
@@ -952,12 +782,12 @@ function buildFallbackJsx(logo: string | null) {
           alignItems: "center",
           justifyContent: "space-between",
           fontSize: px(20),
-          color: TEXT_MUTED,
+          color: OFF_DIM,
           fontWeight: 600,
         }}
       >
         <div style={{ display: "flex" }}>tailslips.com/slate</div>
-        <div style={{ color: MINT, fontWeight: 800, display: "flex" }}>TailSlips</div>
+        <div style={{ color: OFF, fontWeight: 800, display: "flex" }}>TailSlips</div>
       </div>
     </div>
   );
