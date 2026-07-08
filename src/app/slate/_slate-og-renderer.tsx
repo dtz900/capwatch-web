@@ -433,7 +433,7 @@ function buildJsx(inputs: RenderInputs) {
         height: "100%",
         background: BG,
         color: TEXT,
-        padding: `${px(30)}px ${px(52)}px ${px(26)}px`,
+        padding: `${px(20)}px ${px(48)}px ${px(16)}px`,
         display: "flex",
         flexDirection: "column",
         fontFamily: "system-ui, sans-serif",
@@ -460,22 +460,22 @@ function buildJsx(inputs: RenderInputs) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: px(10),
+          marginBottom: px(8),
         }}
       >
-        <LogoOrWordmark logo={logoDataUri} height={46} />
+        <LogoOrWordmark logo={logoDataUri} height={40} />
         <LivePill />
       </div>
 
       {/* Slate-wide context, one small line. */}
       <div
         style={{
-          fontSize: px(19),
+          fontSize: px(17),
           fontWeight: 800,
           color: TEXT_MUTED,
           letterSpacing: 1.6,
           textTransform: "uppercase",
-          marginBottom: px(14),
+          marginBottom: px(10),
           display: "flex",
         }}
       >
@@ -505,8 +505,8 @@ function buildJsx(inputs: RenderInputs) {
       {/* Footer */}
       <div
         style={{
-          marginTop: px(16),
-          paddingTop: px(14),
+          marginTop: px(10),
+          paddingTop: px(10),
           borderTop: `${px(1)}px solid ${ROW_BORDER}`,
           display: "flex",
           alignItems: "center",
@@ -629,7 +629,7 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: `${px(18)}px ${px(32)}px ${px(22)}px`,
+          padding: `${px(14)}px ${px(30)}px ${px(16)}px`,
           position: "relative",
         }}
       >
@@ -683,10 +683,10 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <TeamLogo src={marquee.awayLogoDataUri} size={104} />
+              <TeamLogo src={marquee.awayLogoDataUri} size={78} />
               <div
                 style={{
-                  fontSize: px(52),
+                  fontSize: px(46),
                   fontWeight: 800,
                   color: TEXT,
                   letterSpacing: -1,
@@ -710,10 +710,10 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
               @
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <TeamLogo src={marquee.homeLogoDataUri} size={104} />
+              <TeamLogo src={marquee.homeLogoDataUri} size={78} />
               <div
                 style={{
-                  fontSize: px(52),
+                  fontSize: px(46),
                   fontWeight: 800,
                   color: TEXT,
                   letterSpacing: -1,
@@ -775,13 +775,13 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
             <LeanBar away={marquee.away} home={marquee.home} awayColor={awayColor} homeColor={homeColor} />
           ) : null}
 
-          <div style={{ display: "flex", gap: px(16), marginTop: mlTotal > 0 ? px(12) : 0 }}>
+          <div style={{ display: "flex", gap: px(16), marginTop: mlTotal > 0 ? px(10) : 0 }}>
             <BackingTile side={marquee.away} color={awayColor} />
             <BackingTile side={marquee.home} color={homeColor} />
           </div>
 
           {chips.length > 0 ? (
-            <div style={{ display: "flex", gap: px(10), marginTop: px(12), flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: px(10), marginTop: px(8), flexWrap: "wrap" }}>
               {chips.map((c) => (
                 <div
                   key={c.label}
