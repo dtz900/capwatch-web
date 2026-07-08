@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { notFound } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { vipEnabled } from "@/lib/flags";
@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createBrowserSupabase();
+  const supabase = useMemo(() => createBrowserSupabase(), []);
 
   if (!enabled) notFound();
 

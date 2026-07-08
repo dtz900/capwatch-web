@@ -23,7 +23,7 @@ export function AccountMenu() {
         {entitlements.isVip ? "VIP" : "Account"}
       </Link>
       <button
-        onClick={() => signOut()}
+        onClick={() => { void signOut().catch(console.error); }}
         title={session?.user?.email ?? ""}
         className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
       >
