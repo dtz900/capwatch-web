@@ -91,6 +91,28 @@ async function readLogoDataUri(): Promise<string | null> {
   }
 }
 
+// Manrope is the site's sans (next/font/google in layout.tsx). The OG image is
+// rendered by satori, which has no access to next/font, so without loading the
+// real face here the card falls back to satori's plain default — the "cheap
+// font" look. Bundled WOFFs in public/fonts keep the render fast and offline.
+type OgFont = { name: string; data: Buffer; weight: 500 | 700 | 800; style: "normal" };
+let FONT_CACHE: OgFont[] | null = null;
+async function loadManropeFonts(): Promise<OgFont[]> {
+  if (FONT_CACHE) return FONT_CACHE;
+  const weights: Array<500 | 700 | 800> = [500, 700, 800];
+  const out: OgFont[] = [];
+  for (const w of weights) {
+    try {
+      const buf = await readFile(join(process.cwd(), "public", "fonts", `manrope-${w}.woff`));
+      out.push({ name: "Manrope", data: buf, weight: w, style: "normal" });
+    } catch {
+      // Missing font file falls back to satori's default; not fatal.
+    }
+  }
+  FONT_CACHE = out;
+  return out;
+}
+
 async function fetchRemoteImageAsDataUri(url: string | null): Promise<string | null> {
   if (!url) return null;
   const controller = new AbortController();
@@ -283,8 +305,10 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
     hasAnyPicks: allPicks.length > 0,
   };
 
+  const fonts = await loadManropeFonts();
+
   try {
-    const primary = new ImageResponse(buildJsx(inputs), { ...size });
+    const primary = new ImageResponse(buildJsx(inputs), { ...size, fonts });
     const buf = await primary.arrayBuffer();
     return new Response(buf, {
       headers: { "content-type": "image/png", "cache-control": PRIMARY_CACHE },
@@ -292,7 +316,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   } catch (err) {
     console.error("[slate-og-renderer] primary render failed", err);
     try {
-      const fallback = new ImageResponse(buildFallbackJsx(logo), { ...size });
+      const fallback = new ImageResponse(buildFallbackJsx(logo), { ...size, fonts });
       const buf = await fallback.arrayBuffer();
       return new Response(buf, {
         headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
@@ -439,7 +463,7 @@ function buildJsx(inputs: RenderInputs) {
         padding: `${px(24)}px ${px(44)}px ${px(20)}px`,
         display: "flex",
         flexDirection: "column",
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: "Manrope, sans-serif",
         position: "relative",
       }}
     >
@@ -668,10 +692,10 @@ function TeamPanel({
           position: "relative",
         }}
       >
-        <TeamLogo src={logo} size={68} />
+        <TeamLogo src={logo} size={58} />
         <div
           style={{
-            fontSize: px(50),
+            fontSize: px(44),
             fontWeight: 800,
             letterSpacing: -1,
             color,
@@ -685,7 +709,7 @@ function TeamPanel({
         {/* Giant focal count. */}
         <div
           style={{
-            fontSize: px(104),
+            fontSize: px(88),
             fontWeight: 800,
             lineHeight: 1,
             letterSpacing: -3,
@@ -713,7 +737,7 @@ function TeamPanel({
         {/* Who's backing this side. */}
         <div
           style={{
-            fontSize: px(20),
+            fontSize: px(21),
             fontWeight: 700,
             color: OFF,
             marginTop: px(12),
@@ -751,7 +775,7 @@ function buildFallbackJsx(logo: string | null) {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: "Manrope, sans-serif",
         position: "relative",
       }}
     >
