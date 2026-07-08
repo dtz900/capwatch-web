@@ -592,11 +592,14 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          // Extra bottom padding reserves a safe zone: X overlays its caption
-          // bar across the bottom ~70px of the card in-feed. space-between then
-          // seats the chips/backing just above that band instead of under it.
-          padding: `${px(14)}px ${px(30)}px ${px(80)}px`,
+          // Top-anchor the content (do NOT stretch with space-between). X
+          // overlays its title/domain bar across the bottom ~90px of the card
+          // in-feed; stretching pushed the chips/handles down into it. Stacked
+          // from the top with fixed gaps, all content lives in the upper ~75%
+          // and the empty bottom band is what X's bar covers.
+          justifyContent: "flex-start",
+          gap: px(18),
+          padding: `${px(14)}px ${px(30)}px ${px(24)}px`,
           position: "relative",
         }}
       >
