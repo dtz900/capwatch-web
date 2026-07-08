@@ -1,6 +1,7 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 
 describe("vipEnabled", () => {
+  beforeEach(() => vi.resetModules());
   afterEach(() => vi.unstubAllEnvs());
 
   it("is false when the env var is absent", async () => {
