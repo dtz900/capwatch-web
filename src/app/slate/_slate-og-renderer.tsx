@@ -694,7 +694,7 @@ function TeamPanel({
           position: "relative",
         }}
       >
-        <TeamLogo src={logo} size={58} />
+        <TeamLogo src={logo} size={88} />
         <div
           style={{
             fontSize: px(44),

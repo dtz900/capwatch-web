@@ -49,7 +49,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // produces a new URL that X is forced to re-fetch. OG_CARD_VERSION stays
   // as a manual escape hatch for layout-only redesigns where the data
   // hasn't changed but we still want X to refresh.
-  const OG_CARD_VERSION = "12"; // bump on any _slate-og-renderer.tsx redesign
+  const OG_CARD_VERSION = "13"; // bump on any _slate-og-renderer.tsx redesign
   const fp = await buildSlateOgFingerprint(dateParam);
   const ogQs = new URLSearchParams();
   ogQs.set("date", dateParam);
