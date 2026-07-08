@@ -6,10 +6,12 @@ import { inferMarketBucket, pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
 import type { SlateGame, SlatePick } from "@/lib/types";
 
-// Rendered at 2x (2400x1260) for sharpness. X downscales the card to ~500px
-// wide in the feed, so a 1200px source blurs; a 2400px source stays crisp.
-// The declared og:image dimensions stay 1200x630 (2:1), which is advisory.
-const SCALE = 2;
+// Rendered at 1x (1200x630). This is the proven config X's crawler scrapes
+// reliably: a 2x canvas made the cold render heavier (Twitterbot timed out and
+// cached a blank card) and mismatched the declared og:image dimensions. The
+// card's legibility comes from the font scale, not the pixel resolution, so 1x
+// reads the same in-feed. SCALE stays as a single knob if we revisit this.
+const SCALE = 1;
 export const size = { width: 1200 * SCALE, height: 630 * SCALE };
 export const contentType = "image/png";
 export const alt = "Tonight's MLB slate on TailSlips";
