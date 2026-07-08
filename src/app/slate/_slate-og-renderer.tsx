@@ -140,12 +140,43 @@ function pickMarqueeGame(games: SlateGame[]): SlateGame | null {
   return best;
 }
 
+// Maps common/natural team abbreviations (and a few nicknames) to the
+// canonical abbr the slate data actually uses. Without this, e.g. ?game=ARI-SD
+// fails to match because the data stores Arizona as "AZ" (only the ESPN logo
+// lookup uses "ari"). Keyed by uppercased input token.
+const SLUG_ABBR_ALIASES: Record<string, string> = {
+  ARI: "AZ",
+  ARIZONA: "AZ",
+  DBACKS: "AZ",
+  DIAMONDBACKS: "AZ",
+  CHW: "CWS",
+  CHISOX: "CWS",
+  WHITESOX: "CWS",
+  SOX: "CWS",
+  OAK: "ATH",
+  ATHLETICS: "ATH",
+  WAS: "WSH",
+  WSN: "WSH",
+  NATS: "WSH",
+  SFG: "SF",
+  SDP: "SD",
+  TBR: "TB",
+  KCR: "KC",
+  KCROYALS: "KC",
+};
+
+function normalizeSlugAbbr(token: string): string {
+  return SLUG_ABBR_ALIASES[token] ?? token;
+}
+
 /**
  * Resolve a requested game from a share slug. Accepts a numeric game_id or an
  * "AWAY-HOME" abbreviation pair in either order (case-insensitive, any non-
- * alphanumeric separator). Returns null when nothing matches so callers fall
- * back to the most-bet game. This is what powers ?game= on the OG URL: David
- * can feature any matchup on the card, not just the most-picked one.
+ * alphanumeric separator). Common abbreviation variants (ARI, CHW, OAK, WAS…)
+ * are normalized to the slate's canonical abbrs. Returns null when nothing
+ * matches so callers fall back to the most-bet game. This is what powers
+ * ?game= on the OG URL: David can feature any matchup on the card, not just
+ * the most-picked one.
  */
 function resolveRequestedGame(games: SlateGame[], slug: string | undefined): SlateGame | null {
   if (!slug) return null;
@@ -157,12 +188,16 @@ function resolveRequestedGame(games: SlateGame[], slug: string | undefined): Sla
     if (byId) return byId;
   }
 
-  const parts = raw.toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  const parts = raw
+    .toUpperCase()
+    .split(/[^A-Z0-9]+/)
+    .filter(Boolean)
+    .map(normalizeSlugAbbr);
   if (parts.length >= 2) {
     const [a, b] = parts;
     const match = games.find((g) => {
-      const away = (g.away_team ?? "").toUpperCase();
-      const home = (g.home_team ?? "").toUpperCase();
+      const away = normalizeSlugAbbr((g.away_team ?? "").toUpperCase());
+      const home = normalizeSlugAbbr((g.home_team ?? "").toUpperCase());
       return (away === a && home === b) || (away === b && home === a);
     });
     if (match) return match;
