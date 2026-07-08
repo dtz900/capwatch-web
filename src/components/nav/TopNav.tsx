@@ -4,6 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { NavSearch } from "@/components/nav/NavSearch";
+import { vipEnabled } from "@/lib/flags";
+import { AccountMenu } from "@/components/auth/AccountMenu";
 
 const LINKS: { href: string; label: string; gold?: boolean }[] = [
   { href: "/parlay-palace", label: "Parlay Palace", gold: true },
@@ -70,6 +72,7 @@ export function TopNav() {
         </div>
         <div className="flex items-center gap-2">
           <NavSearch />
+          {vipEnabled() && <AccountMenu />}
         </div>
       </div>
     </nav>
