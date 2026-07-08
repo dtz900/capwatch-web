@@ -2,9 +2,9 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchLeaderboard, fetchSlate } from "@/lib/api";
-import { inferMarketBucket, pickMlSide } from "@/lib/bet-format";
+import { pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
-import type { SlateGame, SlatePick } from "@/lib/types";
+import type { SlateGame } from "@/lib/types";
 
 // Rendered at 1x (1200x630). This is the proven config X's crawler scrapes
 // reliably: a 2x canvas made the cold render heavier (Twitterbot timed out and
@@ -40,13 +40,6 @@ interface MarqueeSide {
   handles: string[];
 }
 
-interface MarketBreakdown {
-  total: number;
-  spread: number;
-  prop: number;
-  parlay: number;
-}
-
 interface MarqueeBlock {
   awayTeam: string | null;
   homeTeam: string | null;
@@ -60,7 +53,6 @@ interface MarqueeBlock {
   featuredLabel: string;
   away: MarqueeSide;
   home: MarqueeSide;
-  breakdown: MarketBreakdown;
 }
 
 interface RenderInputs {
@@ -178,22 +170,6 @@ function resolveRequestedGame(games: SlateGame[], slug: string | undefined): Sla
   return null;
 }
 
-function buildBreakdown(picks: SlatePick[]): MarketBreakdown {
-  const b: MarketBreakdown = { total: 0, spread: 0, prop: 0, parlay: 0 };
-  for (const p of picks) {
-    if (p.kind === "parlay_leg") {
-      b.parlay += 1;
-      continue;
-    }
-    const bucket = inferMarketBucket(p.market, p.selection);
-    if (bucket === "Total") b.total += 1;
-    else if (bucket === "Spread") b.spread += 1;
-    else if (bucket === "Player prop" || bucket === "Game prop") b.prop += 1;
-    // Moneyline is surfaced by the backing tiles; unknown buckets drop out.
-  }
-  return b;
-}
-
 function buildMarqueeBlock(
   game: SlateGame,
   awayLogoDataUri: string | null,
@@ -221,7 +197,6 @@ function buildMarqueeBlock(
     featuredLabel,
     away: { team: game.away_team, count: awayHandles.length, handles: awayHandles },
     home: { team: game.home_team, count: homeHandles.length, handles: homeHandles },
-    breakdown: buildBreakdown(game.picks),
   };
 }
 
@@ -419,12 +394,11 @@ function LivePill() {
 }
 
 function buildJsx(inputs: RenderInputs) {
-  const { logoDataUri, dateLabel, totalGames, sharpsPosted, picksTotal, marquee, hasAnyPicks } =
-    inputs;
-
-  const contextLine = hasAnyPicks
-    ? `${dateLabel} · ${totalGames} ${totalGames === 1 ? "game" : "games"} · ${sharpsPosted} ${sharpsPosted === 1 ? "sharp" : "sharps"} · ${picksTotal} picks`
-    : `${dateLabel} · ${totalGames} ${totalGames === 1 ? "game" : "games"} · no picks tweeted yet`;
+  // Only the wordmark + featured game render on-card. The slate-wide totals
+  // (games/sharps/picks) that used to sit here are dropped: X's own caption
+  // bar already reads "Tonight's MLB slate · N games, M picks from K sharps",
+  // so an on-card copy was redundant and cost a row we need for the matchup.
+  const { logoDataUri, marquee, hasAnyPicks } = inputs;
 
   return (
     <div
@@ -465,21 +439,6 @@ function buildJsx(inputs: RenderInputs) {
       >
         <LogoOrWordmark logo={logoDataUri} height={40} />
         <LivePill />
-      </div>
-
-      {/* Slate-wide context, one small line. */}
-      <div
-        style={{
-          fontSize: px(17),
-          fontWeight: 800,
-          color: TEXT_MUTED,
-          letterSpacing: 1.6,
-          textTransform: "uppercase",
-          marginBottom: px(10),
-          display: "flex",
-        }}
-      >
-        {contextLine}
       </div>
 
       {/* Featured game hero — fills the remaining frame. */}
@@ -547,7 +506,6 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
     awayPitcher && homePitcher ? `${awayPitcher} vs ${homePitcher}` : awayPitcher ?? homePitcher;
 
   const mlTotal = marquee.away.count + marquee.home.count;
-  const chips = buildChips(marquee.breakdown);
 
   return (
     <div
@@ -598,7 +556,7 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           // from the top with fixed gaps, all content lives in the upper ~75%
           // and the empty bottom band is what X's bar covers.
           justifyContent: "flex-start",
-          gap: px(18),
+          gap: px(14),
           padding: `${px(14)}px ${px(30)}px ${px(24)}px`,
           position: "relative",
         }}
@@ -653,7 +611,7 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <TeamLogo src={marquee.awayLogoDataUri} size={72} />
+              <TeamLogo src={marquee.awayLogoDataUri} size={60} />
               <div
                 style={{
                   fontSize: px(42),
@@ -680,7 +638,7 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
               @
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <TeamLogo src={marquee.homeLogoDataUri} size={72} />
+              <TeamLogo src={marquee.homeLogoDataUri} size={60} />
               <div
                 style={{
                   fontSize: px(42),
@@ -739,7 +697,9 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           ) : null}
         </div>
 
-        {/* Bottom: moneyline lean bar + backing handles + market chips. */}
+        {/* Bottom: moneyline lean bar + backing handles (who's on each side).
+           Market-breakdown chips were removed: with X's caption bar eating the
+           bottom ~90px, this row had to go so the handles clear the overlay. */}
         <div style={{ display: "flex", flexDirection: "column" }}>
           {mlTotal > 0 ? (
             <LeanBar away={marquee.away} home={marquee.home} awayColor={awayColor} homeColor={homeColor} />
@@ -749,59 +709,10 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
             <BackingTile side={marquee.away} color={awayColor} />
             <BackingTile side={marquee.home} color={homeColor} />
           </div>
-
-          {chips.length > 0 ? (
-            <div style={{ display: "flex", gap: px(10), marginTop: px(8), flexWrap: "wrap" }}>
-              {chips.map((c) => (
-                <div
-                  key={c.label}
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    gap: px(7),
-                    padding: `${px(6)}px ${px(13)}px`,
-                    borderRadius: px(7),
-                    background: "rgba(255,255,255,0.05)",
-                    border: `${px(1)}px solid ${ROW_BORDER}`,
-                  }}
-                >
-                  <span style={{ fontSize: px(24), fontWeight: 800, color: TEXT, display: "flex" }}>
-                    {c.count}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: px(16),
-                      fontWeight: 700,
-                      letterSpacing: 1,
-                      textTransform: "uppercase",
-                      color: TEXT_MUTED,
-                      display: "flex",
-                    }}
-                  >
-                    {c.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
   );
-}
-
-interface Chip {
-  label: string;
-  count: number;
-}
-
-function buildChips(b: MarketBreakdown): Chip[] {
-  const chips: Chip[] = [];
-  if (b.total > 0) chips.push({ label: b.total === 1 ? "Total" : "Totals", count: b.total });
-  if (b.spread > 0) chips.push({ label: b.spread === 1 ? "Spread" : "Spreads", count: b.spread });
-  if (b.prop > 0) chips.push({ label: b.prop === 1 ? "Prop" : "Props", count: b.prop });
-  if (b.parlay > 0) chips.push({ label: b.parlay === 1 ? "Parlay leg" : "Parlay legs", count: b.parlay });
-  return chips;
 }
 
 function LeanBar({
