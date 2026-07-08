@@ -502,46 +502,10 @@ function buildJsx(inputs: RenderInputs) {
         </div>
       )}
 
-      {/* Footer */}
-      <div
-        style={{
-          marginTop: px(10),
-          paddingTop: px(10),
-          borderTop: `${px(1)}px solid ${ROW_BORDER}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: px(8),
-            fontSize: px(20),
-            color: TEXT_MUTED,
-            fontWeight: 700,
-            letterSpacing: 1.5,
-            textTransform: "uppercase",
-          }}
-        >
-          <span style={{ color: TEXT, fontWeight: 800, display: "flex" }}>{picksTotal}</span>
-          <span style={{ display: "flex" }}>
-            {picksTotal === 1 ? "pick" : "picks"} tracked tonight
-          </span>
-        </div>
-        <div
-          style={{
-            fontSize: px(26),
-            fontWeight: 800,
-            color: MINT,
-            letterSpacing: 0.5,
-            display: "flex",
-          }}
-        >
-          tailslips.com/slate
-        </div>
-      </div>
+      {/* No footer: X overlays its own title/domain bar across the bottom
+         ~70px of the card in-feed. The hero card reserves that space at the
+         bottom (see MarqueeBlockView inner paddingBottom) so nothing important
+         sits under X's caption. Branding is carried by the top wordmark. */}
     </div>
   );
 }
@@ -629,7 +593,10 @@ function MarqueeBlockView({ marquee }: { marquee: MarqueeBlock }) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: `${px(14)}px ${px(30)}px ${px(16)}px`,
+          // Extra bottom padding reserves a safe zone: X overlays its caption
+          // bar across the bottom ~70px of the card in-feed. space-between then
+          // seats the chips/backing just above that band instead of under it.
+          padding: `${px(14)}px ${px(30)}px ${px(80)}px`,
           position: "relative",
         }}
       >
