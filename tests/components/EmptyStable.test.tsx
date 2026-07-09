@@ -9,7 +9,7 @@ import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import type { CapperRow } from "@/lib/types";
 
 const row = (id: number, handle: string): CapperRow =>
-  ({ capper_id: id, handle, display_name: handle.toUpperCase(), profile_image_url: null,
+  ({ capper_id: String(id), handle, display_name: handle.toUpperCase(), profile_image_url: null,
      units_profit: 10 + id, roi_pct: 5, win_rate: 0.5, picks_count: 100,
      current_day_streak: 0, trajectory_units: [0, 1], last_picks: [], live_picks_count: 0,
    } as unknown as CapperRow);

@@ -44,10 +44,11 @@ export default async function MyTailsPage() {
     );
   }
 
-  const { data: follows } = await supabase
+  const { data: follows, error: followsError } = await supabase
     .from("capper_follows")
     .select("capper_id")
     .eq("user_id", user.id);
+  if (followsError) console.error("my-tails follows query failed:", followsError);
   const ids = (follows ?? []).map((f: { capper_id: number }) => f.capper_id);
   const stable = ids.map((id) => byId.get(String(id))).filter(Boolean) as CapperRow[];
   const today = ids.length > 0 ? await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] })) : { date: "", picks: [] };

@@ -31,7 +31,7 @@ export function EmptyStable({ suggestions }: { suggestions: CapperRow[] }) {
               {formatUnits(c.units_profit)}
             </div>
             <div className="mt-3">
-              <TailButton capperId={c.capper_id} size="compact" />
+              <TailButton capperId={Number(c.capper_id)} size="compact" />
             </div>
           </div>
         ))}
