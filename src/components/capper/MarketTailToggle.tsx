@@ -87,13 +87,13 @@ export function MarketTailToggle({ capperId, market }: { capperId: number; marke
       onClick={toggle}
       disabled={pending || tailing === null}
       title={tailing ? "Untail this market" : "Tail only this market from this capper"}
-      className={`text-xs font-semibold transition-colors disabled:opacity-50 ${
+      className={`whitespace-nowrap text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
         tailing
-          ? "text-[var(--color-pos)] hover:text-[var(--color-neg)]"
+          ? "text-[var(--color-text)] hover:text-[var(--color-neg)]"
           : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
       }`}
     >
-      {tailing ? "tailing" : "+ tail"}
+      {tailing ? "✓" : "Tail"}
     </button>
   );
 }

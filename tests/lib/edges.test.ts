@@ -32,8 +32,20 @@ describe("buildEdgeView verdicts", () => {
     expect(v.sentence).toContain("15.1%");
   });
 
-  it("LOSING with a deserved-better qualifier when the close-judged return is positive", () => {
-    const v = buildEdgeView({ ...base, roi_pct: -19.2, xroi_pct: 1.1 });
+  it("UNLUCKY when losing but the close-judged expectation is positive on a real sample", () => {
+    const v = buildEdgeView({ ...base, roi_pct: -3.7, xroi_pct: 15.7 });
+    expect(v.verdict).toEqual({ label: "UNLUCKY", tone: "pos" });
+    expect(v.sentence).toContain("+15.7%");
+  });
+
+  it("stays LOSING when the positive expectation rests on a small sample", () => {
+    const v = buildEdgeView({
+      ...base,
+      n_decided: 14,
+      roi_pct: -19.2,
+      xroi_pct: 1.1,
+      gate_reasons: ["fewer than 40 decided picks", "realized ROI under 6%"],
+    });
     expect(v.verdict.label).toBe("LOSING");
     expect(v.sentence).toContain("deserved better");
   });

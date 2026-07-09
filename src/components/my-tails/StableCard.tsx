@@ -47,8 +47,10 @@ export function StableCard({
             </div>
             <span className="text-xs text-[var(--color-text-muted)]">@{capper.handle}</span>
             {scoped && (
-              <span className="ml-2 text-[11px] font-semibold text-[var(--color-gold)]">
-                {scopes.map((m) => MARKET_LABELS[m] ?? m).join(" + ")} only
+              <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-gold)]">
+                {scopes.length === 1
+                  ? `${MARKET_LABELS[scopes[0]] ?? scopes[0]} only`
+                  : `${scopes.length} markets only`}
               </span>
             )}
           </div>
@@ -100,17 +102,10 @@ export function StableCard({
               }
               const f = buildEdgeView(e);
               return (
-                <div key={m} className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm font-semibold text-[var(--color-text)] truncate">
-                    {f.label}
-                  </span>
-                  <span className="flex items-baseline gap-2 shrink-0 tabular-nums">
-                    <span className={`text-[20px] leading-none font-extrabold ${toneCls(f.roiTone)}`}>
-                      {f.roi.replace(" ROI", "")}
-                    </span>
-                    <span className="text-xs text-[var(--color-text-muted)]">{f.secondary}</span>
-                    <span className={`text-xs font-semibold lowercase ${toneCls(f.verdict.tone)}`}>
-                      {VERDICT_WORDS[f.verdict.label] ?? f.verdict.label.toLowerCase()}
+                <div key={m}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)]">
+                      {f.label}
                     </span>
                     {onUntailMarket && (
                       <button
@@ -121,12 +116,23 @@ export function StableCard({
                           ev.stopPropagation();
                           onUntailMarket(m);
                         }}
-                        className="ml-1 text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-xs"
+                        className="text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-xs"
                       >
                         {"✕"}
                       </button>
                     )}
-                  </span>
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-2 tabular-nums">
+                    <span className={`text-[22px] leading-none font-extrabold ${toneCls(f.roiTone)}`}>
+                      {f.roi.replace(" ROI", "")}
+                    </span>
+                    <span className="text-xs text-[var(--color-text-muted)]">{f.secondary}</span>
+                    <span
+                      className={`ml-auto text-xs font-semibold lowercase ${toneCls(f.verdict.tone)}`}
+                    >
+                      {VERDICT_WORDS[f.verdict.label] ?? f.verdict.label.toLowerCase()}
+                    </span>
+                  </div>
                 </div>
               );
             })}

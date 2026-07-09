@@ -16,13 +16,13 @@ describe("MarketTailToggle", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("renders the plain + tail control for a VIP", () => {
+  it("renders the plain tail control for a VIP", () => {
     mockAuth.current = {
       session: { user: { id: "u1" } },
       entitlements: { isLoggedIn: true, isVip: true },
     };
     render(<MarketTailToggle capperId={2} market="HRR" />);
-    const btn = screen.getByRole("button", { name: /\+ tail/i });
+    const btn = screen.getByRole("button", { name: /^tail$/i });
     expect(btn).toBeEnabled();
   });
 });

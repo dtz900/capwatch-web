@@ -54,11 +54,22 @@ function verdict(row: EdgeRow): { label: string; tone: VerdictTone; sentence: st
   }
 
   if (roi !== null && roi < 0) {
+    const smallSample =
+      hasReason(reasons, "fewer than") || hasReason(reasons, "too few picks");
+    if (xroi !== null && xroi > 0 && !smallSample) {
+      /* The judge must cut both ways: if winning above expectation is luck,
+         losing below a positive expectation is bad luck, not bad betting. */
+      return {
+        label: "UNLUCKY",
+        tone: "pos",
+        sentence: `Down ${Math.abs(roi).toFixed(1)}%, but closing odds say these picks should be winning (${pct(xroi)} expected). Bad run, good bets.`,
+      };
+    }
     if (xroi !== null && xroi > 0) {
       return {
         label: "LOSING",
         tone: "neg",
-        sentence: `Down ${Math.abs(roi).toFixed(1)}%, though closing odds say these picks deserved better. Closer to even on merit.`,
+        sentence: `Down ${Math.abs(roi).toFixed(1)}%, though closing odds say these picks deserved better. Sample is still small.`,
       };
     }
     return {
@@ -146,6 +157,7 @@ export function buildEdgeView(row: EdgeRow): EdgeView {
 /* Plain-word verdicts. No pill chrome; the word and its color carry it. */
 export const VERDICT_WORDS: Record<string, string> = {
   "HOLDS UP": "real edge",
+  UNLUCKY: "unlucky",
   "LUCK SO FAR": "luck",
   VARIANCE: "variance",
   LOSING: "losing",
