@@ -218,7 +218,7 @@ export interface HistoryPick {
   legs?: HistoryPickLeg[];
   /** Source tweet has been deleted from X at any point. */
   was_deleted_on_x?: boolean;
-  /** Deletion timestamp is after the game's commence_time -- the
+  /** Deletion timestamp is after the game's commence_time: the
    * brand-killer pattern (capper pulling the receipt after the bet
    * went bad). Always false for multi-leg parlays. */
   deleted_after_game_start?: boolean;
@@ -376,6 +376,7 @@ export interface TodayPickEntry {
   kind: "straight" | "parlay";
   matchup: string | null;
   market: string | null;
+  market_group: string | null;
   selection: string | null;
   line: number | null;
   odds_taken: number | null;

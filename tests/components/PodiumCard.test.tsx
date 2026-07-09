@@ -48,14 +48,15 @@ describe("PodiumCard", () => {
     expect(screen.getByText(/87 picks/)).toBeInTheDocument();
   });
 
-  it("shows the Model tag when capper is fadeai_", () => {
-    render(<PodiumCard rank={1} variant="gold" capper={sample} />);
-    expect(screen.getByText("Model")).toBeInTheDocument();
+  it("shows the model avatar ring when capper is fadeai_", () => {
+    // The model marker is the blue gradient ring CapperAvatar renders when apiIntegrated
+    const { container } = render(<PodiumCard rank={1} variant="gold" capper={sample} />);
+    expect(container.querySelector('[style*="linear-gradient(135deg"]')).not.toBeNull();
   });
 
-  it("does not show the Model tag for non-fadeai cappers", () => {
-    render(<PodiumCard rank={2} variant="silver" capper={{ ...sample, handle: "sacstim" }} />);
-    expect(screen.queryByText("Model")).not.toBeInTheDocument();
+  it("does not show the model avatar ring for non-fadeai cappers", () => {
+    const { container } = render(<PodiumCard rank={2} variant="silver" capper={{ ...sample, handle: "sacstim" }} />);
+    expect(container.querySelector('[style*="linear-gradient(135deg"]')).toBeNull();
   });
 
   it("shows rank label for current standing (not crowned)", () => {
