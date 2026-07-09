@@ -4,7 +4,15 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 
-export function FollowButton({ capperId }: { capperId: number }) {
+const RETURN_COOKIE = "ts_return_to";
+
+export function TailButton({
+  capperId,
+  size = "hero",
+}: {
+  capperId: number;
+  size?: "hero" | "compact";
+}) {
   const { entitlements, session } = useAuth();
   const supabase = useMemo(
     () =>
@@ -14,12 +22,12 @@ export function FollowButton({ capperId }: { capperId: number }) {
     []
   );
   const router = useRouter();
-  const [following, setFollowing] = useState<boolean | null>(null);
+  const [tailing, setTailing] = useState<boolean | null>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
     if (!supabase || !session?.user?.id) {
-      setFollowing(null);
+      setTailing(false);
       return;
     }
     supabase
@@ -28,49 +36,55 @@ export function FollowButton({ capperId }: { capperId: number }) {
       .eq("user_id", session.user.id)
       .eq("capper_id", capperId)
       .maybeSingle()
-      .then(({ data }) => setFollowing(!!data));
+      .then(({ data }) => setTailing(!!data));
   }, [session, capperId, supabase]);
 
   async function toggle() {
-    if (pending) return;
+    if (pending || tailing === null) return;
     if (!entitlements.isLoggedIn || !session) {
+      document.cookie = `${RETURN_COOKIE}=${encodeURIComponent(
+        window.location.pathname
+      )}; path=/; max-age=1800; samesite=lax`;
       router.push("/login");
       return;
     }
     if (!supabase) return;
     setPending(true);
     try {
-      if (following) {
-        setFollowing(false);
+      if (tailing) {
+        setTailing(false);
         const { error } = await supabase
           .from("capper_follows")
           .delete()
           .eq("user_id", session.user.id)
           .eq("capper_id", capperId);
-        if (error) setFollowing(true);
+        if (error) setTailing(true);
       } else {
-        setFollowing(true);
+        setTailing(true);
         const { error } = await supabase
           .from("capper_follows")
           .insert({ user_id: session.user.id, capper_id: capperId });
-        if (error) setFollowing(false);
+        if (error) setTailing(false);
       }
     } finally {
       setPending(false);
     }
   }
 
+  const pad = size === "hero" ? "px-5 py-2" : "px-3 py-1.5";
+  const base = `rounded-lg text-sm font-bold uppercase tracking-wide transition-colors ${pad} disabled:opacity-50 disabled:cursor-not-allowed`;
+
   return (
     <button
       onClick={toggle}
-      disabled={pending || following === null}
+      disabled={pending || tailing === null}
       className={
-        following
-          ? "rounded-lg bg-[var(--color-text)] text-black px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
-          : "rounded-lg border border-[var(--color-border-h)] px-3 py-1.5 text-sm text-[var(--color-text)] disabled:opacity-50"
+        tailing
+          ? `${base} border border-[var(--color-border-h)] text-[var(--color-text)] hover:border-[var(--color-neg)]`
+          : `${base} bg-[var(--color-text)] text-black hover:opacity-90`
       }
     >
-      {following ? "Following" : "Follow"}
+      {tailing ? "Tailing ✓" : "+ Tail"}
     </button>
   );
 }
