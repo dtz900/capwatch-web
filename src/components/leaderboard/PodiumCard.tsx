@@ -84,7 +84,7 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
       {/* Top accent stripe */}
       <div className={`absolute inset-x-0 top-0 h-[2px] ${accent.bar}`} />
 
-      {/* Branded watermark — large rank numeral bleeding off the right */}
+      {/* Branded watermark: large rank numeral bleeding off the right */}
       <span
         aria-hidden="true"
         className={`pointer-events-none absolute -right-6 -top-2 select-none

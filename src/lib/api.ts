@@ -374,7 +374,7 @@ export interface DeletedPick {
   likely_duplicate_of: number | null;
   /** When non-null, the deleted tweet was followed within an hour by a
    * still-live tweet from the same capper with the same body content.
-   * This is "delete and repost" — effectively an edit, not a credibility-
+   * This is "delete and repost", effectively an edit, not a credibility-
    * affecting deletion. URL points to the live replacement tweet. */
   replacement_tweet_url: string | null;
 }
