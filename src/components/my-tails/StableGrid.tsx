@@ -1,11 +1,17 @@
 "use client";
 import { useMemo, useState } from "react";
-import type { CapperRow } from "@/lib/types";
+import type { CapperRow, TodayPickEntry } from "@/lib/types";
 import { StableCard } from "@/components/my-tails/StableCard";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 
-export function StableGrid({ initial }: { initial: CapperRow[] }) {
+export function StableGrid({
+  initial,
+  todayByCapper = {},
+}: {
+  initial: CapperRow[];
+  todayByCapper?: Record<string, TodayPickEntry[]>;
+}) {
   const [rows, setRows] = useState(initial);
   const { session } = useAuth();
   const supabase = useMemo(
@@ -31,7 +37,12 @@ export function StableGrid({ initial }: { initial: CapperRow[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {rows.map((c) => (
-        <StableCard key={c.capper_id} capper={c} onUntail={() => untail(c.capper_id)} />
+        <StableCard
+          key={c.capper_id}
+          capper={c}
+          onUntail={() => untail(c.capper_id)}
+          todayPicks={todayByCapper[String(c.capper_id)] ?? []}
+        />
       ))}
     </div>
   );

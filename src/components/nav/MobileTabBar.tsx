@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { vipEnabled } from "@/lib/flags";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const TABS: { href: string; label: string; icon: () => React.JSX.Element; gold?: boolean }[] = [
   { href: "/parlay-palace", label: "Palace", icon: CrownIcon, gold: true },
@@ -63,8 +65,27 @@ function MethodologyIcon() {
   );
 }
 
+function MyTailsIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 3h12v18l-6-4.5L6 21z" />
+    </svg>
+  );
+}
+
 export function MobileTabBar() {
   const pathname = usePathname() || "/";
+  const { entitlements } = useAuth();
+  const flagOn = vipEnabled();
+
+  let tabs = TABS;
+  if (flagOn) {
+    tabs = TABS.filter((t) => t.href !== "/methodology");
+    if (entitlements.isLoggedIn) {
+      tabs = [...tabs, { href: "/my-tails", label: "My Tails", icon: MyTailsIcon }];
+    }
+  }
+
   return (
     <nav
       role="navigation"
@@ -74,8 +95,8 @@ export function MobileTabBar() {
                  border-t border-[rgba(255,255,255,0.06)]
                  pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="grid grid-cols-5 h-14">
-        {TABS.map((t) => {
+      <div className={`grid h-14 ${tabs.length === 4 ? "grid-cols-4" : "grid-cols-5"}`}>
+        {tabs.map((t) => {
           const active = isActive(t.href, pathname);
           const Icon = t.icon;
           const cls = t.gold
