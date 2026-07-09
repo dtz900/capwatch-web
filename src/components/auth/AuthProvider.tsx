@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { resolveEntitlements, type Entitlements } from "@/lib/entitlements";
+import { vipEnabled } from "@/lib/flags";
 
 interface AuthState {
   session: Session | null;
@@ -21,15 +22,21 @@ const AuthContext = createContext<AuthState>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<{ tier: string } | null>(null);
-  const supabase = useMemo(() => createBrowserSupabase(), []);
+  const enabled =
+    vipEnabled() &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = useMemo(() => (enabled ? createBrowserSupabase() : null), [enabled]);
 
   useEffect(() => {
+    if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, [supabase]);
 
   useEffect(() => {
+    if (!supabase) return;
     if (!session?.user?.id) {
       setProfile(null);
       return;
@@ -47,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     entitlements: resolveEntitlements(session, profile),
     signOut: async () => {
+      if (!supabase) return;
       await supabase.auth.signOut();
     },
   };

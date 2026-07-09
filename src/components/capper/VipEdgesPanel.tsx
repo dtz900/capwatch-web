@@ -13,11 +13,17 @@ interface ClvSummary {
 
 export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSummary }) {
   const { entitlements } = useAuth();
-  const supabase = useMemo(() => createBrowserSupabase(), []);
+  const supabase = useMemo(
+    () =>
+      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        ? createBrowserSupabase()
+        : null,
+    []
+  );
   const [rows, setRows] = useState<EdgeRow[] | null>(null);
 
   useEffect(() => {
-    if (!entitlements.isVip) return;
+    if (!supabase || !entitlements.isVip) return;
     supabase
       .from("capper_market_edges")
       .select(

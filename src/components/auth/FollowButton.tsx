@@ -6,13 +6,19 @@ import { useAuth } from "@/components/auth/AuthProvider";
 
 export function FollowButton({ capperId }: { capperId: number }) {
   const { entitlements, session } = useAuth();
-  const supabase = useMemo(() => createBrowserSupabase(), []);
+  const supabase = useMemo(
+    () =>
+      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        ? createBrowserSupabase()
+        : null,
+    []
+  );
   const router = useRouter();
   const [following, setFollowing] = useState<boolean | null>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    if (!session?.user?.id) {
+    if (!supabase || !session?.user?.id) {
       setFollowing(null);
       return;
     }
@@ -31,6 +37,7 @@ export function FollowButton({ capperId }: { capperId: number }) {
       router.push("/login");
       return;
     }
+    if (!supabase) return;
     setPending(true);
     try {
       if (following) {

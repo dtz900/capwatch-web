@@ -5,17 +5,21 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { vipEnabled } from "@/lib/flags";
 
 export default function LoginPage() {
-  const enabled = vipEnabled();
+  const enabled =
+    vipEnabled() &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supabase = useMemo(() => createBrowserSupabase(), []);
+  const supabase = useMemo(() => (enabled ? createBrowserSupabase() : null), [enabled]);
 
   if (!enabled) notFound();
 
   async function sendLink(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!supabase) return;
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
@@ -25,6 +29,7 @@ export default function LoginPage() {
   }
 
   async function google() {
+    if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },

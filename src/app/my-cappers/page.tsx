@@ -15,14 +15,20 @@ interface FollowedCapper {
 
 export default function MyCappersPage() {
   const { entitlements, session } = useAuth();
-  const supabase = useMemo(() => createBrowserSupabase(), []);
+  const supabase = useMemo(
+    () =>
+      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        ? createBrowserSupabase()
+        : null,
+    []
+  );
   const router = useRouter();
   const [rows, setRows] = useState<FollowedCapper[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const enabled = vipEnabled();
 
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!supabase || !session?.user?.id) return;
     supabase
       .from("capper_follows")
       .select("capper_id, cappers(handle, display_name)")

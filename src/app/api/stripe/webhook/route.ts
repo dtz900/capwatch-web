@@ -81,6 +81,8 @@ async function sync(
   });
   const { error: upsertErr } = await db.from("subscriptions").upsert(subscription, { onConflict: "user_id" });
   if (upsertErr) throw new Error(`subscriptions upsert failed: ${upsertErr.message}`);
-  const { error: tierErr } = await db.from("ts_profiles").update({ tier }).eq("user_id", userId);
+  const { error: tierErr } = await db
+    .from("ts_profiles")
+    .upsert({ user_id: userId, tier }, { onConflict: "user_id" });
   if (tierErr) throw new Error(`ts_profiles tier update failed: ${tierErr.message}`);
 }
