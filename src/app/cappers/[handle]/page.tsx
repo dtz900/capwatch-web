@@ -34,6 +34,8 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Window } from "@/lib/types";
+import { vipEnabled } from "@/lib/flags";
+import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
@@ -434,6 +436,19 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <div className="mb-6">
             <StatBandLive />
           </div>
+
+          {vipEnabled() && (
+            <div className="mb-6">
+              <VipEdgesPanel
+                capperId={profile.capper.id}
+                clv={{
+                  beatPct: allTimeAgg?.clv_beat_pct ?? null,
+                  avg: allTimeAgg?.clv_avg ?? null,
+                  n: allTimeAgg?.clv_count ?? null,
+                }}
+              />
+            </div>
+          )}
 
           {showNoPublicPicks && (
             <section className="mb-6 rounded-lg border border-[rgba(192,132,252,0.25)] bg-[rgba(192,132,252,0.05)] p-5 sm:p-6">

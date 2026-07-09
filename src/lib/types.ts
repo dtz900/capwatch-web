@@ -367,3 +367,24 @@ export interface PalaceCandidate {
   graded_at: string | null;
   status: "candidate" | "draft" | "published";
 }
+
+export interface TodayPickEntry {
+  capper_id: number;
+  handle: string | null;
+  display_name: string | null;
+  profile_image_url: string | null;
+  kind: "straight" | "parlay";
+  matchup: string | null;
+  market: string | null;
+  selection: string | null;
+  line: number | null;
+  odds_taken: number | null;
+  posted_at: string | null;
+  outcome: "W" | "L" | "P" | "V" | null;
+  profit_units: number | null;
+}
+
+export interface TodayPicksResponse {
+  date: string;
+  picks: TodayPickEntry[];
+}

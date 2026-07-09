@@ -4,8 +4,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { NavSearch } from "@/components/nav/NavSearch";
+import { vipEnabled } from "@/lib/flags";
+import { AvatarMenu } from "@/components/auth/AvatarMenu";
+import { useAuth } from "@/components/auth/AuthProvider";
 
-const LINKS: { href: string; label: string; gold?: boolean }[] = [
+const BASE_LINKS: { href: string; label: string; gold?: boolean }[] = [
   { href: "/parlay-palace", label: "Parlay Palace", gold: true },
   { href: "/slate", label: "Slate" },
   { href: "/", label: "Leaderboard" },
@@ -20,6 +23,16 @@ function isActive(href: string, pathname: string): boolean {
 
 export function TopNav() {
   const pathname = usePathname() || "/";
+  const flagOn = vipEnabled();
+  const { entitlements } = useAuth();
+
+  const links = flagOn
+    ? [
+        ...BASE_LINKS.filter((l) => l.label !== "Methodology"),
+        ...(entitlements.isLoggedIn ? [{ href: "/my-tails", label: "My Tails" }] : []),
+      ]
+    : BASE_LINKS;
+
   return (
     <nav
       className="sticky top-0 z-30 backdrop-blur-md bg-[rgba(10,10,12,0.85)]
@@ -37,7 +50,7 @@ export function TopNav() {
           />
         </Link>
         <div className="hidden sm:flex gap-1 mx-6">
-          {LINKS.map((l) => {
+          {links.map((l) => {
             const active = isActive(l.href, pathname);
             // Active = a colored underline, not a boxed background.
             // Parlay Palace gets a gold underline + gold text always;
@@ -70,6 +83,7 @@ export function TopNav() {
         </div>
         <div className="flex items-center gap-2">
           <NavSearch />
+          {flagOn && <AvatarMenu />}
         </div>
       </div>
     </nav>
