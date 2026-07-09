@@ -5,9 +5,8 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { fetchLeaderboard, fetchTodayPicks } from "@/lib/api";
 import { vipEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
-import { TodayStrip } from "@/components/my-tails/TodayStrip";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
-import type { CapperRow } from "@/lib/types";
+import type { CapperRow, TodayPickEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Tails | TailSlips" };
@@ -25,7 +24,7 @@ export default async function MyTailsPage() {
     min_picks: 0,
     active_only: false,
   });
-  const byId = new Map<string, CapperRow>(lb.leaderboard.map((r) => [r.capper_id, r]));
+  const byId = new Map<string, CapperRow>(lb.leaderboard.map((r) => [String(r.capper_id), r]));
   const top3 = lb.leaderboard.slice(0, 3);
 
   if (!user) {
@@ -53,18 +52,29 @@ export default async function MyTailsPage() {
   const stable = ids.map((id) => byId.get(String(id))).filter(Boolean) as CapperRow[];
   const today = ids.length > 0 ? await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] })) : { date: "", picks: [] };
 
+  const todayByCapper: Record<string, TodayPickEntry[]> = {};
+  for (const p of today.picks) {
+    (todayByCapper[String(p.capper_id)] ??= []).push(p);
+  }
+
   return (
     <>
       <TopNav />
-      <main className="mx-auto max-w-5xl px-4 py-10 space-y-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">My Tails</h1>
+      <main className="mx-auto max-w-5xl px-4 py-10 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">My Tails</h1>
+          {ids.length > 0 && (
+            <p className="mt-1 text-sm text-[var(--color-text-soft)]">
+              {today.picks.length > 0
+                ? `${today.picks.length} pick${today.picks.length === 1 ? "" : "s"} from your tails today`
+                : "No picks from your tails yet today."}
+            </p>
+          )}
+        </div>
         {ids.length === 0 ? (
           <EmptyStable suggestions={top3} />
         ) : (
-          <>
-            <TodayStrip picks={today.picks} date={today.date} />
-            <StableGrid initial={stable} />
-          </>
+          <StableGrid initial={stable} todayByCapper={todayByCapper} />
         )}
       </main>
     </>

@@ -1,17 +1,20 @@
 import Link from "next/link";
-import type { CapperRow } from "@/lib/types";
+import type { CapperRow, TodayPickEntry } from "@/lib/types";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { Sparkline } from "@/components/leaderboard/Sparkline";
 import { MomentumStrip } from "@/components/leaderboard/MomentumStrip";
+import { StatusPill } from "@/components/my-tails/StatusPill";
 import { formatUnits } from "@/lib/formatters";
 
 export function StableCard({
   capper,
   onUntail,
+  todayPicks = [],
 }: {
   capper: CapperRow;
   onUntail: () => void;
+  todayPicks?: TodayPickEntry[];
 }) {
   const positive = (capper.units_profit ?? 0) >= 0;
   return (
@@ -64,6 +67,58 @@ export function StableCard({
             <MomentumStrip picks={capper.last_picks} />
           </div>
         )}
+        <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+              Today
+            </span>
+            {todayPicks.length > 0 && (
+              <span className="text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
+                {todayPicks.length} pick{todayPicks.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+          {todayPicks.length === 0 ? (
+            <p className="mt-2 text-xs text-[var(--color-text-muted)]">No picks yet today.</p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {todayPicks.map((p, i) => (
+                <li
+                  key={`${p.posted_at}-${i}`}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold leading-tight text-[var(--color-text)] truncate">
+                      {p.selection}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+                      {p.matchup ?? (p.kind === "parlay" ? "Multi-game" : "")}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {p.odds_taken != null && (
+                      <span className="text-xs font-semibold tabular-nums text-[var(--color-text-soft)]">
+                        {p.odds_taken > 0 ? "+" : ""}
+                        {p.odds_taken}
+                      </span>
+                    )}
+                    {(p.outcome === "W" || p.outcome === "L") && p.profit_units != null && (
+                      <span
+                        className={`text-xs font-bold tabular-nums ${
+                          p.profit_units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+                        }`}
+                      >
+                        {p.profit_units >= 0 ? "+" : ""}
+                        {p.profit_units.toFixed(1)}u
+                      </span>
+                    )}
+                    <StatusPill outcome={p.outcome} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </Link>
     </div>
   );
