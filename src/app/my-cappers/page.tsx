@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { redirect, useRouter } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -45,7 +45,7 @@ export default function MyCappersPage() {
       });
   }, [session, supabase]);
 
-  if (!enabled) redirect("/");
+  if (!enabled) notFound();
 
   if (!entitlements.isLoggedIn) {
     return (
