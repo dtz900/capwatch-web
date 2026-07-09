@@ -7,6 +7,7 @@ import { vipEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import type { CapperRow, TodayPickEntry } from "@/lib/types";
+import type { EdgeRow } from "@/lib/edges";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Tails | TailSlips" };
@@ -45,16 +46,53 @@ export default async function MyTailsPage() {
 
   const { data: follows, error: followsError } = await supabase
     .from("capper_follows")
-    .select("capper_id")
+    .select("capper_id, market")
     .eq("user_id", user.id);
   if (followsError) console.error("my-tails follows query failed:", followsError);
-  const ids = (follows ?? []).map((f: { capper_id: number }) => f.capper_id);
+  const followRows = (follows ?? []) as { capper_id: number; market: string }[];
+  const ids = [...new Set(followRows.map((f) => f.capper_id))];
+
+  // A capper with an 'all' row is fully tailed; scope rows only count when
+  // no 'all' row exists (the toggle enforces this, this is belt and braces).
+  const whole = new Set(
+    followRows.filter((f) => f.market === "all").map((f) => String(f.capper_id))
+  );
+  const scopesByCapper: Record<string, string[]> = {};
+  for (const f of followRows) {
+    const key = String(f.capper_id);
+    if (f.market !== "all" && !whole.has(key)) {
+      (scopesByCapper[key] ??= []).push(f.market);
+    }
+  }
+
+  const scopedIds = Object.keys(scopesByCapper).map(Number);
+  const edgesByCapper: Record<string, EdgeRow[]> = {};
+  if (scopedIds.length > 0) {
+    const { data: edgeRows } = await supabase
+      .from("capper_market_edges")
+      .select(
+        "capper_id, market, n_decided, roi_pct, xroi_pct, clv_beat_pct, clv_avg_cents, clv_n, tracked_days, gate_pass, gate_reasons"
+      )
+      .in("capper_id", scopedIds);
+    for (const e of (edgeRows ?? []) as (EdgeRow & { capper_id: number })[]) {
+      const key = String(e.capper_id);
+      if (scopesByCapper[key]?.includes(e.market)) {
+        (edgesByCapper[key] ??= []).push(e);
+      }
+    }
+  }
+
   const stable = ids.map((id) => byId.get(String(id))).filter(Boolean) as CapperRow[];
   const today = ids.length > 0 ? await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] })) : { date: "", picks: [] };
 
   const todayByCapper: Record<string, TodayPickEntry[]> = {};
   for (const p of today.picks) {
-    (todayByCapper[String(p.capper_id)] ??= []).push(p);
+    const key = String(p.capper_id);
+    const capperScopes = scopesByCapper[key];
+    // Scoped cappers only surface picks in their tailed markets; parlays
+    // carry market_group null and drop out of scoped views by design.
+    if (capperScopes && (!p.market_group || !capperScopes.includes(p.market_group))) continue;
+    (todayByCapper[key] ??= []).push(p);
   }
 
   return (
@@ -74,7 +112,12 @@ export default async function MyTailsPage() {
         {ids.length === 0 ? (
           <EmptyStable suggestions={top3} />
         ) : (
-          <StableGrid initial={stable} todayByCapper={todayByCapper} />
+          <StableGrid
+            initial={stable}
+            todayByCapper={todayByCapper}
+            scopesByCapper={scopesByCapper}
+            edgesByCapper={edgesByCapper}
+          />
         )}
       </main>
     </>
