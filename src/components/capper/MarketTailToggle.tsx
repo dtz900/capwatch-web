@@ -51,16 +51,31 @@ export function MarketTailToggle({ capperId, market }: { capperId: number; marke
       } else {
         setTailing(true);
         // A whole-capper tail converts to scoped: drop the 'all' row first.
-        await supabase
+        // select() returns the deleted rows so we know whether one existed
+        // and can restore it if the scoped insert then fails.
+        const { data: deleted, error: delErr } = await supabase
           .from("capper_follows")
           .delete()
           .eq("user_id", session.user.id)
           .eq("capper_id", capperId)
-          .eq("market", "all");
+          .eq("market", "all")
+          .select("market");
+        if (delErr) {
+          setTailing(false);
+          return;
+        }
         const { error } = await supabase
           .from("capper_follows")
           .insert({ user_id: session.user.id, capper_id: capperId, market });
-        if (error) setTailing(false);
+        if (error) {
+          setTailing(false);
+          if (deleted && deleted.length > 0) {
+            // Best effort restore of the whole-capper tail we removed above.
+            await supabase
+              .from("capper_follows")
+              .insert({ user_id: session.user.id, capper_id: capperId, market: "all" });
+          }
+        }
       }
     } finally {
       setPending(false);
