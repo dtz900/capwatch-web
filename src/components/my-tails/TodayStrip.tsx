@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import type { TodayPickEntry } from "@/lib/types";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
@@ -50,9 +51,12 @@ export function TodayStrip({ picks, date }: { picks: TodayPickEntry[]; date: str
               className="min-w-[220px] shrink-0 rounded-xl border border-[var(--color-border)] bg-black/20 px-3 py-2.5 hover:border-[var(--color-border-h)]"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-[var(--color-text)] truncate">
-                  {p.display_name ?? p.handle}
-                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <CapperAvatar url={p.profile_image_url ?? null} handle={p.handle ?? null} size={20} />
+                  <span className="text-xs font-semibold text-[var(--color-text)] truncate">
+                    {p.display_name ?? p.handle}
+                  </span>
+                </div>
                 <StatusPill outcome={p.outcome} />
               </div>
               <div className="mt-1.5 text-sm text-[var(--color-text)] truncate">{p.selection}</div>
