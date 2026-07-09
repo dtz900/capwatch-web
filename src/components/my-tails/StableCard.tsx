@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CapperRow, TodayPickEntry } from "@/lib/types";
+import { buildEdgeView, MARKET_LABELS, VERDICT_WORDS, toneCls, type EdgeRow } from "@/lib/edges";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { Sparkline } from "@/components/leaderboard/Sparkline";
@@ -11,11 +12,18 @@ export function StableCard({
   capper,
   onUntail,
   todayPicks = [],
+  scopes = [],
+  scopeEdges = [],
+  onUntailMarket,
 }: {
   capper: CapperRow;
   onUntail: () => void;
   todayPicks?: TodayPickEntry[];
+  scopes?: string[];
+  scopeEdges?: EdgeRow[];
+  onUntailMarket?: (market: string) => void;
 }) {
+  const scoped = scopes.length > 0;
   const positive = (capper.units_profit ?? 0) >= 0;
   return (
     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
@@ -38,33 +46,90 @@ export function StableCard({
               <StreakBadge streak={capper.current_day_streak} size="sm" />
             </div>
             <span className="text-xs text-[var(--color-text-muted)]">@{capper.handle}</span>
+            {scoped && (
+              <span className="ml-2 text-[11px] font-semibold text-[var(--color-gold)]">
+                {scopes.map((m) => MARKET_LABELS[m] ?? m).join(" + ")} only
+              </span>
+            )}
           </div>
         </div>
-        <div className="mt-4 flex items-end justify-between gap-3">
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
-              Net profit
+        {!scoped && (
+          <>
+            <div className="mt-4 flex items-end justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                  Net profit
+                </div>
+                <div
+                  className={`text-[32px] leading-none font-extrabold tabular-nums ${
+                    positive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+                  }`}
+                >
+                  {formatUnits(capper.units_profit)}
+                </div>
+                <div className="mt-1 text-xs text-[var(--color-text-soft)]">
+                  {capper.roi_pct != null ? `${capper.roi_pct > 0 ? "+" : ""}${capper.roi_pct.toFixed(1)}% ROI` : ""}
+                  {capper.win_rate != null ? ` · ${Math.round(capper.win_rate * 100)}% win` : ""}
+                  {` · ${capper.picks_count} picks`}
+                </div>
+              </div>
+              {capper.trajectory_units && capper.trajectory_units.length >= 2 && (
+                <Sparkline values={capper.trajectory_units} width={116} height={38} />
+              )}
             </div>
-            <div
-              className={`text-[32px] leading-none font-extrabold tabular-nums ${
-                positive ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
-              }`}
-            >
-              {formatUnits(capper.units_profit)}
-            </div>
-            <div className="mt-1 text-xs text-[var(--color-text-soft)]">
-              {capper.roi_pct != null ? `${capper.roi_pct > 0 ? "+" : ""}${capper.roi_pct.toFixed(1)}% ROI` : ""}
-              {capper.win_rate != null ? ` · ${Math.round(capper.win_rate * 100)}% win` : ""}
-              {` · ${capper.picks_count} picks`}
-            </div>
-          </div>
-          {capper.trajectory_units && capper.trajectory_units.length >= 2 && (
-            <Sparkline values={capper.trajectory_units} width={116} height={38} />
-          )}
-        </div>
-        {capper.last_picks && capper.last_picks.length > 0 && (
-          <div className="mt-3">
-            <MomentumStrip picks={capper.last_picks} />
+            {capper.last_picks && capper.last_picks.length > 0 && (
+              <div className="mt-3">
+                <MomentumStrip picks={capper.last_picks} />
+              </div>
+            )}
+          </>
+        )}
+        {scoped && (
+          <div className="mt-4 space-y-2.5">
+            {scopes.map((m) => {
+              const e = scopeEdges.find((r) => r.market === m);
+              if (!e) {
+                return (
+                  <div key={m} className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm font-semibold text-[var(--color-text)]">
+                      {MARKET_LABELS[m] ?? m}
+                    </span>
+                    <span className="text-xs text-[var(--color-text-muted)]">no data yet</span>
+                  </div>
+                );
+              }
+              const f = buildEdgeView(e);
+              return (
+                <div key={m} className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-semibold text-[var(--color-text)] truncate">
+                    {f.label}
+                  </span>
+                  <span className="flex items-baseline gap-2 shrink-0 tabular-nums">
+                    <span className={`text-[20px] leading-none font-extrabold ${toneCls(f.roiTone)}`}>
+                      {f.roi.replace(" ROI", "")}
+                    </span>
+                    <span className="text-xs text-[var(--color-text-muted)]">{f.secondary}</span>
+                    <span className={`text-xs font-semibold lowercase ${toneCls(f.verdict.tone)}`}>
+                      {VERDICT_WORDS[f.verdict.label] ?? f.verdict.label.toLowerCase()}
+                    </span>
+                    {onUntailMarket && (
+                      <button
+                        aria-label={`Untail ${f.label}`}
+                        title="Untail this market"
+                        onClick={(ev) => {
+                          ev.preventDefault();
+                          ev.stopPropagation();
+                          onUntailMarket(m);
+                        }}
+                        className="ml-1 text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-xs"
+                      >
+                        {"✕"}
+                      </button>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
         <div className="mt-4 border-t border-[var(--color-border)] pt-3">

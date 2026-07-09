@@ -376,6 +376,7 @@ export interface TodayPickEntry {
   kind: "straight" | "parlay";
   matchup: string | null;
   market: string | null;
+  market_group: string | null;
   selection: string | null;
   line: number | null;
   odds_taken: number | null;

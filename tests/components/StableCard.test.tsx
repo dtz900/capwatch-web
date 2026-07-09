@@ -37,4 +37,39 @@ describe("StableCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /untail/i }));
     expect(spy).toHaveBeenCalled();
   });
+
+  it("renders scoped market rows instead of the season block", () => {
+    const edge = {
+      market: "HRR", n_decided: 90, roi_pct: 13.4, xroi_pct: 4.2,
+      clv_beat_pct: null, clv_avg_cents: null, clv_n: 0,
+      tracked_days: 73, gate_pass: true, gate_reasons: [],
+    };
+    render(
+      <StableCard
+        capper={capper}
+        onUntail={() => {}}
+        scopes={["HRR"]}
+        scopeEdges={[edge]}
+        onUntailMarket={() => {}}
+      />
+    );
+    expect(screen.getByText(/Hits \+ Runs \+ RBIs only/)).toBeInTheDocument();
+    expect(screen.getByText("real edge")).toBeInTheDocument();
+    expect(screen.queryByText("Net profit")).not.toBeInTheDocument();
+  });
+
+  it("fires onUntailMarket from the scope row control", () => {
+    const spy = vi.fn();
+    const edge = {
+      market: "HRR", n_decided: 90, roi_pct: 13.4, xroi_pct: 4.2,
+      clv_beat_pct: null, clv_avg_cents: null, clv_n: 0,
+      tracked_days: 73, gate_pass: true, gate_reasons: [],
+    };
+    render(
+      <StableCard capper={capper} onUntail={() => {}} scopes={["HRR"]}
+        scopeEdges={[edge]} onUntailMarket={spy} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /untail hits \+ runs \+ rbis/i }));
+    expect(spy).toHaveBeenCalledWith("HRR");
+  });
 });
