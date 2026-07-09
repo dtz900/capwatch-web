@@ -43,7 +43,7 @@ export default function LoginPage() {
       <div className="rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-8">
         <h1 className="text-xl font-bold text-[var(--color-text)]">Sign in to TailSlips</h1>
         <p className="mt-1 text-sm text-[var(--color-text-soft)]">
-          Follow cappers and unlock premium stats.
+          Tail cappers and unlock premium stats.
         </p>
         {sent ? (
           <p className="mt-6 text-sm text-[var(--color-pos)]">

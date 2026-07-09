@@ -4,8 +4,10 @@ import { DeletedPicksPill } from "@/components/leaderboard/DeletedPicksPill";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { XIcon } from "@/components/icons/XIcon";
 import { RecentTrajectory } from "@/components/capper/RecentTrajectory";
+import { TailButton } from "@/components/auth/TailButton";
 import { formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
+import { vipEnabled } from "@/lib/flags";
 import type { CapperProfile, CapperAggregate, Window } from "@/lib/types";
 
 function formatMonth(iso: string | null): string | null {
@@ -127,6 +129,11 @@ export function CapperHero({
       {trajectorySeries.length >= 2 && (
         <div className="shrink-0 hidden md:block">
           <RecentTrajectory series={trajectorySeries} window={window} />
+        </div>
+      )}
+      {vipEnabled() && (
+        <div className="self-start shrink-0">
+          <TailButton capperId={c.id} size="hero" />
         </div>
       )}
     </header>
