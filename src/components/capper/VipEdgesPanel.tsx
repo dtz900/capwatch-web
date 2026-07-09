@@ -40,8 +40,9 @@ export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSum
       </p>
       {clv.n != null && clv.n > 0 && clv.beatPct != null && (
         <div className="mt-3 text-sm text-[var(--color-text)]">
-          Closing line value: beat the close on {Math.round(clv.beatPct * 100)}% of{" "}
-          {clv.n} ML and run-line picks
+          Closing line value: beat the close on{" "}
+          {/* allTimeAgg clv_beat_pct is fractional 0..1; edge rows' clv_beat_pct is already percent */}
+          {Math.round(clv.beatPct * 100)}% of {clv.n} ML and run-line picks
         </div>
       )}
       <div className="mt-3 divide-y divide-[var(--color-border)]">
@@ -67,7 +68,7 @@ export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSum
                 )}
               </div>
               <div className="text-right tabular-nums">
-                <div className={r.roi_pct != null && r.roi_pct > 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}>
+                <div className={r.roi_pct != null && r.roi_pct > 0 ? "text-[var(--color-pos)]" : r.roi_pct != null && r.roi_pct < 0 ? "text-[var(--color-neg)]" : "text-[var(--color-text-soft)]"}>
                   {f.roi} ROI
                 </div>
                 <div className="text-xs text-[var(--color-text-soft)]">
