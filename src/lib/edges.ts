@@ -24,7 +24,7 @@ export interface EdgeView {
 }
 
 /* Friendly market names. Anything unmapped renders as-is. */
-const MARKET_LABELS: Record<string, string> = {
+export const MARKET_LABELS: Record<string, string> = {
   ML: "Moneyline",
   HRR: "Hits + Runs + RBIs",
   First5: "First 5 Innings",
@@ -142,3 +142,20 @@ export function buildEdgeView(row: EdgeRow): EdgeView {
     secondary,
   };
 }
+
+/* Plain-word verdicts. No pill chrome; the word and its color carry it. */
+export const VERDICT_WORDS: Record<string, string> = {
+  "HOLDS UP": "real edge",
+  "LUCK SO FAR": "luck",
+  VARIANCE: "variance",
+  LOSING: "losing",
+  MARGINAL: "thin",
+  "TOO EARLY": "too early",
+};
+
+export const toneCls = (tone: VerdictTone) =>
+  tone === "pos"
+    ? "text-[var(--color-pos)]"
+    : tone === "neg"
+      ? "text-[var(--color-neg)]"
+      : "text-[var(--color-text-muted)]";

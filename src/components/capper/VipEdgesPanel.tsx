@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { buildEdgeView, type EdgeRow, type VerdictTone } from "@/lib/edges";
+import { buildEdgeView, toneCls, VERDICT_WORDS, type EdgeRow } from "@/lib/edges";
 import { VipTeaser } from "@/components/capper/VipTeaser";
 
 interface ClvSummary {
@@ -11,16 +11,6 @@ interface ClvSummary {
   avg: number | null;
   n: number | null;
 }
-
-/* Plain-word verdicts. No pill chrome; the word and its color carry it. */
-const VERDICT_WORDS: Record<string, string> = {
-  "HOLDS UP": "real edge",
-  "LUCK SO FAR": "luck",
-  VARIANCE: "variance",
-  LOSING: "losing",
-  MARGINAL: "thin",
-  "TOO EARLY": "too early",
-};
 
 export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSummary }) {
   const { entitlements } = useAuth();
@@ -79,13 +69,6 @@ export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSum
     </section>
   );
 }
-
-const toneCls = (tone: VerdictTone) =>
-  tone === "pos"
-    ? "text-[var(--color-pos)]"
-    : tone === "neg"
-      ? "text-[var(--color-neg)]"
-      : "text-[var(--color-text-muted)]";
 
 const VERDICT_RANK: Record<string, number> = {
   "HOLDS UP": 0,

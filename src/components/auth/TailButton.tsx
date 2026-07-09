@@ -32,11 +32,10 @@ export function TailButton({
     }
     supabase
       .from("capper_follows")
-      .select("capper_id")
+      .select("market")
       .eq("user_id", session.user.id)
       .eq("capper_id", capperId)
-      .maybeSingle()
-      .then(({ data }) => setTailing(!!data));
+      .then(({ data }) => setTailing(!!data && data.length > 0));
   }, [session, capperId, supabase]);
 
   async function toggle() {
@@ -53,6 +52,8 @@ export function TailButton({
     try {
       if (tailing) {
         setTailing(false);
+        // No market filter on purpose: untailing the capper removes the
+        // whole-capper row AND any market-scoped rows.
         const { error } = await supabase
           .from("capper_follows")
           .delete()
@@ -63,7 +64,7 @@ export function TailButton({
         setTailing(true);
         const { error } = await supabase
           .from("capper_follows")
-          .insert({ user_id: session.user.id, capper_id: capperId });
+          .insert({ user_id: session.user.id, capper_id: capperId, market: "all" });
         if (error) setTailing(false);
       }
     } finally {
