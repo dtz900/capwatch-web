@@ -26,6 +26,7 @@ describe("AvatarMenu", () => {
     };
     render(<AvatarMenu />);
     fireEvent.click(screen.getByRole("button", { name: /account menu/i }));
+    expect(screen.getByText("d@x.com")).toBeInTheDocument();
     expect(screen.getByText("Go VIP")).toBeInTheDocument();
     expect(screen.getByText("Account")).toBeInTheDocument();
     expect(screen.getByText("Sign out")).toBeInTheDocument();
@@ -39,6 +40,7 @@ describe("AvatarMenu", () => {
     };
     render(<AvatarMenu />);
     fireEvent.click(screen.getByRole("button", { name: /account menu/i }));
+    expect(screen.getByText("d@x.com")).toBeInTheDocument();
     expect(screen.getByText("VIP")).toBeInTheDocument();
     expect(screen.queryByText("Go VIP")).not.toBeInTheDocument();
   });
