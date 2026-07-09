@@ -4,6 +4,7 @@ import { RecentPicks } from "./RecentPicks";
 import { StreakBadge } from "./StreakBadge";
 import { BiggestWin } from "./BiggestWin";
 import { Sparkline } from "./Sparkline";
+import { MomentumStrip } from "./MomentumStrip";
 import { PaidProgramPill } from "./PaidProgramPill";
 import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LivePicksIndicator } from "./LivePicksIndicator";
@@ -12,7 +13,7 @@ import { XIcon } from "@/components/icons/XIcon";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
 import { buildProfileHref } from "@/lib/profileHref";
-import type { CapperRow, LastPick, Window } from "@/lib/types";
+import type { CapperRow, Window } from "@/lib/types";
 
 type Variant = "gold" | "silver" | "bronze";
 
@@ -239,32 +240,6 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
           {capper.tracked_since && capper.follower_count != null && <span className="opacity-30">·</span>}
           {capper.follower_count != null && <span>{formatFollowers(capper.follower_count)} followers</span>}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function MomentumStrip({ picks }: { picks: LastPick[] }) {
-  if (!picks?.length) return null;
-  const segments = [...picks].reverse();
-  return (
-    <div className="relative flex flex-col gap-1.5 mb-4">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
-          Momentum
-        </span>
-        <span className="text-[9px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] opacity-60">
-          oldest → newest
-        </span>
-      </div>
-      <div className="flex gap-[3px] h-[6px]">
-        {segments.map((p, i) => {
-          const color =
-            p.outcome === "W" ? "bg-[var(--color-pos)]" :
-            p.outcome === "L" ? "bg-[var(--color-neg)]" :
-                                "bg-[rgba(255,255,255,0.10)]";
-          return <span key={i} className={`flex-1 ${color} rounded-full`} title={p.outcome} />;
-        })}
       </div>
     </div>
   );
