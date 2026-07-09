@@ -49,7 +49,7 @@ export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSum
     supabase
       .from("capper_market_edges")
       .select(
-        "market,n_decided,roi_pct,xroi_pct,clv_beat_pct,clv_avg_cents,clv_n,tracked_days,gate_pass,gate_reasons"
+        "market,n_decided,roi_pct,xroi_pct,clv_beat_pct,clv_avg_cents,clv_n,tracked_days,gate_pass,gate_reasons,originator,tail_at_close_roi"
       )
       .eq("capper_id", capperId)
       .order("n_decided", { ascending: false })
@@ -100,12 +100,13 @@ export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSum
 
 const VERDICT_RANK: Record<string, number> = {
   "HOLDS UP": 0,
-  UNLUCKY: 1,
-  "LUCK SO FAR": 2,
-  VARIANCE: 2,
-  LOSING: 2,
-  MARGINAL: 3,
-  "TOO EARLY": 4,
+  ORIGINATOR: 1,
+  UNLUCKY: 2,
+  "LUCK SO FAR": 3,
+  VARIANCE: 3,
+  LOSING: 3,
+  MARGINAL: 4,
+  "TOO EARLY": 5,
 };
 
 /* Stat-band-style table: tiny uppercase column labels, tabular numbers,
@@ -115,8 +116,8 @@ function ScoutReport({ rows, capperId }: { rows: EdgeRow[]; capperId: number }) 
   const views = rows
     .map((r) => ({ row: r, view: buildEdgeView(r) }))
     .sort((a, b) => {
-      const ra = VERDICT_RANK[a.view.verdict.label] ?? 2;
-      const rb = VERDICT_RANK[b.view.verdict.label] ?? 2;
+      const ra = VERDICT_RANK[a.view.verdict.label] ?? 3;
+      const rb = VERDICT_RANK[b.view.verdict.label] ?? 3;
       if (ra !== rb) return ra - rb;
       return b.row.n_decided - a.row.n_decided;
     });
@@ -149,11 +150,13 @@ function ScoutReport({ rows, capperId }: { rows: EdgeRow[]; capperId: number }) 
               {f.roi.replace(" ROI", "")}
             </span>
             <span className="text-right text-[15px] font-semibold tabular-nums text-[var(--color-text-soft)]">
-              {row.xroi_pct !== null
-                ? `${row.xroi_pct > 0 ? "+" : ""}${row.xroi_pct.toFixed(1)}%`
-                : row.clv_n > 0 && row.clv_beat_pct !== null
-                  ? `${Math.round(row.clv_beat_pct)}% beat`
-                  : "n/a"}
+              {row.originator && row.tail_at_close_roi !== null
+                ? `${row.tail_at_close_roi > 0 ? "+" : ""}${row.tail_at_close_roi.toFixed(1)}%`
+                : row.xroi_pct !== null
+                  ? `${row.xroi_pct > 0 ? "+" : ""}${row.xroi_pct.toFixed(1)}%`
+                  : row.clv_n > 0 && row.clv_beat_pct !== null
+                    ? `${Math.round(row.clv_beat_pct)}% beat`
+                    : "n/a"}
             </span>
             <span
               className={`text-right w-16 text-xs font-bold lowercase ${toneCls(f.verdict.tone)}`}
