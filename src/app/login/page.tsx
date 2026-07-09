@@ -9,6 +9,8 @@ export default function LoginPage() {
     vipEnabled() &&
     !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
     !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Google renders only once the provider is configured in Supabase
+  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,12 +68,14 @@ export default function LoginPage() {
             {error && <p className="text-sm text-[var(--color-neg)]">{error}</p>}
           </form>
         )}
-        <button
-          onClick={google}
-          className="mt-3 w-full rounded-lg border border-[var(--color-border-h)] py-2 text-sm text-[var(--color-text)]"
-        >
-          Continue with Google
-        </button>
+        {googleEnabled && (
+          <button
+            onClick={google}
+            className="mt-3 w-full rounded-lg border border-[var(--color-border-h)] py-2 text-sm text-[var(--color-text)]"
+          >
+            Continue with Google
+          </button>
+        )}
       </div>
     </main>
   );
