@@ -9,6 +9,7 @@ import type {
   CapperProfile,
   PalaceEntry,
   PalaceCandidate,
+  TodayPicksResponse,
 } from "./types";
 
 // KV TTLs. Short enough that admin refresh-aggregates / regrade actions
@@ -622,4 +623,14 @@ export async function fetchPalaceCandidates(): Promise<PalaceCandidate[]> {
   if (!res.ok) throw new Error(`Palace candidates failed: ${res.status}`);
   const body = (await res.json()) as { candidates: PalaceCandidate[] };
   return body.candidates ?? [];
+}
+
+export async function fetchTodayPicks(capperIds: number[]): Promise<TodayPicksResponse> {
+  if (capperIds.length === 0) return { date: "", picks: [] };
+  const qs = new URLSearchParams({ capper_ids: capperIds.slice(0, 50).join(",") });
+  const res = await fetch(`${API_BASE}/api/public/picks/today?${qs}`, {
+    next: { revalidate: 60 },
+  });
+  if (!res.ok) throw new Error(`today picks fetch failed: ${res.status}`);
+  return res.json();
 }
