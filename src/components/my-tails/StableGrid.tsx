@@ -30,15 +30,24 @@ export function StableGrid({
 
   async function untail(capperId: string) {
     if (!supabase || !session?.user?.id) return;
-    const prev = rows;
+    const prevRows = rows;
+    const prevScopes = scopes;
     setRows(rows.filter((r) => r.capper_id !== capperId));
+    if (scopes[capperId]) {
+      const nextScopes = { ...scopes };
+      delete nextScopes[capperId];
+      setScopes(nextScopes);
+    }
     // No market filter: removes the whole-capper row and any scoped rows.
     const { error } = await supabase
       .from("capper_follows")
       .delete()
       .eq("user_id", session.user.id)
       .eq("capper_id", Number(capperId));
-    if (error) setRows(prev);
+    if (error) {
+      setRows(prevRows);
+      setScopes(prevScopes);
+    }
   }
 
   async function untailMarket(capperId: string, market: string) {
@@ -46,8 +55,14 @@ export function StableGrid({
     const prevRows = rows;
     const prevScopes = scopes;
     const remaining = (scopes[capperId] ?? []).filter((m) => m !== market);
-    if (remaining.length === 0) setRows(rows.filter((r) => r.capper_id !== capperId));
-    setScopes({ ...scopes, [capperId]: remaining });
+    const nextScopes = { ...scopes };
+    if (remaining.length === 0) {
+      setRows(rows.filter((r) => r.capper_id !== capperId));
+      delete nextScopes[capperId];
+    } else {
+      nextScopes[capperId] = remaining;
+    }
+    setScopes(nextScopes);
     const { error } = await supabase
       .from("capper_follows")
       .delete()

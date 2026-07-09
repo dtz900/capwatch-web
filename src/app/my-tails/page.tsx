@@ -94,6 +94,7 @@ export default async function MyTailsPage() {
     if (capperScopes && (!p.market_group || !capperScopes.includes(p.market_group))) continue;
     (todayByCapper[key] ??= []).push(p);
   }
+  const shownPickCount = Object.values(todayByCapper).reduce((n, arr) => n + arr.length, 0);
 
   return (
     <>
@@ -103,8 +104,8 @@ export default async function MyTailsPage() {
           <h1 className="text-2xl font-bold text-[var(--color-text)]">My Tails</h1>
           {ids.length > 0 && (
             <p className="mt-1 text-sm text-[var(--color-text-soft)]">
-              {today.picks.length > 0
-                ? `${today.picks.length} pick${today.picks.length === 1 ? "" : "s"} from your tails today`
+              {shownPickCount > 0
+                ? `${shownPickCount} pick${shownPickCount === 1 ? "" : "s"} from your tails today`
                 : "No picks from your tails yet today."}
             </p>
           )}
