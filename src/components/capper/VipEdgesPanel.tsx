@@ -5,6 +5,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { buildEdgeView, toneCls, VERDICT_WORDS, type EdgeRow } from "@/lib/edges";
 import { VipTeaser } from "@/components/capper/VipTeaser";
+import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 
 interface ClvSummary {
   beatPct: number | null;
@@ -65,7 +66,7 @@ export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSum
           Not enough graded picks yet for a market breakdown.
         </p>
       )}
-      {rows && rows.length > 0 && <ScoutReport rows={rows} />}
+      {rows && rows.length > 0 && <ScoutReport rows={rows} capperId={capperId} />}
     </section>
   );
 }
@@ -82,7 +83,7 @@ const VERDICT_RANK: Record<string, number> = {
 /* Stat-band-style table: tiny uppercase column labels, tabular numbers,
    verdict as one plain colored word. The full sentence survives as a
    hover title only. */
-function ScoutReport({ rows }: { rows: EdgeRow[] }) {
+function ScoutReport({ rows, capperId }: { rows: EdgeRow[]; capperId: number }) {
   const views = rows
     .map((r) => ({ row: r, view: buildEdgeView(r) }))
     .sort((a, b) => {
@@ -94,18 +95,19 @@ function ScoutReport({ rows }: { rows: EdgeRow[] }) {
 
   return (
     <div className="mt-4">
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-5 items-baseline border-b border-[var(--color-border)] pb-1.5 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-5 items-baseline border-b border-[var(--color-border)] pb-1.5 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
         <span>Market</span>
         <span className="text-right">ROI</span>
         <span className="text-right">By closing odds</span>
         <span className="text-right w-16">Verdict</span>
+        <span className="text-right w-14">Tail</span>
       </div>
       <div className="divide-y divide-[var(--color-border)]">
         {views.map(({ row, view: f }) => (
           <div
             key={row.market}
             title={f.sentence}
-            className="grid grid-cols-[1fr_auto_auto_auto] gap-x-5 items-baseline py-2.5"
+            className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-5 items-baseline py-2.5"
           >
             <div className="min-w-0">
               <span className="text-sm font-semibold text-[var(--color-text)] truncate">
@@ -129,6 +131,9 @@ function ScoutReport({ rows }: { rows: EdgeRow[] }) {
               className={`text-right w-16 text-xs font-semibold lowercase ${toneCls(f.verdict.tone)}`}
             >
               {VERDICT_WORDS[f.verdict.label] ?? f.verdict.label.toLowerCase()}
+            </span>
+            <span className="text-right w-14">
+              <MarketTailToggle capperId={capperId} market={row.market} />
             </span>
           </div>
         ))}
