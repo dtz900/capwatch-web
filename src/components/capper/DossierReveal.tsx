@@ -33,11 +33,23 @@ export function DossierReveal({
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const fileAway = () => {
+    if (state !== "open") return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // Ride the viewport back up to the folder's spot while the sheet folds,
-    // so the close happens in view instead of below the fold.
-    wrapRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-    setState(reduce ? "closed" : "closing");
+    if (reduce) {
+      wrapRef.current?.scrollIntoView({ block: "start" });
+      setState("closed");
+      return;
+    }
+    // Scroll back to the folder's spot FIRST, then fold once the viewport
+    // has arrived; folding mid-scroll collapses the layout and the browser
+    // abandons the smooth scroll.
+    const top = wrapRef.current?.getBoundingClientRect().top ?? 0;
+    if (top > -8) {
+      setState("closing");
+      return;
+    }
+    wrapRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => setState("closing"), 500);
   };
 
   return (
