@@ -5,6 +5,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { fetchLeaderboard, fetchTodayPicks } from "@/lib/api";
 import { vipEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
+import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import type { CapperRow, TodayPickEntry } from "@/lib/types";
 import type { EdgeRow } from "@/lib/edges";
@@ -99,6 +100,7 @@ export default async function MyTailsPage() {
   return (
     <>
       <TopNav />
+      <BetSlipProvider todayDate={today.date || null}>
       <main className="mx-auto max-w-5xl px-4 py-10 space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text)]">My Tails</h1>
@@ -121,6 +123,7 @@ export default async function MyTailsPage() {
           />
         )}
       </main>
+      </BetSlipProvider>
     </>
   );
 }

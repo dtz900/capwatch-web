@@ -7,6 +7,7 @@ import { Sparkline } from "@/components/leaderboard/Sparkline";
 import { MomentumStrip } from "@/components/leaderboard/MomentumStrip";
 import { StatusPill } from "@/components/my-tails/StatusPill";
 import { formatUnits } from "@/lib/formatters";
+import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 
 export function StableCard({
   capper,
@@ -23,6 +24,7 @@ export function StableCard({
   scopeEdges?: EdgeRow[];
   onUntailMarket?: (market: string) => void;
 }) {
+  const slip = useBetSlip();
   const scoped = scopes.length > 0;
   const positive = (capper.units_profit ?? 0) >= 0;
   return (
@@ -184,6 +186,36 @@ export function StableCard({
                       </span>
                     )}
                     <StatusPill outcome={p.outcome} />
+                    {slip && p.kind === "straight" && p.pick_id != null && p.outcome == null && (
+                      slip.inSlip(p.pick_id) ? (
+                        <button
+                          aria-label={`Remove ${p.selection} from bet slip`}
+                          title="On your slip. Click to remove"
+                          onClick={(ev) => {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            const entry = slip.entries?.find((e) => e.pick_id === p.pick_id);
+                            if (entry) slip.removeEntry(entry.id);
+                          }}
+                          className="text-[var(--color-pos)] text-sm font-bold"
+                        >
+                          {"✓"}
+                        </button>
+                      ) : (
+                        <button
+                          aria-label={`Add ${p.selection} to bet slip`}
+                          title="Add to bet slip"
+                          onClick={(ev) => {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            slip.addFromPick(p);
+                          }}
+                          className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-sm font-bold"
+                        >
+                          {"+"}
+                        </button>
+                      )
+                    )}
                   </div>
                 </li>
               ))}
