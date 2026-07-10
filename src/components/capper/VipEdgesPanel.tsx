@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { buildEdgeView, toneCls, VERDICT_WORDS, type EdgeRow } from "@/lib/edges";
-import { buildEdgeDepth, buildHeadlineStrip, fmtU, type DepthLine } from "@/lib/edgeDepth";
+import {
+  buildEdgeCells,
+  buildHeadlineStrip,
+  fmtLead,
+  fmtU,
+  type CellTone,
+  type EdgeCell,
+} from "@/lib/edgeDepth";
 import { VipTeaser } from "@/components/capper/VipTeaser";
 import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 
@@ -35,65 +42,138 @@ function VipGem() {
 }
 
 /* warn is gold: green/red stay reserved for graded P&L. */
-const depthToneCls = (tone: DepthLine["tone"]) =>
+const cellToneCls = (tone: CellTone) =>
   tone === "warn" ? "text-[var(--color-gold)]" : toneCls(tone === "muted" ? "muted" : tone);
+
+const TILE = "rounded-lg bg-[rgba(10,10,12,0.45)] ring-1 ring-[rgba(245,197,74,0.14)] px-3.5 py-3";
+const TILE_LABEL =
+  "text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-text-muted)]";
+const TILE_VALUE = "mt-1 text-[19px] leading-none font-extrabold tabular-nums";
+const TILE_SUB = "mt-1.5 text-[11px] leading-snug text-[var(--color-text-soft)]";
+
+/* Two mini bars on a shared zero axis: what the record deserved (EXP, in
+   off-white) vs what it did (ACT, in graded P&L color). The gap IS the luck. */
+function LuckBars({ expected, actual }: { expected: number; actual: number }) {
+  const max = Math.max(Math.abs(expected), Math.abs(actual), 0.001);
+  const seg = (v: number): React.CSSProperties => ({
+    width: `${(Math.abs(v) / max) * 50}%`,
+    [v < 0 ? "right" : "left"]: "50%",
+  });
+  const track = "relative h-1 rounded-full bg-white/[0.07]";
+  const rowCls = "flex items-center gap-2";
+  return (
+    <div className="mt-2 space-y-1" aria-hidden="true">
+      <div className={rowCls}>
+        <span className="w-6 text-[8px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
+          EXP
+        </span>
+        <span className={`${track} flex-1`}>
+          <span className="absolute left-1/2 top-[-2px] h-2 w-px bg-white/25" />
+          <span
+            className="absolute h-full rounded-full bg-[rgba(247,243,233,0.4)]"
+            style={seg(expected)}
+          />
+        </span>
+      </div>
+      <div className={rowCls}>
+        <span className="w-6 text-[8px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
+          ACT
+        </span>
+        <span className={`${track} flex-1`}>
+          <span className="absolute left-1/2 top-[-2px] h-2 w-px bg-white/25" />
+          <span
+            className={`absolute h-full rounded-full ${
+              actual >= 0 ? "bg-[var(--color-pos)]" : "bg-[var(--color-neg)]"
+            }`}
+            style={seg(actual)}
+          />
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function HeadlineStripView({ rows, beatPct }: { rows: EdgeRow[]; beatPct: number | null }) {
   const strip = buildHeadlineStrip(rows);
   if (!strip.luck && !strip.honesty && !strip.lead) return null;
-  const label = "text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]";
-  const value = "mt-0.5 text-[15px] font-extrabold tabular-nums text-[var(--color-text)]";
-  const sub = "text-[11px] text-[var(--color-text-soft)]";
   return (
-    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <div>
-        <div className={label}>Skill vs. luck</div>
+    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className={TILE}>
+        <div className={TILE_LABEL}>Skill vs. luck</div>
         {strip.luck ? (
           <>
-            <div className={value}>{fmtU(strip.luck.net)} actual</div>
-            <div className={sub}>
-              expected {fmtU(strip.luck.expected)} on de-luckable picks, ran{" "}
-              {strip.luck.delta >= 0 ? "hot" : "cold"} by{" "}
-              {Math.abs(strip.luck.delta).toFixed(1)}u
+            <div
+              className={`${TILE_VALUE} ${
+                strip.luck.net >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+              }`}
+            >
+              {fmtU(strip.luck.net)}
+              <span className="ml-1.5 text-[10px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
+                ACTUAL
+              </span>
+            </div>
+            <LuckBars expected={strip.luck.expected} actual={strip.luck.net} />
+            <div className={TILE_SUB}>
+              {fmtU(strip.luck.expected)} expected on {strip.luck.n} straights, ran{" "}
+              <span className={strip.luck.delta >= 0 ? "text-[var(--color-gold)]" : undefined}>
+                {strip.luck.delta >= 0 ? "hot" : "cold"} by{" "}
+                {Math.abs(strip.luck.delta).toFixed(1)}u
+              </span>
             </div>
           </>
         ) : (
-          <div className={`${value} text-[var(--color-text-muted)]`}>n/a</div>
+          <div className={`${TILE_VALUE} text-[var(--color-text-muted)]`}>n/a</div>
         )}
       </div>
-      <div>
-        <div className={label}>Price honesty</div>
+      <div className={TILE}>
+        <div className={TILE_LABEL}>Price honesty</div>
         {strip.honesty ? (
           <>
-            <div className={value}>
+            <div
+              className={`${TILE_VALUE} ${
+                strip.honesty.flagged ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"
+              }`}
+            >
               {strip.honesty.avgCents > 0 ? "+" : ""}
-              {Math.round(strip.honesty.avgCents)}c vs close
+              {Math.round(strip.honesty.avgCents)}c
+              <span className="ml-1.5 text-[10px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
+                VS CLOSE
+              </span>
             </div>
-            <div className={strip.honesty.flagged ? `${sub} text-[var(--color-gold)]` : sub}>
+            <div className={strip.honesty.flagged ? `${TILE_SUB} text-[var(--color-gold)]` : TILE_SUB}>
               {strip.honesty.flagged
                 ? "hard to match: prices rarely still available"
                 : beatPct != null
-                  ? `beats the close ${Math.round(beatPct * 100)}%, ${strip.honesty.n} priced picks`
+                  ? `beats the close ${Math.round(beatPct * 100)}% · ${strip.honesty.n} priced picks`
                   : `${strip.honesty.n} priced picks`}
             </div>
           </>
         ) : (
-          <div className={`${value} text-[var(--color-text-muted)]`}>n/a</div>
+          <div className={`${TILE_VALUE} text-[var(--color-text-muted)]`}>n/a</div>
         )}
       </div>
-      <div>
-        <div className={label}>Tailability</div>
+      <div className={TILE}>
+        <div className={TILE_LABEL}>Tailability</div>
         {strip.lead ? (
           <>
-            <div className={value}>
-              ~{Math.round(strip.lead.minutes)} min before first pitch
+            <div
+              className={`${TILE_VALUE} ${
+                strip.lead.warn ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"
+              }`}
+            >
+              {fmtLead(strip.lead.minutes)}
+              <span className="ml-1.5 text-[10px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
+                PRE-PITCH
+              </span>
             </div>
-            <div className={strip.lead.warn ? `${sub} text-[var(--color-gold)]` : sub}>
-              {strip.lead.warn ? "tight: posts near first pitch" : "typical post time"}
+            <div className={strip.lead.warn ? `${TILE_SUB} text-[var(--color-gold)]` : TILE_SUB}>
+              {strip.lead.warn
+                ? "tight: posts near first pitch"
+                : "typical gap between post and first pitch"}
             </div>
           </>
         ) : (
-          <div className={`${value} text-[var(--color-text-muted)]`}>n/a</div>
+          <div className={`${TILE_VALUE} text-[var(--color-text-muted)]`}>n/a</div>
         )}
       </div>
     </div>
@@ -116,7 +196,7 @@ export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSum
     supabase
       .from("capper_market_edges")
       .select(
-        "market,n_decided,roi_pct,xroi_pct,clv_beat_pct,clv_avg_cents,clv_n,tracked_days,gate_pass,gate_reasons,originator,tail_at_close_roi,pnl_units,x_actual_pnl_units,x_pnl_units,roi_30d,xroi_30d,n_30d,x_n_30d,median_lead_minutes"
+        "market,n_decided,roi_pct,xroi_pct,clv_beat_pct,clv_avg_cents,clv_n,tracked_days,gate_pass,gate_reasons,originator,tail_at_close_roi,pnl_units,x_actual_pnl_units,x_pnl_units,x_n,roi_30d,xroi_30d,n_30d,x_n_30d,median_lead_minutes"
       )
       .eq("capper_id", capperId)
       .order("n_decided", { ascending: false })
@@ -188,7 +268,7 @@ function ScoutReport({ rows, capperId }: { rows: EdgeRow[]; capperId: number }) 
       <div className="divide-y divide-[var(--color-border)]">
         {views.map(({ row, view: f }) => {
           const open = openMarket === row.market;
-          const depth = buildEdgeDepth(row);
+          const cells = buildEdgeCells(row);
           return (
             <div key={row.market} className="transition-colors hover:bg-white/[0.02]">
               <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-5 items-baseline py-2.5">
@@ -235,18 +315,38 @@ function ScoutReport({ rows, capperId }: { rows: EdgeRow[]; capperId: number }) 
                 </span>
               </div>
               {open && (
-                <div className="space-y-1.5 pb-3 pl-4 pr-2">
+                <div className="mb-3 rounded-lg bg-[rgba(10,10,12,0.45)] ring-1 ring-[rgba(245,197,74,0.10)] px-3.5 py-3">
                   <p className="text-xs leading-relaxed text-[var(--color-text-soft)]">
                     {f.sentence}
                   </p>
-                  {[depth.luck, depth.trend, depth.honesty, depth.lead].map((line) => (
-                    <p
-                      key={line.text}
-                      className={`text-[11px] leading-relaxed ${depthToneCls(line.tone)}`}
-                    >
-                      {line.text}
-                    </p>
-                  ))}
+                  <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-4">
+                    {(
+                      [
+                        ["Luck", cells.luck],
+                        ["30d trend", cells.trend],
+                        ["Close", cells.close],
+                        ["Timing", cells.timing],
+                      ] as [string, EdgeCell][]
+                    ).map(([cellLabel, cell]) => (
+                      <div key={cellLabel}>
+                        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                          {cellLabel}
+                        </div>
+                        <div
+                          className={`mt-0.5 text-[13px] font-extrabold tabular-nums leading-tight ${
+                            cell.tone === "muted"
+                              ? "text-[var(--color-text)]"
+                              : cellToneCls(cell.tone)
+                          }`}
+                        >
+                          {cell.value}
+                        </div>
+                        <div className="mt-0.5 text-[10px] leading-snug text-[var(--color-text-muted)]">
+                          {cell.sub}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
