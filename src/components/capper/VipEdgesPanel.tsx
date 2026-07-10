@@ -128,7 +128,7 @@ export function VipEdgesPanel({ capperId, clv }: { capperId: number; clv: ClvSum
     <section className="rounded-2xl border border-[rgba(245,197,74,0.22)] bg-gradient-to-b from-[rgba(245,197,74,0.07)] via-[rgba(245,197,74,0.025)] to-[rgba(255,255,255,0.02)] px-5 py-5">
       <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-gold)]">
         <VipGem />
-        VIP · Market edge breakdown
+        VIP · Skill vs. luck breakdown
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-[var(--color-text-soft)]">
         We grade every market against the closing line. Beat that number and it is skill. Win

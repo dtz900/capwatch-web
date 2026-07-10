@@ -55,7 +55,7 @@ describe("VipEdgesPanel depth", () => {
     render(<VipEdgesPanel capperId={7} clv={{ beatPct: 0.61, avg: 6, n: 80 }} />);
     await waitFor(() => expect(screen.getByText("Moneyline")).toBeInTheDocument());
     // luck strip: net 6.6, expected 2.4, delta +4.2 ran hot
-    expect(screen.getByText(/skill vs\. luck/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/skill vs\. luck/i).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(/\+2\.4u expected/i)).toBeInTheDocument();
     expect(screen.getByText(/ran hot \+4\.2u/i)).toBeInTheDocument();
     expect(screen.getByText(/price honesty/i)).toBeInTheDocument();
