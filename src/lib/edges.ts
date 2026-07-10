@@ -11,6 +11,14 @@ export interface EdgeRow {
   gate_reasons: string[];
   originator: boolean;
   tail_at_close_roi: number | null;
+  pnl_units?: number | null;
+  x_actual_pnl_units?: number | null;
+  x_pnl_units?: number | null;
+  roi_30d?: number | null;
+  xroi_30d?: number | null;
+  n_30d?: number | null;
+  x_n_30d?: number | null;
+  median_lead_minutes?: number | null;
 }
 
 export type VerdictTone = "pos" | "neg" | "muted";
