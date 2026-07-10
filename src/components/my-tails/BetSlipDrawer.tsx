@@ -27,7 +27,7 @@ export function BetSlipDrawer() {
       </button>
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/60"
+          className="fixed inset-0 z-[49] bg-black/60"
           onClick={() => setOpen(false)}
           aria-hidden="true"
         />
@@ -36,8 +36,9 @@ export function BetSlipDrawer() {
         className={`fixed inset-y-0 right-0 z-50 w-[320px] max-w-[90vw] bg-[#0f0f14] border-l border-[var(--color-border)] transition-transform duration-200 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
+        aria-hidden={!open}
       >
-        <div className="flex items-center justify-between bg-[#0f0f14] border-b border-[var(--color-border)] px-4 py-3">
+        <div className="flex h-12 items-center justify-between bg-[#0f0f14] border-b border-[var(--color-border)] px-4">
           <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
             MY BET SLIP{totals.pending > 0 ? ` · ${totals.pending} pending` : ""}
           </span>
@@ -50,7 +51,7 @@ export function BetSlipDrawer() {
           </button>
         </div>
         {open && (
-          <div className="h-[calc(100%-45px)] overflow-y-auto px-4 pb-6">
+          <div className="h-[calc(100%-3rem)] overflow-y-auto px-4 pb-6">
             {teaserOpen && (
               <div className="mt-3" onClick={closeTeaser}>
                 <VipTeaser />
