@@ -43,7 +43,7 @@ export function SlipEntryRow({
   const [odds, setOdds] = useState(String(entry.odds));
 
   return (
-    <li className="rounded-lg bg-[rgba(11,42,36,0.85)] ring-1 ring-[rgba(47,217,192,0.15)] p-3.5">
+    <li className="rounded-lg bg-[rgba(8,12,11,0.75)] ring-1 ring-[rgba(47,217,192,0.10)] p-3.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="text-[15px] font-bold leading-tight text-white truncate">
@@ -206,9 +206,9 @@ export function BetSlipRail() {
 
   return (
     <div className="fixed right-3 sm:right-4 top-24 z-30 w-[304px] max-w-[calc(100vw-1.5rem)]">
-    <aside className="w-full overflow-hidden rounded-2xl bg-gradient-to-b from-[#0e352e] via-[#09231e] to-[#051713] ring-1 ring-[rgba(47,217,192,0.28)] shadow-[0_12px_48px_rgba(10,60,50,0.45)]">
+    <aside className="w-full overflow-hidden rounded-2xl bg-gradient-to-b from-[#0c1f1b] via-[#0a1512] to-[#07100d] ring-1 ring-[rgba(47,217,192,0.22)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
       {/* Ticket header: teal bar, the TailSlips logo, count badge, collapse */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-[#12443a] to-[#0c2f28] px-4 py-3 border-b border-[rgba(47,217,192,0.25)]">
+      <div className="flex items-center justify-between bg-gradient-to-r from-[#0e2c25] to-[#0a1e19] px-4 py-3 border-b border-[rgba(47,217,192,0.25)]">
         <span className="flex items-center">
           <Image
             src="/logo-horizontal-aligned-tight.png"
@@ -243,7 +243,7 @@ export function BetSlipRail() {
           <VipTeaser />
         </div>
       )}
-      <div className="max-h-[calc(100vh-11.5rem)] overflow-y-auto p-3">
+      <div className="max-h-[calc(100vh-11.5rem)] overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
         {entries === null && (
           <p className="py-3 text-xs text-[#6da399]">Loading...</p>
         )}
