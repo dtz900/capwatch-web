@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { EdgeRow } from "@/lib/edges";
-import { VipTeaser } from "@/components/capper/VipTeaser";
 import { DossierReveal } from "@/components/capper/DossierReveal";
 import { VipDossier } from "@/components/capper/VipDossier";
 
@@ -47,7 +46,10 @@ export function VipEdgesPanel({
       .then(({ data }) => setRows((data as EdgeRow[]) ?? []));
   }, [entitlements.isVip, capperId, supabase]);
 
-  if (!entitlements.isVip) return <VipTeaser />;
+  // Three tiers: no account sees nothing, a free account sees the sealed
+  // folder as the upsell, VIP opens the report.
+  if (!entitlements.isLoggedIn) return null;
+  if (!entitlements.isVip) return <DossierReveal handle={handle} locked />;
   if (rows === null) {
     return <p className="py-2 text-sm text-[var(--color-text-muted)]">Loading...</p>;
   }

@@ -21,12 +21,16 @@ export function InkCrown({ className, color = "#143024" }: { className?: string;
 /* Confidential-file reveal: closed folder until clicked, newspaper-spin
    open. Filing it away rewinds the spin toward the folder's spot, then the
    folder pops back in. */
+/* locked: the folder renders sealed as the non-VIP upsell; clicking routes
+   to the account page instead of opening. */
 export function DossierReveal({
   handle,
+  locked = false,
   children,
 }: {
   handle: string;
-  children: React.ReactNode;
+  locked?: boolean;
+  children?: React.ReactNode;
 }) {
   const [state, setState] = useState<"closed" | "open" | "closing">("closed");
   const [returned, setReturned] = useState(false);
@@ -84,7 +88,31 @@ export function DossierReveal({
           .dossier-open, .dossier-closing, .folder-pop { animation: none; }
         }
       `}</style>
-      {state === "closed" ? (
+      {locked ? (
+        <a
+          href="/account"
+          className="group mx-auto block w-full max-w-2xl -rotate-1 rounded-lg px-5 py-4 text-left shadow-[0_16px_48px_rgba(0,0,0,0.55)] transition-transform duration-200 hover:rotate-0 hover:scale-[1.02]"
+          style={{ background: "#f2ecdd", color: "#17140f" }}
+        >
+          <div className="flex items-center gap-3">
+            <InkCrown className="h-7 w-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate whitespace-nowrap text-[12px] font-extrabold uppercase tracking-[0.14em]">
+                TailSlips · Scout Report
+              </div>
+              <div className="mt-0.5 truncate whitespace-nowrap text-[9px] uppercase tracking-[0.1em] text-[#7a7263]">
+                Subject @{handle} · VIP eyes only
+              </div>
+            </div>
+            <span className="inline-block shrink-0 -rotate-6 rounded border-2 border-[#7a7263] px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#7a7263]">
+              Sealed
+            </span>
+          </div>
+          <div className="mt-2.5 border-t border-dashed border-[rgba(23,20,15,0.3)] pt-1.5 text-center text-[9px] font-bold uppercase tracking-[0.18em] text-[#b91c1c]">
+            VIP members only · unlock the full report
+          </div>
+        </a>
+      ) : state === "closed" ? (
         <button
           onClick={() => setState("open")}
           aria-expanded={false}
