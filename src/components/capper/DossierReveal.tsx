@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 /* Ink-colored crown via CSS mask of the transparent asset, so it prints
    dark on paper surfaces instead of brand green. */
@@ -30,17 +30,18 @@ export function DossierReveal({
 }) {
   const [state, setState] = useState<"closed" | "open" | "closing">("closed");
   const [returned, setReturned] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   const fileAway = () => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setState("closed");
-    } else {
-      setState("closing");
-    }
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Ride the viewport back up to the folder's spot while the sheet folds,
+    // so the close happens in view instead of below the fold.
+    wrapRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    setState(reduce ? "closed" : "closing");
   };
 
   return (
-    <div>
+    <div ref={wrapRef} className="scroll-mt-20">
       <style>{`
         @keyframes dossier-spin {
           0% { transform: rotate(-1080deg) scale(0.05); opacity: 0; }
