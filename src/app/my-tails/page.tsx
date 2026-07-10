@@ -7,6 +7,7 @@ import { vipEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
 import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
 import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
+import { BetSlipDrawer } from "@/components/my-tails/BetSlipDrawer";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import type { CapperRow, TodayPickEntry } from "@/lib/types";
 import type { EdgeRow } from "@/lib/edges";
@@ -133,6 +134,9 @@ export default async function MyTailsPage() {
           </div>
         </div>
       </main>
+      <div className="lg:hidden">
+        <BetSlipDrawer />
+      </div>
       </BetSlipProvider>
     </>
   );
