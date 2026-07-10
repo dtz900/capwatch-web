@@ -119,8 +119,8 @@ export function VipDossier({
       className="rounded-lg px-5 py-6 shadow-[0_16px_48px_rgba(0,0,0,0.55)] sm:px-7"
       style={{ background: "#f2ecdd", color: INK }}
     >
-      <div className="flex items-start justify-between border-b-2 pb-3" style={{ borderColor: "rgba(23,20,15,0.8)" }}>
-        <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex items-start justify-between gap-3 border-b-2 pb-3" style={{ borderColor: "rgba(23,20,15,0.8)" }}>
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <InkCrown className="h-7 w-10" />
           <div>
             <div className="truncate whitespace-nowrap text-[12px] font-extrabold uppercase tracking-[0.14em] sm:text-[13px] sm:tracking-[0.22em]">
@@ -195,9 +195,11 @@ export function VipDossier({
         </div>
       </div>
       <div className="mt-4 border-t border-dashed pt-4" style={{ borderColor: "rgba(23,20,15,0.3)" }}>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-y-1">
           <span className={label} style={{ color: FAINT }}>Deserved vs. actual</span>
-          <span className="text-[9px]" style={{ color: FAINT }}>bar = actual ROI · ink tick = deserved by close</span>
+          <span className="w-full text-[10px] font-semibold sm:w-auto" style={{ color: SOFT }}>
+            bar = actual ROI · ink tick = deserved by close
+          </span>
         </div>
         <BulletChart rows={rows} />
       </div>
