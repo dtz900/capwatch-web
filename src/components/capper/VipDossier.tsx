@@ -49,7 +49,7 @@ function BulletChart({ rows }: { rows: EdgeRow[] }) {
           const xr = xroi_pct;
           return (
             <div key={market} className="flex items-center gap-3">
-              <span className="w-28 shrink-0 truncate text-[11px] font-semibold" style={{ color: SOFT }}>
+              <span className="w-20 shrink-0 truncate text-[10px] font-semibold sm:w-28 sm:text-[11px]" style={{ color: SOFT }}>
                 {market}
               </span>
               <div className="relative h-4 flex-1">
@@ -81,7 +81,7 @@ function BulletChart({ rows }: { rows: EdgeRow[] }) {
         })}
       </div>
       <div className="mt-1.5 flex items-center gap-3 text-[9px]" style={{ color: FAINT }}>
-        <span className="w-28 shrink-0" />
+        <span className="w-20 shrink-0 sm:w-28" />
         <div className="flex flex-1 justify-between tabular-nums">
           <span>-{Math.round(max)}%</span>
           <span>0</span>
@@ -120,13 +120,13 @@ export function VipDossier({
       style={{ background: "#f2ecdd", color: INK }}
     >
       <div className="flex items-start justify-between border-b-2 pb-3" style={{ borderColor: "rgba(23,20,15,0.8)" }}>
-        <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
           <InkCrown className="h-7 w-10" />
           <div>
-            <div className="text-[13px] font-extrabold uppercase tracking-[0.22em]">
+            <div className="truncate whitespace-nowrap text-[12px] font-extrabold uppercase tracking-[0.14em] sm:text-[13px] sm:tracking-[0.22em]">
               TailSlips · Scout Report
             </div>
-            <div className="text-[10px] uppercase tracking-[0.14em]" style={{ color: FAINT }}>
+            <div className="truncate whitespace-nowrap text-[9px] uppercase tracking-[0.1em] sm:text-[10px] sm:tracking-[0.14em]" style={{ color: FAINT }}>
               Subject @{handle} · graded vs Pinnacle close · VIP
             </div>
           </div>
@@ -211,7 +211,7 @@ export function VipDossier({
               className="border-b py-2.5 last:border-0"
               style={{ borderColor: "rgba(23,20,15,0.08)" }}
             >
-              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-5">
+              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2.5 sm:gap-x-5">
                 <button
                   onClick={() => setOpenMarket(open ? null : row.market)}
                   aria-expanded={open}
