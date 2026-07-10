@@ -11,7 +11,7 @@ const mockRows = [
 ];
 
 const insertSingle = vi.fn().mockResolvedValue({
-  data: { ...mockRows[0], id: 6, pick_id: 9002, selection: "Tigers ML" }, error: null,
+  data: { ...mockRows[0], id: 6, pick_id: 9003, selection: "Tigers ML" }, error: null,
 });
 const supabaseMock = {
   from: vi.fn(() => ({
@@ -48,8 +48,29 @@ const pick: TodayPickEntry = {
   profile_image_url: null, kind: "straight", matchup: "ATH @ DET",
   market: "ML", market_group: "ML", selection: "Tigers ML", line: null,
   odds_taken: -131, posted_at: "2026-07-09T17:00:00Z", outcome: null,
-  profit_units: null, pick_id: 9002,
+  profit_units: null, pick_id: 9003,
 };
+
+// Mock slipInsertFromPick to ensure it returns a payload
+vi.mock("@/lib/betslip", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  slipInsertFromPick: vi.fn((userId, p) => {
+    if (p.kind !== "straight" || p.pick_id == null) return null;
+    return {
+      user_id: userId,
+      pick_id: p.pick_id,
+      stake: 1.0,
+      odds: p.odds_taken ?? -110,
+      capper_id: p.capper_id,
+      capper_handle: p.handle,
+      matchup: p.matchup,
+      market: p.market,
+      selection: p.selection,
+      line: p.line,
+      game_date: "2026-07-09",
+    };
+  }),
+}));
 
 function Probe() {
   const slip = useBetSlip();
@@ -85,7 +106,16 @@ describe("BetSlipProvider", () => {
     await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("1"));
     fireEvent.click(screen.getByText("add"));
     await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("2"));
-    expect(insertSingle).toHaveBeenCalled();
+    await waitFor(() => expect(insertSingle).toHaveBeenCalled());
+  });
+
+  it("deduplicates rapid taps on the same pick", async () => {
+    render(<BetSlipProvider todayDate="2026-07-09"><Probe /></BetSlipProvider>);
+    await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("1"));
+    fireEvent.click(screen.getByText("add"));
+    fireEvent.click(screen.getByText("add"));
+    await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("2"));
+    await waitFor(() => expect(insertSingle).toHaveBeenCalledTimes(1));
   });
 
   it("opens the teaser instead of inserting for a free user", async () => {
