@@ -47,10 +47,10 @@ export function DossierReveal({
           55% { opacity: 1; }
           100% { transform: rotate(0deg) scale(1); opacity: 1; }
         }
-        @keyframes dossier-spin-out {
-          0% { transform: rotate(0deg) scale(1); opacity: 1; }
-          55% { opacity: 1; }
-          100% { transform: rotate(-1080deg) scale(0.04); opacity: 0; }
+        @keyframes dossier-fold {
+          0% { transform: perspective(1400px) rotateX(0deg) scale(1); opacity: 1; }
+          55% { transform: perspective(1400px) rotateX(-72deg) scale(0.97); opacity: 0.92; }
+          100% { transform: perspective(1400px) rotateX(-90deg) scale(0.5) translateY(-4%); opacity: 0; }
         }
         @keyframes folder-pop {
           0% { transform: rotate(-1deg) scale(0.4); opacity: 0; }
@@ -62,7 +62,7 @@ export function DossierReveal({
           transform-origin: 50% 40%;
         }
         .dossier-closing {
-          animation: dossier-spin-out 0.7s cubic-bezier(.6, 0, .8, 1) both;
+          animation: dossier-fold 0.6s cubic-bezier(.55, 0, .55, 1) both;
           transform-origin: 50% 0%;
         }
         .folder-pop {
@@ -103,7 +103,7 @@ export function DossierReveal({
         <div
           className={state === "closing" ? "dossier-closing" : "dossier-open"}
           onAnimationEnd={(e) => {
-            if (e.animationName === "dossier-spin-out") {
+            if (e.animationName === "dossier-fold") {
               setReturned(true);
               setState("closed");
             }
