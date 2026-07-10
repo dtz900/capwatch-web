@@ -51,21 +51,23 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("VipEdgesPanel depth", () => {
-  it("renders the headline strip tiles from the edge rows", async () => {
+  it("renders the KPI cards from the edge rows", async () => {
     render(<VipEdgesPanel capperId={7} clv={{ beatPct: 0.61, avg: 6, n: 80 }} />);
     await waitFor(() => expect(screen.getByText("Moneyline")).toBeInTheDocument());
-    // luck tile: only the Game Total row is de-luckable (ML has no x data)
+    // luck card: only the Game Total row is de-luckable (ML has no x data);
+    // -2.4u shows as the big value AND the ACT bar value
     expect(screen.getAllByText(/skill vs\. luck/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("-2.4u")).toBeInTheDocument();
-    expect(
-      screen.getByText(/-0\.6u expected on 40 straights, ran/i)
-    ).toBeInTheDocument();
-    expect(screen.getByText(/cold by 1\.8u/i)).toBeInTheDocument();
-    // honesty tile: (8*60 + 4*20) / 80 = 7c, not flagged, server beat pct
+    expect(screen.getAllByText("-2.4u").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/ran cold 1\.8u/i)).toBeInTheDocument();
+    expect(screen.getByText(/40 straights graded vs the close/i)).toBeInTheDocument();
+    // honesty card: (8*60 + 4*20) / 80 = 7c, not flagged, gauge from server beat pct
     expect(screen.getByText("+7c")).toBeInTheDocument();
-    expect(screen.getByText(/beats the close 61% · 80 priced picks/i)).toBeInTheDocument();
-    // tailability tile: (50*60 + 18*40) / 100 = 37.2 min
+    expect(screen.getByText(/fair quotes/i)).toBeInTheDocument();
+    expect(screen.getByText(/beats close 61%/i)).toBeInTheDocument();
+    expect(screen.getByText(/80 priced picks graded vs the close/i)).toBeInTheDocument();
+    // tailability card: (50*60 + 18*40) / 100 = 37.2 min
     expect(screen.getByText("37 min")).toBeInTheDocument();
+    expect(screen.getByText(/wide window/i)).toBeInTheDocument();
     expect(screen.getByText(/price honesty/i)).toBeInTheDocument();
     expect(screen.getByText(/tailability/i)).toBeInTheDocument();
   });

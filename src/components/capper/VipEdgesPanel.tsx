@@ -45,11 +45,76 @@ function VipGem() {
 const cellToneCls = (tone: CellTone) =>
   tone === "warn" ? "text-[var(--color-gold)]" : toneCls(tone === "muted" ? "muted" : tone);
 
-const TILE = "rounded-lg bg-[rgba(10,10,12,0.45)] ring-1 ring-[rgba(245,197,74,0.14)] px-3.5 py-3";
-const TILE_LABEL =
-  "text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-text-muted)]";
-const TILE_VALUE = "mt-1 text-[19px] leading-none font-extrabold tabular-nums";
-const TILE_SUB = "mt-1.5 text-[11px] leading-snug text-[var(--color-text-soft)]";
+/* KPI card icons: tiny stroke glyphs, inherit the muted label color. */
+function IconDie() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="4" />
+      <circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+function IconTag() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M2.5 2.5h8l11 11-8 8-11-11z" strokeLinejoin="round" />
+      <circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.5 2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function KpiPill({ text, gold }: { text: string; gold?: boolean }) {
+  return (
+    <span
+      className={`shrink-0 rounded-full px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.12em] ${
+        gold
+          ? "bg-[var(--color-gold-soft)] text-[var(--color-gold)]"
+          : "bg-white/[0.06] text-[var(--color-text-soft)]"
+      }`}
+    >
+      {text}
+    </span>
+  );
+}
+
+function KpiCard({
+  icon,
+  label,
+  pill,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  pill?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl bg-gradient-to-b from-white/[0.05] to-white/[0.015] ring-1 ring-white/[0.09] px-4 py-3.5 transition-colors hover:ring-[rgba(245,197,74,0.3)]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+          {icon}
+          {label}
+        </span>
+        {pill}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const KPI_VALUE = "text-[26px] leading-none font-extrabold tabular-nums";
+const KPI_UNIT = "text-[9px] font-bold tracking-[0.16em] text-[var(--color-text-muted)]";
+const KPI_SUB = "mt-2 text-[10px] leading-snug text-[var(--color-text-muted)]";
 
 /* Two mini bars on a shared zero axis: what the record deserved (EXP, in
    off-white) vs what it did (ACT, in graded P&L color). The gap IS the luck. */
@@ -59,36 +124,42 @@ function LuckBars({ expected, actual }: { expected: number; actual: number }) {
     width: `${(Math.abs(v) / max) * 50}%`,
     [v < 0 ? "right" : "left"]: "50%",
   });
-  const track = "relative h-1 rounded-full bg-white/[0.07]";
-  const rowCls = "flex items-center gap-2";
+  const row = (tag: string, v: number, fill: string) => (
+    <div className="flex items-center gap-2">
+      <span className="w-6 text-[8px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
+        {tag}
+      </span>
+      <span className="relative h-1.5 flex-1 rounded-full bg-white/[0.07]">
+        <span className="absolute left-1/2 top-[-2px] h-2.5 w-px bg-white/25" />
+        <span className={`absolute h-full rounded-full ${fill}`} style={seg(v)} />
+      </span>
+      <span className="w-12 text-right text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
+        {fmtU(v)}
+      </span>
+    </div>
+  );
   return (
-    <div className="mt-2 space-y-1" aria-hidden="true">
-      <div className={rowCls}>
-        <span className="w-6 text-[8px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
-          EXP
-        </span>
-        <span className={`${track} flex-1`}>
-          <span className="absolute left-1/2 top-[-2px] h-2 w-px bg-white/25" />
-          <span
-            className="absolute h-full rounded-full bg-[rgba(247,243,233,0.4)]"
-            style={seg(expected)}
-          />
-        </span>
-      </div>
-      <div className={rowCls}>
-        <span className="w-6 text-[8px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
-          ACT
-        </span>
-        <span className={`${track} flex-1`}>
-          <span className="absolute left-1/2 top-[-2px] h-2 w-px bg-white/25" />
-          <span
-            className={`absolute h-full rounded-full ${
-              actual >= 0 ? "bg-[var(--color-pos)]" : "bg-[var(--color-neg)]"
-            }`}
-            style={seg(actual)}
-          />
-        </span>
-      </div>
+    <div className="mt-2.5 space-y-1.5">
+      {row("EXP", expected, "bg-[rgba(247,243,233,0.4)]")}
+      {row("ACT", actual, actual >= 0 ? "bg-[var(--color-pos)]" : "bg-[var(--color-neg)]")}
+    </div>
+  );
+}
+
+/* Beat-close micro gauge: fill = beat rate, tick at the 50% coin-flip line. */
+function BeatGauge({ pct }: { pct: number }) {
+  return (
+    <div className="mt-2.5 flex items-center gap-2">
+      <span className="relative h-1.5 flex-1 rounded-full bg-white/[0.07]">
+        <span className="absolute left-1/2 top-[-2px] h-2.5 w-px bg-white/25" />
+        <span
+          className="absolute h-full rounded-full bg-[rgba(247,243,233,0.45)]"
+          style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
+        />
+      </span>
+      <span className="shrink-0 text-right text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
+        beats close {Math.round(pct)}%
+      </span>
     </div>
   );
 }
@@ -96,86 +167,107 @@ function LuckBars({ expected, actual }: { expected: number; actual: number }) {
 function HeadlineStripView({ rows, beatPct }: { rows: EdgeRow[]; beatPct: number | null }) {
   const strip = buildHeadlineStrip(rows);
   if (!strip.luck && !strip.honesty && !strip.lead) return null;
+  const na = <div className={`mt-2.5 ${KPI_VALUE} text-[var(--color-text-muted)]`}>n/a</div>;
   return (
-    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-      <div className={TILE}>
-        <div className={TILE_LABEL}>Skill vs. luck</div>
+    <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+      <KpiCard
+        icon={<IconDie />}
+        label="Skill vs. luck"
+        pill={
+          strip.luck ? (
+            <KpiPill
+              gold={strip.luck.delta >= 0}
+              text={`ran ${strip.luck.delta >= 0 ? "hot" : "cold"} ${Math.abs(strip.luck.delta).toFixed(1)}u`}
+            />
+          ) : undefined
+        }
+      >
         {strip.luck ? (
           <>
-            <div
-              className={`${TILE_VALUE} ${
-                strip.luck.net >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
-              }`}
-            >
-              {fmtU(strip.luck.net)}
-              <span className="ml-1.5 text-[10px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
-                ACTUAL
+            <div className="mt-2.5 flex items-baseline gap-1.5">
+              <span
+                className={`${KPI_VALUE} ${
+                  strip.luck.net >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+                }`}
+              >
+                {fmtU(strip.luck.net)}
               </span>
+              <span className={KPI_UNIT}>ACTUAL</span>
             </div>
             <LuckBars expected={strip.luck.expected} actual={strip.luck.net} />
-            <div className={TILE_SUB}>
-              {fmtU(strip.luck.expected)} expected on {strip.luck.n} straights, ran{" "}
-              <span className={strip.luck.delta >= 0 ? "text-[var(--color-gold)]" : undefined}>
-                {strip.luck.delta >= 0 ? "hot" : "cold"} by{" "}
-                {Math.abs(strip.luck.delta).toFixed(1)}u
-              </span>
-            </div>
+            <div className={KPI_SUB}>{strip.luck.n} straights graded vs the close</div>
           </>
         ) : (
-          <div className={`${TILE_VALUE} text-[var(--color-text-muted)]`}>n/a</div>
+          na
         )}
-      </div>
-      <div className={TILE}>
-        <div className={TILE_LABEL}>Price honesty</div>
+      </KpiCard>
+      <KpiCard
+        icon={<IconTag />}
+        label="Price honesty"
+        pill={
+          strip.honesty ? (
+            <KpiPill
+              gold={strip.honesty.flagged}
+              text={strip.honesty.flagged ? "hard to match" : "fair quotes"}
+            />
+          ) : undefined
+        }
+      >
         {strip.honesty ? (
           <>
-            <div
-              className={`${TILE_VALUE} ${
-                strip.honesty.flagged ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"
-              }`}
-            >
-              {strip.honesty.avgCents > 0 ? "+" : ""}
-              {Math.round(strip.honesty.avgCents)}c
-              <span className="ml-1.5 text-[10px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
-                VS CLOSE
+            <div className="mt-2.5 flex items-baseline gap-1.5">
+              <span
+                className={`${KPI_VALUE} ${
+                  strip.honesty.flagged ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"
+                }`}
+              >
+                {strip.honesty.avgCents > 0 ? "+" : ""}
+                {Math.round(strip.honesty.avgCents)}c
               </span>
+              <span className={KPI_UNIT}>VS CLOSE</span>
             </div>
-            <div className={strip.honesty.flagged ? `${TILE_SUB} text-[var(--color-gold)]` : TILE_SUB}>
+            {beatPct != null && <BeatGauge pct={beatPct * 100} />}
+            <div className={KPI_SUB}>
               {strip.honesty.flagged
-                ? "hard to match: prices rarely still available"
-                : beatPct != null
-                  ? `beats the close ${Math.round(beatPct * 100)}% · ${strip.honesty.n} priced picks`
-                  : `${strip.honesty.n} priced picks`}
+                ? `posted prices rarely still available · ${strip.honesty.n} priced picks`
+                : `${strip.honesty.n} priced picks graded vs the close`}
             </div>
           </>
         ) : (
-          <div className={`${TILE_VALUE} text-[var(--color-text-muted)]`}>n/a</div>
+          na
         )}
-      </div>
-      <div className={TILE}>
-        <div className={TILE_LABEL}>Tailability</div>
+      </KpiCard>
+      <KpiCard
+        icon={<IconClock />}
+        label="Tailability"
+        pill={
+          strip.lead ? (
+            <KpiPill gold={strip.lead.warn} text={strip.lead.warn ? "tight window" : "wide window"} />
+          ) : undefined
+        }
+      >
         {strip.lead ? (
           <>
-            <div
-              className={`${TILE_VALUE} ${
-                strip.lead.warn ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"
-              }`}
-            >
-              {fmtLead(strip.lead.minutes)}
-              <span className="ml-1.5 text-[10px] font-bold tracking-[0.14em] text-[var(--color-text-muted)]">
-                PRE-PITCH
+            <div className="mt-2.5 flex items-baseline gap-1.5">
+              <span
+                className={`${KPI_VALUE} ${
+                  strip.lead.warn ? "text-[var(--color-gold)]" : "text-[var(--color-text)]"
+                }`}
+              >
+                {fmtLead(strip.lead.minutes)}
               </span>
+              <span className={KPI_UNIT}>PRE-PITCH</span>
             </div>
-            <div className={strip.lead.warn ? `${TILE_SUB} text-[var(--color-gold)]` : TILE_SUB}>
+            <div className={KPI_SUB}>
               {strip.lead.warn
-                ? "tight: posts near first pitch"
+                ? "posts near first pitch, hard to get down in time"
                 : "typical gap between post and first pitch"}
             </div>
           </>
         ) : (
-          <div className={`${TILE_VALUE} text-[var(--color-text-muted)]`}>n/a</div>
+          na
         )}
-      </div>
+      </KpiCard>
     </div>
   );
 }
