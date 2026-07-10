@@ -19,7 +19,8 @@ export function InkCrown({ className, color = "#143024" }: { className?: string;
 }
 
 /* Confidential-file reveal: closed folder until clicked, newspaper-spin
-   open; filing it away rewinds the same spin. Lab prototype. */
+   open. Filing it away rewinds the spin toward the folder's spot, then the
+   folder pops back in. */
 export function DossierReveal({
   handle,
   children,
@@ -28,6 +29,7 @@ export function DossierReveal({
   children: React.ReactNode;
 }) {
   const [state, setState] = useState<"closed" | "open" | "closing">("closed");
+  const [returned, setReturned] = useState(false);
 
   const fileAway = () => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -36,35 +38,6 @@ export function DossierReveal({
       setState("closing");
     }
   };
-
-  if (state === "closed") {
-    return (
-      <button
-        onClick={() => setState("open")}
-        aria-expanded={false}
-        className="group mx-auto block -rotate-1 rounded-lg px-8 py-6 text-left shadow-[0_16px_48px_rgba(0,0,0,0.55)] transition-transform duration-200 hover:rotate-0 hover:scale-[1.02]"
-        style={{ background: "#f2ecdd", color: "#17140f" }}
-      >
-        <div className="flex items-center gap-4">
-          <InkCrown className="h-9 w-12" />
-          <div>
-            <div className="text-[13px] font-extrabold uppercase tracking-[0.22em]">
-              TailSlips · Scout Report
-            </div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[#7a7263]">
-              Subject @{handle} · VIP eyes only
-            </div>
-          </div>
-          <span className="ml-6 inline-block -rotate-6 rounded border-2 border-[#b91c1c] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#b91c1c]">
-            Confidential
-          </span>
-        </div>
-        <div className="mt-3 border-t border-dashed border-[rgba(23,20,15,0.3)] pt-2 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#7a7263] group-hover:text-[#17140f]">
-          Click to open the file
-        </div>
-      </button>
-    );
-  }
 
   return (
     <div>
@@ -76,8 +49,13 @@ export function DossierReveal({
         }
         @keyframes dossier-spin-out {
           0% { transform: rotate(0deg) scale(1); opacity: 1; }
-          45% { opacity: 1; }
-          100% { transform: rotate(-1080deg) scale(0.05); opacity: 0; }
+          55% { opacity: 1; }
+          100% { transform: rotate(-1080deg) scale(0.04); opacity: 0; }
+        }
+        @keyframes folder-pop {
+          0% { transform: rotate(-1deg) scale(0.4); opacity: 0; }
+          65% { transform: rotate(-1deg) scale(1.06); opacity: 1; }
+          100% { transform: rotate(-1deg) scale(1); opacity: 1; }
         }
         .dossier-open {
           animation: dossier-spin 0.9s cubic-bezier(.22, 1, .36, 1) both;
@@ -85,28 +63,63 @@ export function DossierReveal({
         }
         .dossier-closing {
           animation: dossier-spin-out 0.7s cubic-bezier(.6, 0, .8, 1) both;
-          transform-origin: 50% 40%;
+          transform-origin: 50% 0%;
+        }
+        .folder-pop {
+          animation: folder-pop 0.3s cubic-bezier(.22, 1, .36, 1) both;
         }
         @media (prefers-reduced-motion: reduce) {
-          .dossier-open, .dossier-closing { animation: none; }
+          .dossier-open, .dossier-closing, .folder-pop { animation: none; }
         }
       `}</style>
-      <div
-        className={state === "closing" ? "dossier-closing" : "dossier-open"}
-        onAnimationEnd={(e) => {
-          if (e.animationName === "dossier-spin-out") setState("closed");
-        }}
-      >
-        {children}
-        <div className="mt-2 text-center">
-          <button
-            onClick={fileAway}
-            className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-          >
-            File it away
-          </button>
+      {state === "closed" ? (
+        <button
+          onClick={() => setState("open")}
+          aria-expanded={false}
+          className={`group mx-auto block -rotate-1 rounded-lg px-8 py-6 text-left shadow-[0_16px_48px_rgba(0,0,0,0.55)] transition-transform duration-200 hover:rotate-0 hover:scale-[1.02] ${
+            returned ? "folder-pop" : ""
+          }`}
+          style={{ background: "#f2ecdd", color: "#17140f" }}
+        >
+          <div className="flex items-center gap-4">
+            <InkCrown className="h-9 w-12" />
+            <div>
+              <div className="text-[13px] font-extrabold uppercase tracking-[0.22em]">
+                TailSlips · Scout Report
+              </div>
+              <div className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[#7a7263]">
+                Subject @{handle} · VIP eyes only
+              </div>
+            </div>
+            <span className="ml-6 inline-block -rotate-6 rounded border-2 border-[#b91c1c] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#b91c1c]">
+              Confidential
+            </span>
+          </div>
+          <div className="mt-3 border-t border-dashed border-[rgba(23,20,15,0.3)] pt-2 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#7a7263] group-hover:text-[#17140f]">
+            Click to open the file
+          </div>
+        </button>
+      ) : (
+        <div
+          className={state === "closing" ? "dossier-closing" : "dossier-open"}
+          onAnimationEnd={(e) => {
+            if (e.animationName === "dossier-spin-out") {
+              setReturned(true);
+              setState("closed");
+            }
+          }}
+        >
+          {children}
+          <div className="mt-2 text-center">
+            <button
+              onClick={fileAway}
+              className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            >
+              File it away
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
