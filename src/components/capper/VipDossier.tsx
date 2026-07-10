@@ -238,7 +238,7 @@ export function VipDossier({
                 </span>
                 <Stamp tone={f.verdict.tone} text={VERDICT_WORDS[f.verdict.label] ?? f.verdict.label.toLowerCase()} />
                 <span className="w-14 text-right">
-                  <MarketTailToggle capperId={capperId} market={row.market} />
+                  <MarketTailToggle capperId={capperId} market={row.market} ink />
                 </span>
               </div>
               {open && (
