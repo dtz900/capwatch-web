@@ -2,7 +2,26 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { StableCard } from "@/components/my-tails/StableCard";
-import type { CapperRow } from "@/lib/types";
+import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
+import type { CapperRow, TodayPickEntry } from "@/lib/types";
+
+vi.mock("@/lib/supabase/client", () => ({
+  createBrowserSupabase: () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }),
+      }),
+      insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: { message: "x" } }) }) }),
+    }),
+  }),
+}));
+vi.mock("@/components/auth/AuthProvider", () => ({
+  useAuth: () => ({ session: { user: { id: "u1" } }, entitlements: { isVip: true } }),
+}));
+vi.mock("@/lib/api", async (orig) => ({
+  ...(await orig<object>()),
+  fetchPickOutcomes: async () => ({}),
+}));
 
 const capper = {
   capper_id: 2,
@@ -21,6 +40,44 @@ const capper = {
   ],
   live_picks_count: 1,
 } as unknown as CapperRow;
+
+const sample = capper;
+
+const straightPick: TodayPickEntry = {
+  capper_id: 2,
+  handle: "sbr_bets",
+  display_name: "SBR",
+  profile_image_url: null,
+  kind: "straight",
+  matchup: "NYY @ BOS",
+  market: "ML",
+  market_group: "ML",
+  selection: "NYY",
+  line: null,
+  odds_taken: -110,
+  posted_at: "2026-07-09T12:00:00Z",
+  outcome: null,
+  profit_units: null,
+  pick_id: 9001,
+};
+
+const parlayPick: TodayPickEntry = {
+  capper_id: 2,
+  handle: "sbr_bets",
+  display_name: "SBR",
+  profile_image_url: null,
+  kind: "parlay",
+  matchup: null,
+  market: null,
+  market_group: null,
+  selection: "3-leg parlay",
+  line: null,
+  odds_taken: null,
+  posted_at: "2026-07-09T12:00:00Z",
+  outcome: null,
+  profit_units: null,
+  pick_id: null,
+};
 
 describe("StableCard", () => {
   it("renders name, focal units, supporting line and links to the profile", () => {
@@ -74,4 +131,26 @@ describe("StableCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /untail hits \+ runs \+ rbis/i }));
     expect(spy).toHaveBeenCalledWith("HRR");
   });
+});
+
+it("straight rows show the add-to-slip affordance inside the provider", async () => {
+  render(
+    <BetSlipProvider todayDate="2026-07-09">
+      <StableCard capper={sample} onUntail={() => {}} todayPicks={[straightPick]} />
+    </BetSlipProvider>
+  );
+  expect(
+    await screen.findByLabelText(`Add ${straightPick.selection} to bet slip`)
+  ).toBeInTheDocument();
+});
+
+it("parlay rows and provider-less renders show no affordance", () => {
+  const { rerender } = render(
+    <BetSlipProvider todayDate="2026-07-09">
+      <StableCard capper={sample} onUntail={() => {}} todayPicks={[parlayPick]} />
+    </BetSlipProvider>
+  );
+  expect(screen.queryByLabelText(/to bet slip/)).not.toBeInTheDocument();
+  rerender(<StableCard capper={sample} onUntail={() => {}} todayPicks={[straightPick]} />);
+  expect(screen.queryByLabelText(/to bet slip/)).not.toBeInTheDocument();
 });

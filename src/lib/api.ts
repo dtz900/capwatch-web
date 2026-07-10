@@ -634,3 +634,24 @@ export async function fetchTodayPicks(capperIds: number[]): Promise<TodayPicksRe
   if (!res.ok) throw new Error(`today picks fetch failed: ${res.status}`);
   return res.json();
 }
+
+/** Grades for a set of pick ids, keyed by pick_id. Ungraded ids are
+ * absent. Chunks at the endpoint's 200-id cap; no-store because the slip
+ * wants grades the moment the nightly grader lands them. */
+export async function fetchPickOutcomes(
+  pickIds: number[],
+): Promise<Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null }>> {
+  const out: Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null }> = {};
+  for (let i = 0; i < pickIds.length; i += 200) {
+    const chunk = pickIds.slice(i, i + 200);
+    if (chunk.length === 0) continue;
+    const qs = new URLSearchParams({ pick_ids: chunk.join(",") });
+    const res = await fetch(`${API_BASE}/api/public/picks/outcomes?${qs}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`pick outcomes fetch failed: ${res.status}`);
+    const body = (await res.json()) as {
+      outcomes: { pick_id: number; outcome: "W" | "L" | "P" | "V"; graded_at: string | null }[];
+    };
+    for (const o of body.outcomes) out[o.pick_id] = { outcome: o.outcome, graded_at: o.graded_at };
+  }
+  return out;
+}
