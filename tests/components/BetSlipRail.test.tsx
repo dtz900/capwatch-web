@@ -60,11 +60,12 @@ describe("BetSlipRail", () => {
       </BetSlipProvider>
     );
     await waitFor(() => expect(screen.getByText("Reds ML")).toBeInTheDocument());
-    expect(screen.getByText(/MY BET SLIP/)).toBeInTheDocument();
+    // Header text is "My Bet Slip"; CSS uppercases it, the DOM text does not.
+    expect(screen.getByText(/my bet slip/i)).toBeInTheDocument();
     expect(screen.getByText("WON")).toBeInTheDocument();
     // graded W at +142 1u: appears as the entry profit AND in both totals
     expect(screen.getAllByText("+1.4u").length).toBeGreaterThanOrEqual(3);
-    // graded entries lock: no editable inputs
-    expect(screen.queryByLabelText(/stake/i)).not.toBeInTheDocument();
+    // graded entries lock: no editable Wager/odds inputs
+    expect(screen.queryByLabelText(/wager/i)).not.toBeInTheDocument();
   });
 });

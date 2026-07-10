@@ -242,12 +242,21 @@ export function BetSlipProvider({
     [entries, todayDate]
   );
 
+  // The slip renders as a daily card: only today's entries show. History
+  // stays in user_bet_slips (it feeds the all-time total and the future
+  // bet-log surface); yesterday's graded bets roll off at the date flip.
+  const todayEntries = useMemo(() => {
+    if (entries === null) return null;
+    if (!todayDate) return entries;
+    return entries.filter((e) => e.game_date === todayDate);
+  }, [entries, todayDate]);
+
   const value = useMemo(
     () => ({
-      entries, inSlip, addFromPick, removeEntry, updateEntry, totals,
+      entries: todayEntries, inSlip, addFromPick, removeEntry, updateEntry, totals,
       teaserOpen, closeTeaser: () => setTeaserOpen(false),
     }),
-    [entries, inSlip, addFromPick, removeEntry, updateEntry, totals, teaserOpen]
+    [todayEntries, inSlip, addFromPick, removeEntry, updateEntry, totals, teaserOpen]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
