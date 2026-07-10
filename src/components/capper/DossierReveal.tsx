@@ -60,17 +60,9 @@ export function DossierReveal({
           55% { opacity: 1; }
           100% { transform: rotate(0deg) scale(1); opacity: 1; }
         }
-        @keyframes dossier-fold {
-          0% { transform: perspective(1200px) scaleY(1) scale(1); opacity: 1; }
-          45% { transform: perspective(1200px) scaleY(0.52) rotateX(-7deg) scale(1); opacity: 1; }
-          70% { transform: perspective(1200px) scaleY(0.5) rotateX(-3deg) scale(0.55) translateY(-12%); opacity: 1; }
-          100% { transform: perspective(1200px) scaleY(0.5) rotateX(0deg) scale(0.1) translateY(-32%); opacity: 0; }
-        }
-        @keyframes dossier-crease {
-          0% { opacity: 0; }
-          40% { opacity: 1; }
-          75% { opacity: 0.6; }
-          100% { opacity: 0; }
+        @keyframes dossier-settle {
+          0% { transform: scale(1) translateY(0); opacity: 1; }
+          100% { transform: scale(0.97) translateY(-10px); opacity: 0; }
         }
         @keyframes folder-pop {
           0% { transform: rotate(-1deg) scale(0.4); opacity: 0; }
@@ -82,13 +74,8 @@ export function DossierReveal({
           transform-origin: 50% 40%;
         }
         .dossier-closing {
-          animation: dossier-fold 0.85s cubic-bezier(.5, 0, .45, 1) both;
+          animation: dossier-settle 0.3s cubic-bezier(.22, 1, .36, 1) both;
           transform-origin: 50% 0%;
-        }
-        .dossier-crease {
-          background: linear-gradient(to bottom,
-            transparent 42%, rgba(23,20,15,0.22) 50%, rgba(23,20,15,0.08) 54%, transparent 62%);
-          animation: dossier-crease 0.85s linear both;
         }
         .folder-pop {
           animation: folder-pop 0.3s cubic-bezier(.22, 1, .36, 1) both;
@@ -128,16 +115,13 @@ export function DossierReveal({
         <div
           className={state === "closing" ? "dossier-closing" : "dossier-open"}
           onAnimationEnd={(e) => {
-            if (e.animationName === "dossier-fold") {
+            if (e.animationName === "dossier-settle") {
               setReturned(true);
               setState("closed");
             }
           }}
         >
           <div className="relative">
-            {state === "closing" && (
-              <div className="dossier-crease pointer-events-none absolute inset-0 z-20 rounded-lg" aria-hidden="true" />
-            )}
             <button
               onClick={fileAway}
               className="absolute -top-3 right-10 z-10 rounded-t-md px-3 pb-1 pt-1.5 text-[9px] font-extrabold uppercase tracking-[0.16em] shadow-[0_-4px_16px_rgba(0,0,0,0.35)]"
