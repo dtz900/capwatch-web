@@ -7,7 +7,6 @@ import { vipEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
 import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
 import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
-import { BetSlipDrawer } from "@/components/my-tails/BetSlipDrawer";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import type { CapperRow, TodayPickEntry } from "@/lib/types";
 import type { EdgeRow } from "@/lib/edges";
@@ -103,40 +102,35 @@ export default async function MyTailsPage() {
     <>
       <TopNav />
       <BetSlipProvider todayDate={today.date || null}>
-      <main className="mx-auto max-w-[1680px] px-4 sm:px-6 py-10">
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_384px] lg:gap-8">
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold text-[var(--color-text)]">My Tails</h1>
-              {ids.length > 0 && (
-                <p className="mt-1 text-sm text-[var(--color-text-soft)]">
-                  {shownPickCount > 0
-                    ? `${shownPickCount} pick${shownPickCount === 1 ? "" : "s"} from your tails today`
-                    : "No picks from your tails yet today."}
-                </p>
-              )}
-            </div>
-            {ids.length === 0 ? (
-              <EmptyStable suggestions={top3} />
-            ) : (
-              <StableGrid
-                initial={stable}
-                todayByCapper={todayByCapper}
-                scopesByCapper={scopesByCapper}
-                edgesByCapper={edgesByCapper}
-              />
+      {/* Content spans the leaderboard's exact container (max-w-[1240px]) so
+          the card grid spreads like the podiums. The bet slip lives in the
+          header row as a ticket stub that scrolls with the page; once opened
+          it becomes a fixed ticket pinned in the right gutter. */}
+      <main className="max-w-[1240px] mx-auto px-4 sm:px-7 py-10 space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--color-text)]">My Tails</h1>
+            {ids.length > 0 && (
+              <p className="mt-1 text-sm text-[var(--color-text-soft)]">
+                {shownPickCount > 0
+                  ? `${shownPickCount} pick${shownPickCount === 1 ? "" : "s"} from your tails today`
+                  : "No picks from your tails yet today."}
+              </p>
             )}
           </div>
-          <div className="hidden lg:block">
-            <div className="sticky top-16">
-              <BetSlipRail />
-            </div>
-          </div>
+          <BetSlipRail />
         </div>
+        {ids.length === 0 ? (
+          <EmptyStable suggestions={top3} />
+        ) : (
+          <StableGrid
+            initial={stable}
+            todayByCapper={todayByCapper}
+            scopesByCapper={scopesByCapper}
+            edgesByCapper={edgesByCapper}
+          />
+        )}
       </main>
-      <div className="lg:hidden">
-        <BetSlipDrawer />
-      </div>
       </BetSlipProvider>
     </>
   );
