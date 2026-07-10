@@ -2,7 +2,10 @@ import type { EdgeRow } from "@/lib/edges";
 
 /* Tunables for the VIP panel depth cells. Spec:
    docs/superpowers/specs/2026-07-09-tailslips-vip-panel-depth-design.md */
-export const HONESTY_FLAG_CENTS = 15;
+/* clv_avg_cents is BASIS POINTS of implied probability (see
+   fadeai-platform jobs/stamp_capper_clv.py). Flag at 1 full point. */
+export const HONESTY_FLAG_CENTS = 100;
+export const HONESTY_MIN_N = 20;
 export const LEAD_WARN_MINUTES = 10;
 export const TREND_MIN_N = 10;
 export const TREND_FLAT_TOL = 2.0;
@@ -43,7 +46,7 @@ export function fmtLead(minutes: number): string {
 }
 
 const pct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
-const cents = (v: number) => `${v > 0 ? "+" : ""}${Math.round(v)}c`;
+const bpsPct = (v: number) => `${v > 0 ? "+" : ""}${(v / 100).toFixed(1)}%`;
 
 function luckCell(row: EdgeRow): EdgeCell {
   const actual = row.x_actual_pnl_units;
@@ -83,9 +86,10 @@ function closeCell(row: EdgeRow): EdgeCell {
   if (!row.clv_n || row.clv_beat_pct == null || row.clv_avg_cents == null) {
     return { value: "n/a", sub: "no priced picks", tone: "muted" };
   }
-  const flagged = row.clv_avg_cents > HONESTY_FLAG_CENTS;
+  // The hard-to-match flag needs a real sample; 12 lucky quotes prove nothing.
+  const flagged = row.clv_avg_cents > HONESTY_FLAG_CENTS && row.clv_n >= HONESTY_MIN_N;
   return {
-    value: `${cents(row.clv_avg_cents)} vs close`,
+    value: `${bpsPct(row.clv_avg_cents)} vs close`,
     sub: flagged
       ? "hard to match at post time"
       : `beats the close ${Math.round(row.clv_beat_pct)}% of ${row.clv_n}`,
@@ -138,7 +142,8 @@ export function buildHeadlineStrip(rows: EdgeRow[]): HeadlineStrip {
       leadN += r.n_decided;
     }
   }
-  const avgCents = centsN > 0 ? centsSum / centsN : null;
+  // Below the floor the honesty read is noise; render the cell as no-data.
+  const avgCents = centsN >= HONESTY_MIN_N ? centsSum / centsN : null;
   const leadMin = leadN > 0 ? leadSum / leadN : null;
   return {
     luck: hasLuck ? { net, expected, delta: net - expected, n: luckN } : null,

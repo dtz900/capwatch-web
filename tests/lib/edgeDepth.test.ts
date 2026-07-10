@@ -16,7 +16,7 @@ const base: EdgeRow = {
   roi_pct: -11.3,
   xroi_pct: -11.2,
   clv_beat_pct: 48,
-  clv_avg_cents: 4,
+  clv_avg_cents: -76,
   clv_n: 20,
   tracked_days: 60,
   gate_pass: false,
@@ -86,13 +86,13 @@ describe("buildEdgeCells", () => {
 
   it("summarizes the close cell from clv columns", () => {
     const c = buildEdgeCells(base);
-    expect(c.close.value).toBe("+4c vs close");
+    expect(c.close.value).toBe("-0.8% vs close");
     expect(c.close.sub).toBe("beats the close 48% of 20");
     expect(c.close.tone).toBe("muted");
   });
 
   it("flags hard-to-match prices past the honesty threshold", () => {
-    const c = buildEdgeCells({ ...base, clv_avg_cents: HONESTY_FLAG_CENTS + 5 });
+    const c = buildEdgeCells({ ...base, clv_avg_cents: HONESTY_FLAG_CENTS + 50 });
     expect(c.close.sub).toBe("hard to match at post time");
     expect(c.close.tone).toBe("warn");
   });
@@ -122,7 +122,7 @@ describe("buildHeadlineStrip", () => {
     x_actual_pnl_units: 9.0,
     x_pnl_units: 3.0,
     x_n: 60,
-    clv_avg_cents: 20,
+    clv_avg_cents: 200,
     clv_n: 60,
     median_lead_minutes: 50,
   };
@@ -138,12 +138,12 @@ describe("buildHeadlineStrip", () => {
 
   it("weights honesty by priced-pick count and flags hard-to-match prices", () => {
     const s = buildHeadlineStrip([base, prop]);
-    // (4*20 + 20*60) / 80 = 16c, above HONESTY_FLAG_CENTS
+    // (-76*20 + 200*60) / 80 = 131 bps, above HONESTY_FLAG_CENTS
     expect(s.honesty).not.toBeNull();
-    expect(s.honesty!.avgCents).toBeCloseTo(16, 5);
+    expect(s.honesty!.avgCents).toBeCloseTo(131, 5);
     expect(s.honesty!.n).toBe(80);
     expect(s.honesty!.flagged).toBe(true);
-    expect(HONESTY_FLAG_CENTS).toBe(15);
+    expect(HONESTY_FLAG_CENTS).toBe(100);
   });
 
   it("weights typical lead by decided picks", () => {

@@ -5,7 +5,7 @@ import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
 const edgeRows = [
   {
     market: "ML", n_decided: 60, roi_pct: 13.7, xroi_pct: null,
-    clv_beat_pct: 66, clv_avg_cents: 8, clv_n: 60, tracked_days: 80,
+    clv_beat_pct: 66, clv_avg_cents: 80, clv_n: 60, tracked_days: 80,
     gate_pass: true, gate_reasons: [], originator: false,
     tail_at_close_roi: null, pnl_units: 9.0, x_actual_pnl_units: null,
     x_pnl_units: null, x_n: 0, roi_30d: 10.0, xroi_30d: null, n_30d: 15,
@@ -13,7 +13,7 @@ const edgeRows = [
   },
   {
     market: "Game Total", n_decided: 40, roi_pct: -11.3, xroi_pct: -11.2,
-    clv_beat_pct: 48, clv_avg_cents: 4, clv_n: 20, tracked_days: 80,
+    clv_beat_pct: 48, clv_avg_cents: -76, clv_n: 20, tracked_days: 80,
     gate_pass: false, gate_reasons: ["de-lucked xROI not positive"],
     originator: false, tail_at_close_roi: null, pnl_units: -2.4,
     x_actual_pnl_units: -2.4, x_pnl_units: -0.6, x_n: 40, roi_30d: -8.0,
@@ -33,12 +33,11 @@ const supabaseMock = {
 
 vi.mock("@/lib/supabase/client", () => ({ createBrowserSupabase: () => supabaseMock }));
 
-vi.mock("@/components/auth/AuthProvider", () => ({
-  useAuth: () => ({
-    session: { user: { id: "user-1" } },
-    entitlements: { isVip: true, isLoggedIn: true },
-  }),
-}));
+const authState = {
+  session: { user: { id: "user-1" } } as { user: { id: string } } | null,
+  entitlements: { isVip: true, isLoggedIn: true },
+};
+vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => authState }));
 
 vi.mock("@/components/capper/MarketTailToggle", () => ({
   MarketTailToggle: () => <span>TAIL</span>,
@@ -47,46 +46,67 @@ vi.mock("@/components/capper/MarketTailToggle", () => ({
 beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
+  authState.entitlements = { isVip: true, isLoggedIn: true };
 });
 afterEach(() => vi.clearAllMocks());
 
-describe("VipEdgesPanel depth", () => {
-  it("renders the KPI cards from the edge rows", async () => {
-    render(<VipEdgesPanel capperId={7} clv={{ beatPct: 0.61, avg: 6, n: 80 }} />);
-    await waitFor(() => expect(screen.getByText("Moneyline")).toBeInTheDocument());
-    // luck card: only the Game Total row is de-luckable (ML has no x data);
-    // -2.4u shows as the big value AND the ACT bar value
-    expect(screen.getAllByText(/skill vs\. luck/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText("-2.4u").length).toBeGreaterThanOrEqual(1);
+async function openDossier() {
+  render(<VipEdgesPanel capperId={7} handle="tester" clv={{ beatPct: 0.61, avg: 6, n: 80 }} />);
+  await waitFor(() =>
+    expect(screen.getByText(/click to open the file/i)).toBeInTheDocument()
+  );
+  fireEvent.click(screen.getByText(/click to open the file/i).closest("button")!);
+  await waitFor(() =>
+    expect(screen.getAllByText("Moneyline").length).toBeGreaterThanOrEqual(1)
+  );
+}
+
+describe("VipEdgesPanel dossier", () => {
+  it("opens the folder into the report with KPIs, chart and stamps", async () => {
+    await openDossier();
+    // letterhead + real edge stamp (ML holds up)
+    expect(screen.getAllByText(/scout report/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/1 real edge/i)).toBeInTheDocument();
+    // luck KPI: only Game Total is de-luckable
+    expect(screen.getByText("-2.4u")).toBeInTheDocument();
     expect(screen.getByText(/ran cold 1\.8u/i)).toBeInTheDocument();
-    expect(screen.getByText(/40 straights graded vs the close/i)).toBeInTheDocument();
-    // honesty card: (8*60 + 4*20) / 80 = 7c, not flagged, gauge from server beat pct
-    expect(screen.getByText("+7c")).toBeInTheDocument();
-    expect(screen.getByText(/fair quotes/i)).toBeInTheDocument();
+    // honesty KPI: weighted (80*60 + -76*20) / 80 = 41 bps -> +0.4%
+    expect(screen.getByText("+0.4%")).toBeInTheDocument();
     expect(screen.getByText(/beats close 61%/i)).toBeInTheDocument();
-    expect(screen.getByText(/80 priced picks graded vs the close/i)).toBeInTheDocument();
-    // tailability card: (50*60 + 18*40) / 100 = 37.2 min
+    // tailability: (50*60 + 18*40) / 100 = 37.2 min
     expect(screen.getByText("37 min")).toBeInTheDocument();
-    expect(screen.getByText(/wide window/i)).toBeInTheDocument();
-    expect(screen.getByText(/price honesty/i)).toBeInTheDocument();
-    expect(screen.getByText(/tailability/i)).toBeInTheDocument();
+    // verdict stamps in the table
+    expect(screen.getByText(/^real edge$/i)).toBeInTheDocument();
   });
 
   it("expands a market row into the labeled cell grid", async () => {
-    render(<VipEdgesPanel capperId={7} clv={{ beatPct: 0.61, avg: 6, n: 80 }} />);
-    await waitFor(() => expect(screen.getByText("Game Total")).toBeInTheDocument());
-    // collapsed: no expansion cells yet (the 30d trend only lives there)
+    await openDossier();
     expect(screen.queryByText(/last 30d/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /details for game total/i }));
     await waitFor(() =>
       expect(screen.getByText(/-8\.1% last 30d/i)).toBeInTheDocument()
     );
     expect(screen.getByText(/ran cold by 1\.8u/i)).toBeInTheDocument();
-    expect(screen.getByText(/\+4c vs close/i)).toBeInTheDocument();
-    expect(screen.getByText(/beats the close 48% of 20/i)).toBeInTheDocument();
+    expect(screen.getByText(/-0\.8% vs close/i)).toBeInTheDocument();
     expect(screen.getByText(/18 min pre-pitch/i)).toBeInTheDocument();
-    // collapse again
     fireEvent.click(screen.getByRole("button", { name: /details for game total/i }));
     expect(screen.queryByText(/last 30d/i)).not.toBeInTheDocument();
+  });
+
+  it("shows a sealed folder to free accounts and nothing when logged out", async () => {
+    authState.entitlements = { isVip: false, isLoggedIn: true };
+    const { unmount } = render(
+      <VipEdgesPanel capperId={7} handle="tester" clv={{ beatPct: null, avg: null, n: null }} />
+    );
+    expect(screen.getByText(/vip members only/i)).toBeInTheDocument();
+    expect(screen.getByText(/sealed/i)).toBeInTheDocument();
+    expect(screen.queryByText(/click to open the file/i)).not.toBeInTheDocument();
+    unmount();
+
+    authState.entitlements = { isVip: false, isLoggedIn: false };
+    const { container } = render(
+      <VipEdgesPanel capperId={7} handle="tester" clv={{ beatPct: null, avg: null, n: null }} />
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });

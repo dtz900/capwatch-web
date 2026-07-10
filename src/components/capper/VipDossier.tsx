@@ -169,10 +169,15 @@ export function VipDossier({
             <>
               <div className={big} style={{ color: strip.honesty.flagged ? AMBER : INK }}>
                 {strip.honesty.avgCents > 0 ? "+" : ""}
-                {Math.round(strip.honesty.avgCents)}c
+                {(strip.honesty.avgCents / 100).toFixed(1)}%
               </div>
               <div className="mt-0.5 text-[10px]" style={{ color: SOFT }}>
-                vs close · {strip.honesty.n} priced{strip.honesty.flagged ? " · hard to match" : ""}
+                {strip.honesty.flagged
+                  ? "quotes rarely still available"
+                  : strip.honesty.avgCents < 0
+                    ? "posted prices carry less value than the close"
+                    : "posted prices hold their value to close"}{" "}
+                · {strip.honesty.n} priced
                 {beatPct != null ? ` · beats close ${Math.round(beatPct * 100)}%` : ""}
               </div>
             </>
