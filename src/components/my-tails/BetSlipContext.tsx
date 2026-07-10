@@ -164,11 +164,19 @@ export function BetSlipProvider({
             setEntries((prev) => (prev ?? []).filter((e) => e.id !== tempId));
             return;
           }
-          setEntries((prev) =>
-            (prev ?? []).map((e) =>
-              e.id === tempId ? { ...(data as Omit<SlipEntry, "outcome">), outcome: null } : e
-            )
-          );
+          const real: SlipEntry = { ...(data as Omit<SlipEntry, "outcome">), outcome: null };
+          setEntries((prev) => {
+            const list = prev ?? [];
+            // The initial load can resolve between the optimistic set and
+            // this callback; if tempId is gone, append the committed row
+            // instead of silently dropping it until the next reload.
+            if (!list.some((e) => e.id === tempId)) {
+              return list.some((e) => e.pick_id === real.pick_id)
+                ? list
+                : [real, ...list];
+            }
+            return list.map((e) => (e.id === tempId ? real : e));
+          });
         });
     },
     [entitlements.isVip, supabase, userId, todayDate]
