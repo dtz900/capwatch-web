@@ -180,7 +180,7 @@ export function VipDossier({
             <>
               <div className={big} style={{ color: FAINT }}>n/a</div>
               <div className="mt-0.5 text-[10px]" style={{ color: FAINT }}>
-                too few posted prices to judge
+                price check covers ML + spread picks only
               </div>
             </>
           )}
