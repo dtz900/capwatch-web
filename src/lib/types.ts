@@ -383,6 +383,9 @@ export interface TodayPickEntry {
   posted_at: string | null;
   outcome: "W" | "L" | "P" | "V" | null;
   profit_units: number | null;
+  /** Underlying capper_picks id for straights; null for parlay entries.
+      The bet slip binds to this for self-grading. */
+  pick_id: number | null;
 }
 
 export interface TodayPicksResponse {
