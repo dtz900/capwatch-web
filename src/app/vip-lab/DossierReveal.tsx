@@ -1,9 +1,25 @@
 "use client";
 import { useState } from "react";
-import Image from "next/image";
 
-/* Confidential-file reveal: the dossier stays closed until clicked, then
-   spins open like a newspaper. Lab prototype for the VIP section. */
+/* Ink-colored crown via CSS mask of the transparent asset, so it prints
+   dark on paper surfaces instead of brand green. */
+export function InkCrown({ className, color = "#143024" }: { className?: string; color?: string }) {
+  const mask: React.CSSProperties = {
+    backgroundColor: color,
+    WebkitMaskImage: "url(/logo-crown.png)",
+    maskImage: "url(/logo-crown.png)",
+    WebkitMaskSize: "contain",
+    maskSize: "contain",
+    WebkitMaskRepeat: "no-repeat",
+    maskRepeat: "no-repeat",
+    WebkitMaskPosition: "center",
+    maskPosition: "center",
+  };
+  return <span aria-hidden="true" className={`inline-block ${className ?? ""}`} style={mask} />;
+}
+
+/* Confidential-file reveal: closed folder until clicked, newspaper-spin
+   open; filing it away rewinds the same spin. Lab prototype. */
 export function DossierReveal({
   handle,
   children,
@@ -11,18 +27,26 @@ export function DossierReveal({
   handle: string;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [state, setState] = useState<"closed" | "open" | "closing">("closed");
 
-  if (!open) {
+  const fileAway = () => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setState("closed");
+    } else {
+      setState("closing");
+    }
+  };
+
+  if (state === "closed") {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => setState("open")}
         aria-expanded={false}
         className="group mx-auto block -rotate-1 rounded-lg px-8 py-6 text-left shadow-[0_16px_48px_rgba(0,0,0,0.55)] transition-transform duration-200 hover:rotate-0 hover:scale-[1.02]"
         style={{ background: "#f2ecdd", color: "#17140f" }}
       >
         <div className="flex items-center gap-4">
-          <Image src="/logo-crown.png" alt="" width={1135} height={793} className="h-8 w-auto" />
+          <InkCrown className="h-9 w-12" />
           <div>
             <div className="text-[13px] font-extrabold uppercase tracking-[0.22em]">
               TailSlips · Scout Report
@@ -50,19 +74,33 @@ export function DossierReveal({
           55% { opacity: 1; }
           100% { transform: rotate(0deg) scale(1); opacity: 1; }
         }
+        @keyframes dossier-spin-out {
+          0% { transform: rotate(0deg) scale(1); opacity: 1; }
+          45% { opacity: 1; }
+          100% { transform: rotate(-1080deg) scale(0.05); opacity: 0; }
+        }
         .dossier-open {
           animation: dossier-spin 0.9s cubic-bezier(.22, 1, .36, 1) both;
           transform-origin: 50% 40%;
         }
+        .dossier-closing {
+          animation: dossier-spin-out 0.7s cubic-bezier(.6, 0, .8, 1) both;
+          transform-origin: 50% 40%;
+        }
         @media (prefers-reduced-motion: reduce) {
-          .dossier-open { animation: none; }
+          .dossier-open, .dossier-closing { animation: none; }
         }
       `}</style>
-      <div className="dossier-open">
+      <div
+        className={state === "closing" ? "dossier-closing" : "dossier-open"}
+        onAnimationEnd={(e) => {
+          if (e.animationName === "dossier-spin-out") setState("closed");
+        }}
+      >
         {children}
         <div className="mt-2 text-center">
           <button
-            onClick={() => setOpen(false)}
+            onClick={fileAway}
             className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
           >
             File it away

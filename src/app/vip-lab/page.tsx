@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { DossierReveal } from "./DossierReveal";
+import { DossierReveal, InkCrown } from "./DossierReveal";
 import { TopNav } from "@/components/nav/TopNav";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { vipEnabled } from "@/lib/flags";
@@ -21,21 +21,6 @@ const SELECT =
 
 const pctStr = (v: number | null) =>
   v == null ? "n/a" : `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
-
-function InkCrown({ className, color = "#143024" }: { className?: string; color?: string }) {
-  const mask: React.CSSProperties = {
-    backgroundColor: color,
-    WebkitMaskImage: "url(/logo-crown.png)",
-    maskImage: "url(/logo-crown.png)",
-    WebkitMaskSize: "contain",
-    maskSize: "contain",
-    WebkitMaskRepeat: "no-repeat",
-    maskRepeat: "no-repeat",
-    WebkitMaskPosition: "center",
-    maskPosition: "center",
-  };
-  return <span aria-hidden="true" className={`inline-block ${className ?? ""}`} style={mask} />;
-}
 
 function views(rows: EdgeRow[]) {
   return rows
