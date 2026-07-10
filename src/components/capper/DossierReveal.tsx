@@ -88,26 +88,26 @@ export function DossierReveal({
         <button
           onClick={() => setState("open")}
           aria-expanded={false}
-          className={`group mx-auto block -rotate-1 rounded-lg px-8 py-6 text-left shadow-[0_16px_48px_rgba(0,0,0,0.55)] transition-transform duration-200 hover:rotate-0 hover:scale-[1.02] ${
+          className={`group mx-auto block w-full max-w-2xl -rotate-1 rounded-lg px-5 py-4 text-left shadow-[0_16px_48px_rgba(0,0,0,0.55)] transition-transform duration-200 hover:rotate-0 hover:scale-[1.02] ${
             returned ? "folder-pop" : ""
           }`}
           style={{ background: "#f2ecdd", color: "#17140f" }}
         >
-          <div className="flex items-center gap-4">
-            <InkCrown className="h-9 w-12" />
-            <div>
-              <div className="text-[13px] font-extrabold uppercase tracking-[0.22em]">
+          <div className="flex items-center gap-3">
+            <InkCrown className="h-7 w-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate whitespace-nowrap text-[12px] font-extrabold uppercase tracking-[0.14em]">
                 TailSlips · Scout Report
               </div>
-              <div className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[#7a7263]">
+              <div className="mt-0.5 truncate whitespace-nowrap text-[9px] uppercase tracking-[0.1em] text-[#7a7263]">
                 Subject @{handle} · VIP eyes only
               </div>
             </div>
-            <span className="ml-6 inline-block -rotate-6 rounded border-2 border-[#b91c1c] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#b91c1c]">
+            <span className="inline-block shrink-0 -rotate-6 rounded border-2 border-[#b91c1c] px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#b91c1c]">
               Confidential
             </span>
           </div>
-          <div className="mt-3 border-t border-dashed border-[rgba(23,20,15,0.3)] pt-2 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#7a7263] group-hover:text-[#17140f]">
+          <div className="mt-2.5 border-t border-dashed border-[rgba(23,20,15,0.3)] pt-1.5 text-center text-[9px] font-bold uppercase tracking-[0.18em] text-[#7a7263] group-hover:text-[#17140f]">
             Click to open the file
           </div>
         </button>
