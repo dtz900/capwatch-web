@@ -106,7 +106,7 @@ export function BetSlipProvider({
       }
       if (!supabase || !userId || entries === null) return;
       const payload = slipInsertFromPick(userId, p, todayDate);
-      if (!payload || inSlip(p.pick_id)) return;
+      if (!payload) return;
       const tempId = -Date.now();
       const optimistic: SlipEntry = {
         id: tempId,
@@ -123,7 +123,17 @@ export function BetSlipProvider({
         created_at: new Date().toISOString(),
         outcome: null,
       };
-      setEntries((prev) => [optimistic, ...(prev ?? [])]);
+      // Dedup inside the functional updater so a rapid double tap cannot
+      // slip past a stale entries snapshot and insert twice.
+      let duplicate = false;
+      setEntries((prev) => {
+        if ((prev ?? []).some((e) => e.pick_id === p.pick_id)) {
+          duplicate = true;
+          return prev;
+        }
+        return [optimistic, ...(prev ?? [])];
+      });
+      if (duplicate) return;
       supabase
         .from("user_bet_slips")
         .insert(payload)
@@ -144,7 +154,7 @@ export function BetSlipProvider({
           );
         });
     },
-    [entitlements.isVip, supabase, userId, entries, todayDate, inSlip]
+    [entitlements.isVip, supabase, userId, todayDate]
   );
 
   const removeEntry = useCallback(
@@ -152,6 +162,7 @@ export function BetSlipProvider({
       if (!supabase || !userId) return;
       const target = (entries ?? []).find((e) => e.id === id);
       if (!target || target.outcome !== null) return; // graded = locked
+      const idx = (entries ?? []).findIndex((e) => e.id === id);
       setEntries((prev) => (prev ?? []).filter((e) => e.id !== id));
       supabase
         .from("user_bet_slips")
@@ -161,7 +172,12 @@ export function BetSlipProvider({
         .then(({ error }) => {
           if (error) {
             console.error("bet slip delete failed:", error);
-            setEntries((prev) => [target, ...(prev ?? [])]);
+            // restore at the original position, not the top
+            setEntries((prev) => {
+              const next = [...(prev ?? [])];
+              next.splice(Math.max(0, idx), 0, target);
+              return next;
+            });
           }
         });
     },
