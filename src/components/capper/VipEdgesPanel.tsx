@@ -6,23 +6,15 @@ import type { EdgeRow } from "@/lib/edges";
 import { DossierReveal } from "@/components/capper/DossierReveal";
 import { VipDossier } from "@/components/capper/VipDossier";
 
-interface ClvSummary {
-  beatPct: number | null;
-  avg: number | null;
-  n: number | null;
-}
-
 /* The VIP section is a confidential scout report: a closed cream folder on
    the page that spins open into the full dossier (VipDossier). Data comes
    from the nightly capper_market_edges table; no live compute here. */
 export function VipEdgesPanel({
   capperId,
   handle = "",
-  clv,
 }: {
   capperId: number;
   handle?: string;
-  clv: ClvSummary;
 }) {
   const { entitlements } = useAuth();
   const supabase = useMemo(
@@ -60,9 +52,17 @@ export function VipEdgesPanel({
       </p>
     );
   }
+  // Beat-close comes from the RLS-gated ML edge row, not the public profile
+  // API (which strips CLV for anonymous callers). clv_beat_pct on edge rows
+  // is already a percent; the dossier gauge expects a fraction.
+  const mlRow = rows.find((r) => r.market === "ML");
+  const beatPct =
+    mlRow && mlRow.clv_n > 0 && mlRow.clv_beat_pct != null
+      ? mlRow.clv_beat_pct / 100
+      : null;
   return (
     <DossierReveal handle={handle}>
-      <VipDossier rows={rows} capperId={capperId} handle={handle} beatPct={clv.beatPct} />
+      <VipDossier rows={rows} capperId={capperId} handle={handle} beatPct={beatPct} />
     </DossierReveal>
   );
 }
