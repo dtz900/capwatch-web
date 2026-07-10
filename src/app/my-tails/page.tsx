@@ -103,8 +103,8 @@ export default async function MyTailsPage() {
     <>
       <TopNav />
       <BetSlipProvider todayDate={today.date || null}>
-      <main className="mx-auto max-w-7xl px-4 py-10">
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
+      <main className="mx-auto max-w-[1680px] px-4 sm:px-6 py-10">
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_384px] lg:gap-8">
           <div className="space-y-6">
             <div>
               <h1 className="text-2xl font-bold text-[var(--color-text)]">My Tails</h1>
