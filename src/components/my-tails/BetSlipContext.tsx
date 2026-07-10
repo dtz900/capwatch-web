@@ -1,6 +1,6 @@
 "use client";
 import {
-  createContext, useCallback, useContext, useEffect, useMemo, useState,
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -46,6 +46,7 @@ export function BetSlipProvider({
   );
   const [entries, setEntries] = useState<SlipEntry[] | null>(null);
   const [teaserOpen, setTeaserOpen] = useState(false);
+  const insertingPickIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     if (!supabase || !userId) {
@@ -104,13 +105,24 @@ export function BetSlipProvider({
         setTeaserOpen(true);
         return;
       }
-      if (!supabase || !userId || entries === null) return;
+      if (!supabase || !userId || p.pick_id == null) return;
+
+      const pickId = p.pick_id; // Narrow the type
+      // Synchronous dedup check using ref
+      if (insertingPickIdsRef.current.has(pickId)) {
+        return;
+      }
+      insertingPickIdsRef.current.add(pickId);
+
       const payload = slipInsertFromPick(userId, p, todayDate);
-      if (!payload) return;
+      if (!payload) {
+        insertingPickIdsRef.current.delete(pickId);
+        return;
+      }
       const tempId = -Date.now();
       const optimistic: SlipEntry = {
         id: tempId,
-        pick_id: p.pick_id,
+        pick_id: pickId,
         stake: payload.stake as number,
         odds: payload.odds as number,
         capper_id: p.capper_id,
@@ -127,13 +139,17 @@ export function BetSlipProvider({
       // slip past a stale entries snapshot and insert twice.
       let duplicate = false;
       setEntries((prev) => {
-        if ((prev ?? []).some((e) => e.pick_id === p.pick_id)) {
+        if (prev === null) return prev; // still loading
+        if (prev.some((e) => e.pick_id === p.pick_id)) {
           duplicate = true;
           return prev;
         }
-        return [optimistic, ...(prev ?? [])];
+        return [optimistic, ...prev];
       });
-      if (duplicate) return;
+      if (duplicate) {
+        insertingPickIdsRef.current.delete(pickId);
+        return;
+      }
       supabase
         .from("user_bet_slips")
         .insert(payload)
@@ -142,6 +158,7 @@ export function BetSlipProvider({
         )
         .single()
         .then(({ data, error }) => {
+          insertingPickIdsRef.current.delete(pickId);
           if (error || !data) {
             console.error("bet slip insert failed:", error);
             setEntries((prev) => (prev ?? []).filter((e) => e.id !== tempId));
