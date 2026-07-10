@@ -51,7 +51,7 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 async function openDossier() {
-  render(<VipEdgesPanel capperId={7} handle="tester" clv={{ beatPct: 0.61, avg: 6, n: 80 }} />);
+  render(<VipEdgesPanel capperId={7} handle="tester" />);
   await waitFor(() =>
     expect(screen.getByText(/click to open the file/i)).toBeInTheDocument()
   );
@@ -72,7 +72,7 @@ describe("VipEdgesPanel dossier", () => {
     expect(screen.getByText(/ran cold 1\.8u/i)).toBeInTheDocument();
     // honesty KPI: weighted (80*60 + -76*20) / 80 = 41 bps -> +0.4%
     expect(screen.getByText("+0.4%")).toBeInTheDocument();
-    expect(screen.getByText(/beats close 61%/i)).toBeInTheDocument();
+    expect(screen.getByText(/beats close 66%/i)).toBeInTheDocument();
     // tailability: (50*60 + 18*40) / 100 = 37.2 min
     expect(screen.getByText("37 min")).toBeInTheDocument();
     // verdict stamps in the table
@@ -96,7 +96,7 @@ describe("VipEdgesPanel dossier", () => {
   it("shows a sealed folder to free accounts and nothing when logged out", async () => {
     authState.entitlements = { isVip: false, isLoggedIn: true };
     const { unmount } = render(
-      <VipEdgesPanel capperId={7} handle="tester" clv={{ beatPct: null, avg: null, n: null }} />
+      <VipEdgesPanel capperId={7} handle="tester" />
     );
     expect(screen.getByText(/vip members only/i)).toBeInTheDocument();
     expect(screen.getByText(/sealed/i)).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe("VipEdgesPanel dossier", () => {
 
     authState.entitlements = { isVip: false, isLoggedIn: false };
     const { container } = render(
-      <VipEdgesPanel capperId={7} handle="tester" clv={{ beatPct: null, avg: null, n: null }} />
+      <VipEdgesPanel capperId={7} handle="tester" />
     );
     expect(container).toBeEmptyDOMElement();
   });

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchCapperProfile } from "@/lib/api";
+import { fetchCapperProfileAdmin } from "@/lib/api";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart, formatPickDate } from "@/lib/formatters";
 import type { CapperAggregate, HistoryPick } from "@/lib/types";
@@ -34,7 +34,8 @@ export default async function AdminCapperPicksPage({ params, searchParams }: Pag
 
   let profile;
   try {
-    profile = await fetchCapperProfile(handle, {
+    // Admin fetch: cron bearer keeps the CLV fields the anon API strips.
+    profile = await fetchCapperProfileAdmin(handle, {
       history_limit: PAGE_SIZE,
       history_offset: offset,
     });

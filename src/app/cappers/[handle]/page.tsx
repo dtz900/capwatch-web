@@ -449,11 +449,6 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
               <VipEdgesPanel
                 capperId={profile.capper.id}
                 handle={profile.capper.handle ?? undefined}
-                clv={{
-                  beatPct: allTimeAgg?.clv_beat_pct ?? null,
-                  avg: allTimeAgg?.clv_avg ?? null,
-                  n: allTimeAgg?.clv_count ?? null,
-                }}
               />
             </div>
           )}

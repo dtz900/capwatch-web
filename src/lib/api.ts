@@ -355,6 +355,30 @@ export async function fetchCapperProfile(
   });
 }
 
+/** Server-only, admin surfaces. Same profile endpoint but with the cron
+ * bearer, which re-enables the CLV fields the API strips from anonymous
+ * responses. Deliberately bypasses the shared KV cache and Next data cache
+ * so a privileged response is never served to an anonymous request. */
+export async function fetchCapperProfileAdmin(
+  handle: string,
+  filters: CapperProfileFilters = {},
+): Promise<CapperProfile> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error("CRON_SECRET not set on server");
+  const params = new URLSearchParams();
+  if (filters.history_limit != null) params.set("history_limit", String(filters.history_limit));
+  if (filters.history_offset != null) params.set("history_offset", String(filters.history_offset));
+  const qs = params.toString();
+  const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}${qs ? `?${qs}` : ""}`;
+  const res = await fetchWithRetry(url, {
+    headers: { Authorization: `Bearer ${secret}` },
+    cache: "no-store",
+  });
+  if (res.status === 404) throw new Error("not_found");
+  if (!res.ok) throw new Error(`Capper profile fetch failed: ${res.status}`);
+  return (await res.json()) as CapperProfile;
+}
+
 export interface DeletedPick {
   id: number;
   raw_id: number;
