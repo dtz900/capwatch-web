@@ -6,7 +6,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 /* Tail exactly one market from one capper. VIP only: non-VIPs render nothing
    (the panel that hosts this is already teaser-gated for them). Plain text
    control by design; no pill chrome. */
-export function MarketTailToggle({ capperId, market }: { capperId: number; market: string }) {
+export function MarketTailToggle({ capperId, market, ink = false }: { capperId: number; market: string; ink?: boolean }) {
   const { session, entitlements } = useAuth();
   const supabase = useMemo(
     () =>
@@ -88,9 +88,13 @@ export function MarketTailToggle({ capperId, market }: { capperId: number; marke
       disabled={pending || tailing === null}
       title={tailing ? "Untail this market" : "Tail only this market from this capper"}
       className={`whitespace-nowrap text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
-        tailing
-          ? "text-[var(--color-text)] hover:text-[var(--color-neg)]"
-          : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        ink
+          ? tailing
+            ? "text-[#15803d] hover:text-[#b91c1c]"
+            : "text-[#7a7263] hover:text-[#17140f]"
+          : tailing
+            ? "text-[var(--color-text)] hover:text-[var(--color-neg)]"
+            : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
       }`}
     >
       {tailing ? "✓" : "Tail"}

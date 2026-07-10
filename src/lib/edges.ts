@@ -14,6 +14,7 @@ export interface EdgeRow {
   pnl_units?: number | null;
   x_actual_pnl_units?: number | null;
   x_pnl_units?: number | null;
+  x_n?: number | null;
   roi_30d?: number | null;
   xroi_30d?: number | null;
   n_30d?: number | null;
