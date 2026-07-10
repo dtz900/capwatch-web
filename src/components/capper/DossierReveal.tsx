@@ -122,7 +122,16 @@ export function DossierReveal({
             }
           }}
         >
-          {children}
+          <div className="relative">
+            <button
+              onClick={fileAway}
+              className="absolute -top-3 right-10 z-10 rounded-t-md px-3 pb-1 pt-1.5 text-[9px] font-extrabold uppercase tracking-[0.16em] shadow-[0_-4px_16px_rgba(0,0,0,0.35)]"
+              style={{ background: "#e6dec9", color: "#3f3a30" }}
+            >
+              ✕ File away
+            </button>
+            {children}
+          </div>
           <div className="mt-2 text-center">
             <button
               onClick={fileAway}
