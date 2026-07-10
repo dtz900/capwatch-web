@@ -12,6 +12,8 @@ const base: EdgeRow = {
   tracked_days: 73,
   gate_pass: false,
   gate_reasons: [],
+  originator: false,
+  tail_at_close_roi: null,
 };
 
 describe("buildEdgeView verdicts", () => {
@@ -137,5 +139,48 @@ describe("buildEdgeView verdicts", () => {
       buildEdgeView({ ...base, xroi_pct: null, clv_n: 94, clv_beat_pct: 36 }).secondary
     ).toBe("beats the close 36% of the time");
     expect(buildEdgeView({ ...base, xroi_pct: null }).secondary).toBe("no line data");
+  });
+
+  it("ORIGINATOR outranks the CLV variance flag", () => {
+    const v = buildEdgeView({
+      ...base,
+      market: "ML",
+      roi_pct: 21.0,
+      xroi_pct: null,
+      clv_beat_pct: 32,
+      clv_n: 140,
+      originator: true,
+      tail_at_close_roi: 10.7,
+      gate_reasons: ["CLV negative: record looks like variance, not edge"],
+    });
+    expect(v.verdict).toEqual({ label: "ORIGINATOR", tone: "pos" });
+    expect(v.sentence).toContain("+10.7%");
+    expect(v.sentence).toContain("originator skill");
+  });
+
+  it("a passing gate still wins over the originator flag", () => {
+    const v = buildEdgeView({
+      ...base,
+      market: "ML",
+      gate_pass: true,
+      roi_pct: 18.0,
+      originator: true,
+      tail_at_close_roi: 9.1,
+    });
+    expect(v.verdict.label).toBe("HOLDS UP");
+  });
+
+  it("originator secondary line shows the tail-at-close return", () => {
+    const v = buildEdgeView({
+      ...base,
+      market: "ML",
+      xroi_pct: null,
+      clv_beat_pct: 32,
+      clv_n: 140,
+      originator: true,
+      tail_at_close_roi: 10.7,
+      gate_reasons: ["CLV negative: record looks like variance, not edge"],
+    });
+    expect(v.secondary).toBe("+10.7% tailing at the close");
   });
 });

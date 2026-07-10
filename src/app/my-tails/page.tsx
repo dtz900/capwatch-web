@@ -71,7 +71,7 @@ export default async function MyTailsPage() {
     const { data: edgeRows } = await supabase
       .from("capper_market_edges")
       .select(
-        "capper_id, market, n_decided, roi_pct, xroi_pct, clv_beat_pct, clv_avg_cents, clv_n, tracked_days, gate_pass, gate_reasons"
+        "capper_id, market, n_decided, roi_pct, xroi_pct, clv_beat_pct, clv_avg_cents, clv_n, tracked_days, gate_pass, gate_reasons, originator, tail_at_close_roi"
       )
       .in("capper_id", scopedIds);
     for (const e of (edgeRows ?? []) as (EdgeRow & { capper_id: number })[]) {

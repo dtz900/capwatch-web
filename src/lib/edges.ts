@@ -9,6 +9,8 @@ export interface EdgeRow {
   tracked_days: number | null;
   gate_pass: boolean;
   gate_reasons: string[];
+  originator: boolean;
+  tail_at_close_roi: number | null;
 }
 
 export type VerdictTone = "pos" | "neg" | "muted";
@@ -79,6 +81,18 @@ function verdict(row: EdgeRow): { label: string; tone: VerdictTone; sentence: st
     };
   }
 
+  /* Originator: the backend flags cappers whose wins beat the devigged
+     close's own probability, persistently. CLV cannot see them (they post
+     before the market moves), so this must outrank the variance flag.
+     Threshold logic lives in the nightly job only. */
+  if (row.originator) {
+    return {
+      label: "ORIGINATOR",
+      tone: "pos",
+      sentence: `The line moves toward his picks after he posts. His wins beat what closing odds predict, which is originator skill, not luck. Tailing at the close has returned ${pct(row.tail_at_close_roi)}.`,
+    };
+  }
+
   if (hasReason(reasons, "CLV negative")) {
     const beat = row.clv_beat_pct !== null ? Math.round(row.clv_beat_pct) : null;
     return {
@@ -131,7 +145,9 @@ function verdict(row: EdgeRow): { label: string; tone: VerdictTone; sentence: st
 export function buildEdgeView(row: EdgeRow): EdgeView {
   const v = verdict(row);
   let secondary: string;
-  if (row.xroi_pct !== null) {
+  if (row.originator && row.tail_at_close_roi !== null) {
+    secondary = `${pct(row.tail_at_close_roi)} tailing at the close`;
+  } else if (row.xroi_pct !== null) {
     secondary = `${pct(row.xroi_pct)} by closing odds`;
   } else if (row.clv_n > 0 && row.clv_beat_pct !== null) {
     secondary = `beats the close ${Math.round(row.clv_beat_pct)}% of the time`;
@@ -157,6 +173,7 @@ export function buildEdgeView(row: EdgeRow): EdgeView {
 /* Plain-word verdicts. No pill chrome; the word and its color carry it. */
 export const VERDICT_WORDS: Record<string, string> = {
   "HOLDS UP": "real edge",
+  ORIGINATOR: "originator",
   UNLUCKY: "unlucky",
   "LUCK SO FAR": "luck",
   VARIANCE: "variance",

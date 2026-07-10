@@ -43,6 +43,7 @@ describe("StableCard", () => {
       market: "HRR", n_decided: 90, roi_pct: 13.4, xroi_pct: 4.2,
       clv_beat_pct: null, clv_avg_cents: null, clv_n: 0,
       tracked_days: 73, gate_pass: true, gate_reasons: [],
+      originator: false, tail_at_close_roi: null,
     };
     render(
       <StableCard
@@ -64,6 +65,7 @@ describe("StableCard", () => {
       market: "HRR", n_decided: 90, roi_pct: 13.4, xroi_pct: 4.2,
       clv_beat_pct: null, clv_avg_cents: null, clv_n: 0,
       tracked_days: 73, gate_pass: true, gate_reasons: [],
+      originator: false, tail_at_close_roi: null,
     };
     render(
       <StableCard capper={capper} onUntail={() => {}} scopes={["HRR"]}
