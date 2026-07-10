@@ -54,10 +54,10 @@ describe("VipEdgesPanel depth", () => {
   it("renders the headline strip from the edge rows", async () => {
     render(<VipEdgesPanel capperId={7} clv={{ beatPct: 0.61, avg: 6, n: 80 }} />);
     await waitFor(() => expect(screen.getByText("Moneyline")).toBeInTheDocument());
-    // luck strip: net 6.6, expected 2.4, delta +4.2 ran hot
+    // luck strip: net 6.6 leads, expected 2.4 and delta +4.2 in the sub-line
     expect(screen.getAllByText(/skill vs\. luck/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText(/\+2\.4u expected/i)).toBeInTheDocument();
-    expect(screen.getByText(/ran hot \+4\.2u/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+6\.6u actual/i)).toBeInTheDocument();
+    expect(screen.getByText(/expected \+2\.4u on de-luckable picks, ran hot by 4\.2u/i)).toBeInTheDocument();
     expect(screen.getByText(/price honesty/i)).toBeInTheDocument();
     expect(screen.getByText(/tailability/i)).toBeInTheDocument();
     // typical lead: (50*60 + 18*40) / 100 = 37.2 -> ~37 min

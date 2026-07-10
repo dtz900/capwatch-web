@@ -50,10 +50,11 @@ function HeadlineStripView({ rows, beatPct }: { rows: EdgeRow[]; beatPct: number
         <div className={label}>Skill vs. luck</div>
         {strip.luck ? (
           <>
-            <div className={value}>{fmtU(strip.luck.expected)} expected</div>
+            <div className={value}>{fmtU(strip.luck.net)} actual</div>
             <div className={sub}>
-              {fmtU(strip.luck.net)} actual, ran {strip.luck.delta >= 0 ? "hot" : "cold"}{" "}
-              {fmtU(strip.luck.delta)}
+              expected {fmtU(strip.luck.expected)} on de-luckable picks, ran{" "}
+              {strip.luck.delta >= 0 ? "hot" : "cold"} by{" "}
+              {Math.abs(strip.luck.delta).toFixed(1)}u
             </div>
           </>
         ) : (
