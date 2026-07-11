@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { buildEdgeView, MARKET_LABELS, VERDICT_WORDS, toneCls } from "@/lib/edges";
 import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
@@ -108,14 +108,30 @@ function CapperName({ row, className }: { row: RankedEdgeRow; className: string 
 
 function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[] }) {
   const [expanded, setExpanded] = useState(false);
+  const stripRef = useRef<HTMLDivElement>(null);
   const label = MARKET_LABELS[market] ?? market;
+
+  /* Collapsing a long contender list leaves the viewport stranded below the
+     shrunken strip; snap back so the strip tops out under the sticky nav. */
+  function toggleExpanded() {
+    const next = !expanded;
+    setExpanded(next);
+    if (!next) {
+      requestAnimationFrame(() => {
+        stripRef.current?.scrollIntoView({ block: "nearest" });
+      });
+    }
+  }
 
   const champ = rows.find(holdsBeltVerdict) ?? null;
   const contenders = rows.filter((r) => r !== champ);
   const shown = expanded ? contenders : contenders.slice(0, 3);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)]">
+    <div
+      ref={stripRef}
+      className="scroll-mt-20 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)]"
+    >
       <div className="flex items-baseline justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-1.5">
         <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--color-text)]">
           {label} division
@@ -231,7 +247,7 @@ function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[]
 
       {contenders.length > 3 && (
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={toggleExpanded}
           className="w-full border-t border-[var(--color-border)] py-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
         >
           {expanded ? "Fewer" : `All ${contenders.length} contenders`}
