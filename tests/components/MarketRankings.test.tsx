@@ -86,6 +86,7 @@ describe("MarketRankings", () => {
     expect(screen.getByText(/variance/i)).toBeInTheDocument();
     expect(screen.getByText("+7.8%")).toBeInTheDocument();
     expect(screen.getByText(/tailing at close/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+7\.3% actual/)).toBeInTheDocument();
     expect(screen.queryByText("robd")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Best available" }));
     expect(screen.getByText("robd")).toBeInTheDocument();

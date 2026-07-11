@@ -6,6 +6,7 @@ import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   digest,
+  fmtPct,
   headline,
   marketsPresent,
   rankRows,
@@ -125,6 +126,11 @@ export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: bool
                       <span className="text-sm">
                         <span className="font-bold text-[var(--color-text)]">{h.value}</span>{" "}
                         <span className="text-[var(--color-text-muted)]">{h.label}</span>
+                      </span>
+                    )}
+                    {h && h.label !== "ROI" && row.roi_pct != null && (
+                      <span className="text-xs text-[var(--color-text-muted)]">
+                        {fmtPct(row.roi_pct)} actual
                       </span>
                     )}
                     <span className="text-xs text-[var(--color-text-muted)]">

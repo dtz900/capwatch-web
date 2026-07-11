@@ -57,11 +57,12 @@ export default async function MyTailsPage() {
   const followRows = (follows ?? []) as { capper_id: number; market: string }[];
   const ids = [...new Set(followRows.map((f) => f.capper_id))];
 
-  const { data: tsProfile } = await supabase
+  const { data: tsProfile, error: tsProfileError } = await supabase
     .from("ts_profiles")
     .select("tier")
     .eq("user_id", user.id)
     .maybeSingle();
+  if (tsProfileError) console.error("my-tails tier query failed:", tsProfileError);
   const isVip = tsProfile?.tier === "vip";
 
   // Cross-capper read of the whole edges table. RLS gates it to VIP JWTs;

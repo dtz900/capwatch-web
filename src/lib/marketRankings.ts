@@ -33,17 +33,17 @@ export function sortKey(row: RankedEdgeRow): number | null {
   return null;
 }
 
-const fmt = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
+export const fmtPct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
 
 /* The displayed number is always the number the row was ranked by. */
 export function headline(row: RankedEdgeRow): { value: string; label: string } | null {
   if (row.originator && row.tail_at_close_roi != null)
-    return { value: fmt(row.tail_at_close_roi), label: "tailing at close" };
+    return { value: fmtPct(row.tail_at_close_roi), label: "tailing at close" };
   if ((row.x_n ?? 0) > 0 && row.xroi_pct != null)
-    return { value: fmt(row.xroi_pct), label: "by closing odds" };
+    return { value: fmtPct(row.xroi_pct), label: "by closing odds" };
   if (row.tail_at_close_roi != null)
-    return { value: fmt(row.tail_at_close_roi), label: "tailing at close" };
-  if (row.roi_pct != null) return { value: fmt(row.roi_pct), label: "ROI" };
+    return { value: fmtPct(row.tail_at_close_roi), label: "tailing at close" };
+  if (row.roi_pct != null) return { value: fmtPct(row.roi_pct), label: "ROI" };
   return null;
 }
 
