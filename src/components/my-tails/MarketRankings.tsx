@@ -5,7 +5,6 @@ import { buildEdgeView, MARKET_LABELS, VERDICT_WORDS, toneCls } from "@/lib/edge
 import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
-  digest,
   fmtPct,
   headline,
   marketsPresent,
@@ -13,19 +12,36 @@ import {
   type RankedEdgeRow,
 } from "@/lib/marketRankings";
 
-/* VIP discovery section on My Tails: every (capper, market) pair ranked by
-   what closing odds say it deserves. Digest = tailable pairs across all
-   markets; a market chip drills into that market's full ranking including
-   the failers, so the top raw-ROI name explains itself. */
+/* The belt follows the PUBLIC verdict, not the internal tail gate: edges.ts
+   deliberately lets provenance-only gate failures (tracked days, half
+   splits) still read "real edge", and a division cannot say VACANT while a
+   row on screen says REAL EDGE. */
+function holdsBeltVerdict(row: RankedEdgeRow): boolean {
+  const label = buildEdgeView(row).verdict.label;
+  return label === "HOLDS UP" || label === "ORIGINATOR";
+}
+
+/* The ranked (close-judged) number, or null when the row has no line data
+   and fell back to raw ROI: then the expected column has nothing to add. */
+function expectedValue(row: RankedEdgeRow): string | null {
+  const h = headline(row);
+  return h && h.label !== "ROI" ? h.value : null;
+}
+
+/* VIP discovery on My Tails, staged as a title board: every market is a
+   division, the belt goes to the top-ranked capper who survives the
+   de-lucking (gate pass or originator), and a division with no survivor is
+   VACANT. Contenders run underneath in small print with their verdicts.
+   The structure carries the methodology so the rows never have to. */
 export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: boolean }) {
   const { entitlements } = useAuth();
-  const [market, setMarket] = useState<string>("all");
 
   const header = (
     <div>
-      <h2 className="text-lg font-bold text-[var(--color-text)]">Market Rankings</h2>
+      <h2 className="text-lg font-bold text-[var(--color-text)]">The Title Board</h2>
       <p className="mt-0.5 text-sm text-[var(--color-text-soft)]">
-        Every capper in every market, ranked by what closing odds say they deserve.
+        Every market has a division. The belt goes to whoever holds up against
+        closing lines, not raw profit. No survivor, no champ.
       </p>
     </div>
   );
@@ -36,8 +52,8 @@ export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: bool
         <div className="text-[10px] uppercase tracking-wider text-[var(--color-gold)]">VIP</div>
         <div className="mt-1">{header}</div>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          See who actually holds up: de-lucked rankings for every market, with a
-          tail button on every row.
+          See who actually holds the belt in every market, with a tail button
+          on every row.
         </p>
         <Link
           href={entitlements.isLoggedIn ? "/account" : "/login"}
@@ -50,8 +66,6 @@ export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: bool
   }
 
   const markets = marketsPresent(rows);
-  const shown =
-    market === "all" ? digest(rows) : rankRows(rows.filter((r) => r.market === market));
 
   return (
     <section className="rounded-2xl bg-[var(--color-bg-card)] border border-[var(--color-border)] px-5 py-5">
@@ -62,80 +76,150 @@ export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: bool
           Rankings are being computed. Check back soon.
         </p>
       ) : (
-        <>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              onClick={() => setMarket("all")}
-              className={`text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                market === "all"
-                  ? "text-[var(--color-text)]"
-                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              }`}
-            >
-              Best available
-            </button>
-            {markets.map((m) => (
-              <button
-                key={m}
-                onClick={() => setMarket(m)}
-                className={`text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                  market === m
-                    ? "text-[var(--color-text)]"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                }`}
-              >
-                {MARKET_LABELS[m] ?? m}
-              </button>
-            ))}
-          </div>
+        <div className="mt-4 space-y-3">
+          {markets.map((m) => (
+            <DivisionStrip
+              key={m}
+              market={m}
+              rows={rankRows(rows.filter((r) => r.market === m))}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
-          <ol className="mt-3 divide-y divide-[var(--color-border)]">
+function roiTone(roi: number | null): "pos" | "neg" | "muted" {
+  if (roi != null && roi > 0) return "pos";
+  if (roi != null && roi < 0) return "neg";
+  return "muted";
+}
+
+function CapperName({ row, className }: { row: RankedEdgeRow; className: string }) {
+  return row.handle ? (
+    <Link href={`/cappers/${row.handle}`} className={`${className} hover:underline`}>
+      {row.handle}
+    </Link>
+  ) : (
+    <span className={className}>{row.display_name ?? `capper ${row.capper_id}`}</span>
+  );
+}
+
+function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const label = MARKET_LABELS[market] ?? market;
+
+  const champ = rows.find(holdsBeltVerdict) ?? null;
+  const contenders = rows.filter((r) => r !== champ);
+  const shown = expanded ? contenders : contenders.slice(0, 3);
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)]">
+      <div className="flex items-baseline justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-1.5">
+        <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--color-text)]">
+          {label} division
+        </span>
+        <span className="text-[11px] text-[var(--color-text-muted)]">
+          {rows.length} contender{rows.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {champ ? (
+        <div className="flex items-center gap-4 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-gold)]">
+              Holds the belt
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2.5">
+              <CapperName
+                row={champ}
+                className="truncate text-xl font-bold text-[var(--color-text)]"
+              />
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider ${toneCls(buildEdgeView(champ).verdict.tone)}`}
+              >
+                {VERDICT_WORDS[buildEdgeView(champ).verdict.label] ??
+                  buildEdgeView(champ).verdict.label}
+              </span>
+            </div>
+            <div className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
+              {champ.n_decided} picks · {champ.tracked_days ?? "?"}d tracked
+            </div>
+          </div>
+          <div className="shrink-0 text-right">
+            <div
+              className={`text-2xl font-bold tabular-nums leading-tight ${toneCls(roiTone(champ.roi_pct))}`}
+            >
+              {champ.roi_pct != null ? fmtPct(champ.roi_pct) : "n/a"}
+            </div>
+            {expectedValue(champ) && (
+              <div className="text-[11px] text-[var(--color-text-muted)]">
+                expected{" "}
+                <span className="font-semibold text-[var(--color-text)]">
+                  {expectedValue(champ)}
+                </span>
+              </div>
+            )}
+          </div>
+          <MarketTailToggle capperId={champ.capper_id} market={champ.market} />
+        </div>
+      ) : (
+        <div className="px-4 py-3">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            Title vacant
+          </div>
+          <div className="mt-0.5 text-sm text-[var(--color-text-soft)]">
+            Nobody in this division beats the closing line yet.
+          </div>
+        </div>
+      )}
+
+      {contenders.length > 0 && (
+        <>
+          <div className="flex items-center border-t border-[var(--color-border)] px-4 py-1">
+            <span className="ml-auto w-16 text-right text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+              Expected
+            </span>
+            <span className="w-16 text-right text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+              Actual
+            </span>
+            <span className="w-12 shrink-0" />
+          </div>
+          <ol className="border-t border-[var(--color-border)]">
             {shown.map((row, i) => {
               const view = buildEdgeView(row);
-              const h = headline(row);
               const word = VERDICT_WORDS[view.verdict.label] ?? view.verdict.label;
+              const exp = expectedValue(row);
               return (
                 <li
-                  key={`${row.capper_id}-${row.market}`}
-                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5"
+                  key={row.capper_id}
+                  className="flex items-center gap-2.5 border-b border-[var(--color-border)] px-4 py-1.5 last:border-b-0"
                 >
-                  <span className="w-6 shrink-0 text-right text-sm tabular-nums text-[var(--color-text-muted)]">
-                    {i + 1}
+                  <span className="w-4 shrink-0 text-right text-[11px] font-bold tabular-nums text-[var(--color-text-muted)]">
+                    {i + (champ ? 2 : 1)}
                   </span>
-                  <span className="min-w-0 font-bold text-[var(--color-text)]">
-                    {row.handle ? (
-                      <Link href={`/cappers/${row.handle}`} className="hover:underline">
-                        {row.handle}
-                      </Link>
-                    ) : (
-                      (row.display_name ?? `capper ${row.capper_id}`)
-                    )}
-                  </span>
-                  {market === "all" && (
-                    <span className="text-xs text-[var(--color-text-soft)]">
-                      {MARKET_LABELS[row.market] ?? row.market}
-                    </span>
-                  )}
+                  <CapperName
+                    row={row}
+                    className="truncate text-[13px] font-bold text-[var(--color-text)]"
+                  />
                   <span
-                    className={`text-[11px] font-bold uppercase tracking-wider ${toneCls(view.verdict.tone)}`}
+                    className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${toneCls(view.verdict.tone)}`}
                   >
                     {word}
                   </span>
-                  <span className="ml-auto flex items-baseline gap-x-3">
-                    {h && (
-                      <span className="text-sm">
-                        <span className="font-bold text-[var(--color-text)]">{h.value}</span>{" "}
-                        <span className="text-[var(--color-text-muted)]">{h.label}</span>
-                      </span>
-                    )}
-                    {h && h.label !== "ROI" && row.roi_pct != null && (
-                      <span className="text-xs text-[var(--color-text-muted)]">
-                        {fmtPct(row.roi_pct)} actual
-                      </span>
-                    )}
-                    <span className="text-xs text-[var(--color-text-muted)]">
-                      {row.n_decided} picks · {row.tracked_days ?? "?"}d
-                    </span>
+                  <span className="hidden sm:inline text-[11px] text-[var(--color-text-muted)]">
+                    {row.n_decided} picks · {row.tracked_days ?? "?"}d
+                  </span>
+                  <span className="ml-auto w-16 shrink-0 text-right text-[13px] font-semibold tabular-nums text-[var(--color-text)]">
+                    {exp ?? "n/a"}
+                  </span>
+                  <span
+                    className={`w-16 shrink-0 text-right text-[13px] font-bold tabular-nums ${toneCls(roiTone(row.roi_pct))}`}
+                  >
+                    {row.roi_pct != null ? fmtPct(row.roi_pct) : "n/a"}
+                  </span>
+                  <span className="flex w-12 shrink-0 justify-end">
                     <MarketTailToggle capperId={row.capper_id} market={row.market} />
                   </span>
                 </li>
@@ -144,6 +228,15 @@ export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: bool
           </ol>
         </>
       )}
-    </section>
+
+      {contenders.length > 3 && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full border-t border-[var(--color-border)] py-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+        >
+          {expanded ? "Fewer" : `All ${contenders.length} contenders`}
+        </button>
+      )}
+    </div>
   );
 }

@@ -60,17 +60,17 @@ describe("sortKey precedence", () => {
 });
 
 describe("headline", () => {
-  it("labels xroi as by closing odds", () => {
+  it("labels xroi as deserved", () => {
     expect(headline(row({ xroi_pct: 8.3 }))).toEqual({
       value: "+8.3%",
-      label: "by closing odds",
+      label: "deserved",
     });
   });
 
-  it("labels originator as tailing at close", () => {
+  it("labels originator as deserved", () => {
     expect(
       headline(row({ originator: true, tail_at_close_roi: 7.8, xroi_pct: 99 }))
-    ).toEqual({ value: "+7.8%", label: "tailing at close" });
+    ).toEqual({ value: "+7.8%", label: "deserved" });
   });
 
   it("labels the last-resort realized roi as ROI and signs negatives", () => {
