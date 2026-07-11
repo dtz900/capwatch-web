@@ -9,6 +9,7 @@ import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
 import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import { MarketRankings } from "@/components/my-tails/MarketRankings";
+import { MyTailsTabs, type MyTailsTab } from "@/components/my-tails/MyTailsTabs";
 import type { CapperRow, TodayPickEntry } from "@/lib/types";
 import type { EdgeRow } from "@/lib/edges";
 import type { RankedEdgeRow } from "@/lib/marketRankings";
@@ -16,8 +17,15 @@ import type { RankedEdgeRow } from "@/lib/marketRankings";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Tails | TailSlips" };
 
-export default async function MyTailsPage() {
+export default async function MyTailsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   if (!vipEnabled()) notFound();
+
+  const { tab } = await searchParams;
+  const initialTab: MyTailsTab = tab === "board" ? "board" : "stable";
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -42,8 +50,13 @@ export default async function MyTailsPage() {
             <Link href="/login" className="underline">Sign in</Link> to tail cappers and track
             your stable here.
           </p>
-          <div className="mt-8"><EmptyStable suggestions={top3} /></div>
-          <div className="mt-6"><MarketRankings rows={[]} vip={false} /></div>
+          <div className="mt-8">
+            <MyTailsTabs
+              initialTab={initialTab}
+              stable={<EmptyStable suggestions={top3} />}
+              board={<MarketRankings rows={[]} vip={false} />}
+            />
+          </div>
         </main>
       </>
     );
@@ -148,17 +161,22 @@ export default async function MyTailsPage() {
           </div>
           <BetSlipRail />
         </div>
-        {ids.length === 0 ? (
-          <EmptyStable suggestions={top3} />
-        ) : (
-          <StableGrid
-            initial={stable}
-            todayByCapper={todayByCapper}
-            scopesByCapper={scopesByCapper}
-            edgesByCapper={edgesByCapper}
-          />
-        )}
-        <MarketRankings rows={rankingRows} vip={isVip} />
+        <MyTailsTabs
+          initialTab={initialTab}
+          stable={
+            ids.length === 0 ? (
+              <EmptyStable suggestions={top3} />
+            ) : (
+              <StableGrid
+                initial={stable}
+                todayByCapper={todayByCapper}
+                scopesByCapper={scopesByCapper}
+                edgesByCapper={edgesByCapper}
+              />
+            )
+          }
+          board={<MarketRankings rows={rankingRows} vip={isVip} />}
+        />
       </main>
       </BetSlipProvider>
     </>
