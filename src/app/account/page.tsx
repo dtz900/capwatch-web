@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TopNav } from "@/components/nav/TopNav";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { createBrowserSupabase } from "@/lib/supabase/client";
@@ -170,9 +171,12 @@ export default function AccountPage() {
 
   if (!entitlements.isLoggedIn) {
     return (
-      <main className="mx-auto max-w-md px-4 py-16 text-center text-[var(--color-text-soft)]">
-        Sign in at <a href="/login" className="underline">/login</a> to manage your account.
-      </main>
+      <>
+        <TopNav />
+        <main className="mx-auto max-w-md px-4 py-16 text-center text-[var(--color-text-soft)]">
+          Sign in at <a href="/login" className="underline">/login</a> to manage your account.
+        </main>
+      </>
     );
   }
 
@@ -180,6 +184,8 @@ export default function AccountPage() {
   const since = memberSince(session?.user?.created_at);
 
   return (
+    <>
+    <TopNav />
     <main className="mx-auto max-w-2xl px-4 py-10">
       {/* Identity card */}
       <div className="rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
@@ -294,5 +300,6 @@ export default function AccountPage() {
         </div>
       )}
     </main>
+    </>
   );
 }
