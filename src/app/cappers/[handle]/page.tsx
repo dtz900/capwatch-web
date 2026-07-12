@@ -12,7 +12,6 @@ import { StickyProfileStrip } from "@/components/capper/StickyProfileStrip";
 import { HistoryList } from "@/components/capper/HistoryList";
 import { FilterSheet } from "@/components/capper/FilterSheet";
 import { ShareFilteredButton } from "@/components/capper/ShareFilteredButton";
-import { TailButton } from "@/components/auth/TailButton";
 import { PendingBlock } from "@/components/capper/PendingBlock";
 import { MarketMixBar } from "@/components/capper/MarketMixBar";
 import { FaqSection } from "@/components/capper/FaqSection";
@@ -425,18 +424,18 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <StickyProfileStrip />
           <CapperHeroLive />
 
+          {/* Tail control lives in the stat band's top-right (StatBandLive),
+              not up here next to Share. */}
           <div className="hidden sm:flex items-start justify-between gap-3 mb-5">
             <ProfileFilterBar />
             <div className="flex flex-col items-end gap-2 shrink-0">
               <ShareFilteredButton />
-              {vipEnabled() && <TailButton capperId={profile.capper.id} size="hero" />}
             </div>
           </div>
           <div className="sm:hidden flex items-center justify-between gap-3 mb-5">
             <FilterSheet />
             <div className="flex items-center gap-2">
               <ShareFilteredButton />
-              {vipEnabled() && <TailButton capperId={profile.capper.id} size="compact" />}
             </div>
           </div>
 
