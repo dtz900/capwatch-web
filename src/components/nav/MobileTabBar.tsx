@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { vipEnabled } from "@/lib/flags";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useNewTailPicks } from "@/lib/useTailsNotif";
 
 const TABS: { href: string; label: string; icon: () => React.JSX.Element; gold?: boolean }[] = [
   { href: "/parlay-palace", label: "Palace", icon: CrownIcon, gold: true },
@@ -77,6 +78,7 @@ export function MobileTabBar() {
   const pathname = usePathname() || "/";
   const { entitlements } = useAuth();
   const flagOn = vipEnabled();
+  const newTailPicks = useNewTailPicks();
 
   let tabs = TABS;
   if (flagOn) {
@@ -111,7 +113,15 @@ export function MobileTabBar() {
               aria-current={active ? "page" : undefined}
               className={`flex flex-col items-center justify-center gap-0.5 min-w-0 ${cls}`}
             >
-              <Icon />
+              <span className="relative">
+                <Icon />
+                {t.href === "/my-tails" && newTailPicks && (
+                  <span
+                    className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-[#2fd9c0]"
+                    aria-label="New picks from your tails"
+                  />
+                )}
+              </span>
               <span className="text-[10px] font-semibold leading-none">{t.label}</span>
             </Link>
           );

@@ -7,6 +7,7 @@ import { NavSearch } from "@/components/nav/NavSearch";
 import { vipEnabled } from "@/lib/flags";
 import { AvatarMenu } from "@/components/auth/AvatarMenu";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useNewTailPicks } from "@/lib/useTailsNotif";
 
 const BASE_LINKS: { href: string; label: string; gold?: boolean }[] = [
   { href: "/parlay-palace", label: "Parlay Palace", gold: true },
@@ -25,6 +26,7 @@ export function TopNav() {
   const pathname = usePathname() || "/";
   const flagOn = vipEnabled();
   const { entitlements } = useAuth();
+  const newTailPicks = useNewTailPicks();
 
   const links = flagOn
     ? [
@@ -66,7 +68,7 @@ export function TopNav() {
               <Link
                 key={l.label}
                 href={l.href}
-                className="px-3.5 py-2 text-sm font-semibold transition-colors hover:text-white"
+                className="relative px-3.5 py-2 text-sm font-semibold transition-colors hover:text-white"
                 style={{
                   color: textColor,
                   textDecoration: active ? "underline" : undefined,
@@ -77,6 +79,12 @@ export function TopNav() {
                 aria-current={active ? "page" : undefined}
               >
                 {l.label}
+                {l.href === "/my-tails" && newTailPicks && (
+                  <span
+                    className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[#2fd9c0]"
+                    aria-label="New picks from your tails"
+                  />
+                )}
               </Link>
             );
           })}
