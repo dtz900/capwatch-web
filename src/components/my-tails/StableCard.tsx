@@ -158,8 +158,22 @@ export function StableCard({
               Today
             </span>
             {todayPicks.length > 0 && (
-              <span className="text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
-                {todayPicks.length} pick{todayPicks.length === 1 ? "" : "s"}
+              <span className="flex items-baseline gap-2">
+                <span className="text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
+                  {todayPicks.length} pick{todayPicks.length === 1 ? "" : "s"}
+                </span>
+                {/* Running day P&L across the graded picks shown on this card */}
+                {todayPicks.some((p) => p.profit_units != null) && (
+                  <span
+                    className={`text-[13px] font-extrabold tabular-nums leading-none ${
+                      todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0) >= 0
+                        ? "text-[var(--color-pos)]"
+                        : "text-[var(--color-neg)]"
+                    }`}
+                  >
+                    {formatUnits(todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0))}u
+                  </span>
+                )}
               </span>
             )}
           </div>

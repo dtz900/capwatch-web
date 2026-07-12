@@ -243,7 +243,9 @@ export function BetSlipRail() {
           <VipTeaser />
         </div>
       )}
-      <div className="max-h-[calc(100vh-11.5rem)] overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
+      {/* Picks scroll; the P&L footer below is pinned to the slip, so the
+          list fades out behind it via the mask. */}
+      <div className="max-h-[calc(100vh-16rem)] overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
         {entries === null && (
           <p className="py-3 text-xs text-[#6da399]">Loading...</p>
         )}
@@ -277,35 +279,39 @@ export function BetSlipRail() {
                 </div>
               </div>
             )}
-            <div className="mt-3 flex items-end justify-between rounded-lg bg-[rgba(4,16,13,0.6)] px-3 py-2.5">
-              <div>
-                <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
-                  Today
-                </div>
-                <div
-                  className={`text-[22px] leading-none font-extrabold tabular-nums ${
-                    totals.today >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
-                  }`}
-                >
-                  {unitsStr(totals.today)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
-                  All time
-                </div>
-                <div
-                  className={`text-[22px] leading-none font-extrabold tabular-nums ${
-                    totals.allTime >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
-                  }`}
-                >
-                  {unitsStr(totals.allTime)}
-                </div>
-              </div>
-            </div>
           </>
         )}
       </div>
+      {entries !== null && entries.length > 0 && (
+        <div className="px-3 pb-3">
+          <div className="flex items-end justify-between rounded-lg bg-[rgba(4,16,13,0.6)] px-3 py-2.5">
+            <div>
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
+                Today
+              </div>
+              <div
+                className={`text-[22px] leading-none font-extrabold tabular-nums ${
+                  totals.today >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+                }`}
+              >
+                {unitsStr(totals.today)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
+                All time
+              </div>
+              <div
+                className={`text-[22px] leading-none font-extrabold tabular-nums ${
+                  totals.allTime >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+                }`}
+              >
+                {unitsStr(totals.allTime)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
     </div>
   );
