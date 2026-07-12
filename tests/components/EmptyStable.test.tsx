@@ -19,6 +19,6 @@ describe("EmptyStable", () => {
     mockAuth.current = { session: null, entitlements: { isLoggedIn: false, isVip: false } };
     render(<EmptyStable suggestions={[row(1, "a"), row(2, "b"), row(3, "c")]} />);
     expect(screen.getByText(/build your stable/i)).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /\+ tail/i })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: /^tail$/i })).toHaveLength(3);
   });
 });
