@@ -398,6 +398,9 @@ export interface TodayPickEntry {
   /** Parlay group id for parlay entries; null for straights. The bet slip
       binds parlay tails to this and grades via capper_parlay_grades. */
   parlay_id: number | null;
+  /** Present on parlay rows once the feed serves it (fadeai-platform #87).
+      Ordered by leg_index ascending; the card expands these on click. */
+  legs?: HistoryPickLeg[] | null;
 }
 
 export interface TodayPicksResponse {

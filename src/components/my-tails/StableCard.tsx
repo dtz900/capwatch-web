@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useState } from "react";
 import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import { MARKET_LABELS, toneCls } from "@/lib/edges";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
@@ -25,6 +26,7 @@ export function StableCard({
   onUntailMarket?: (market: string) => void;
 }) {
   const slip = useBetSlip();
+  const [openParlays, setOpenParlays] = useState<Set<number>>(new Set());
   const scoped = scopes.length > 0;
   const positive = (capper.units_profit ?? 0) >= 0;
   return (
@@ -167,14 +169,42 @@ export function StableCard({
             <p className="mt-2 text-xs text-[var(--color-text-muted)]">No picks yet today.</p>
           ) : (
             <ul className="mt-2 space-y-2">
-              {todayPicks.map((p, i) => (
-                <li
-                  key={`${p.posted_at}-${i}`}
-                  className="flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
+              {todayPicks.map((p, i) => {
+                const expandable =
+                  p.kind === "parlay" && p.parlay_id != null && (p.legs?.length ?? 0) > 0;
+                const open = expandable && openParlays.has(p.parlay_id as number);
+                return (
+                <li key={`${p.posted_at}-${i}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div
+                    className={`min-w-0 ${expandable ? "cursor-pointer" : ""}`}
+                    {...(expandable
+                      ? {
+                          role: "button" as const,
+                          tabIndex: 0,
+                          "aria-expanded": open,
+                          "aria-label": `${open ? "Hide" : "Show"} ${p.selection} legs`,
+                          onClick: (ev: React.MouseEvent) => {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            setOpenParlays((prev) => {
+                              const next = new Set(prev);
+                              const id = p.parlay_id as number;
+                              if (next.has(id)) next.delete(id);
+                              else next.add(id);
+                              return next;
+                            });
+                          },
+                        }
+                      : {})}
+                  >
                     <div className="text-sm font-semibold leading-tight text-[var(--color-text)] truncate">
                       {p.selection}
+                      {expandable && (
+                        <span className="ml-1.5 text-[10px] text-[var(--color-text-muted)]">
+                          {open ? "▾" : "▸"}
+                        </span>
+                      )}
                     </div>
                     <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] truncate">
                       {p.matchup ?? (p.kind === "parlay" ? "Multi-game" : "")}
@@ -234,8 +264,47 @@ export function StableCard({
                       )
                     )}
                   </div>
+                </div>
+                {open && (
+                  <ul className="mt-1.5 ml-1 space-y-1.5 border-l border-[var(--color-border)] pl-2.5">
+                    {p.legs!.map((leg) => (
+                      <li key={leg.leg_index} className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold leading-tight text-[var(--color-text-soft)] truncate">
+                            {leg.selection}
+                          </div>
+                          <div className="text-[9px] uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+                            {[leg.game_label, leg.market].filter(Boolean).join(" · ")}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {leg.odds_taken != null && (
+                            <span className="text-[11px] font-semibold tabular-nums text-[var(--color-text-muted)]">
+                              {leg.odds_taken > 0 ? "+" : ""}
+                              {leg.odds_taken}
+                            </span>
+                          )}
+                          {leg.outcome != null && (
+                            <span
+                              className={`text-[11px] font-bold ${
+                                leg.outcome === "W"
+                                  ? "text-[var(--color-pos)]"
+                                  : leg.outcome === "L"
+                                    ? "text-[var(--color-neg)]"
+                                    : "text-[var(--color-text-muted)]"
+                              }`}
+                            >
+                              {leg.outcome}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
           {/* Day P&L across the graded picks shown on this card, footered

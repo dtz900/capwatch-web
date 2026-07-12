@@ -258,33 +258,33 @@ export function BetSlipRail() {
           </p>
         )}
         {entries !== null && entries.length > 0 && (
-          <>
-            <ul className="space-y-2">
-              {entries.map((e) => (
-                <SlipEntryRow key={e.id} entry={e} onRemove={removeEntry} onUpdate={updateEntry} />
-              ))}
-            </ul>
-            {pending.wager > 0 && (
-              <div className="mt-3 space-y-1.5 border-t border-dashed border-[rgba(47,217,192,0.22)] pt-3 text-[12px] tabular-nums">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#6da399]">Total wager</span>
-                  <span className="font-extrabold text-white">
-                    {pending.wager.toFixed(1)}u
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[#6da399]">To win</span>
-                  <span className="font-extrabold" style={{ color: SLIP_TEAL }}>
-                    {pending.toWin.toFixed(2)}u
-                  </span>
-                </div>
-              </div>
-            )}
-          </>
+          <ul className="space-y-2">
+            {entries.map((e) => (
+              <SlipEntryRow key={e.id} entry={e} onRemove={removeEntry} onUpdate={updateEntry} />
+            ))}
+          </ul>
         )}
       </div>
       {entries !== null && entries.length > 0 && (
         <div className="px-3 pb-3">
+          {/* Pending totals ride in the pinned footer with the P&L card so
+              they stay visible while the ticket legs scroll behind. */}
+          {pending.wager > 0 && (
+            <div className="mb-2.5 space-y-1.5 border-t border-dashed border-[rgba(47,217,192,0.22)] pt-2.5 text-[12px] tabular-nums">
+              <div className="flex items-center justify-between">
+                <span className="text-[#6da399]">Total wager</span>
+                <span className="font-extrabold text-white">
+                  {pending.wager.toFixed(1)}u
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6da399]">To win</span>
+                <span className="font-extrabold" style={{ color: SLIP_TEAL }}>
+                  {pending.toWin.toFixed(2)}u
+                </span>
+              </div>
+            </div>
+          )}
           <div className="flex items-end justify-between rounded-lg bg-[rgba(4,16,13,0.6)] px-3 py-2.5">
             <div>
               <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
