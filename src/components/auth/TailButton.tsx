@@ -78,22 +78,26 @@ export function TailButton({
   }
 
   if (variant === "bare") {
+    // Editorial small caps + crown, matching MarketTailToggle's pill look.
     return (
       <button
         onClick={toggle}
         disabled={pending || tailing === null}
         title={tailing ? "Untail this capper" : "Tail this capper"}
-        className={`inline-flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.18em] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           tailing
             ? "text-[var(--color-text)]"
-            : "text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
+            : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
         }`}
       >
         {tailing ? "Tailing" : "Tail capper"}
         <TailCrown
-          filled={!!tailing}
-          size={20}
-          className={tailing ? "text-[var(--color-pos)]" : ""}
+          size={26}
+          className={
+            tailing
+              ? "text-[#35a05f] [filter:drop-shadow(0_0_6px_rgba(53,160,95,0.45))]"
+              : ""
+          }
         />
       </button>
     );
@@ -113,7 +117,7 @@ export function TailButton({
       }
     >
       <span className="inline-flex items-center gap-1.5">
-        <TailCrown filled={!!tailing} className={tailing ? "text-[var(--color-pos)]" : ""} />
+        <TailCrown size={16} className={tailing ? "text-[#35a05f]" : ""} />
         {tailing ? "Tailing" : "Tail"}
       </span>
     </button>
