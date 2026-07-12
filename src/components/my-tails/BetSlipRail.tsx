@@ -208,8 +208,10 @@ export function BetSlipRail() {
   return (
     <div className="fixed right-3 sm:right-4 top-24 z-30 w-[304px] max-w-[calc(100vw-1.5rem)]">
     {/* Viewport-capped flex column: the ticket legs scroll in the middle
-        while the header and the totals/P&L footer stay pinned on screen. */}
-    <aside className="flex max-h-[calc(100vh-7rem)] w-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-[#0c1f1b] via-[#0a1512] to-[#07100d] ring-1 ring-[rgba(47,217,192,0.22)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
+        while the header and the totals/P&L footer stay pinned on screen.
+        Mobile subtracts the h-14 tab bar (+ safe area) and uses dvh so the
+        browser chrome never clips the footer; sm+ has no tab bar. */}
+    <aside className="flex max-h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] sm:max-h-[calc(100vh-7rem)] w-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-[#0c1f1b] via-[#0a1512] to-[#07100d] ring-1 ring-[rgba(47,217,192,0.22)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
       {/* Ticket header: teal bar, the TailSlips logo, count badge, collapse */}
       <div className="flex shrink-0 items-center justify-between bg-gradient-to-r from-[#0e2c25] to-[#0a1e19] px-4 py-3 border-b border-[rgba(47,217,192,0.25)]">
         <span className="flex items-center">
