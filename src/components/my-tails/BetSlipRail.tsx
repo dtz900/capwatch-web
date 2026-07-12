@@ -141,6 +141,17 @@ function pendingTotals(entries: SlipEntry[]): { wager: number; toWin: number } {
 
 const COLLAPSE_KEY = "ts-betslip-collapsed";
 
+/* Notch cutouts for the floating take-a-number ticket: transparent
+   half-circles masked out of the ticket itself (not painted over it), at
+   the torn left edge and at the perforation 8px (w-2 sliver) from the
+   right edge. Layers intersect so every notch punches through. */
+const TICKET_NOTCH_MASK = [
+  "radial-gradient(circle 5px at 0 0, transparent 5px, black 5.5px)",
+  "radial-gradient(circle 5px at 0 100%, transparent 5px, black 5.5px)",
+  "radial-gradient(circle 5px at calc(100% - 8px) 0, transparent 5px, black 5.5px)",
+  "radial-gradient(circle 5px at calc(100% - 8px) 100%, transparent 5px, black 5.5px)",
+].join(", ");
+
 export function BetSlipRail() {
   const slip = useBetSlip();
   // Default expanded; the stored preference is applied after mount so the
@@ -202,35 +213,38 @@ export function BetSlipRail() {
         <button
           onClick={toggle}
           aria-label={`Open bet slip, ${totals.pending} pending`}
-          className="sm:hidden fixed right-0 top-24 z-30 flex items-stretch overflow-hidden bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] shadow-[0_8px_32px_rgba(10,60,50,0.6)]"
+          className="sm:hidden fixed right-0 top-24 z-30 drop-shadow-[0_8px_24px_rgba(10,60,50,0.6)]"
         >
-          <span className="relative w-0" aria-hidden="true">
-            <span className="absolute -left-[5px] -top-[5px] h-2.5 w-2.5 rounded-full bg-[var(--color-bg)]" />
-            <span className="absolute -left-[5px] -bottom-[5px] h-2.5 w-2.5 rounded-full bg-[var(--color-bg)]" />
-          </span>
-          <span className="flex items-center gap-1.5 py-2 pl-3 pr-2.5">
-            <Image
-              src="/logo-crown.png"
-              alt=""
-              width={1135}
-              height={793}
-              className="h-4 w-auto"
-            />
-            <span
-              className="text-[12px] font-extrabold tabular-nums"
-              style={{ color: count > 0 ? SLIP_TEAL : "#4c7d72" }}
-            >
-              {count}
-            </span>
-          </span>
           <span
-            className="relative border-l border-dashed border-[rgba(47,217,192,0.35)]"
-            aria-hidden="true"
+            className="flex items-stretch overflow-hidden bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28]"
+            style={{
+              WebkitMaskImage: TICKET_NOTCH_MASK,
+              maskImage: TICKET_NOTCH_MASK,
+              WebkitMaskComposite: "source-in",
+              maskComposite: "intersect",
+            }}
           >
-            <span className="absolute -left-[5px] -top-[5px] h-2.5 w-2.5 rounded-full bg-[var(--color-bg)]" />
-            <span className="absolute -left-[5px] -bottom-[5px] h-2.5 w-2.5 rounded-full bg-[var(--color-bg)]" />
+            <span className="flex items-center gap-1.5 py-2 pl-3 pr-2.5">
+              <Image
+                src="/logo-crown.png"
+                alt=""
+                width={1135}
+                height={793}
+                className="h-4 w-auto"
+              />
+              <span
+                className="text-[12px] font-extrabold tabular-nums"
+                style={{ color: count > 0 ? SLIP_TEAL : "#4c7d72" }}
+              >
+                {count}
+              </span>
+            </span>
+            <span
+              className="border-l border-dashed border-[rgba(47,217,192,0.35)]"
+              aria-hidden="true"
+            />
+            <span className="w-2" aria-hidden="true" />
           </span>
-          <span className="w-2" aria-hidden="true" />
         </button>
       )}
       <button
