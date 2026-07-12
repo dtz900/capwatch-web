@@ -56,14 +56,18 @@ export function MarketSelect({
           onSelect(o.value);
           setOpen(false);
         }}
-        className={`flex w-full items-center justify-between gap-6 rounded-md px-3 py-2 text-left text-[12px] font-bold transition-colors ${
+        className={`flex w-full items-center justify-between gap-6 rounded-md px-3 py-2 text-left text-[12px] font-bold transition-all duration-150 ${
           active
-            ? "bg-[rgba(255,255,255,0.10)] text-[var(--color-text)]"
+            ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
             : "text-[var(--color-text-soft)] hover:bg-white/5 hover:text-[var(--color-text)]"
         }`}
       >
         <span className="truncate">{o.label}</span>
-        <span className="shrink-0 tabular-nums text-[11px] font-semibold text-[var(--color-text-muted)]">
+        <span
+          className={`shrink-0 tabular-nums text-[11px] font-semibold ${
+            active ? "text-black/70" : "text-[var(--color-text-muted)]"
+          }`}
+        >
           {o.count}
         </span>
       </button>
@@ -76,9 +80,11 @@ export function MarketSelect({
         role="listbox"
         aria-label="Market"
         aria-disabled={disabled}
-        className={`max-h-64 overflow-y-auto rounded-lg bg-[rgba(255,255,255,0.04)] p-1 ${
-          disabled ? "opacity-40 pointer-events-none" : ""
-        }`}
+        className={`max-h-64 overflow-y-auto rounded-lg bg-[rgba(255,255,255,0.04)] p-1
+                    [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                    [mask-image:linear-gradient(to_bottom,black_calc(100%-16px),transparent)] ${
+                      disabled ? "opacity-40 pointer-events-none" : ""
+                    }`}
       >
         {rows.map(row)}
       </div>
@@ -94,11 +100,8 @@ export function MarketSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Market"
-        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors disabled:opacity-40 ${
-          value
-            ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)]"
-            : "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-        }`}
+        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold leading-none transition-all duration-150 disabled:opacity-40
+                   bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)] hover:brightness-105"
       >
         {current.label}
         <svg
@@ -113,12 +116,16 @@ export function MarketSelect({
         </svg>
       </button>
       {open && (
-        <div
-          role="listbox"
-          aria-label="Market"
-          className="absolute left-0 top-full z-30 mt-1 max-h-80 w-64 overflow-y-auto rounded-xl border border-[var(--color-border-h)] bg-[#121216] p-1.5 shadow-xl"
-        >
-          {rows.map(row)}
+        <div className="absolute left-0 top-full z-30 mt-1 w-64 rounded-xl border border-[var(--color-border-h)] bg-[#121216] shadow-xl">
+          <div
+            role="listbox"
+            aria-label="Market"
+            className="max-h-80 overflow-y-auto p-1.5
+                       [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                       [mask-image:linear-gradient(to_bottom,black_calc(100%-18px),transparent)]"
+          >
+            {rows.map(row)}
+          </div>
         </div>
       )}
     </div>

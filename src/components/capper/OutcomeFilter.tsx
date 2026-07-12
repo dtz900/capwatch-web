@@ -38,9 +38,9 @@ export function OutcomeFilter({ stacked = false }: { stacked?: boolean }) {
                 type="button"
                 onClick={() => setOutcome(o.value)}
                 aria-pressed={active}
-                className={`w-full text-center py-2.5 rounded-md text-[12px] font-bold transition-colors ${
+                className={`w-full text-center py-2.5 rounded-md text-[12px] font-bold transition-all duration-150 ${
                   active
-                    ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)] shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
+                    ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 }`}
               >
@@ -67,9 +67,9 @@ export function OutcomeFilter({ stacked = false }: { stacked?: boolean }) {
               type="button"
               onClick={() => setOutcome(o.value)}
               aria-pressed={active}
-              className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md text-[11px] sm:text-[10px] font-bold transition-colors ${
+              className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md text-[11px] sm:text-[10px] font-bold transition-all duration-150 ${
                 active
-                  ? "bg-[rgba(255,255,255,0.10)] text-[var(--color-text)]"
+                  ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               }`}
             >

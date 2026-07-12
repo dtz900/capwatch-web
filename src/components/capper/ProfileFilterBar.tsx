@@ -75,9 +75,9 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
               data-range-trigger
               onClick={() => setPickerOpen((o) => !o)}
               aria-pressed={!!range}
-              className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors ${
+              className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold leading-none transition-all duration-150 ${
                 range
-                  ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)]"
+                  ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
                   : "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               }`}
             >
@@ -120,9 +120,9 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
             data-range-trigger
             onClick={() => setPickerOpen((o) => !o)}
             aria-pressed={!!range}
-            className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors ${
+            className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold leading-none transition-all duration-150 ${
               range
-                ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)]"
+                ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
                 : "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
@@ -178,7 +178,7 @@ function Seg<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className={`gap-1 rounded-lg bg-[rgba(255,255,255,0.04)] p-1 ${
+      className={`gap-0.5 rounded-lg bg-[rgba(255,255,255,0.025)] border border-[rgba(255,255,255,0.04)] p-0.5 ${
         fill ? "grid" : `inline-flex ${wrap ? "flex-wrap" : ""}`
       }`}
       style={fill ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` } : undefined}
@@ -192,12 +192,12 @@ function Seg<T extends string>({
             onClick={() => onSelect(o.value)}
             aria-pressed={active}
             disabled={disabled}
-            className={`rounded-md text-[12px] sm:text-[11px] font-bold transition-colors ${
-              fill ? "w-full text-center py-2.5" : "px-3 py-2.5 sm:py-1.5"
+            className={`rounded-md text-[12px] sm:text-[11px] font-bold leading-none transition-all duration-150 ${
+              fill ? "w-full text-center py-2.5" : "px-3 py-2.5 sm:px-2.5 sm:py-1.5"
             } ${
               active
-                ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)] shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
-                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
+                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[rgba(255,255,255,0.04)]"
             }`}
           >
             {o.label}

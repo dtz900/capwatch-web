@@ -94,18 +94,20 @@ export function MarketTailToggle({
   }
 
   if (pill) {
+    // Mirrors TailButton's chrome so the stat-band control doesn't change
+    // identity when it switches between whole-capper and market modes.
     return (
       <button
         onClick={toggle}
         disabled={pending || tailing === null}
         title={tailing ? "Untail this market" : "Tail only this market from this capper"}
-        className={`whitespace-nowrap rounded-md border px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors disabled:opacity-50 ${
+        className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           tailing
-            ? "border-[var(--color-pos)] text-[var(--color-pos)] hover:border-[var(--color-neg)] hover:text-[var(--color-neg)]"
-            : "border-[var(--color-border-h)] text-[var(--color-text)] hover:bg-white/5"
+            ? "border border-[var(--color-border-h)] text-[var(--color-text)] hover:border-[var(--color-neg)]"
+            : "bg-[var(--color-text)] text-black hover:opacity-90"
         }`}
       >
-        {tailing ? "Tailing this market ✓" : "Tail this market"}
+        {tailing ? "Tailing market ✓" : "+ Tail this market"}
       </button>
     );
   }
