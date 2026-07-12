@@ -5,7 +5,6 @@ import { buildEdgeView, MARKET_LABELS, VERDICT_WORDS, toneCls } from "@/lib/edge
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { XIcon } from "@/components/icons/XIcon";
 import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
-import { useAuth } from "@/components/auth/AuthProvider";
 import {
   fmtPct,
   headline,
@@ -35,12 +34,13 @@ function expectedValue(row: RankedEdgeRow): string | null {
    with no survivor has no master. Contenders run underneath in small print
    with their verdicts. The structure carries the methodology so the rows
    never have to. */
-export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: boolean }) {
-  const { entitlements } = useAuth();
-
+export function MarketRankings({ rows, signedIn }: { rows: RankedEdgeRow[]; signedIn: boolean }) {
   const header = (
     <div>
-      <h2 className="text-lg font-bold text-[var(--color-text)]">Market Masters</h2>
+      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+        Free early access
+      </div>
+      <h2 className="mt-0.5 text-lg font-bold text-[var(--color-text)]">Market Masters</h2>
       <p className="mt-0.5 text-sm text-[var(--color-text-soft)]">
         One master per market: whoever holds up against closing lines, not raw
         profit. No survivor, no master.
@@ -48,19 +48,18 @@ export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: bool
     </div>
   );
 
-  if (!vip) {
+  if (!signedIn) {
     return (
       <section className="rounded-2xl bg-[var(--color-bg-card)] border border-[var(--color-border)] px-5 py-5">
-        <div className="text-[10px] uppercase tracking-wider text-[var(--color-gold)]">VIP</div>
-        <div className="mt-1">{header}</div>
+        {header}
         <p className="mt-2 text-sm text-[var(--color-text)]">
           See who actually runs every market, with a tail button on every row.
         </p>
         <Link
-          href={entitlements.isLoggedIn ? "/account" : "/login"}
+          href="/login"
           className="mt-3 inline-block rounded-lg border border-[var(--color-border-h)] px-3 py-1.5 text-sm text-[var(--color-text)]"
         >
-          {entitlements.isLoggedIn ? "Upgrade to VIP" : "Sign in to get started"}
+          Sign in to get started
         </Link>
       </section>
     );

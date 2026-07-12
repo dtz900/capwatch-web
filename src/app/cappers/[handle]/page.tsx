@@ -35,7 +35,7 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Window } from "@/lib/types";
-import { vipEnabled } from "@/lib/flags";
+import { vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
 
 interface PageProps {
@@ -444,7 +444,9 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
             <StatBandLive />
           </div>
 
-          {vipEnabled() && (
+          {/* Dossier is paid-tier inventory, held back from the free launch
+              (decisions/log.md 2026-07-11). */}
+          {vipEnabled() && vipTierEnabled() && (
             <div className="mb-6">
               <VipEdgesPanel
                 capperId={profile.capper.id}

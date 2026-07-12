@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServiceSupabase } from "@/lib/supabase/service";
 import { fetchLeaderboard, fetchTodayPicks } from "@/lib/api";
 import { vipEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
@@ -54,7 +55,7 @@ export default async function MyTailsPage({
             <MyTailsTabs
               initialTab={initialTab}
               stable={<EmptyStable suggestions={top3} />}
-              board={<MarketRankings rows={[]} vip={false} />}
+              board={<MarketRankings rows={[]} signedIn={false} />}
             />
           </div>
         </main>
@@ -70,19 +71,14 @@ export default async function MyTailsPage({
   const followRows = (follows ?? []) as { capper_id: number; market: string }[];
   const ids = [...new Set(followRows.map((f) => f.capper_id))];
 
-  const { data: tsProfile, error: tsProfileError } = await supabase
-    .from("ts_profiles")
-    .select("tier")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (tsProfileError) console.error("my-tails tier query failed:", tsProfileError);
-  const isVip = tsProfile?.tier === "vip";
-
-  // Cross-capper read of the whole edges table. RLS gates it to VIP JWTs;
+  // Cross-capper read of the whole edges table. Market Masters is free for
+  // any signed-in user, but RLS on capper_market_edges stays VIP-gated for
+  // the dossier surfaces, so this read goes through the service role.
   // x_n rides along because the ranking sort needs it.
   let rankingRows: RankedEdgeRow[] = [];
-  if (isVip) {
-    const { data: allEdges, error: allEdgesError } = await supabase
+  const serviceSupabase = createServiceSupabase();
+  if (serviceSupabase) {
+    const { data: allEdges, error: allEdgesError } = await serviceSupabase
       .from("capper_market_edges")
       .select(
         "capper_id, market, n_decided, roi_pct, xroi_pct, clv_beat_pct, clv_avg_cents, clv_n, tracked_days, gate_pass, gate_reasons, originator, tail_at_close_roi, x_n"
@@ -176,7 +172,7 @@ export default async function MyTailsPage({
               />
             )
           }
-          board={<MarketRankings rows={rankingRows} vip={isVip} />}
+          board={<MarketRankings rows={rankingRows} signedIn={true} />}
         />
       </main>
       </BetSlipProvider>

@@ -118,14 +118,29 @@ describe("BetSlipProvider", () => {
     await waitFor(() => expect(insertSingle).toHaveBeenCalledTimes(1));
   });
 
-  it("opens the teaser instead of inserting for a free user", async () => {
+  it("inserts for a free user while the paid tier is dark", async () => {
     isVip = false;
     render(<BetSlipProvider todayDate="2026-07-09"><Probe /></BetSlipProvider>);
     await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("1"));
     fireEvent.click(screen.getByText("add"));
-    await waitFor(() => expect(screen.getByTestId("teaser")).toHaveTextContent("true"));
-    expect(insertSingle).not.toHaveBeenCalled();
+    await waitFor(() => expect(insertSingle).toHaveBeenCalled());
+    expect(screen.getByTestId("teaser")).toHaveTextContent("false");
     isVip = true;
+  });
+
+  it("opens the teaser instead of inserting for a free user once the tier flag is on", async () => {
+    vi.stubEnv("NEXT_PUBLIC_VIP_TIER_ENABLED", "true");
+    try {
+      isVip = false;
+      render(<BetSlipProvider todayDate="2026-07-09"><Probe /></BetSlipProvider>);
+      await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("1"));
+      fireEvent.click(screen.getByText("add"));
+      await waitFor(() => expect(screen.getByTestId("teaser")).toHaveTextContent("true"));
+      expect(insertSingle).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      isVip = true;
+    }
   });
 
   it("returns null outside the provider", () => {

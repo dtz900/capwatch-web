@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 
-/* Tail exactly one market from one capper. VIP only: non-VIPs render nothing
-   (the panel that hosts this is already teaser-gated for them). Plain text
-   control by design; no pill chrome. */
+/* Tail exactly one market from one capper. Any signed-in user; logged-out
+   viewers render nothing (their hosts show a sign-in path instead). Plain
+   text control by design; no pill chrome. */
 export function MarketTailToggle({ capperId, market, ink = false }: { capperId: number; market: string; ink?: boolean }) {
   const { session, entitlements } = useAuth();
   const supabase = useMemo(
@@ -19,7 +19,7 @@ export function MarketTailToggle({ capperId, market, ink = false }: { capperId: 
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    if (!supabase || !session?.user?.id || !entitlements.isVip) {
+    if (!supabase || !session?.user?.id || !entitlements.isLoggedIn) {
       setTailing(false);
       return;
     }
@@ -31,9 +31,9 @@ export function MarketTailToggle({ capperId, market, ink = false }: { capperId: 
       .eq("market", market)
       .maybeSingle()
       .then(({ data }) => setTailing(!!data));
-  }, [session, capperId, market, supabase, entitlements.isVip]);
+  }, [session, capperId, market, supabase, entitlements.isLoggedIn]);
 
-  if (!entitlements.isVip) return null;
+  if (!entitlements.isLoggedIn) return null;
 
   async function toggle() {
     if (!supabase || !session?.user?.id || pending || tailing === null) return;

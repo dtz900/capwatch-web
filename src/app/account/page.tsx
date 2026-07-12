@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { notFound } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { vipEnabled } from "@/lib/flags";
+import { vipEnabled, vipTierEnabled } from "@/lib/flags";
 
 export default function AccountPage() {
   const { entitlements, session } = useAuth();
@@ -37,26 +37,30 @@ export default function AccountPage() {
       <div className="rounded-2xl bg-[var(--color-bg-card)] border border-[var(--color-border)] px-6 py-6">
         <h1 className="text-xl font-bold text-[var(--color-text)]">Account</h1>
         <p className="mt-1 text-sm text-[var(--color-text-soft)]">{session?.user?.email}</p>
-        <div className="mt-4 text-sm text-[var(--color-text)]">
-          Plan:{" "}
-          <span className={entitlements.isVip ? "text-[var(--color-gold)] font-semibold" : ""}>
-            {entitlements.isVip ? "VIP" : "Free"}
-          </span>
-        </div>
-        {!entitlements.isVip && (
+        {vipTierEnabled() && (
           <>
-            <p className="mt-4 text-sm text-[var(--color-text-soft)]">
-              VIP unlocks closing line value, de-lucked ROI by market, and trust
-              signals on every capper.
-            </p>
-            <button
-              onClick={upgrade}
-              disabled={busy}
-              className="mt-3 rounded-lg bg-[var(--color-text)] text-black font-semibold px-4 py-2 text-sm disabled:opacity-50"
-            >
-              {busy ? "Redirecting..." : "Upgrade to VIP"}
-            </button>
-            {error && <p className="mt-2 text-sm text-[var(--color-neg)]">{error}</p>}
+            <div className="mt-4 text-sm text-[var(--color-text)]">
+              Plan:{" "}
+              <span className={entitlements.isVip ? "text-[var(--color-gold)] font-semibold" : ""}>
+                {entitlements.isVip ? "VIP" : "Free"}
+              </span>
+            </div>
+            {!entitlements.isVip && (
+              <>
+                <p className="mt-4 text-sm text-[var(--color-text-soft)]">
+                  VIP unlocks closing line value, de-lucked ROI by market, and trust
+                  signals on every capper.
+                </p>
+                <button
+                  onClick={upgrade}
+                  disabled={busy}
+                  className="mt-3 rounded-lg bg-[var(--color-text)] text-black font-semibold px-4 py-2 text-sm disabled:opacity-50"
+                >
+                  {busy ? "Redirecting..." : "Upgrade to VIP"}
+                </button>
+                {error && <p className="mt-2 text-sm text-[var(--color-neg)]">{error}</p>}
+              </>
+            )}
           </>
         )}
       </div>

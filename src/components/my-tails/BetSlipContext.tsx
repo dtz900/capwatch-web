@@ -3,6 +3,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { vipTierEnabled } from "@/lib/flags";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { fetchPickOutcomes } from "@/lib/api";
 import {
@@ -101,7 +102,9 @@ export function BetSlipProvider({
 
   const addFromPick = useCallback(
     (p: TodayPickEntry) => {
-      if (!entitlements.isVip) {
+      // The paid-tier teaser only exists once the VIP tier is live; on the
+      // free launch every signed-in user gets the slip.
+      if (vipTierEnabled() && !entitlements.isVip) {
         setTeaserOpen(true);
         return;
       }
