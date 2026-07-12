@@ -251,7 +251,7 @@ export function BetSlipRail() {
         ref={stubRef}
         onClick={toggle}
         aria-label={`Open bet slip, ${totals.pending} pending`}
-        className="relative flex shrink-0 items-stretch overflow-hidden rounded-lg bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] ring-1 ring-[rgba(47,217,192,0.35)] shadow-[0_8px_32px_rgba(10,60,50,0.5)] transition-all hover:ring-[rgba(47,217,192,0.6)]"
+        className="relative flex shrink-0 items-stretch overflow-hidden rounded-lg bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] shadow-[0_8px_32px_rgba(10,60,50,0.5)] transition-all hover:brightness-110"
       >
         <span className="flex items-center gap-2 py-2.5 pl-3.5 pr-3.5">
           <Image
