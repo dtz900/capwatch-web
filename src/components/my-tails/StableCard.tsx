@@ -39,6 +39,8 @@ export function StableCard({
       >
         {"✕"}
       </button>
+      {/* Only the header links to the profile; the card body (stats, today
+          picks) is plain so slip adds and the parlay expander don't navigate. */}
       <Link href={`/cappers/${capper.handle}`} className="block">
         <div className="flex items-center gap-3">
           <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={44} />
@@ -59,6 +61,7 @@ export function StableCard({
             )}
           </div>
         </div>
+      </Link>
         {!scoped && (
           <>
             <div className="mt-4 flex items-end justify-between gap-3">
@@ -326,7 +329,6 @@ export function StableCard({
             </div>
           )}
         </div>
-      </Link>
     </div>
   );
 }

@@ -207,9 +207,11 @@ export function BetSlipRail() {
 
   return (
     <div className="fixed right-3 sm:right-4 top-24 z-30 w-[304px] max-w-[calc(100vw-1.5rem)]">
-    <aside className="w-full overflow-hidden rounded-2xl bg-gradient-to-b from-[#0c1f1b] via-[#0a1512] to-[#07100d] ring-1 ring-[rgba(47,217,192,0.22)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
+    {/* Viewport-capped flex column: the ticket legs scroll in the middle
+        while the header and the totals/P&L footer stay pinned on screen. */}
+    <aside className="flex max-h-[calc(100vh-7rem)] w-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-[#0c1f1b] via-[#0a1512] to-[#07100d] ring-1 ring-[rgba(47,217,192,0.22)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
       {/* Ticket header: teal bar, the TailSlips logo, count badge, collapse */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-[#0e2c25] to-[#0a1e19] px-4 py-3 border-b border-[rgba(47,217,192,0.25)]">
+      <div className="flex shrink-0 items-center justify-between bg-gradient-to-r from-[#0e2c25] to-[#0a1e19] px-4 py-3 border-b border-[rgba(47,217,192,0.25)]">
         <span className="flex items-center">
           <Image
             src="/logo-horizontal-aligned-tight.png"
@@ -246,7 +248,7 @@ export function BetSlipRail() {
       )}
       {/* Picks scroll; the P&L footer below is pinned to the slip, so the
           list fades out behind it via the mask. */}
-      <div className="max-h-[calc(100vh-16rem)] overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
         {entries === null && (
           <p className="py-3 text-xs text-[#6da399]">Loading...</p>
         )}
@@ -266,7 +268,7 @@ export function BetSlipRail() {
         )}
       </div>
       {entries !== null && entries.length > 0 && (
-        <div className="px-3 pb-3">
+        <div className="shrink-0 px-3 pb-3">
           {/* Pending totals ride in the pinned footer with the P&L card so
               they stay visible while the ticket legs scroll behind. */}
           {pending.wager > 0 && (
