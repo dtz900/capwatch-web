@@ -1,7 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import type { CapperRow, TodayPickEntry } from "@/lib/types";
-import type { EdgeRow } from "@/lib/edges";
+import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import { StableCard } from "@/components/my-tails/StableCard";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -10,12 +9,12 @@ export function StableGrid({
   initial,
   todayByCapper = {},
   scopesByCapper = {},
-  edgesByCapper = {},
+  statsByCapper = {},
 }: {
   initial: CapperRow[];
   todayByCapper?: Record<string, TodayPickEntry[]>;
   scopesByCapper?: Record<string, string[]>;
-  edgesByCapper?: Record<string, EdgeRow[]>;
+  statsByCapper?: Record<string, ScopeStat[]>;
 }) {
   const [rows, setRows] = useState(initial);
   const [scopes, setScopes] = useState(scopesByCapper);
@@ -84,7 +83,7 @@ export function StableGrid({
           onUntail={() => untail(String(c.capper_id))}
           todayPicks={todayByCapper[String(c.capper_id)] ?? []}
           scopes={scopes[String(c.capper_id)] ?? []}
-          scopeEdges={edgesByCapper[String(c.capper_id)] ?? []}
+          scopeStats={statsByCapper[String(c.capper_id)] ?? []}
           onUntailMarket={(m) => untailMarket(String(c.capper_id), m)}
         />
       ))}

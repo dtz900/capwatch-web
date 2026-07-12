@@ -95,38 +95,33 @@ describe("StableCard", () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  it("renders scoped market rows instead of the season block", () => {
-    const edge = {
-      market: "HRR", n_decided: 90, roi_pct: 13.4, xroi_pct: 4.2,
-      clv_beat_pct: null, clv_avg_cents: null, clv_n: 0,
-      tracked_days: 73, gate_pass: true, gate_reasons: [],
-      originator: false, tail_at_close_roi: null,
-    };
+  it("renders scoped rows with ROI only, no de-luck machinery", () => {
+    const stat = { market: "HRR", n_decided: 90, roi_pct: 13.4 };
     render(
       <StableCard
         capper={capper}
         onUntail={() => {}}
         scopes={["HRR"]}
-        scopeEdges={[edge]}
+        scopeStats={[stat]}
         onUntailMarket={() => {}}
       />
     );
     expect(screen.getByText(/Hits \+ Runs \+ RBIs only/)).toBeInTheDocument();
-    expect(screen.getByText("real edge")).toBeInTheDocument();
+    expect(screen.getByText("+13.4%")).toBeInTheDocument();
+    expect(screen.getByText(/90 picks/)).toBeInTheDocument();
+    // VIP inventory must not leak onto the free stable card
+    expect(screen.queryByText(/real edge/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/luck/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/closing odds/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Net profit")).not.toBeInTheDocument();
   });
 
   it("fires onUntailMarket from the scope row control", () => {
     const spy = vi.fn();
-    const edge = {
-      market: "HRR", n_decided: 90, roi_pct: 13.4, xroi_pct: 4.2,
-      clv_beat_pct: null, clv_avg_cents: null, clv_n: 0,
-      tracked_days: 73, gate_pass: true, gate_reasons: [],
-      originator: false, tail_at_close_roi: null,
-    };
+    const stat = { market: "HRR", n_decided: 90, roi_pct: 13.4 };
     render(
       <StableCard capper={capper} onUntail={() => {}} scopes={["HRR"]}
-        scopeEdges={[edge]} onUntailMarket={spy} />
+        scopeStats={[stat]} onUntailMarket={spy} />
     );
     fireEvent.click(screen.getByRole("button", { name: /untail hits \+ runs \+ rbis/i }));
     expect(spy).toHaveBeenCalledWith("HRR");

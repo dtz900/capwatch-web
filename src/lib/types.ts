@@ -368,6 +368,15 @@ export interface PalaceCandidate {
   status: "candidate" | "draft" | "published";
 }
 
+/** Public-safe per-market stat for a tailed scope on a My Tails card. Only
+ * fields a FREE user may see: the de-lucked machinery (xROI, CLV, verdicts)
+ * on the same source rows is VIP inventory and must not ride along. */
+export interface ScopeStat {
+  market: string;
+  roi_pct: number | null;
+  n_decided: number;
+}
+
 export interface TodayPickEntry {
   capper_id: number;
   handle: string | null;

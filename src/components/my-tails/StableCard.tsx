@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { CapperRow, TodayPickEntry } from "@/lib/types";
-import { buildEdgeView, MARKET_LABELS, VERDICT_WORDS, toneCls, type EdgeRow } from "@/lib/edges";
+import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
+import { MARKET_LABELS, toneCls } from "@/lib/edges";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { Sparkline } from "@/components/leaderboard/Sparkline";
@@ -14,14 +14,14 @@ export function StableCard({
   onUntail,
   todayPicks = [],
   scopes = [],
-  scopeEdges = [],
+  scopeStats = [],
   onUntailMarket,
 }: {
   capper: CapperRow;
   onUntail: () => void;
   todayPicks?: TodayPickEntry[];
   scopes?: string[];
-  scopeEdges?: EdgeRow[];
+  scopeStats?: ScopeStat[];
   onUntailMarket?: (market: string) => void;
 }) {
   const slip = useBetSlip();
@@ -90,49 +90,61 @@ export function StableCard({
         )}
         {scoped && (
           <div className="mt-4 space-y-2.5">
+            {/* ROI only, on purpose: xROI/CLV/verdicts are VIP inventory
+                and never reach this surface (ScopeStat carries just the
+                public-safe fields). */}
             {scopes.map((m) => {
-              const e = scopeEdges.find((r) => r.market === m);
-              if (!e) {
+              const label = MARKET_LABELS[m] ?? m;
+              const s = scopeStats.find((r) => r.market === m);
+              const untail = onUntailMarket && (
+                <button
+                  aria-label={`Untail ${label}`}
+                  title="Untail this market"
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    onUntailMarket(m);
+                  }}
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-xs"
+                >
+                  {"✕"}
+                </button>
+              );
+              if (!s) {
                 return (
                   <div key={m} className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm font-semibold text-[var(--color-text)]">
-                      {MARKET_LABELS[m] ?? m}
+                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)]">
+                      {label}
                     </span>
-                    <span className="text-xs text-[var(--color-text-muted)]">no data yet</span>
+                    <span className="ml-auto text-xs text-[var(--color-text-muted)]">
+                      no data yet
+                    </span>
+                    {untail}
                   </div>
                 );
               }
-              const f = buildEdgeView(e);
+              const roiTone =
+                s.roi_pct != null && s.roi_pct > 0
+                  ? "pos"
+                  : s.roi_pct != null && s.roi_pct < 0
+                    ? "neg"
+                    : "muted";
               return (
                 <div key={m}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)]">
-                      {f.label}
+                      {label}
                     </span>
-                    {onUntailMarket && (
-                      <button
-                        aria-label={`Untail ${f.label}`}
-                        title="Untail this market"
-                        onClick={(ev) => {
-                          ev.preventDefault();
-                          ev.stopPropagation();
-                          onUntailMarket(m);
-                        }}
-                        className="text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-xs"
-                      >
-                        {"✕"}
-                      </button>
-                    )}
+                    {untail}
                   </div>
                   <div className="mt-1 flex items-baseline gap-2 tabular-nums">
-                    <span className={`text-[22px] leading-none font-extrabold ${toneCls(f.roiTone)}`}>
-                      {f.roi.replace(" ROI", "")}
+                    <span className={`text-[22px] leading-none font-extrabold ${toneCls(roiTone)}`}>
+                      {s.roi_pct != null
+                        ? `${s.roi_pct > 0 ? "+" : ""}${s.roi_pct.toFixed(1)}%`
+                        : "n/a"}
                     </span>
-                    <span className="text-xs text-[var(--color-text-muted)]">{f.secondary}</span>
-                    <span
-                      className={`ml-auto text-xs font-semibold lowercase ${toneCls(f.verdict.tone)}`}
-                    >
-                      {VERDICT_WORDS[f.verdict.label] ?? f.verdict.label.toLowerCase()}
+                    <span className="text-xs text-[var(--color-text-muted)]">
+                      ROI · {s.n_decided} picks
                     </span>
                   </div>
                 </div>

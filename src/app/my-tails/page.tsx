@@ -10,7 +10,8 @@ import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import { MarketRankings } from "@/components/my-tails/MarketRankings";
 import { MyTailsTabs, type MyTailsTab } from "@/components/my-tails/MyTailsTabs";
-import type { CapperRow, TodayPickEntry } from "@/lib/types";
+import { createServiceSupabase } from "@/lib/supabase/service";
+import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import type { EdgeRow } from "@/lib/edges";
 import type { RankedEdgeRow } from "@/lib/marketRankings";
 
@@ -117,19 +118,28 @@ export default async function MyTailsPage({
     }
   }
 
+  // Per-market ROI for tailed scopes. The source table is VIP-RLS-gated but
+  // ROI itself is public (it's on every profile page), so the read goes
+  // through the service role with ONLY the public-safe columns projected.
+  // The de-lucked fields (xROI, CLV, verdicts) stay VIP and never reach
+  // this surface.
   const scopedIds = Object.keys(scopesByCapper).map(Number);
-  const edgesByCapper: Record<string, EdgeRow[]> = {};
-  if (scopedIds.length > 0) {
-    const { data: edgeRows } = await supabase
+  const statsByCapper: Record<string, ScopeStat[]> = {};
+  const serviceSupabase = scopedIds.length > 0 ? createServiceSupabase() : null;
+  if (serviceSupabase && scopedIds.length > 0) {
+    const { data: statRows, error: statError } = await serviceSupabase
       .from("capper_market_edges")
-      .select(
-        "capper_id, market, n_decided, roi_pct, xroi_pct, clv_beat_pct, clv_avg_cents, clv_n, tracked_days, gate_pass, gate_reasons, originator, tail_at_close_roi"
-      )
+      .select("capper_id, market, roi_pct, n_decided")
       .in("capper_id", scopedIds);
-    for (const e of (edgeRows ?? []) as (EdgeRow & { capper_id: number })[]) {
+    if (statError) console.error("my-tails scope stats query failed:", statError);
+    for (const e of (statRows ?? []) as (ScopeStat & { capper_id: number })[]) {
       const key = String(e.capper_id);
       if (scopesByCapper[key]?.includes(e.market)) {
-        (edgesByCapper[key] ??= []).push(e);
+        (statsByCapper[key] ??= []).push({
+          market: e.market,
+          roi_pct: e.roi_pct,
+          n_decided: e.n_decided,
+        });
       }
     }
   }
@@ -179,7 +189,7 @@ export default async function MyTailsPage({
                 initial={stable}
                 todayByCapper={todayByCapper}
                 scopesByCapper={scopesByCapper}
-                edgesByCapper={edgesByCapper}
+                statsByCapper={statsByCapper}
               />
             );
           // Tabs exist for the Market Masters sub-page, which is paid-tier
