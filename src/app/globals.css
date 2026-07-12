@@ -60,6 +60,14 @@ html, body {
   .pp-rise { animation: none; opacity: 1; transform: none; }
 }
 
+/* Marker scribble draw-on (SharpieCircle): path carries pathLength=1 and
+   dasharray 1, so offset 1 -> 0 draws the stroke tip-to-tail. */
+@keyframes sharpie-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.sharpie-draw { animation: sharpie-draw .45s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .sharpie-draw { animation: none; stroke-dashoffset: 0; }
+}
+
 /* My Tails sub-page swipe: the incoming panel slides in from the side the
    user swiped toward. */
 @keyframes subpage-in-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }

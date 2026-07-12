@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { TailCrown } from "@/components/icons/TailCrown";
+import { SharpieCircle } from "@/components/icons/SharpieCircle";
 
 /* Tail exactly one market from one capper. Any signed-in user; logged-out
    viewers render nothing (their hosts show a sign-in path instead). Plain
@@ -102,7 +103,7 @@ export function MarketTailToggle({
         onClick={toggle}
         disabled={pending || tailing === null}
         title={tailing ? "Untail this market" : "Tail only this market from this capper"}
-        className={`inline-flex items-end gap-2.5 whitespace-nowrap text-[11px] font-bold uppercase leading-none tracking-[0.18em] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`relative inline-flex items-end gap-2.5 whitespace-nowrap text-[11px] font-bold uppercase leading-none tracking-[0.18em] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           tailing
             ? "text-[var(--color-text)]"
             : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
@@ -114,11 +115,10 @@ export function MarketTailToggle({
         <TailCrown
           size={26}
           className={`translate-y-[5px] ${
-            tailing
-              ? "text-[#35a05f] [filter:drop-shadow(0_0_5px_rgba(53,160,95,0.85))_drop-shadow(0_0_14px_rgba(53,160,95,0.5))]"
-              : ""
+            tailing ? "text-[#35a05f] [filter:drop-shadow(0_0_3px_rgba(53,160,95,0.5))]" : ""
           }`}
         />
+        <SharpieCircle className="inset-[-11px_-16px] text-[var(--color-gold)]" />
       </button>
     );
   }
