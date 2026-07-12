@@ -2,9 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { createServiceSupabase } from "@/lib/supabase/service";
 import { fetchLeaderboard, fetchTodayPicks } from "@/lib/api";
-import { vipEnabled } from "@/lib/flags";
+import { vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
 import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
 import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
@@ -52,11 +51,15 @@ export default async function MyTailsPage({
             your stable here.
           </p>
           <div className="mt-8">
-            <MyTailsTabs
-              initialTab={initialTab}
-              stable={<EmptyStable suggestions={top3} />}
-              board={<MarketRankings rows={[]} signedIn={false} />}
-            />
+            {vipTierEnabled() ? (
+              <MyTailsTabs
+                initialTab={initialTab}
+                stable={<EmptyStable suggestions={top3} />}
+                board={<MarketRankings rows={[]} vip={false} />}
+              />
+            ) : (
+              <EmptyStable suggestions={top3} />
+            )}
           </div>
         </main>
       </>
@@ -71,14 +74,23 @@ export default async function MyTailsPage({
   const followRows = (follows ?? []) as { capper_id: number; market: string }[];
   const ids = [...new Set(followRows.map((f) => f.capper_id))];
 
-  // Cross-capper read of the whole edges table. Market Masters is free for
-  // any signed-in user, but RLS on capper_market_edges stays VIP-gated for
-  // the dossier surfaces, so this read goes through the service role.
-  // x_n rides along because the ranking sort needs it.
+  // Market Masters is paid-tier inventory (decisions/log.md 2026-07-11):
+  // held out of the free launch entirely and only fetched once the tier is
+  // live. Cross-capper read of the whole edges table; RLS gates it to VIP
+  // JWTs; x_n rides along because the ranking sort needs it.
+  let isVip = false;
   let rankingRows: RankedEdgeRow[] = [];
-  const serviceSupabase = createServiceSupabase();
-  if (serviceSupabase) {
-    const { data: allEdges, error: allEdgesError } = await serviceSupabase
+  if (vipTierEnabled()) {
+    const { data: tsProfile, error: tsProfileError } = await supabase
+      .from("ts_profiles")
+      .select("tier")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (tsProfileError) console.error("my-tails tier query failed:", tsProfileError);
+    isVip = tsProfile?.tier === "vip";
+  }
+  if (isVip) {
+    const { data: allEdges, error: allEdgesError } = await supabase
       .from("capper_market_edges")
       .select(
         "capper_id, market, n_decided, roi_pct, xroi_pct, clv_beat_pct, clv_avg_cents, clv_n, tracked_days, gate_pass, gate_reasons, originator, tail_at_close_roi, x_n"
@@ -158,9 +170,8 @@ export default async function MyTailsPage({
           </div>
           <BetSlipRail />
         </div>
-        <MyTailsTabs
-          initialTab={initialTab}
-          stable={
+        {(() => {
+          const stableView =
             ids.length === 0 ? (
               <EmptyStable suggestions={top3} />
             ) : (
@@ -170,10 +181,19 @@ export default async function MyTailsPage({
                 scopesByCapper={scopesByCapper}
                 edgesByCapper={edgesByCapper}
               />
-            )
-          }
-          board={<MarketRankings rows={rankingRows} signedIn={true} />}
-        />
+            );
+          // Tabs exist for the Market Masters sub-page, which is paid-tier
+          // inventory; the free launch is the stable alone.
+          return vipTierEnabled() ? (
+            <MyTailsTabs
+              initialTab={initialTab}
+              stable={stableView}
+              board={<MarketRankings rows={rankingRows} vip={isVip} />}
+            />
+          ) : (
+            stableView
+          );
+        })()}
       </main>
       </BetSlipProvider>
     </>

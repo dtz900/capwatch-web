@@ -5,8 +5,19 @@ import { useAuth } from "@/components/auth/AuthProvider";
 
 /* Tail exactly one market from one capper. Any signed-in user; logged-out
    viewers render nothing (their hosts show a sign-in path instead). Plain
-   text control by design; no pill chrome. */
-export function MarketTailToggle({ capperId, market, ink = false }: { capperId: number; market: string; ink?: boolean }) {
+   text control by default; `pill` renders a labeled bordered button for
+   hosts like the profile market filter. */
+export function MarketTailToggle({
+  capperId,
+  market,
+  ink = false,
+  pill = false,
+}: {
+  capperId: number;
+  market: string;
+  ink?: boolean;
+  pill?: boolean;
+}) {
   const { session, entitlements } = useAuth();
   const supabase = useMemo(
     () =>
@@ -80,6 +91,23 @@ export function MarketTailToggle({ capperId, market, ink = false }: { capperId: 
     } finally {
       setPending(false);
     }
+  }
+
+  if (pill) {
+    return (
+      <button
+        onClick={toggle}
+        disabled={pending || tailing === null}
+        title={tailing ? "Untail this market" : "Tail only this market from this capper"}
+        className={`whitespace-nowrap rounded-md border px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors disabled:opacity-50 ${
+          tailing
+            ? "border-[var(--color-pos)] text-[var(--color-pos)] hover:border-[var(--color-neg)] hover:text-[var(--color-neg)]"
+            : "border-[var(--color-border-h)] text-[var(--color-text)] hover:bg-white/5"
+        }`}
+      >
+        {tailing ? "Tailing this market ✓" : "Tail this market"}
+      </button>
+    );
   }
 
   return (

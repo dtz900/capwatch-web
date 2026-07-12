@@ -64,21 +64,21 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("MarketRankings market masters", () => {
-  it("shows a sign-in card with no data or VIP framing to logged-out viewers", () => {
-    render(<MarketRankings rows={[]} signedIn={false} />);
+  it("shows the teaser and no data to non-VIPs", () => {
+    render(<MarketRankings rows={[]} vip={false} />);
     expect(screen.getByText("Market Masters")).toBeInTheDocument();
-    expect(screen.getByText(/sign in to get started/i)).toBeInTheDocument();
+    expect(screen.getByText(/upgrade to vip/i)).toBeInTheDocument();
     expect(screen.queryByText("robd")).not.toBeInTheDocument();
-    expect(screen.queryByText(/vip/i)).not.toBeInTheDocument();
   });
 
-  it("carries the free early access tag", () => {
-    render(<MarketRankings rows={rows} signedIn={true} />);
-    expect(screen.getByText(/free early access/i)).toBeInTheDocument();
+  it("routes the logged-out teaser to sign in", () => {
+    authState.entitlements = { isVip: false, isLoggedIn: false };
+    render(<MarketRankings rows={[]} vip={false} />);
+    expect(screen.getByText(/sign in to get started/i)).toBeInTheDocument();
   });
 
   it("crowns the top tailable capper and marks survivor-less markets masterless", () => {
-    render(<MarketRankings rows={rows} signedIn={true} />);
+    render(<MarketRankings rows={rows} vip={true} />);
     // HRR market: robd passes the gate and is the master
     expect(screen.getByText(/hits \+ runs \+ rbis/i)).toBeInTheDocument();
     expect(screen.getByText("Market Master")).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("MarketRankings market masters", () => {
       gate_pass: false,
       gate_reasons: ["not profitable in both halves"],
     };
-    render(<MarketRankings rows={[investin]} signedIn={true} />);
+    render(<MarketRankings rows={[investin]} vip={true} />);
     expect(screen.getByText("Spread")).toBeInTheDocument();
     expect(screen.getByText("Market Master")).toBeInTheDocument();
     expect(screen.queryByText(/no master yet/i)).not.toBeInTheDocument();
@@ -128,7 +128,7 @@ describe("MarketRankings market masters", () => {
   });
 
   it("collapses contenders to three and expands on demand", () => {
-    render(<MarketRankings rows={mlRows} signedIn={true} />);
+    render(<MarketRankings rows={mlRows} vip={true} />);
     expect(screen.getByText("swampy")).toBeInTheDocument();
     expect(screen.getByText("ml_four")).toBeInTheDocument();
     expect(screen.queryByText("ml_six")).not.toBeInTheDocument();
@@ -139,7 +139,7 @@ describe("MarketRankings market masters", () => {
   });
 
   it("renders a quiet unavailable line for VIPs when rows are empty", () => {
-    render(<MarketRankings rows={[]} signedIn={true} />);
+    render(<MarketRankings rows={[]} vip={true} />);
     expect(screen.getByText(/rankings are being computed/i)).toBeInTheDocument();
   });
 });

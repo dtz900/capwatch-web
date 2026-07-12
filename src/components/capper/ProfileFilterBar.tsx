@@ -4,7 +4,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useCapperFilters } from "@/components/capper/CapperFilterProvider";
 import { DateRangePicker } from "@/components/capper/DateRangePicker";
+import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 import { formatRangeLabel } from "@/lib/capperFilters";
+import { followScopeForMarket } from "@/lib/followScope";
+import { vipEnabled } from "@/lib/flags";
 import type { BetTypeFilter, Window } from "@/lib/types";
 
 const WINDOWS: { value: Window; label: string }[] = [
@@ -29,6 +32,7 @@ const BET_TYPES: { value: BetTypeFilter; label: string }[] = [
  *     full-width equal segments, for a calmer, more premium sheet. */
 export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
   const {
+    profile,
     window,
     betType,
     market,
@@ -42,6 +46,13 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
     clearRange,
   } = useCapperFilters();
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // While a specific market is filtered, offer to tail just that slice of
+  // this capper. Only markets that map onto a follow scope get the button.
+  const followScope = market && !marketDisabled ? followScopeForMarket(market) : null;
+  const tailThisMarket = vipEnabled() && followScope && (
+    <MarketTailToggle capperId={profile.capper.id} market={followScope} pill />
+  );
 
   // The Bet type chip shows Straights as active when a market is selected,
   // so the user never sees "All bets · Spread" with fewer picks than expected.
@@ -76,6 +87,7 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
                 disabled={marketDisabled}
               />
             </div>
+            {tailThisMarket && <div className="mt-2">{tailThisMarket}</div>}
           </Group>
         )}
         <Group label="Date range">
@@ -145,18 +157,21 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
         </div>
       </div>
       {marketOptions.length > 0 && (
-        <div
-          className={marketDisabled ? "opacity-40 pointer-events-none" : ""}
-          aria-disabled={marketDisabled}
-        >
-          <Seg
-            ariaLabel="Market"
-            options={marketSegOptions}
-            value={market}
-            onSelect={setMarket}
-            wrap
-            disabled={marketDisabled}
-          />
+        <div className="flex items-start gap-2 flex-wrap">
+          <div
+            className={marketDisabled ? "opacity-40 pointer-events-none" : ""}
+            aria-disabled={marketDisabled}
+          >
+            <Seg
+              ariaLabel="Market"
+              options={marketSegOptions}
+              value={market}
+              onSelect={setMarket}
+              wrap
+              disabled={marketDisabled}
+            />
+          </div>
+          {tailThisMarket}
         </div>
       )}
     </div>
