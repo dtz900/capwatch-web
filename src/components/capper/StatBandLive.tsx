@@ -34,7 +34,7 @@ export function StatBandLive() {
   const action = !vipEnabled() ? undefined : scope && entitlements.isLoggedIn ? (
     <MarketTailToggle capperId={profile.capper.id} market={scope} pill />
   ) : (
-    <TailButton capperId={profile.capper.id} size="compact" />
+    <TailButton capperId={profile.capper.id} variant="bare" />
   );
 
   return (

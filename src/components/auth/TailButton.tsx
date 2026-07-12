@@ -10,9 +10,13 @@ const RETURN_COOKIE = "ts_return_to";
 export function TailButton({
   capperId,
   size = "hero",
+  variant = "solid",
 }: {
   capperId: number;
   size?: "hero" | "compact";
+  /** "bare" drops the button chrome: quiet text + crown on the right that
+   * fills when tailing (the stat-band placement). */
+  variant?: "solid" | "bare";
 }) {
   const { entitlements, session } = useAuth();
   const supabase = useMemo(
@@ -71,6 +75,28 @@ export function TailButton({
     } finally {
       setPending(false);
     }
+  }
+
+  if (variant === "bare") {
+    return (
+      <button
+        onClick={toggle}
+        disabled={pending || tailing === null}
+        title={tailing ? "Untail this capper" : "Tail this capper"}
+        className={`inline-flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+          tailing
+            ? "text-[var(--color-text)]"
+            : "text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
+        }`}
+      >
+        {tailing ? "Tailing" : "Tail capper"}
+        <TailCrown
+          filled={!!tailing}
+          size={20}
+          className={tailing ? "text-[var(--color-pos)]" : ""}
+        />
+      </button>
+    );
   }
 
   const pad = size === "hero" ? "px-5 py-2" : "px-3 py-1.5";

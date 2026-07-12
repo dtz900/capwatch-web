@@ -95,23 +95,25 @@ export function MarketTailToggle({
   }
 
   if (pill) {
-    // Mirrors TailButton's chrome so the stat-band control doesn't change
-    // identity when it switches between whole-capper and market modes.
+    // No button chrome: the crown IS the control. Outline crown beside
+    // quiet text; tailing fills the crown green.
     return (
       <button
         onClick={toggle}
         disabled={pending || tailing === null}
         title={tailing ? "Untail this market" : "Tail only this market from this capper"}
-        className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`group inline-flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           tailing
-            ? "border border-[var(--color-border-h)] text-[var(--color-text)] hover:border-[var(--color-neg)]"
-            : "bg-[var(--color-text)] text-black hover:opacity-90"
+            ? "text-[var(--color-text)]"
+            : "text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
         }`}
       >
-        <span className="inline-flex items-center gap-1.5">
-          <TailCrown filled={!!tailing} className={tailing ? "text-[var(--color-pos)]" : ""} />
-          {tailing ? "Tailing market" : "Tail this market"}
-        </span>
+        {tailing ? "Tailing market" : "Tail this market"}
+        <TailCrown
+          filled={!!tailing}
+          size={20}
+          className={tailing ? "text-[var(--color-pos)]" : ""}
+        />
       </button>
     );
   }
