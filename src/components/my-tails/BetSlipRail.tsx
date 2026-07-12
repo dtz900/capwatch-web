@@ -194,15 +194,21 @@ export function BetSlipRail() {
     return (
       <>
       {stubOffscreen && (
-        // Take-a-number ticket: two separately outlined pieces (the ticket
-        // you grab + the next ticket's sliver in the screen-edge slot),
-        // joined only by the dashed perforation between them.
+        // Raffle-roll ticket off the screen-edge slot (per David's photo
+        // reference): half-circle notches vertically CENTERED on each
+        // perforation, an inner printed border framing the content, dashed
+        // perf into the next ticket's sliver on the right, and a torn left
+        // edge with the notch remnant from the previously pulled ticket.
         <button
           onClick={toggle}
           aria-label={`Open bet slip, ${totals.pending} pending`}
-          className="sm:hidden fixed right-0 top-24 z-30 flex items-stretch"
+          className="sm:hidden fixed right-0 top-24 z-30 flex items-stretch overflow-hidden bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] ring-1 ring-[rgba(47,217,192,0.45)] shadow-[0_8px_32px_rgba(10,60,50,0.6)]"
         >
-          <span className="flex items-center gap-1.5 rounded-l-lg bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] py-2 pl-3 pr-2.5 ring-1 ring-[rgba(47,217,192,0.45)] shadow-[0_8px_32px_rgba(10,60,50,0.6)]">
+          <span className="relative w-0" aria-hidden="true">
+            <span className="absolute -left-[5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[var(--color-bg)]" />
+          </span>
+          {/* Inner printed border, like the frame around TICKET 25375-123 */}
+          <span className="my-1.5 ml-2.5 mr-2 flex items-center gap-1.5 rounded border border-[rgba(47,217,192,0.35)] px-2.5 py-1">
             <Image
               src="/logo-crown.png"
               alt=""
@@ -217,16 +223,13 @@ export function BetSlipRail() {
               {count}
             </span>
           </span>
-          {/* Perforation: the only connection between the two tickets, so it
-              stops short of the top and bottom edges. */}
           <span
-            className="my-1 w-0 border-l border-dashed border-[rgba(47,217,192,0.5)]"
+            className="relative border-l border-dashed border-[rgba(47,217,192,0.35)]"
             aria-hidden="true"
-          />
-          <span
-            className="w-2 bg-gradient-to-r from-[#0e3a31] to-[#0c2f28] ring-1 ring-[rgba(47,217,192,0.45)]"
-            aria-hidden="true"
-          />
+          >
+            <span className="absolute -left-[5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[var(--color-bg)]" />
+          </span>
+          <span className="w-2" aria-hidden="true" />
         </button>
       )}
       <button
