@@ -194,23 +194,35 @@ export function BetSlipRail() {
     return (
       <>
       {stubOffscreen && (
+        // Take-a-number ticket: flush against the right screen edge (the
+        // "machine slot"), rounded only on the exposed side, with the stub
+        // perforation marking where it feeds into the slot.
         <button
           onClick={toggle}
           aria-label={`Open bet slip, ${totals.pending} pending`}
-          className="sm:hidden fixed right-3 top-24 z-30 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#12443a] to-[#0c2f28] px-3 py-2 ring-1 ring-[rgba(47,217,192,0.45)] shadow-[0_8px_32px_rgba(10,60,50,0.6)]"
+          className="sm:hidden fixed right-0 top-24 z-30 flex items-stretch overflow-hidden rounded-l-lg bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] ring-1 ring-[rgba(47,217,192,0.45)] shadow-[0_8px_32px_rgba(10,60,50,0.6)]"
         >
-          <Image
-            src="/logo-crown.png"
-            alt=""
-            width={1135}
-            height={793}
-            className="h-4 w-auto"
-          />
+          <span className="flex items-center gap-1.5 py-2 pl-3 pr-2.5">
+            <Image
+              src="/logo-crown.png"
+              alt=""
+              width={1135}
+              height={793}
+              className="h-4 w-auto"
+            />
+            <span
+              className="text-[12px] font-extrabold tabular-nums"
+              style={{ color: count > 0 ? SLIP_TEAL : "#4c7d72" }}
+            >
+              {count}
+            </span>
+          </span>
           <span
-            className="text-[12px] font-extrabold tabular-nums"
-            style={{ color: count > 0 ? SLIP_TEAL : "#4c7d72" }}
+            className="relative w-2 border-l border-dashed border-[rgba(47,217,192,0.35)]"
+            aria-hidden="true"
           >
-            {count}
+            <span className="absolute -left-[5px] -top-[5px] h-2.5 w-2.5 rounded-full bg-[var(--color-bg)]" />
+            <span className="absolute -left-[5px] -bottom-[5px] h-2.5 w-2.5 rounded-full bg-[var(--color-bg)]" />
           </span>
         </button>
       )}
