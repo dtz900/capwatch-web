@@ -206,6 +206,15 @@ export function BetSlipRail() {
   }
 
   return (
+    <>
+    {/* Mobile scrim: dims the page behind the open slip and collapses it on
+        tap-outside. Same z as the slip wrapper; DOM order keeps the slip on
+        top. Desktop (sm+) has room for both, so no scrim. */}
+    <div
+      aria-hidden="true"
+      onClick={toggle}
+      className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[2px] sm:hidden"
+    />
     <div className="fixed right-3 sm:right-4 top-24 z-30 w-[304px] max-w-[calc(100vw-1.5rem)]">
     {/* Viewport-capped flex column: the ticket legs scroll in the middle
         while the header and the totals/P&L footer stay pinned on screen.
@@ -319,5 +328,6 @@ export function BetSlipRail() {
       )}
     </aside>
     </div>
+    </>
   );
 }
