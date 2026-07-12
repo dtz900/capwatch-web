@@ -102,20 +102,22 @@ export function MarketTailToggle({
         onClick={toggle}
         disabled={pending || tailing === null}
         title={tailing ? "Untail this market" : "Tail only this market from this capper"}
-        className={`inline-flex items-center gap-2.5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.18em] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`inline-flex items-end gap-2.5 whitespace-nowrap text-[11px] font-bold uppercase leading-none tracking-[0.18em] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           tailing
             ? "text-[var(--color-text)]"
             : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
         }`}
       >
         {tailing ? "Tailing market" : "Tail this market"}
+        {/* translate compensates the path's empty bottom band so the crown's
+            base sits on the text baseline */}
         <TailCrown
           size={26}
-          className={
+          className={`translate-y-[5px] ${
             tailing
-              ? "text-[#35a05f] [filter:drop-shadow(0_0_6px_rgba(53,160,95,0.45))]"
+              ? "text-[#35a05f] [filter:drop-shadow(0_0_5px_rgba(53,160,95,0.85))_drop-shadow(0_0_14px_rgba(53,160,95,0.5))]"
               : ""
-          }
+          }`}
         />
       </button>
     );
