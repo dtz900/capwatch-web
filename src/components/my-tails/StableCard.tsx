@@ -158,22 +158,8 @@ export function StableCard({
               Today
             </span>
             {todayPicks.length > 0 && (
-              <span className="flex items-baseline gap-2">
-                <span className="text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
-                  {todayPicks.length} pick{todayPicks.length === 1 ? "" : "s"}
-                </span>
-                {/* Running day P&L across the graded picks shown on this card */}
-                {todayPicks.some((p) => p.profit_units != null) && (
-                  <span
-                    className={`text-[13px] font-extrabold tabular-nums leading-none ${
-                      todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0) >= 0
-                        ? "text-[var(--color-pos)]"
-                        : "text-[var(--color-neg)]"
-                    }`}
-                  >
-                    {formatUnits(todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0))}u
-                  </span>
-                )}
+              <span className="text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
+                {todayPicks.length} pick{todayPicks.length === 1 ? "" : "s"}
               </span>
             )}
           </div>
@@ -246,6 +232,24 @@ export function StableCard({
                 </li>
               ))}
             </ul>
+          )}
+          {/* Day P&L across the graded picks shown on this card, footered
+              like the bet slip's tally. */}
+          {todayPicks.some((p) => p.profit_units != null) && (
+            <div className="mt-3 flex items-baseline justify-between border-t border-[var(--color-border)] pt-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                Day P&L
+              </span>
+              <span
+                className={`text-[17px] font-extrabold tabular-nums leading-none ${
+                  todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0) >= 0
+                    ? "text-[var(--color-pos)]"
+                    : "text-[var(--color-neg)]"
+                }`}
+              >
+                {formatUnits(todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0))}u
+              </span>
+            </div>
           )}
         </div>
       </Link>
