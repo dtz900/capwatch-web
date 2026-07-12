@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { TailCrown } from "@/components/icons/TailCrown";
 
 /* Tail exactly one market from one capper. Any signed-in user; logged-out
    viewers render nothing (their hosts show a sign-in path instead). Plain
@@ -107,7 +108,10 @@ export function MarketTailToggle({
             : "bg-[var(--color-text)] text-black hover:opacity-90"
         }`}
       >
-        {tailing ? "Tailing market ✓" : "+ Tail this market"}
+        <span className="inline-flex items-center gap-1.5">
+          <TailCrown filled={!!tailing} className={tailing ? "text-[var(--color-pos)]" : ""} />
+          {tailing ? "Tailing market" : "Tail this market"}
+        </span>
       </button>
     );
   }

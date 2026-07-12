@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { TailCrown } from "@/components/icons/TailCrown";
 
 const RETURN_COOKIE = "ts_return_to";
 
@@ -85,7 +86,10 @@ export function TailButton({
           : `${base} bg-[var(--color-text)] text-black hover:opacity-90`
       }
     >
-      {tailing ? "Tailing ✓" : "+ Tail"}
+      <span className="inline-flex items-center gap-1.5">
+        <TailCrown filled={!!tailing} className={tailing ? "text-[var(--color-pos)]" : ""} />
+        {tailing ? "Tailing" : "Tail"}
+      </span>
     </button>
   );
 }
