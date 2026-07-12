@@ -202,7 +202,7 @@ export function BetSlipRail() {
         <button
           onClick={toggle}
           aria-label={`Open bet slip, ${totals.pending} pending`}
-          className="sm:hidden fixed right-0 top-24 z-30 flex items-stretch overflow-hidden bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] ring-1 ring-[rgba(47,217,192,0.45)] shadow-[0_8px_32px_rgba(10,60,50,0.6)]"
+          className="sm:hidden fixed right-0 top-24 z-30 flex items-stretch overflow-hidden bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] shadow-[0_8px_32px_rgba(10,60,50,0.6)]"
         >
           <span className="relative w-0" aria-hidden="true">
             <span className="absolute -left-[5px] -top-[5px] h-2.5 w-2.5 rounded-full bg-[var(--color-bg)]" />
