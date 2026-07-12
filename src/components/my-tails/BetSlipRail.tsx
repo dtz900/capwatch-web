@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 import { netOdds, slipProfit, type SlipEntry } from "@/lib/betslip";
@@ -146,6 +146,10 @@ export function BetSlipRail() {
   // Default expanded; the stored preference is applied after mount so the
   // server and client render the same initial markup.
   const [collapsed, setCollapsed] = useState(false);
+  // The collapsed stub scrolls with the page; when it leaves the viewport a
+  // small fixed tag takes over (mobile) so the slip is always reachable.
+  const stubRef = useRef<HTMLButtonElement | null>(null);
+  const [stubOffscreen, setStubOffscreen] = useState(false);
   useEffect(() => {
     try {
       if (localStorage.getItem(COLLAPSE_KEY) === "1") setCollapsed(true);
@@ -153,6 +157,20 @@ export function BetSlipRail() {
       /* storage unavailable: stay expanded */
     }
   }, []);
+  useEffect(() => {
+    if (!collapsed) {
+      setStubOffscreen(false);
+      return;
+    }
+    const el = stubRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setStubOffscreen(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [collapsed]);
   if (!slip) return null;
   const { entries, totals, removeEntry, updateEntry, teaserOpen, closeTeaser } = slip;
   const pending = pendingTotals(entries ?? []);
@@ -171,9 +189,33 @@ export function BetSlipRail() {
 
   if (collapsed) {
     // Collapsed = a ticket stub sitting in the page flow next to the title.
-    // It scrolls away with the page; only the opened slip pins itself.
+    // It scrolls away with the page; once offscreen a small fixed tag takes
+    // its place on mobile so the slip stays one tap away mid-scroll.
     return (
+      <>
+      {stubOffscreen && (
+        <button
+          onClick={toggle}
+          aria-label={`Open bet slip, ${totals.pending} pending`}
+          className="sm:hidden fixed right-3 top-24 z-30 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#12443a] to-[#0c2f28] px-3 py-2 ring-1 ring-[rgba(47,217,192,0.45)] shadow-[0_8px_32px_rgba(10,60,50,0.6)]"
+        >
+          <Image
+            src="/logo-crown.png"
+            alt=""
+            width={1135}
+            height={793}
+            className="h-4 w-auto"
+          />
+          <span
+            className="text-[12px] font-extrabold tabular-nums"
+            style={{ color: count > 0 ? SLIP_TEAL : "#4c7d72" }}
+          >
+            {count}
+          </span>
+        </button>
+      )}
       <button
+        ref={stubRef}
         onClick={toggle}
         aria-label={`Open bet slip, ${totals.pending} pending`}
         className="relative flex shrink-0 items-stretch overflow-hidden rounded-lg bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] ring-1 ring-[rgba(47,217,192,0.35)] shadow-[0_8px_32px_rgba(10,60,50,0.5)] transition-all hover:ring-[rgba(47,217,192,0.6)]"
@@ -202,6 +244,7 @@ export function BetSlipRail() {
           {count}
         </span>
       </button>
+      </>
     );
   }
 
