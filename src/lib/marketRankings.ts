@@ -6,6 +6,7 @@ export interface RankedEdgeRow extends EdgeRow {
   capper_id: number;
   handle: string | null;
   display_name: string | null;
+  profile_image_url: string | null;
 }
 
 /* Chip order. Matches the coarse market vocabulary of capper_market_edges. */

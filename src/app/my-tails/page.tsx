@@ -92,6 +92,7 @@ export default async function MyTailsPage({
       ...e,
       handle: byId.get(String(e.capper_id))?.handle ?? null,
       display_name: byId.get(String(e.capper_id))?.display_name ?? null,
+      profile_image_url: byId.get(String(e.capper_id))?.profile_image_url ?? null,
     }));
   }
 

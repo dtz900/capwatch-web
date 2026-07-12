@@ -2,6 +2,8 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { buildEdgeView, MARKET_LABELS, VERDICT_WORDS, toneCls } from "@/lib/edges";
+import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
+import { XIcon } from "@/components/icons/XIcon";
 import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
@@ -141,7 +143,8 @@ function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[]
       </div>
 
       {champ ? (
-        <div className="flex items-center gap-4 px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <CapperAvatar url={champ.profile_image_url} handle={champ.handle} size={44} />
           <div className="min-w-0 flex-1">
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-gold)]">
               Market Master
@@ -157,6 +160,17 @@ function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[]
                 {VERDICT_WORDS[buildEdgeView(champ).verdict.label] ??
                   buildEdgeView(champ).verdict.label}
               </span>
+              {champ.handle && (
+                <a
+                  href={`https://x.com/${champ.handle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${champ.handle} on X`}
+                  className="inline-flex h-6 w-6 items-center justify-center self-center rounded-md bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+                >
+                  <XIcon size={11} />
+                </a>
+              )}
             </div>
             <div className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
               {champ.n_decided} picks · {champ.tracked_days ?? "?"}d tracked

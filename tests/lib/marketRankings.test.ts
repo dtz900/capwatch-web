@@ -13,6 +13,7 @@ const base: RankedEdgeRow = {
   capper_id: 1,
   handle: "capper_a",
   display_name: "Capper A",
+  profile_image_url: null,
   market: "HRR",
   n_decided: 50,
   roi_pct: 5.0,

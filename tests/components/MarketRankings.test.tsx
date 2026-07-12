@@ -16,6 +16,7 @@ const base: RankedEdgeRow = {
   capper_id: 1,
   handle: "robd",
   display_name: "Rob",
+  profile_image_url: null,
   market: "HRR",
   n_decided: 107,
   roi_pct: 6.6,
@@ -87,6 +88,11 @@ describe("MarketRankings market masters", () => {
     expect(screen.getAllByText("+6.6%").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/expected/i).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("TAIL:HRR")).toBeInTheDocument();
+    // master row links out to the capper's X profile
+    expect(screen.getByRole("link", { name: /robd on x/i })).toHaveAttribute(
+      "href",
+      "https://x.com/robd"
+    );
     // ML market: swampy fails the gate, no master, swampy runs as contender
     expect(screen.getByText("Moneyline")).toBeInTheDocument();
     expect(screen.getByText(/no master yet/i)).toBeInTheDocument();
