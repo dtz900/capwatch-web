@@ -118,7 +118,7 @@ export function MarketTailToggle({
             tailing ? "text-[#35a05f] [filter:drop-shadow(0_0_3px_rgba(53,160,95,0.5))]" : ""
           }`}
         />
-        <SharpieCircle className="inset-[-11px_-16px] text-[var(--color-gold)]" />
+        <SharpieCircle className="inset-[-26px_-38px] text-[var(--color-gold)]" />
       </button>
     );
   }
