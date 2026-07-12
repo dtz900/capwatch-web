@@ -12,10 +12,10 @@ import {
   type RankedEdgeRow,
 } from "@/lib/marketRankings";
 
-/* The belt follows the PUBLIC verdict, not the internal tail gate: edges.ts
-   deliberately lets provenance-only gate failures (tracked days, half
-   splits) still read "real edge", and a division cannot say VACANT while a
-   row on screen says REAL EDGE. */
+/* The master's crown follows the PUBLIC verdict, not the internal tail gate:
+   edges.ts deliberately lets provenance-only gate failures (tracked days,
+   half splits) still read "real edge", and a market cannot say NO MASTER
+   while a row on screen says REAL EDGE. */
 function holdsBeltVerdict(row: RankedEdgeRow): boolean {
   const label = buildEdgeView(row).verdict.label;
   return label === "HOLDS UP" || label === "ORIGINATOR";
@@ -28,20 +28,20 @@ function expectedValue(row: RankedEdgeRow): string | null {
   return h && h.label !== "ROI" ? h.value : null;
 }
 
-/* VIP discovery on My Tails, staged as a title board: every market is a
-   division, the belt goes to the top-ranked capper who survives the
-   de-lucking (gate pass or originator), and a division with no survivor is
-   VACANT. Contenders run underneath in small print with their verdicts.
-   The structure carries the methodology so the rows never have to. */
+/* VIP discovery on My Tails: every market crowns a master, the top-ranked
+   capper who survives the de-lucking (gate pass or originator). A market
+   with no survivor has no master. Contenders run underneath in small print
+   with their verdicts. The structure carries the methodology so the rows
+   never have to. */
 export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: boolean }) {
   const { entitlements } = useAuth();
 
   const header = (
     <div>
-      <h2 className="text-lg font-bold text-[var(--color-text)]">The Title Board</h2>
+      <h2 className="text-lg font-bold text-[var(--color-text)]">Market Masters</h2>
       <p className="mt-0.5 text-sm text-[var(--color-text-soft)]">
-        Every market has a division. The belt goes to whoever holds up against
-        closing lines, not raw profit. No survivor, no champ.
+        One master per market: whoever holds up against closing lines, not raw
+        profit. No survivor, no master.
       </p>
     </div>
   );
@@ -52,8 +52,7 @@ export function MarketRankings({ rows, vip }: { rows: RankedEdgeRow[]; vip: bool
         <div className="text-[10px] uppercase tracking-wider text-[var(--color-gold)]">VIP</div>
         <div className="mt-1">{header}</div>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          See who actually holds the belt in every market, with a tail button
-          on every row.
+          See who actually runs every market, with a tail button on every row.
         </p>
         <Link
           href={entitlements.isLoggedIn ? "/account" : "/login"}
@@ -134,7 +133,7 @@ function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[]
     >
       <div className="flex items-baseline justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-1.5">
         <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--color-text)]">
-          {label} division
+          {label}
         </span>
         <span className="text-[11px] text-[var(--color-text-muted)]">
           {rows.length} contender{rows.length === 1 ? "" : "s"}
@@ -145,7 +144,7 @@ function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[]
         <div className="flex items-center gap-4 px-4 py-3">
           <div className="min-w-0 flex-1">
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-gold)]">
-              Holds the belt
+              Market Master
             </div>
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2.5">
               <CapperName
@@ -183,10 +182,10 @@ function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[]
       ) : (
         <div className="px-4 py-3">
           <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-            Title vacant
+            No master yet
           </div>
           <div className="mt-0.5 text-sm text-[var(--color-text-soft)]">
-            Nobody in this division beats the closing line yet.
+            Nobody in this market beats the closing line yet.
           </div>
         </div>
       )}

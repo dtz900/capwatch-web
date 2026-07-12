@@ -62,10 +62,10 @@ beforeEach(() => {
 });
 afterEach(() => vi.clearAllMocks());
 
-describe("MarketRankings title board", () => {
+describe("MarketRankings market masters", () => {
   it("shows the teaser and no data to non-VIPs", () => {
     render(<MarketRankings rows={[]} vip={false} />);
-    expect(screen.getByText(/title board/i)).toBeInTheDocument();
+    expect(screen.getByText("Market Masters")).toBeInTheDocument();
     expect(screen.getByText(/upgrade to vip/i)).toBeInTheDocument();
     expect(screen.queryByText("robd")).not.toBeInTheDocument();
   });
@@ -76,21 +76,21 @@ describe("MarketRankings title board", () => {
     expect(screen.getByText(/sign in/i)).toBeInTheDocument();
   });
 
-  it("crowns the top tailable capper and marks survivor-less divisions vacant", () => {
+  it("crowns the top tailable capper and marks survivor-less markets masterless", () => {
     render(<MarketRankings rows={rows} vip={true} />);
-    // HRR division: robd passes the gate and holds the belt
-    expect(screen.getByText(/hits \+ runs \+ rbis division/i)).toBeInTheDocument();
-    expect(screen.getByText(/holds the belt/i)).toBeInTheDocument();
+    // HRR market: robd passes the gate and is the master
+    expect(screen.getByText(/hits \+ runs \+ rbis/i)).toBeInTheDocument();
+    expect(screen.getByText("Market Master")).toBeInTheDocument();
     expect(screen.getByText("robd")).toBeInTheDocument();
     expect(screen.getByText(/real edge/i)).toBeInTheDocument();
-    // champ shows actual big plus the expected line (same value for robd)
+    // master shows actual big plus the expected line (same value for robd)
     expect(screen.getAllByText("+6.6%").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/expected/i).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("TAIL:HRR")).toBeInTheDocument();
-    // ML division: swampy fails the gate, title vacant, swampy runs as contender
-    expect(screen.getByText(/moneyline division/i)).toBeInTheDocument();
-    expect(screen.getByText(/title vacant/i)).toBeInTheDocument();
-    expect(screen.getByText(/nobody in this division beats the closing line/i)).toBeInTheDocument();
+    // ML market: swampy fails the gate, no master, swampy runs as contender
+    expect(screen.getByText("Moneyline")).toBeInTheDocument();
+    expect(screen.getByText(/no master yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/nobody in this market beats the closing line/i)).toBeInTheDocument();
     expect(screen.getByText("swampy")).toBeInTheDocument();
     expect(screen.getByText(/variance/i)).toBeInTheDocument();
     // contender columns: expected (ranked) next to actual
@@ -101,7 +101,7 @@ describe("MarketRankings title board", () => {
     expect(screen.getByText("TAIL:ML")).toBeInTheDocument();
   });
 
-  it("awards the belt on the public verdict even when the gate trips on provenance only", () => {
+  it("crowns the master on the public verdict even when the gate trips on provenance only", () => {
     const investin: RankedEdgeRow = {
       ...base,
       capper_id: 7,
@@ -114,9 +114,9 @@ describe("MarketRankings title board", () => {
       gate_reasons: ["not profitable in both halves"],
     };
     render(<MarketRankings rows={[investin]} vip={true} />);
-    expect(screen.getByText(/spread division/i)).toBeInTheDocument();
-    expect(screen.getByText(/holds the belt/i)).toBeInTheDocument();
-    expect(screen.queryByText(/title vacant/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Spread")).toBeInTheDocument();
+    expect(screen.getByText("Market Master")).toBeInTheDocument();
+    expect(screen.queryByText(/no master yet/i)).not.toBeInTheDocument();
     expect(screen.getByText("investin")).toBeInTheDocument();
     expect(screen.getByText(/real edge/i)).toBeInTheDocument();
   });

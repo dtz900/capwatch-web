@@ -33,7 +33,7 @@ describe("MyTailsTabs", () => {
   it("switches panels on tab click and mirrors the tab into the URL", () => {
     const replaceState = vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
     renderTabs();
-    fireEvent.click(screen.getByRole("tab", { name: "Title Board" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Market Masters" }));
     expect(screen.getByText("BOARD PANEL")).toBeInTheDocument();
     expect(screen.queryByText("STABLE PANEL")).not.toBeInTheDocument();
     expect(replaceState).toHaveBeenCalledWith(null, "", "?tab=board");

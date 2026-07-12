@@ -6,7 +6,7 @@ export type MyTailsTab = "stable" | "board";
 
 const TABS: { key: MyTailsTab; label: string }[] = [
   { key: "stable", label: "Stable" },
-  { key: "board", label: "Title Board" },
+  { key: "board", label: "Market Masters" },
 ];
 
 const SWIPE_MIN_X = 48;
