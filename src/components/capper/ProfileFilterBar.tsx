@@ -30,6 +30,7 @@ const BET_TYPES: { value: BetTypeFilter; label: string }[] = [
  *     full-width equal segments, for a calmer, more premium sheet. */
 export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
   const {
+    profile,
     window,
     betType,
     market,
@@ -65,6 +66,7 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
               onSelect={setMarket}
               disabled={marketDisabled}
               stacked
+              capperId={profile.capper.id}
             />
           </Group>
         )}
@@ -112,6 +114,7 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
             value={market}
             onSelect={setMarket}
             disabled={marketDisabled}
+            capperId={profile.capper.id}
           />
         )}
         <div className="relative">

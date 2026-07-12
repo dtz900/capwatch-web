@@ -1,28 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MarketOption } from "@/lib/capperFilters";
+import { createBrowserSupabase } from "@/lib/supabase/client";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { followScopeForMarket } from "@/lib/followScope";
+import { TailCrown } from "@/components/icons/TailCrown";
 
 /* Market filter as a single dropdown: the pill-soup wrap didn't survive
  * contact with prop specialists (15+ ragged buttons). The trigger sits in
  * the main filter row; the panel lists markets with graded pick counts,
  * ordered by volume (options arrive pre-sorted). Stacked mode (mobile
- * filter sheet) renders the same list inline instead of a popover. */
+ * filter sheet) renders the same list inline instead of a popover.
+ *
+ * With a capperId, rows the signed-in user is tailing carry the green
+ * crown: scoped follows crown their market rows, a whole-capper follow
+ * crowns the All markets row. Follows are refetched each time the panel
+ * opens so a tail toggled elsewhere on the page shows up. */
 export function MarketSelect({
   options,
   value,
   onSelect,
   disabled = false,
   stacked = false,
+  capperId,
 }: {
   options: MarketOption[];
   value: string;
   onSelect: (v: string) => void;
   disabled?: boolean;
   stacked?: boolean;
+  capperId?: number;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { session } = useAuth();
+  const supabase = useMemo(
+    () =>
+      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        ? createBrowserSupabase()
+        : null,
+    []
+  );
+  const [tailed, setTailed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!open) return;
@@ -40,6 +60,28 @@ export function MarketSelect({
     };
   }, [open]);
 
+  const listVisible = stacked || open;
+  useEffect(() => {
+    if (!capperId || !supabase || !session?.user?.id || !listVisible) {
+      if (!session?.user?.id) setTailed(new Set());
+      return;
+    }
+    supabase
+      .from("capper_follows")
+      .select("market")
+      .eq("user_id", session.user.id)
+      .eq("capper_id", capperId)
+      .then(({ data }) =>
+        setTailed(new Set(((data ?? []) as { market: string }[]).map((r) => r.market)))
+      );
+  }, [capperId, supabase, session, listVisible]);
+
+  function isTailed(o: MarketOption): boolean {
+    if (!o.value) return tailed.has("all");
+    const scope = followScopeForMarket(o.value);
+    return scope !== null && tailed.has(scope);
+  }
+
   const total = options.reduce((n, o) => n + o.count, 0);
   const rows: MarketOption[] = [{ value: "", label: "All markets", count: total }, ...options];
   const current = rows.find((r) => r.value === value) ?? rows[0];
@@ -56,15 +98,18 @@ export function MarketSelect({
           onSelect(o.value);
           setOpen(false);
         }}
-        className={`flex w-full items-center justify-between gap-6 rounded-md px-3 py-2 text-left text-[12px] font-bold transition-all duration-150 ${
+        className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[12px] font-bold transition-all duration-150 ${
           active
             ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
             : "text-[var(--color-text-soft)] hover:bg-white/5 hover:text-[var(--color-text)]"
         }`}
       >
         <span className="truncate">{o.label}</span>
+        {isTailed(o) && (
+          <TailCrown size={15} className={active ? "text-black/75" : "text-[#35a05f]"} />
+        )}
         <span
-          className={`shrink-0 tabular-nums text-[11px] font-semibold ${
+          className={`ml-auto shrink-0 tabular-nums text-[11px] font-semibold ${
             active ? "text-black/70" : "text-[var(--color-text-muted)]"
           }`}
         >
