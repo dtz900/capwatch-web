@@ -12,7 +12,6 @@ import { StickyProfileStrip } from "@/components/capper/StickyProfileStrip";
 import { HistoryList } from "@/components/capper/HistoryList";
 import { FilterSheet } from "@/components/capper/FilterSheet";
 import { ShareFilteredButton } from "@/components/capper/ShareFilteredButton";
-import { TailButton } from "@/components/auth/TailButton";
 import { PendingBlock } from "@/components/capper/PendingBlock";
 import { MarketMixBar } from "@/components/capper/MarketMixBar";
 import { FaqSection } from "@/components/capper/FaqSection";
@@ -35,7 +34,7 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Window } from "@/lib/types";
-import { vipEnabled } from "@/lib/flags";
+import { vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
 
 interface PageProps {
@@ -425,18 +424,18 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <StickyProfileStrip />
           <CapperHeroLive />
 
+          {/* Tail control lives in the stat band's top-right (StatBandLive),
+              not up here next to Share. */}
           <div className="hidden sm:flex items-start justify-between gap-3 mb-5">
             <ProfileFilterBar />
             <div className="flex flex-col items-end gap-2 shrink-0">
               <ShareFilteredButton />
-              {vipEnabled() && <TailButton capperId={profile.capper.id} size="hero" />}
             </div>
           </div>
           <div className="sm:hidden flex items-center justify-between gap-3 mb-5">
             <FilterSheet />
             <div className="flex items-center gap-2">
               <ShareFilteredButton />
-              {vipEnabled() && <TailButton capperId={profile.capper.id} size="compact" />}
             </div>
           </div>
 
@@ -444,7 +443,9 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
             <StatBandLive />
           </div>
 
-          {vipEnabled() && (
+          {/* Dossier is paid-tier inventory, held back from the free launch
+              (decisions/log.md 2026-07-11). */}
+          {vipEnabled() && vipTierEnabled() && (
             <div className="mb-6">
               <VipEdgesPanel
                 capperId={profile.capper.id}

@@ -22,6 +22,10 @@ interface Props {
   /** When true, a specific market is active: hide Streak and Biggest win,
    * which are not computed per market. */
   marketScoped?: boolean;
+  /** Tail control pinned to the band's top-right corner. Context-aware:
+   * whole-capper tail normally, tail-this-market while a market filter is
+   * active (see StatBandLive). */
+  action?: React.ReactNode;
 }
 
 export function StatBand({
@@ -31,11 +35,15 @@ export function StatBand({
   window,
   scopeLabel,
   marketScoped = false,
+  action,
 }: Props) {
   if (!agg) {
     return (
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-6 py-8 text-center text-[13px] text-[var(--color-text-muted)] italic">
-        No graded picks in this window yet.
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-6 py-8">
+        {action && <div className="mb-4 flex justify-end">{action}</div>}
+        <div className="text-center text-[13px] text-[var(--color-text-muted)] italic">
+          No graded picks in this window yet.
+        </div>
       </div>
     );
   }
@@ -57,9 +65,12 @@ export function StatBand({
 
   return (
     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-6 sm:px-7 sm:py-7">
-      {scopeLabel && (
-        <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold mb-4">
-          {scopeLabel}
+      {(scopeLabel || action) && (
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] font-bold">
+            {scopeLabel}
+          </div>
+          {action}
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-[minmax(160px,1.1fr)_minmax(160px,1.1fr)_minmax(180px,1fr)] gap-x-6 sm:gap-x-9 gap-y-6 sm:gap-y-7 items-end">

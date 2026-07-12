@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { vipTierEnabled } from "@/lib/flags";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export function AvatarMenu() {
@@ -51,17 +52,18 @@ export function AvatarMenu() {
           <div className="px-3 py-1.5 text-xs text-[var(--color-text-muted)] truncate">
             {session?.user?.email}
           </div>
-          {entitlements.isVip ? (
-            <div className="px-3 py-1.5 text-sm font-semibold text-[var(--color-gold)]">VIP</div>
-          ) : (
-            <Link
-              href="/account"
-              onClick={() => setOpen(false)}
-              className="block px-3 py-1.5 text-sm text-[var(--color-gold)] hover:bg-white/5"
-            >
-              Go VIP
-            </Link>
-          )}
+          {vipTierEnabled() &&
+            (entitlements.isVip ? (
+              <div className="px-3 py-1.5 text-sm font-semibold text-[var(--color-gold)]">VIP</div>
+            ) : (
+              <Link
+                href="/account"
+                onClick={() => setOpen(false)}
+                className="block px-3 py-1.5 text-sm text-[var(--color-gold)] hover:bg-white/5"
+              >
+                Go VIP
+              </Link>
+            ))}
           <Link
             href="/account"
             onClick={() => setOpen(false)}

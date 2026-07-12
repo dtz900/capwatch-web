@@ -6,6 +6,7 @@ export interface RankedEdgeRow extends EdgeRow {
   capper_id: number;
   handle: string | null;
   display_name: string | null;
+  profile_image_url: string | null;
 }
 
 /* Chip order. Matches the coarse market vocabulary of capper_market_edges. */
@@ -35,14 +36,16 @@ export function sortKey(row: RankedEdgeRow): number | null {
 
 export const fmtPct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
 
-/* The displayed number is always the number the row was ranked by. */
+/* The displayed number is always the number the row was ranked by. Every
+   close-judged branch shares the one plain word the section header explains
+   ("deserved"); only the no-line-data fallback is labeled as the raw ROI. */
 export function headline(row: RankedEdgeRow): { value: string; label: string } | null {
   if (row.originator && row.tail_at_close_roi != null)
-    return { value: fmtPct(row.tail_at_close_roi), label: "tailing at close" };
+    return { value: fmtPct(row.tail_at_close_roi), label: "deserved" };
   if ((row.x_n ?? 0) > 0 && row.xroi_pct != null)
-    return { value: fmtPct(row.xroi_pct), label: "by closing odds" };
+    return { value: fmtPct(row.xroi_pct), label: "deserved" };
   if (row.tail_at_close_roi != null)
-    return { value: fmtPct(row.tail_at_close_roi), label: "tailing at close" };
+    return { value: fmtPct(row.tail_at_close_roi), label: "deserved" };
   if (row.roi_pct != null) return { value: fmtPct(row.roi_pct), label: "ROI" };
   return null;
 }

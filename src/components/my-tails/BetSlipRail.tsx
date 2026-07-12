@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 import { netOdds, slipProfit, type SlipEntry } from "@/lib/betslip";
@@ -50,8 +50,9 @@ export function SlipEntryRow({
             {entry.selection}
           </div>
           <div className="mt-0.5 text-[11px] text-[#6da399] truncate">
-            {entry.matchup ?? ""}
-            {entry.capper_handle ? ` · @${entry.capper_handle}` : ""}
+            {[entry.matchup, entry.capper_handle ? `@${entry.capper_handle}` : null]
+              .filter(Boolean)
+              .join(" · ")}
           </div>
         </div>
         <div className="flex flex-col items-end shrink-0">
@@ -140,11 +141,26 @@ function pendingTotals(entries: SlipEntry[]): { wager: number; toWin: number } {
 
 const COLLAPSE_KEY = "ts-betslip-collapsed";
 
+/* Notch cutouts for the floating take-a-number ticket: transparent
+   half-circles masked out of the ticket itself (not painted over it), at
+   the torn left edge and at the perforation 8px (w-2 sliver) from the
+   right edge. Layers intersect so every notch punches through. */
+const TICKET_NOTCH_MASK = [
+  "radial-gradient(circle 5px at 0 0, transparent 5px, black 5.5px)",
+  "radial-gradient(circle 5px at 0 100%, transparent 5px, black 5.5px)",
+  "radial-gradient(circle 5px at calc(100% - 8px) 0, transparent 5px, black 5.5px)",
+  "radial-gradient(circle 5px at calc(100% - 8px) 100%, transparent 5px, black 5.5px)",
+].join(", ");
+
 export function BetSlipRail() {
   const slip = useBetSlip();
   // Default expanded; the stored preference is applied after mount so the
   // server and client render the same initial markup.
   const [collapsed, setCollapsed] = useState(false);
+  // The collapsed stub scrolls with the page; when it leaves the viewport a
+  // small fixed tag takes over (mobile) so the slip is always reachable.
+  const stubRef = useRef<HTMLButtonElement | null>(null);
+  const [stubOffscreen, setStubOffscreen] = useState(false);
   useEffect(() => {
     try {
       if (localStorage.getItem(COLLAPSE_KEY) === "1") setCollapsed(true);
@@ -152,6 +168,20 @@ export function BetSlipRail() {
       /* storage unavailable: stay expanded */
     }
   }, []);
+  useEffect(() => {
+    if (!collapsed) {
+      setStubOffscreen(false);
+      return;
+    }
+    const el = stubRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setStubOffscreen(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [collapsed]);
   if (!slip) return null;
   const { entries, totals, removeEntry, updateEntry, teaserOpen, closeTeaser } = slip;
   const pending = pendingTotals(entries ?? []);
@@ -170,12 +200,58 @@ export function BetSlipRail() {
 
   if (collapsed) {
     // Collapsed = a ticket stub sitting in the page flow next to the title.
-    // It scrolls away with the page; only the opened slip pins itself.
+    // It scrolls away with the page; once offscreen a small fixed tag takes
+    // its place on mobile so the slip stays one tap away mid-scroll.
     return (
+      <>
+      {stubOffscreen && (
+        // Take-a-number ticket off the screen-edge slot. Right side: dashed
+        // perforation + notch bites into the next ticket's sliver (same
+        // treatment as the collapsed stub). Left side: straight torn edge
+        // with the notch remnants left behind by the previously pulled
+        // ticket, so the perforation cutouts read on both sides.
+        <button
+          onClick={toggle}
+          aria-label={`Open bet slip, ${totals.pending} pending`}
+          className="sm:hidden fixed right-0 top-24 z-30 drop-shadow-[0_8px_24px_rgba(10,60,50,0.6)]"
+        >
+          <span
+            className="flex items-stretch overflow-hidden bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28]"
+            style={{
+              WebkitMaskImage: TICKET_NOTCH_MASK,
+              maskImage: TICKET_NOTCH_MASK,
+              WebkitMaskComposite: "source-in",
+              maskComposite: "intersect",
+            }}
+          >
+            <span className="flex items-center gap-1.5 py-2 pl-3 pr-2.5">
+              <Image
+                src="/logo-crown.png"
+                alt=""
+                width={1135}
+                height={793}
+                className="h-4 w-auto"
+              />
+              <span
+                className="text-[12px] font-extrabold tabular-nums"
+                style={{ color: count > 0 ? SLIP_TEAL : "#4c7d72" }}
+              >
+                {count}
+              </span>
+            </span>
+            <span
+              className="border-l border-dashed border-[rgba(47,217,192,0.35)]"
+              aria-hidden="true"
+            />
+            <span className="w-2" aria-hidden="true" />
+          </span>
+        </button>
+      )}
       <button
+        ref={stubRef}
         onClick={toggle}
         aria-label={`Open bet slip, ${totals.pending} pending`}
-        className="relative flex shrink-0 items-stretch overflow-hidden rounded-lg bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] ring-1 ring-[rgba(47,217,192,0.35)] shadow-[0_8px_32px_rgba(10,60,50,0.5)] transition-all hover:ring-[rgba(47,217,192,0.6)]"
+        className="relative flex shrink-0 items-stretch overflow-hidden rounded-lg bg-gradient-to-r from-[#12443a] via-[#0e3a31] to-[#0c2f28] shadow-[0_8px_32px_rgba(10,60,50,0.5)] transition-all hover:brightness-110"
       >
         <span className="flex items-center gap-2 py-2.5 pl-3.5 pr-3.5">
           <Image
@@ -201,14 +277,28 @@ export function BetSlipRail() {
           {count}
         </span>
       </button>
+      </>
     );
   }
 
   return (
+    <>
+    {/* Mobile scrim: dims the page behind the open slip and collapses it on
+        tap-outside. Same z as the slip wrapper; DOM order keeps the slip on
+        top. Desktop (sm+) has room for both, so no scrim. */}
+    <div
+      aria-hidden="true"
+      onClick={toggle}
+      className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[2px] sm:hidden"
+    />
     <div className="fixed right-3 sm:right-4 top-24 z-30 w-[304px] max-w-[calc(100vw-1.5rem)]">
-    <aside className="w-full overflow-hidden rounded-2xl bg-gradient-to-b from-[#0c1f1b] via-[#0a1512] to-[#07100d] ring-1 ring-[rgba(47,217,192,0.22)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
+    {/* Viewport-capped flex column: the ticket legs scroll in the middle
+        while the header and the totals/P&L footer stay pinned on screen.
+        Mobile subtracts the h-14 tab bar (+ safe area) and uses dvh so the
+        browser chrome never clips the footer; sm+ has no tab bar. */}
+    <aside className="flex max-h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] sm:max-h-[calc(100vh-7rem)] w-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-[#0c1f1b] via-[#0a1512] to-[#07100d] ring-1 ring-[rgba(47,217,192,0.22)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
       {/* Ticket header: teal bar, the TailSlips logo, count badge, collapse */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-[#0e2c25] to-[#0a1e19] px-4 py-3 border-b border-[rgba(47,217,192,0.25)]">
+      <div className="flex shrink-0 items-center justify-between bg-gradient-to-r from-[#0e2c25] to-[#0a1e19] px-4 py-3 border-b border-[rgba(47,217,192,0.25)]">
         <span className="flex items-center">
           <Image
             src="/logo-horizontal-aligned-tight.png"
@@ -243,7 +333,9 @@ export function BetSlipRail() {
           <VipTeaser />
         </div>
       )}
-      <div className="max-h-[calc(100vh-11.5rem)] overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
+      {/* Picks scroll; the P&L footer below is pinned to the slip, so the
+          list fades out behind it via the mask. */}
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
         {entries === null && (
           <p className="py-3 text-xs text-[#6da399]">Loading...</p>
         )}
@@ -255,58 +347,63 @@ export function BetSlipRail() {
           </p>
         )}
         {entries !== null && entries.length > 0 && (
-          <>
-            <ul className="space-y-2">
-              {entries.map((e) => (
-                <SlipEntryRow key={e.id} entry={e} onRemove={removeEntry} onUpdate={updateEntry} />
-              ))}
-            </ul>
-            {pending.wager > 0 && (
-              <div className="mt-3 space-y-1.5 border-t border-dashed border-[rgba(47,217,192,0.22)] pt-3 text-[12px] tabular-nums">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#6da399]">Total wager</span>
-                  <span className="font-extrabold text-white">
-                    {pending.wager.toFixed(1)}u
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[#6da399]">To win</span>
-                  <span className="font-extrabold" style={{ color: SLIP_TEAL }}>
-                    {pending.toWin.toFixed(2)}u
-                  </span>
-                </div>
-              </div>
-            )}
-            <div className="mt-3 flex items-end justify-between rounded-lg bg-[rgba(4,16,13,0.6)] px-3 py-2.5">
-              <div>
-                <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
-                  Today
-                </div>
-                <div
-                  className={`text-[22px] leading-none font-extrabold tabular-nums ${
-                    totals.today >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
-                  }`}
-                >
-                  {unitsStr(totals.today)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
-                  All time
-                </div>
-                <div
-                  className={`text-[22px] leading-none font-extrabold tabular-nums ${
-                    totals.allTime >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
-                  }`}
-                >
-                  {unitsStr(totals.allTime)}
-                </div>
-              </div>
-            </div>
-          </>
+          <ul className="space-y-2">
+            {entries.map((e) => (
+              <SlipEntryRow key={e.id} entry={e} onRemove={removeEntry} onUpdate={updateEntry} />
+            ))}
+          </ul>
         )}
       </div>
+      {entries !== null && entries.length > 0 && (
+        <div className="shrink-0 px-3 pb-3">
+          {/* Pending totals ride in the pinned footer with the P&L card so
+              they stay visible while the ticket legs scroll behind. */}
+          {pending.wager > 0 && (
+            <div className="mb-2.5 space-y-1.5 border-t border-dashed border-[rgba(47,217,192,0.22)] pt-2.5 text-[12px] tabular-nums">
+              <div className="flex items-center justify-between">
+                <span className="text-[#6da399]">Total wager</span>
+                <span className="font-extrabold text-white">
+                  {pending.wager.toFixed(1)}u
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6da399]">To win</span>
+                <span className="font-extrabold" style={{ color: SLIP_TEAL }}>
+                  {pending.toWin.toFixed(2)}u
+                </span>
+              </div>
+            </div>
+          )}
+          <div className="flex items-end justify-between rounded-lg bg-[rgba(4,16,13,0.6)] px-3 py-2.5">
+            <div>
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
+                Today
+              </div>
+              <div
+                className={`text-[22px] leading-none font-extrabold tabular-nums ${
+                  totals.today >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+                }`}
+              >
+                {unitsStr(totals.today)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#4c7d72]">
+                All time
+              </div>
+              <div
+                className={`text-[22px] leading-none font-extrabold tabular-nums ${
+                  totals.allTime >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
+                }`}
+              >
+                {unitsStr(totals.allTime)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
     </div>
+    </>
   );
 }

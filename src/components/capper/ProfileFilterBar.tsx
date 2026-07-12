@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useCapperFilters } from "@/components/capper/CapperFilterProvider";
 import { DateRangePicker } from "@/components/capper/DateRangePicker";
+import { MarketSelect } from "@/components/capper/MarketSelect";
 import { formatRangeLabel } from "@/lib/capperFilters";
 import type { BetTypeFilter, Window } from "@/lib/types";
 
@@ -29,6 +30,7 @@ const BET_TYPES: { value: BetTypeFilter; label: string }[] = [
  *     full-width equal segments, for a calmer, more premium sheet. */
 export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
   const {
+    profile,
     window,
     betType,
     market,
@@ -47,11 +49,6 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
   // so the user never sees "All bets · Spread" with fewer picks than expected.
   const betActive: BetTypeFilter = market ? "straights" : betType;
 
-  const marketSegOptions = [
-    { value: "", label: "All markets" },
-    ...marketOptions.map((o) => ({ value: o.value, label: o.label })),
-  ];
-
   if (stacked) {
     return (
       <div className="flex flex-col gap-5">
@@ -63,19 +60,14 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
         </Group>
         {marketOptions.length > 0 && (
           <Group label="Market">
-            <div
-              className={marketDisabled ? "opacity-40 pointer-events-none" : ""}
-              aria-disabled={marketDisabled}
-            >
-              <Seg
-                ariaLabel="Market"
-                options={marketSegOptions}
-                value={market}
-                onSelect={setMarket}
-                wrap
-                disabled={marketDisabled}
-              />
-            </div>
+            <MarketSelect
+              options={marketOptions}
+              value={market}
+              onSelect={setMarket}
+              disabled={marketDisabled}
+              stacked
+              capperId={profile.capper.id}
+            />
           </Group>
         )}
         <Group label="Date range">
@@ -85,9 +77,9 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
               data-range-trigger
               onClick={() => setPickerOpen((o) => !o)}
               aria-pressed={!!range}
-              className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors ${
+              className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold leading-none transition-all duration-150 ${
                 range
-                  ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)]"
+                  ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
                   : "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               }`}
             >
@@ -116,15 +108,24 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
       <div className="flex items-center gap-2 flex-wrap">
         <Seg ariaLabel="Window" options={WINDOWS} value={(range ? "" : window) as Window} onSelect={setWindow} />
         <Seg ariaLabel="Bet type" options={BET_TYPES} value={betActive} onSelect={setBetType} />
+        {marketOptions.length > 0 && (
+          <MarketSelect
+            options={marketOptions}
+            value={market}
+            onSelect={setMarket}
+            disabled={marketDisabled}
+            capperId={profile.capper.id}
+          />
+        )}
         <div className="relative">
           <button
             type="button"
             data-range-trigger
             onClick={() => setPickerOpen((o) => !o)}
             aria-pressed={!!range}
-            className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold transition-colors ${
+            className={`rounded-md px-3 py-2.5 sm:py-1.5 text-[12px] sm:text-[11px] font-bold leading-none transition-all duration-150 ${
               range
-                ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)]"
+                ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
                 : "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
@@ -144,21 +145,6 @@ export function ProfileFilterBar({ stacked = false }: { stacked?: boolean }) {
           )}
         </div>
       </div>
-      {marketOptions.length > 0 && (
-        <div
-          className={marketDisabled ? "opacity-40 pointer-events-none" : ""}
-          aria-disabled={marketDisabled}
-        >
-          <Seg
-            ariaLabel="Market"
-            options={marketSegOptions}
-            value={market}
-            onSelect={setMarket}
-            wrap
-            disabled={marketDisabled}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -195,7 +181,7 @@ function Seg<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className={`gap-1 rounded-lg bg-[rgba(255,255,255,0.04)] p-1 ${
+      className={`gap-0.5 rounded-lg bg-[rgba(255,255,255,0.025)] border border-[rgba(255,255,255,0.04)] p-0.5 ${
         fill ? "grid" : `inline-flex ${wrap ? "flex-wrap" : ""}`
       }`}
       style={fill ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` } : undefined}
@@ -209,12 +195,12 @@ function Seg<T extends string>({
             onClick={() => onSelect(o.value)}
             aria-pressed={active}
             disabled={disabled}
-            className={`rounded-md text-[12px] sm:text-[11px] font-bold transition-colors ${
-              fill ? "w-full text-center py-2.5" : "px-3 py-2.5 sm:py-1.5"
+            className={`rounded-md text-[12px] sm:text-[11px] font-bold leading-none transition-all duration-150 ${
+              fill ? "w-full text-center py-2.5" : "px-3 py-2.5 sm:px-2.5 sm:py-1.5"
             } ${
               active
-                ? "bg-[rgba(255,255,255,0.12)] text-[var(--color-text)] shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
-                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                ? "bg-[var(--color-gold)] text-black shadow-[0_2px_8px_-2px_rgba(245,197,74,0.45)]"
+                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[rgba(255,255,255,0.04)]"
             }`}
           >
             {o.label}

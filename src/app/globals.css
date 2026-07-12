@@ -60,6 +60,16 @@ html, body {
   .pp-rise { animation: none; opacity: 1; transform: none; }
 }
 
+/* My Tails sub-page swipe: the incoming panel slides in from the side the
+   user swiped toward. */
+@keyframes subpage-in-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes subpage-in-left { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+.subpage-in-right { animation: subpage-in-right .22s ease-out both; }
+.subpage-in-left { animation: subpage-in-left .22s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .subpage-in-right, .subpage-in-left { animation: none; opacity: 1; transform: none; }
+}
+
 /* Streak badge: a subtle static glow per tone (--streak-glow set inline). No
    motion, so a full list of badges reads calm instead of jittering. */
 .streak-icon {

@@ -368,6 +368,15 @@ export interface PalaceCandidate {
   status: "candidate" | "draft" | "published";
 }
 
+/** Public-safe per-market stat for a tailed scope on a My Tails card. Only
+ * fields a FREE user may see: the de-lucked machinery (xROI, CLV, verdicts)
+ * on the same source rows is VIP inventory and must not ride along. */
+export interface ScopeStat {
+  market: string;
+  roi_pct: number | null;
+  n_decided: number;
+}
+
 export interface TodayPickEntry {
   capper_id: number;
   handle: string | null;
@@ -386,6 +395,12 @@ export interface TodayPickEntry {
   /** Underlying capper_picks id for straights; null for parlay entries.
       The bet slip binds to this for self-grading. */
   pick_id: number | null;
+  /** Parlay group id for parlay entries; null for straights. The bet slip
+      binds parlay tails to this and grades via capper_parlay_grades. */
+  parlay_id: number | null;
+  /** Present on parlay rows once the feed serves it (fadeai-platform #87).
+      Ordered by leg_index ascending; the card expands these on click. */
+  legs?: HistoryPickLeg[] | null;
 }
 
 export interface TodayPicksResponse {

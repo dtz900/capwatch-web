@@ -1,6 +1,7 @@
 import Link from "next/link";
-import type { CapperRow, TodayPickEntry } from "@/lib/types";
-import { buildEdgeView, MARKET_LABELS, VERDICT_WORDS, toneCls, type EdgeRow } from "@/lib/edges";
+import { useState } from "react";
+import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
+import { MARKET_LABELS, toneCls } from "@/lib/edges";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { Sparkline } from "@/components/leaderboard/Sparkline";
@@ -14,17 +15,18 @@ export function StableCard({
   onUntail,
   todayPicks = [],
   scopes = [],
-  scopeEdges = [],
+  scopeStats = [],
   onUntailMarket,
 }: {
   capper: CapperRow;
   onUntail: () => void;
   todayPicks?: TodayPickEntry[];
   scopes?: string[];
-  scopeEdges?: EdgeRow[];
+  scopeStats?: ScopeStat[];
   onUntailMarket?: (market: string) => void;
 }) {
   const slip = useBetSlip();
+  const [openParlays, setOpenParlays] = useState<Set<number>>(new Set());
   const scoped = scopes.length > 0;
   const positive = (capper.units_profit ?? 0) >= 0;
   return (
@@ -37,6 +39,8 @@ export function StableCard({
       >
         {"✕"}
       </button>
+      {/* Only the header links to the profile; the card body (stats, today
+          picks) is plain so slip adds and the parlay expander don't navigate. */}
       <Link href={`/cappers/${capper.handle}`} className="block">
         <div className="flex items-center gap-3">
           <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={44} />
@@ -57,6 +61,7 @@ export function StableCard({
             )}
           </div>
         </div>
+      </Link>
         {!scoped && (
           <>
             <div className="mt-4 flex items-end justify-between gap-3">
@@ -90,49 +95,61 @@ export function StableCard({
         )}
         {scoped && (
           <div className="mt-4 space-y-2.5">
+            {/* ROI only, on purpose: xROI/CLV/verdicts are VIP inventory
+                and never reach this surface (ScopeStat carries just the
+                public-safe fields). */}
             {scopes.map((m) => {
-              const e = scopeEdges.find((r) => r.market === m);
-              if (!e) {
+              const label = MARKET_LABELS[m] ?? m;
+              const s = scopeStats.find((r) => r.market === m);
+              const untail = onUntailMarket && (
+                <button
+                  aria-label={`Untail ${label}`}
+                  title="Untail this market"
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    onUntailMarket(m);
+                  }}
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-xs"
+                >
+                  {"✕"}
+                </button>
+              );
+              if (!s) {
                 return (
                   <div key={m} className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm font-semibold text-[var(--color-text)]">
-                      {MARKET_LABELS[m] ?? m}
+                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)]">
+                      {label}
                     </span>
-                    <span className="text-xs text-[var(--color-text-muted)]">no data yet</span>
+                    <span className="ml-auto text-xs text-[var(--color-text-muted)]">
+                      no data yet
+                    </span>
+                    {untail}
                   </div>
                 );
               }
-              const f = buildEdgeView(e);
+              const roiTone =
+                s.roi_pct != null && s.roi_pct > 0
+                  ? "pos"
+                  : s.roi_pct != null && s.roi_pct < 0
+                    ? "neg"
+                    : "muted";
               return (
                 <div key={m}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)]">
-                      {f.label}
+                      {label}
                     </span>
-                    {onUntailMarket && (
-                      <button
-                        aria-label={`Untail ${f.label}`}
-                        title="Untail this market"
-                        onClick={(ev) => {
-                          ev.preventDefault();
-                          ev.stopPropagation();
-                          onUntailMarket(m);
-                        }}
-                        className="text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-xs"
-                      >
-                        {"✕"}
-                      </button>
-                    )}
+                    {untail}
                   </div>
                   <div className="mt-1 flex items-baseline gap-2 tabular-nums">
-                    <span className={`text-[22px] leading-none font-extrabold ${toneCls(f.roiTone)}`}>
-                      {f.roi.replace(" ROI", "")}
+                    <span className={`text-[22px] leading-none font-extrabold ${toneCls(roiTone)}`}>
+                      {s.roi_pct != null
+                        ? `${s.roi_pct > 0 ? "+" : ""}${s.roi_pct.toFixed(1)}%`
+                        : "n/a"}
                     </span>
-                    <span className="text-xs text-[var(--color-text-muted)]">{f.secondary}</span>
-                    <span
-                      className={`ml-auto text-xs font-semibold lowercase ${toneCls(f.verdict.tone)}`}
-                    >
-                      {VERDICT_WORDS[f.verdict.label] ?? f.verdict.label.toLowerCase()}
+                    <span className="text-xs text-[var(--color-text-muted)]">
+                      ROI · {s.n_decided} picks
                     </span>
                   </div>
                 </div>
@@ -155,14 +172,42 @@ export function StableCard({
             <p className="mt-2 text-xs text-[var(--color-text-muted)]">No picks yet today.</p>
           ) : (
             <ul className="mt-2 space-y-2">
-              {todayPicks.map((p, i) => (
-                <li
-                  key={`${p.posted_at}-${i}`}
-                  className="flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
+              {todayPicks.map((p, i) => {
+                const expandable =
+                  p.kind === "parlay" && p.parlay_id != null && (p.legs?.length ?? 0) > 0;
+                const open = expandable && openParlays.has(p.parlay_id as number);
+                return (
+                <li key={`${p.posted_at}-${i}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div
+                    className={`min-w-0 ${expandable ? "cursor-pointer" : ""}`}
+                    {...(expandable
+                      ? {
+                          role: "button" as const,
+                          tabIndex: 0,
+                          "aria-expanded": open,
+                          "aria-label": `${open ? "Hide" : "Show"} ${p.selection} legs`,
+                          onClick: (ev: React.MouseEvent) => {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            setOpenParlays((prev) => {
+                              const next = new Set(prev);
+                              const id = p.parlay_id as number;
+                              if (next.has(id)) next.delete(id);
+                              else next.add(id);
+                              return next;
+                            });
+                          },
+                        }
+                      : {})}
+                  >
                     <div className="text-sm font-semibold leading-tight text-[var(--color-text)] truncate">
                       {p.selection}
+                      {expandable && (
+                        <span className="ml-1.5 text-[10px] text-[var(--color-text-muted)]">
+                          {open ? "▾" : "▸"}
+                        </span>
+                      )}
                     </div>
                     <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] truncate">
                       {p.matchup ?? (p.kind === "parlay" ? "Multi-game" : "")}
@@ -186,15 +231,20 @@ export function StableCard({
                       </span>
                     )}
                     <StatusPill outcome={p.outcome} />
-                    {slip && p.kind === "straight" && p.pick_id != null && p.outcome == null && (
-                      slip.inSlip(p.pick_id) ? (
+                    {slip && p.outcome == null &&
+                      (p.kind === "straight" ? p.pick_id != null : p.parlay_id != null) && (
+                      (p.kind === "straight" ? slip.inSlip(p.pick_id) : slip.inSlipParlay(p.parlay_id)) ? (
                         <button
                           aria-label={`Remove ${p.selection} from bet slip`}
                           title="On your slip. Click to remove"
                           onClick={(ev) => {
                             ev.preventDefault();
                             ev.stopPropagation();
-                            const entry = slip.entries?.find((e) => e.pick_id === p.pick_id);
+                            const entry = slip.entries?.find((e) =>
+                              p.kind === "straight"
+                                ? e.pick_id === p.pick_id
+                                : e.parlay_id === p.parlay_id
+                            );
                             if (entry) slip.removeEntry(entry.id);
                           }}
                           className="text-[var(--color-pos)] text-sm font-bold"
@@ -217,12 +267,68 @@ export function StableCard({
                       )
                     )}
                   </div>
+                </div>
+                {open && (
+                  <ul className="mt-1.5 ml-1 space-y-1.5 border-l border-[var(--color-border)] pl-2.5">
+                    {p.legs!.map((leg) => (
+                      <li key={leg.leg_index} className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold leading-tight text-[var(--color-text-soft)] truncate">
+                            {leg.selection}
+                          </div>
+                          <div className="text-[9px] uppercase tracking-wider text-[var(--color-text-muted)] truncate">
+                            {[leg.game_label, leg.market].filter(Boolean).join(" · ")}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {leg.odds_taken != null && (
+                            <span className="text-[11px] font-semibold tabular-nums text-[var(--color-text-muted)]">
+                              {leg.odds_taken > 0 ? "+" : ""}
+                              {leg.odds_taken}
+                            </span>
+                          )}
+                          {leg.outcome != null && (
+                            <span
+                              className={`text-[11px] font-bold ${
+                                leg.outcome === "W"
+                                  ? "text-[var(--color-pos)]"
+                                  : leg.outcome === "L"
+                                    ? "text-[var(--color-neg)]"
+                                    : "text-[var(--color-text-muted)]"
+                              }`}
+                            >
+                              {leg.outcome}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
+          {/* Day P&L across the graded picks shown on this card, footered
+              like the bet slip's tally. */}
+          {todayPicks.some((p) => p.profit_units != null) && (
+            <div className="mt-3 flex items-baseline justify-between border-t border-[var(--color-border)] pt-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                Day P&L
+              </span>
+              <span
+                className={`text-[17px] font-extrabold tabular-nums leading-none ${
+                  todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0) >= 0
+                    ? "text-[var(--color-pos)]"
+                    : "text-[var(--color-neg)]"
+                }`}
+              >
+                {formatUnits(todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0))}u
+              </span>
+            </div>
+          )}
         </div>
-      </Link>
     </div>
   );
 }

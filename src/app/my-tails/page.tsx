@@ -3,21 +3,30 @@ import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { fetchLeaderboard, fetchTodayPicks } from "@/lib/api";
-import { vipEnabled } from "@/lib/flags";
+import { vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
 import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
 import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import { MarketRankings } from "@/components/my-tails/MarketRankings";
-import type { CapperRow, TodayPickEntry } from "@/lib/types";
+import { MyTailsTabs, type MyTailsTab } from "@/components/my-tails/MyTailsTabs";
+import { createServiceSupabase } from "@/lib/supabase/service";
+import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import type { EdgeRow } from "@/lib/edges";
 import type { RankedEdgeRow } from "@/lib/marketRankings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Tails | TailSlips" };
 
-export default async function MyTailsPage() {
+export default async function MyTailsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   if (!vipEnabled()) notFound();
+
+  const { tab } = await searchParams;
+  const initialTab: MyTailsTab = tab === "board" ? "board" : "stable";
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -42,8 +51,17 @@ export default async function MyTailsPage() {
             <Link href="/login" className="underline">Sign in</Link> to tail cappers and track
             your stable here.
           </p>
-          <div className="mt-8"><EmptyStable suggestions={top3} /></div>
-          <div className="mt-6"><MarketRankings rows={[]} vip={false} /></div>
+          <div className="mt-8">
+            {vipTierEnabled() ? (
+              <MyTailsTabs
+                initialTab={initialTab}
+                stable={<EmptyStable suggestions={top3} />}
+                board={<MarketRankings rows={[]} vip={false} />}
+              />
+            ) : (
+              <EmptyStable suggestions={top3} />
+            )}
+          </div>
         </main>
       </>
     );
@@ -57,17 +75,21 @@ export default async function MyTailsPage() {
   const followRows = (follows ?? []) as { capper_id: number; market: string }[];
   const ids = [...new Set(followRows.map((f) => f.capper_id))];
 
-  const { data: tsProfile, error: tsProfileError } = await supabase
-    .from("ts_profiles")
-    .select("tier")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (tsProfileError) console.error("my-tails tier query failed:", tsProfileError);
-  const isVip = tsProfile?.tier === "vip";
-
-  // Cross-capper read of the whole edges table. RLS gates it to VIP JWTs;
-  // x_n rides along because the ranking sort needs it.
+  // Market Masters is paid-tier inventory (decisions/log.md 2026-07-11):
+  // held out of the free launch entirely and only fetched once the tier is
+  // live. Cross-capper read of the whole edges table; RLS gates it to VIP
+  // JWTs; x_n rides along because the ranking sort needs it.
+  let isVip = false;
   let rankingRows: RankedEdgeRow[] = [];
+  if (vipTierEnabled()) {
+    const { data: tsProfile, error: tsProfileError } = await supabase
+      .from("ts_profiles")
+      .select("tier")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (tsProfileError) console.error("my-tails tier query failed:", tsProfileError);
+    isVip = tsProfile?.tier === "vip";
+  }
   if (isVip) {
     const { data: allEdges, error: allEdgesError } = await supabase
       .from("capper_market_edges")
@@ -79,6 +101,7 @@ export default async function MyTailsPage() {
       ...e,
       handle: byId.get(String(e.capper_id))?.handle ?? null,
       display_name: byId.get(String(e.capper_id))?.display_name ?? null,
+      profile_image_url: byId.get(String(e.capper_id))?.profile_image_url ?? null,
     }));
   }
 
@@ -95,19 +118,28 @@ export default async function MyTailsPage() {
     }
   }
 
+  // Per-market ROI for tailed scopes. The source table is VIP-RLS-gated but
+  // ROI itself is public (it's on every profile page), so the read goes
+  // through the service role with ONLY the public-safe columns projected.
+  // The de-lucked fields (xROI, CLV, verdicts) stay VIP and never reach
+  // this surface.
   const scopedIds = Object.keys(scopesByCapper).map(Number);
-  const edgesByCapper: Record<string, EdgeRow[]> = {};
-  if (scopedIds.length > 0) {
-    const { data: edgeRows } = await supabase
+  const statsByCapper: Record<string, ScopeStat[]> = {};
+  const serviceSupabase = scopedIds.length > 0 ? createServiceSupabase() : null;
+  if (serviceSupabase && scopedIds.length > 0) {
+    const { data: statRows, error: statError } = await serviceSupabase
       .from("capper_market_edges")
-      .select(
-        "capper_id, market, n_decided, roi_pct, xroi_pct, clv_beat_pct, clv_avg_cents, clv_n, tracked_days, gate_pass, gate_reasons, originator, tail_at_close_roi"
-      )
+      .select("capper_id, market, roi_pct, n_decided")
       .in("capper_id", scopedIds);
-    for (const e of (edgeRows ?? []) as (EdgeRow & { capper_id: number })[]) {
+    if (statError) console.error("my-tails scope stats query failed:", statError);
+    for (const e of (statRows ?? []) as (ScopeStat & { capper_id: number })[]) {
       const key = String(e.capper_id);
       if (scopesByCapper[key]?.includes(e.market)) {
-        (edgesByCapper[key] ??= []).push(e);
+        (statsByCapper[key] ??= []).push({
+          market: e.market,
+          roi_pct: e.roi_pct,
+          n_decided: e.n_decided,
+        });
       }
     }
   }
@@ -148,17 +180,30 @@ export default async function MyTailsPage() {
           </div>
           <BetSlipRail />
         </div>
-        {ids.length === 0 ? (
-          <EmptyStable suggestions={top3} />
-        ) : (
-          <StableGrid
-            initial={stable}
-            todayByCapper={todayByCapper}
-            scopesByCapper={scopesByCapper}
-            edgesByCapper={edgesByCapper}
-          />
-        )}
-        <MarketRankings rows={rankingRows} vip={isVip} />
+        {(() => {
+          const stableView =
+            ids.length === 0 ? (
+              <EmptyStable suggestions={top3} />
+            ) : (
+              <StableGrid
+                initial={stable}
+                todayByCapper={todayByCapper}
+                scopesByCapper={scopesByCapper}
+                statsByCapper={statsByCapper}
+              />
+            );
+          // Tabs exist for the Market Masters sub-page, which is paid-tier
+          // inventory; the free launch is the stable alone.
+          return vipTierEnabled() ? (
+            <MyTailsTabs
+              initialTab={initialTab}
+              stable={stableView}
+              board={<MarketRankings rows={rankingRows} vip={isVip} />}
+            />
+          ) : (
+            stableView
+          );
+        })()}
       </main>
       </BetSlipProvider>
     </>

@@ -7,7 +7,7 @@ vi.mock("@/lib/supabase/client", () => ({ createBrowserSupabase: () => null }));
 import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 
 describe("MarketTailToggle", () => {
-  it("renders nothing for a non-VIP user", () => {
+  it("renders nothing when logged out", () => {
     mockAuth.current = {
       session: null,
       entitlements: { isLoggedIn: false, isVip: false },
@@ -16,10 +16,10 @@ describe("MarketTailToggle", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("renders the plain tail control for a VIP", () => {
+  it("renders the plain tail control for any signed-in user, no VIP required", () => {
     mockAuth.current = {
       session: { user: { id: "u1" } },
-      entitlements: { isLoggedIn: true, isVip: true },
+      entitlements: { isLoggedIn: true, isVip: false },
     };
     render(<MarketTailToggle capperId={2} market="HRR" />);
     const btn = screen.getByRole("button", { name: /^tail$/i });

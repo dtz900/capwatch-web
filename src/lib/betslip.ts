@@ -4,6 +4,7 @@ import type { TodayPickEntry } from "@/lib/types";
 export interface SlipEntry {
   id: number;
   pick_id: number | null;
+  parlay_id: number | null;
   stake: number;
   odds: number;
   capper_id: number | null;
@@ -33,11 +34,12 @@ export function slipProfit(
   return 0; // push and void return the stake
 }
 
-/** American odds, absolute value 100..2000. Null = rejected input. */
+/** American odds, absolute value 100..10000. Null = rejected input. The
+ * ceiling covers parlay combined odds, which routinely run past +2000. */
 export function clampOdds(v: number): number | null {
   if (!Number.isFinite(v)) return null;
   const a = Math.abs(v);
-  return a >= 100 && a <= 2000 ? Math.round(v) : null;
+  return a >= 100 && a <= 10000 ? Math.round(v) : null;
 }
 
 export function clampStake(v: number): number | null {
@@ -45,18 +47,37 @@ export function clampStake(v: number): number | null {
   return v >= 0.1 && v <= 10 ? Math.round(v * 10) / 10 : null;
 }
 
-/** Insert payload for user_bet_slips, or null when the pick is not
-    addable (parlay, or no pick_id to bind to). Snapshot fields keep the
+/** Insert payload for user_bet_slips, or null when the pick has no id to
+    bind to. A parlay tail is ONE row at the capper's combined odds (the
+    feed's default, user-editable in the slip). Snapshot fields keep the
     row renderable if the pick is later purged upstream. */
 export function slipInsertFromPick(
   userId: string,
   pick: TodayPickEntry,
   gameDate: string | null,
 ): Record<string, unknown> | null {
-  if (pick.kind !== "straight" || pick.pick_id == null) return null;
+  if (pick.kind === "parlay") {
+    if (pick.parlay_id == null) return null;
+    return {
+      user_id: userId,
+      pick_id: null,
+      parlay_id: pick.parlay_id,
+      stake: 1.0,
+      odds: pick.odds_taken ?? -110,
+      capper_id: pick.capper_id,
+      capper_handle: pick.handle,
+      matchup: null,
+      market: "parlay",
+      selection: pick.selection,
+      line: null,
+      game_date: gameDate,
+    };
+  }
+  if (pick.pick_id == null) return null;
   return {
     user_id: userId,
     pick_id: pick.pick_id,
+    parlay_id: null,
     stake: 1.0,
     odds: pick.odds_taken ?? -110,
     capper_id: pick.capper_id,

@@ -4,14 +4,14 @@ import { BetSlipProvider, useBetSlip } from "@/components/my-tails/BetSlipContex
 import type { TodayPickEntry } from "@/lib/types";
 
 const mockRows = [
-  { id: 5, pick_id: 9001, stake: 1, odds: 142, capper_id: 69,
+  { id: 5, pick_id: 9001, parlay_id: null, stake: 1, odds: 142, capper_id: 69,
     capper_handle: "tonestakes", matchup: "PHI @ CIN", market: "ML",
     selection: "Reds ML", line: null, game_date: "2026-07-09",
     created_at: "2026-07-09T16:05:00Z" },
 ];
 
 const insertSingle = vi.fn().mockResolvedValue({
-  data: { ...mockRows[0], id: 6, pick_id: 9003, selection: "Tigers ML" }, error: null,
+  data: { ...mockRows[0], id: 6, pick_id: 9003, parlay_id: null, selection: "Tigers ML" }, error: null,
 });
 const supabaseMock = {
   from: vi.fn(() => ({
@@ -39,7 +39,8 @@ vi.mock("@/components/auth/AuthProvider", () => ({
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   fetchPickOutcomes: vi.fn().mockResolvedValue({
-    9001: { outcome: "W", graded_at: "2026-07-09T05:00:00Z" },
+    picks: { 9001: { outcome: "W", graded_at: "2026-07-09T05:00:00Z" } },
+    parlays: {},
   }),
 }));
 
@@ -48,7 +49,7 @@ const pick: TodayPickEntry = {
   profile_image_url: null, kind: "straight", matchup: "ATH @ DET",
   market: "ML", market_group: "ML", selection: "Tigers ML", line: null,
   odds_taken: -131, posted_at: "2026-07-09T17:00:00Z", outcome: null,
-  profit_units: null, pick_id: 9003,
+  profit_units: null, pick_id: 9003, parlay_id: null,
 };
 
 // Mock slipInsertFromPick to ensure it returns a payload
@@ -59,6 +60,7 @@ vi.mock("@/lib/betslip", async (importOriginal) => ({
     return {
       user_id: userId,
       pick_id: p.pick_id,
+      parlay_id: null,
       stake: 1.0,
       odds: p.odds_taken ?? -110,
       capper_id: p.capper_id,
@@ -118,14 +120,29 @@ describe("BetSlipProvider", () => {
     await waitFor(() => expect(insertSingle).toHaveBeenCalledTimes(1));
   });
 
-  it("opens the teaser instead of inserting for a free user", async () => {
+  it("inserts for a free user while the paid tier is dark", async () => {
     isVip = false;
     render(<BetSlipProvider todayDate="2026-07-09"><Probe /></BetSlipProvider>);
     await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("1"));
     fireEvent.click(screen.getByText("add"));
-    await waitFor(() => expect(screen.getByTestId("teaser")).toHaveTextContent("true"));
-    expect(insertSingle).not.toHaveBeenCalled();
+    await waitFor(() => expect(insertSingle).toHaveBeenCalled());
+    expect(screen.getByTestId("teaser")).toHaveTextContent("false");
     isVip = true;
+  });
+
+  it("opens the teaser instead of inserting for a free user once the tier flag is on", async () => {
+    vi.stubEnv("NEXT_PUBLIC_VIP_TIER_ENABLED", "true");
+    try {
+      isVip = false;
+      render(<BetSlipProvider todayDate="2026-07-09"><Probe /></BetSlipProvider>);
+      await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("1"));
+      fireEvent.click(screen.getByText("add"));
+      await waitFor(() => expect(screen.getByTestId("teaser")).toHaveTextContent("true"));
+      expect(insertSingle).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      isVip = true;
+    }
   });
 
   it("returns null outside the provider", () => {

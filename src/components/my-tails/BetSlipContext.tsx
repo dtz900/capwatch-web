@@ -3,6 +3,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { vipTierEnabled } from "@/lib/flags";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { fetchPickOutcomes } from "@/lib/api";
 import {
@@ -13,6 +14,7 @@ import type { TodayPickEntry } from "@/lib/types";
 export interface BetSlipCtx {
   entries: SlipEntry[] | null;
   inSlip: (pickId: number | null) => boolean;
+  inSlipParlay: (parlayId: number | null) => boolean;
   addFromPick: (p: TodayPickEntry) => void;
   removeEntry: (id: number) => void;
   updateEntry: (id: number, patch: { stake?: number; odds?: number }) => void;
@@ -46,7 +48,7 @@ export function BetSlipProvider({
   );
   const [entries, setEntries] = useState<SlipEntry[] | null>(null);
   const [teaserOpen, setTeaserOpen] = useState(false);
-  const insertingPickIdsRef = useRef<Set<number>>(new Set());
+  const insertingKeysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!supabase || !userId) {
@@ -58,7 +60,7 @@ export function BetSlipProvider({
       const { data, error } = await supabase
         .from("user_bet_slips")
         .select(
-          "id, pick_id, stake, odds, capper_id, capper_handle, matchup, market, selection, line, game_date, created_at"
+          "id, pick_id, parlay_id, stake, odds, capper_id, capper_handle, matchup, market, selection, line, game_date, created_at"
         )
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
@@ -73,9 +75,12 @@ export function BetSlipProvider({
         outcome: null,
       }));
       const ids = rows.map((r) => r.pick_id).filter((x): x is number => x != null);
-      let outcomes: Awaited<ReturnType<typeof fetchPickOutcomes>> = {};
+      const pids = rows.map((r) => r.parlay_id).filter((x): x is number => x != null);
+      let outcomes: Awaited<ReturnType<typeof fetchPickOutcomes>> = { picks: {}, parlays: {} };
       try {
-        outcomes = ids.length > 0 ? await fetchPickOutcomes(ids) : {};
+        if (ids.length > 0 || pids.length > 0) {
+          outcomes = await fetchPickOutcomes(ids, pids);
+        }
       } catch (err) {
         console.error("bet slip outcomes fetch failed:", err);
       }
@@ -83,8 +88,13 @@ export function BetSlipProvider({
       setEntries(
         rows.map((r) => ({
           ...r,
-          // pick purged upstream: render from snapshot, count as void
-          outcome: r.pick_id == null ? "V" : outcomes[r.pick_id]?.outcome ?? null,
+          outcome:
+            r.pick_id != null
+              ? outcomes.picks[r.pick_id]?.outcome ?? null
+              : r.parlay_id != null
+                ? outcomes.parlays[r.parlay_id]?.outcome ?? null
+                // pick purged upstream: render from snapshot, count as void
+                : "V",
         }))
       );
     })();
@@ -99,38 +109,58 @@ export function BetSlipProvider({
     [entries]
   );
 
+  const inSlipParlay = useCallback(
+    (parlayId: number | null) =>
+      parlayId != null && (entries ?? []).some((e) => e.parlay_id === parlayId),
+    [entries]
+  );
+
   const addFromPick = useCallback(
     (p: TodayPickEntry) => {
-      if (!entitlements.isVip) {
+      // The paid-tier teaser only exists once the VIP tier is live; on the
+      // free launch every signed-in user gets the slip.
+      if (vipTierEnabled() && !entitlements.isVip) {
         setTeaserOpen(true);
         return;
       }
-      if (!supabase || !userId || p.pick_id == null) return;
-
-      const pickId = p.pick_id; // Narrow the type
+      if (!supabase || !userId) return;
+      // Straights key the dedup by pick id, parlay tails by parlay id;
+      // prefixes keep the two id spaces from colliding in the shared ref.
+      const dedupKey =
+        p.kind === "parlay"
+          ? p.parlay_id != null
+            ? `parlay:${p.parlay_id}`
+            : null
+          : p.pick_id != null
+            ? `pick:${p.pick_id}`
+            : null;
+      if (dedupKey === null) return;
       // Synchronous dedup check using ref
-      if (insertingPickIdsRef.current.has(pickId)) {
+      if (insertingKeysRef.current.has(dedupKey)) {
         return;
       }
-      insertingPickIdsRef.current.add(pickId);
+      insertingKeysRef.current.add(dedupKey);
 
       const payload = slipInsertFromPick(userId, p, todayDate);
       if (!payload) {
-        insertingPickIdsRef.current.delete(pickId);
+        insertingKeysRef.current.delete(dedupKey);
         return;
       }
+      const isDup = (e: SlipEntry) =>
+        p.kind === "parlay" ? e.parlay_id === p.parlay_id : e.pick_id === p.pick_id;
       const tempId = -Date.now();
       const optimistic: SlipEntry = {
         id: tempId,
-        pick_id: pickId,
+        pick_id: (payload.pick_id as number | null) ?? null,
+        parlay_id: (payload.parlay_id as number | null) ?? null,
         stake: payload.stake as number,
         odds: payload.odds as number,
         capper_id: p.capper_id,
         capper_handle: p.handle,
-        matchup: p.matchup,
-        market: p.market,
+        matchup: (payload.matchup as string | null) ?? null,
+        market: (payload.market as string | null) ?? null,
         selection: p.selection,
-        line: p.line,
+        line: (payload.line as number | null) ?? null,
         game_date: todayDate,
         created_at: new Date().toISOString(),
         outcome: null,
@@ -140,25 +170,25 @@ export function BetSlipProvider({
       let duplicate = false;
       setEntries((prev) => {
         if (prev === null) return prev; // still loading
-        if (prev.some((e) => e.pick_id === p.pick_id)) {
+        if (prev.some(isDup)) {
           duplicate = true;
           return prev;
         }
         return [optimistic, ...prev];
       });
       if (duplicate) {
-        insertingPickIdsRef.current.delete(pickId);
+        insertingKeysRef.current.delete(dedupKey);
         return;
       }
       supabase
         .from("user_bet_slips")
         .insert(payload)
         .select(
-          "id, pick_id, stake, odds, capper_id, capper_handle, matchup, market, selection, line, game_date, created_at"
+          "id, pick_id, parlay_id, stake, odds, capper_id, capper_handle, matchup, market, selection, line, game_date, created_at"
         )
         .single()
         .then(({ data, error }) => {
-          insertingPickIdsRef.current.delete(pickId);
+          insertingKeysRef.current.delete(dedupKey);
           if (error || !data) {
             console.error("bet slip insert failed:", error);
             setEntries((prev) => (prev ?? []).filter((e) => e.id !== tempId));
@@ -171,9 +201,7 @@ export function BetSlipProvider({
             // this callback; if tempId is gone, append the committed row
             // instead of silently dropping it until the next reload.
             if (!list.some((e) => e.id === tempId)) {
-              return list.some((e) => e.pick_id === real.pick_id)
-                ? list
-                : [real, ...list];
+              return list.some(isDup) ? list : [real, ...list];
             }
             return list.map((e) => (e.id === tempId ? real : e));
           });
@@ -253,10 +281,10 @@ export function BetSlipProvider({
 
   const value = useMemo(
     () => ({
-      entries: todayEntries, inSlip, addFromPick, removeEntry, updateEntry, totals,
+      entries: todayEntries, inSlip, inSlipParlay, addFromPick, removeEntry, updateEntry, totals,
       teaserOpen, closeTeaser: () => setTeaserOpen(false),
     }),
-    [todayEntries, inSlip, addFromPick, removeEntry, updateEntry, totals, teaserOpen]
+    [todayEntries, inSlip, inSlipParlay, addFromPick, removeEntry, updateEntry, totals, teaserOpen]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
