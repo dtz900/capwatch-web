@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { TailCrown } from "@/components/icons/TailCrown";
-import { SharpieCircle } from "@/components/icons/SharpieCircle";
 
 /* Tail exactly one market from one capper. Any signed-in user; logged-out
    viewers render nothing (their hosts show a sign-in path instead). Plain
@@ -118,7 +117,6 @@ export function MarketTailToggle({
             tailing ? "text-[#35a05f] [filter:drop-shadow(0_0_3px_rgba(53,160,95,0.5))]" : ""
           }`}
         />
-        <SharpieCircle className="inset-[-26px_-38px] text-[var(--color-gold)]" />
       </button>
     );
   }
