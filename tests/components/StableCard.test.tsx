@@ -20,7 +20,7 @@ vi.mock("@/components/auth/AuthProvider", () => ({
 }));
 vi.mock("@/lib/api", async (orig) => ({
   ...(await orig<object>()),
-  fetchPickOutcomes: async () => ({}),
+  fetchPickOutcomes: async () => ({ picks: {}, parlays: {} }),
 }));
 
 const capper = {
@@ -59,6 +59,7 @@ const straightPick: TodayPickEntry = {
   outcome: null,
   profit_units: null,
   pick_id: 9001,
+  parlay_id: null,
 };
 
 const parlayPick: TodayPickEntry = {
@@ -77,6 +78,7 @@ const parlayPick: TodayPickEntry = {
   outcome: null,
   profit_units: null,
   pick_id: null,
+  parlay_id: 501,
 };
 
 describe("StableCard", () => {
@@ -139,13 +141,18 @@ it("straight rows show the add-to-slip affordance inside the provider", async ()
   ).toBeInTheDocument();
 });
 
-it("parlay rows and provider-less renders show no affordance", () => {
-  const { rerender } = render(
+it("parlay rows show the add affordance inside the provider", async () => {
+  render(
     <BetSlipProvider todayDate="2026-07-09">
       <StableCard capper={sample} onUntail={() => {}} todayPicks={[parlayPick]} />
     </BetSlipProvider>
   );
-  expect(screen.queryByLabelText(/to bet slip/)).not.toBeInTheDocument();
-  rerender(<StableCard capper={sample} onUntail={() => {}} todayPicks={[straightPick]} />);
+  expect(
+    await screen.findByLabelText(`Add ${parlayPick.selection} to bet slip`)
+  ).toBeInTheDocument();
+});
+
+it("provider-less renders show no affordance", () => {
+  render(<StableCard capper={sample} onUntail={() => {}} todayPicks={[straightPick]} />);
   expect(screen.queryByLabelText(/to bet slip/)).not.toBeInTheDocument();
 });

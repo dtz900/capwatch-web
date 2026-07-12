@@ -13,12 +13,12 @@ const basePick: TodayPickEntry = {
   profile_image_url: null, kind: "straight", matchup: "PHI @ CIN",
   market: "ML", market_group: "ML", selection: "Reds ML", line: null,
   odds_taken: 142, posted_at: "2026-07-09T16:00:00Z", outcome: null,
-  profit_units: null, pick_id: 9001,
+  profit_units: null, pick_id: 9001, parlay_id: null,
 };
 
 function entry(over: Partial<SlipEntry> = {}): SlipEntry {
   return {
-    id: 1, pick_id: 9001, stake: 1.0, odds: 142, capper_id: 69,
+    id: 1, pick_id: 9001, parlay_id: null, stake: 1.0, odds: 142, capper_id: 69,
     capper_handle: "tonestakes", matchup: "PHI @ CIN", market: "ML",
     selection: "Reds ML", line: null, game_date: "2026-07-09",
     created_at: "2026-07-09T16:05:00Z", outcome: null, ...over,
@@ -40,13 +40,14 @@ describe("betslip math", () => {
     expect(slipProfit(null, 3, 142)).toBeNull();
   });
 
-  it("clampOdds accepts American 100..2000 absolute, rejects the rest", () => {
+  it("clampOdds accepts American 100..10000 absolute (parlay combineds), rejects the rest", () => {
     expect(clampOdds(-110)).toBe(-110);
     expect(clampOdds(2000)).toBe(2000);
+    expect(clampOdds(9500)).toBe(9500);
     expect(clampOdds(99)).toBeNull();
     expect(clampOdds(-99)).toBeNull();
     expect(clampOdds(0)).toBeNull();
-    expect(clampOdds(2001)).toBeNull();
+    expect(clampOdds(10001)).toBeNull();
     expect(clampOdds(NaN)).toBeNull();
   });
 
@@ -62,7 +63,7 @@ describe("slipInsertFromPick", () => {
   it("builds the insert payload with snapshot fields", () => {
     const row = slipInsertFromPick("user-1", basePick, "2026-07-09");
     expect(row).toEqual({
-      user_id: "user-1", pick_id: 9001, stake: 1.0, odds: 142,
+      user_id: "user-1", pick_id: 9001, parlay_id: null, stake: 1.0, odds: 142,
       capper_id: 69, capper_handle: "tonestakes", matchup: "PHI @ CIN",
       market: "ML", selection: "Reds ML", line: null, game_date: "2026-07-09",
     });
@@ -73,8 +74,24 @@ describe("slipInsertFromPick", () => {
     expect(row?.odds).toBe(-110);
   });
 
-  it("refuses parlays and picks without pick_id", () => {
-    expect(slipInsertFromPick("u", { ...basePick, kind: "parlay" }, "2026-07-09")).toBeNull();
+  it("builds a parlay payload binding parlay_id at the combined odds", () => {
+    const parlay: TodayPickEntry = {
+      ...basePick, kind: "parlay", pick_id: null, parlay_id: 501,
+      matchup: null, market: "parlay", market_group: null,
+      selection: "3-leg parlay", line: null, odds_taken: 450,
+    };
+    const row = slipInsertFromPick("user-1", parlay, "2026-07-09");
+    expect(row).toEqual({
+      user_id: "user-1", pick_id: null, parlay_id: 501, stake: 1.0, odds: 450,
+      capper_id: 69, capper_handle: "tonestakes", matchup: null,
+      market: "parlay", selection: "3-leg parlay", line: null, game_date: "2026-07-09",
+    });
+  });
+
+  it("refuses picks without an id to bind to", () => {
+    expect(
+      slipInsertFromPick("u", { ...basePick, kind: "parlay", parlay_id: null }, "2026-07-09")
+    ).toBeNull();
     expect(slipInsertFromPick("u", { ...basePick, pick_id: null }, "2026-07-09")).toBeNull();
   });
 });
@@ -95,23 +112,29 @@ describe("slipTotals", () => {
 });
 
 describe("fetchPickOutcomes", () => {
-  it("maps the response by pick_id and returns empty for no ids", async () => {
+  it("maps pick and parlay outcomes by id and returns empty maps for no ids", async () => {
     const payload = {
       outcomes: [
         { pick_id: 1, outcome: "W", graded_at: "2026-07-09T05:00:00Z" },
         { pick_id: 2, outcome: "V", graded_at: null },
       ],
+      parlay_outcomes: [{ parlay_id: 501, outcome: "L", graded_at: null }],
     };
     const spy = vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true, json: async () => payload,
     } as unknown as Response);
-    const out = await fetchPickOutcomes([1, 2]);
-    expect(out[1]).toEqual({ outcome: "W", graded_at: "2026-07-09T05:00:00Z" });
-    expect(out[2].outcome).toBe("V");
+    const out = await fetchPickOutcomes([1, 2], [501]);
+    expect(out.picks[1]).toEqual({ outcome: "W", graded_at: "2026-07-09T05:00:00Z" });
+    expect(out.picks[2].outcome).toBe("V");
+    expect(out.parlays[501].outcome).toBe("L");
     expect(spy).toHaveBeenCalledWith(
       expect.stringMatching(/\/api\/public\/picks\/outcomes\?pick_ids=1%2C2/),
       expect.objectContaining({ cache: "no-store" }),
     );
-    expect(await fetchPickOutcomes([])).toEqual({});
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/public\/picks\/outcomes\?parlay_ids=501/),
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    expect(await fetchPickOutcomes([])).toEqual({ picks: {}, parlays: {} });
   });
 });

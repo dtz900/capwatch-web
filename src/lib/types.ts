@@ -395,6 +395,9 @@ export interface TodayPickEntry {
   /** Underlying capper_picks id for straights; null for parlay entries.
       The bet slip binds to this for self-grading. */
   pick_id: number | null;
+  /** Parlay group id for parlay entries; null for straights. The bet slip
+      binds parlay tails to this and grades via capper_parlay_grades. */
+  parlay_id: number | null;
 }
 
 export interface TodayPicksResponse {

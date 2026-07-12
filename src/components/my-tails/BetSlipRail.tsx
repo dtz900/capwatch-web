@@ -50,8 +50,9 @@ export function SlipEntryRow({
             {entry.selection}
           </div>
           <div className="mt-0.5 text-[11px] text-[#6da399] truncate">
-            {entry.matchup ?? ""}
-            {entry.capper_handle ? ` · @${entry.capper_handle}` : ""}
+            {[entry.matchup, entry.capper_handle ? `@${entry.capper_handle}` : null]
+              .filter(Boolean)
+              .join(" · ")}
           </div>
         </div>
         <div className="flex flex-col items-end shrink-0">

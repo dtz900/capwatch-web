@@ -198,15 +198,20 @@ export function StableCard({
                       </span>
                     )}
                     <StatusPill outcome={p.outcome} />
-                    {slip && p.kind === "straight" && p.pick_id != null && p.outcome == null && (
-                      slip.inSlip(p.pick_id) ? (
+                    {slip && p.outcome == null &&
+                      (p.kind === "straight" ? p.pick_id != null : p.parlay_id != null) && (
+                      (p.kind === "straight" ? slip.inSlip(p.pick_id) : slip.inSlipParlay(p.parlay_id)) ? (
                         <button
                           aria-label={`Remove ${p.selection} from bet slip`}
                           title="On your slip. Click to remove"
                           onClick={(ev) => {
                             ev.preventDefault();
                             ev.stopPropagation();
-                            const entry = slip.entries?.find((e) => e.pick_id === p.pick_id);
+                            const entry = slip.entries?.find((e) =>
+                              p.kind === "straight"
+                                ? e.pick_id === p.pick_id
+                                : e.parlay_id === p.parlay_id
+                            );
                             if (entry) slip.removeEntry(entry.id);
                           }}
                           className="text-[var(--color-pos)] text-sm font-bold"

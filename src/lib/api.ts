@@ -659,23 +659,38 @@ export async function fetchTodayPicks(capperIds: number[]): Promise<TodayPicksRe
   return res.json();
 }
 
-/** Grades for a set of pick ids, keyed by pick_id. Ungraded ids are
- * absent. Chunks at the endpoint's 200-id cap; no-store because the slip
- * wants grades the moment the nightly grader lands them. */
+export interface PickOutcomeMaps {
+  picks: Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null }>;
+  parlays: Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null }>;
+}
+
+/** Grades for sets of pick ids and parlay ids, keyed by id. Ungraded ids
+ * are absent. Chunks at the endpoint's 200-id cap; no-store because the
+ * slip wants grades the moment the nightly grader lands them. */
 export async function fetchPickOutcomes(
   pickIds: number[],
-): Promise<Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null }>> {
-  const out: Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null }> = {};
+  parlayIds: number[] = [],
+): Promise<PickOutcomeMaps> {
+  const out: PickOutcomeMaps = { picks: {}, parlays: {} };
+  const requests: { pick_ids?: string; parlay_ids?: string }[] = [];
   for (let i = 0; i < pickIds.length; i += 200) {
-    const chunk = pickIds.slice(i, i + 200);
-    if (chunk.length === 0) continue;
-    const qs = new URLSearchParams({ pick_ids: chunk.join(",") });
+    requests.push({ pick_ids: pickIds.slice(i, i + 200).join(",") });
+  }
+  for (let i = 0; i < parlayIds.length; i += 200) {
+    requests.push({ parlay_ids: parlayIds.slice(i, i + 200).join(",") });
+  }
+  for (const params of requests) {
+    const qs = new URLSearchParams(params as Record<string, string>);
     const res = await fetch(`${API_BASE}/api/public/picks/outcomes?${qs}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`pick outcomes fetch failed: ${res.status}`);
     const body = (await res.json()) as {
       outcomes: { pick_id: number; outcome: "W" | "L" | "P" | "V"; graded_at: string | null }[];
+      parlay_outcomes?: { parlay_id: number; outcome: "W" | "L" | "P" | "V"; graded_at: string | null }[];
     };
-    for (const o of body.outcomes) out[o.pick_id] = { outcome: o.outcome, graded_at: o.graded_at };
+    for (const o of body.outcomes) out.picks[o.pick_id] = { outcome: o.outcome, graded_at: o.graded_at };
+    for (const o of body.parlay_outcomes ?? []) {
+      out.parlays[o.parlay_id] = { outcome: o.outcome, graded_at: o.graded_at };
+    }
   }
   return out;
 }
