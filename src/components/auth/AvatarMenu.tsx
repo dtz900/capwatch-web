@@ -71,6 +71,15 @@ export function AvatarMenu() {
           >
             Account
           </Link>
+          {/* Methodology left the main nav when My Tails took its slot; the
+              avatar menu and the footer disclaimer keep it reachable. */}
+          <Link
+            href="/methodology"
+            onClick={() => setOpen(false)}
+            className="block px-3 py-1.5 text-sm text-[var(--color-text)] hover:bg-white/5"
+          >
+            Methodology
+          </Link>
           <button
             onClick={() => {
               setOpen(false);
