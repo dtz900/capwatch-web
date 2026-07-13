@@ -37,16 +37,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return;
-    if (!session?.user?.id) {
+    const user = session?.user;
+    if (!user?.id) {
       setProfile(null);
       return;
     }
     supabase
       .from("ts_profiles")
       .select("tier")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle()
-      .then(({ data }) => setProfile(data));
+      .then(({ data }) => {
+        if (data) {
+          setProfile(data);
+          return;
+        }
+        // No row = first TailSlips login. The app owns roster membership
+        // (the shared-project signup trigger was dropped 2026-07-13, since
+        // it swept FADE AI signups into the TailSlips roster); self-insert
+        // is allowed by RLS, tier pinned to 'free'. Missing row still
+        // resolves to free if this races or fails.
+        setProfile({ tier: "free" });
+        void supabase
+          .from("ts_profiles")
+          .upsert(
+            { user_id: user.id, email: user.email ?? null },
+            { onConflict: "user_id", ignoreDuplicates: true }
+          )
+          .then(({ error }) => {
+            if (error) console.error("ts_profiles self-insert failed:", error);
+          });
+      });
   }, [session, supabase]);
 
   const value: AuthState = {
