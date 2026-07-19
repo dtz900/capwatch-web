@@ -113,7 +113,11 @@ function CapperRow({
         <span className="truncate text-[13px] font-semibold text-[var(--color-text)]">
           {handleStr}
         </span>
-        <StreakBadge streak={capper.current_day_streak} size="xs" />
+        {/* Desktop: badge rides next to the handle. On mobile it moves to the
+            trailing slot (below) so the handle always renders in full. */}
+        <span className="hidden sm:inline-flex">
+          <StreakBadge streak={capper.current_day_streak} size="xs" />
+        </span>
       </div>
       <div className="shrink-0 w-12 sm:w-14 text-right text-[12px] sm:text-[13px] font-bold tabular-nums">
         {formatRecord(capper)}
@@ -121,7 +125,15 @@ function CapperRow({
       <div className={`shrink-0 w-14 sm:w-16 text-right text-[13px] sm:text-[14px] font-extrabold tabular-nums ${unitsCls}`}>
         {formatUnits(capper.net_units)}u
       </div>
-      <div className="shrink-0 w-10 sm:w-14 text-right text-[10px] sm:text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums">
+      {/* Trailing slot. Mobile is too narrow for handle + badge + graded/total,
+          so the least informative column yields: the badge takes this slot and
+          the per-row graded/total count (already summarized in the section
+          header) is desktop-only. Fixed width either way so record/units stay
+          column-aligned across rows. */}
+      <div className="shrink-0 w-12 flex justify-end sm:hidden">
+        <StreakBadge streak={capper.current_day_streak} size="xs" />
+      </div>
+      <div className="shrink-0 w-14 text-right text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums hidden sm:block">
         {capper.graded_count}/{totalCount}
       </div>
     </>
