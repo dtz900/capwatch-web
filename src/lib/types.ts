@@ -159,6 +159,10 @@ export interface SlateCapperSummary {
   graded_count: number;
   pending_count: number;
   net_units: number;
+  /** Signed settle-day streak INCLUDING the live slate day (prior streak from
+   * the leaderboard snapshot extended with today's graded net). Null when
+   * viewing a past slate, where a current streak would be misleading. */
+  current_day_streak?: number | null;
 }
 
 export interface SlateResponse {

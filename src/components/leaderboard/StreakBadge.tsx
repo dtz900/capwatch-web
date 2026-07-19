@@ -40,8 +40,10 @@ const TONE = {
 
 interface Props {
   streak?: number | null;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
 }
+
+const DIM = { xs: 24, sm: 32, md: 44 } as const;
 
 /**
  * Hot/cold day-streak badge. The icon carries the heat/cold and breathes with a
@@ -55,7 +57,7 @@ export function StreakBadge({ streak, size = "sm" }: Props) {
   if (!tier) return null;
 
   const tone = TONE[tier.tone];
-  const dim = size === "md" ? 44 : 32;
+  const dim = DIM[size];
   const text = size === "md" ? "text-[12px]" : "text-[11px]";
   const days = Math.abs(value);
   const title = `${days} ${tier.tone === "hot" ? "profitable" : "losing"} days in a row`;
@@ -76,8 +78,9 @@ export function StreakBadge({ streak, size = "sm" }: Props) {
       <img src={tier.icon} alt="" className="streak-icon shrink-0" style={iconStyle} />
       <span>
         {/* On the dense desktop rows show just the day count; mobile and the
-            podium (size md) have room for the full label. */}
-        <span className={size === "sm" ? "sm:hidden" : ""}>
+            podium (size md) have room for the full label. xs (slate standings
+            rows) is dense at every width, so it never shows the label. */}
+        <span className={size === "sm" ? "sm:hidden" : size === "xs" ? "hidden" : ""}>
           {tier.label}
           <span className="opacity-50"> · </span>
         </span>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
+import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { formatUnits } from "@/lib/formatters";
 import type { SlateCapperSummary } from "@/lib/types";
 
@@ -108,8 +109,11 @@ function CapperRow({
         {String(rank).padStart(2, "0")}
       </div>
       <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={prominent ? 28 : 26} apiIntegrated={isModel} />
-      <div className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--color-text)]">
-        {handleStr}
+      <div className="min-w-0 flex-1 flex items-center gap-2">
+        <span className="truncate text-[13px] font-semibold text-[var(--color-text)]">
+          {handleStr}
+        </span>
+        <StreakBadge streak={capper.current_day_streak} size="xs" />
       </div>
       <div className="shrink-0 w-12 sm:w-14 text-right text-[12px] sm:text-[13px] font-bold tabular-nums">
         {formatRecord(capper)}
