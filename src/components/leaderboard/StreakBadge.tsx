@@ -76,10 +76,12 @@ export function StreakBadge({ streak, size = "sm" }: Props) {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={tier.icon} alt="" className="streak-icon shrink-0" style={iconStyle} />
-      <span>
+      {/* xs (slate standings rows) is icon-only on mobile: the row has no room
+          for handle + count, and the tooltip still carries the number. */}
+      <span className={size === "xs" ? "hidden sm:inline" : ""}>
         {/* On the dense desktop rows show just the day count; mobile and the
-            podium (size md) have room for the full label. xs (slate standings
-            rows) is dense at every width, so it never shows the label. */}
+            podium (size md) have room for the full label. xs is dense at every
+            width, so it never shows the label. */}
         <span className={size === "sm" ? "sm:hidden" : size === "xs" ? "hidden" : ""}>
           {tier.label}
           <span className="opacity-50"> · </span>
