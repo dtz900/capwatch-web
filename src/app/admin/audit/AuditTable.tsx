@@ -21,6 +21,7 @@ const REASON_LABEL: Record<string, string> = {
   no_grade_row: "Grader hasn't run",
   player_did_not_play: "Player didn't play",
   data_gap: "Game data gap",
+  ungradeable: "Grader gave up",
 };
 
 const BENIGN_REASONS = new Set(["player_did_not_play", "game_pending"]);
