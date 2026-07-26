@@ -175,6 +175,7 @@ export interface SlateResponse {
 
 export type GradingOddsSource =
   | "posted"
+  | "posted_capped"
   | "pinnacle_close"
   | "pinnacle_at_post"
   | "consensus_at_post"
