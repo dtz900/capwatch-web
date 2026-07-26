@@ -60,12 +60,15 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
       : displayedOdds > 0
         ? `+${displayedOdds}`
         : String(displayedOdds);
-  // Capper didn't post odds; grading_odds was derived from Pinnacle. All three
-  // derived rungs render the same "(market)" indicator.
+  // grading_odds was derived from Pinnacle rather than the capper's own
+  // price: the three stakeless rungs, plus posted_capped (a claimed price
+  // the integrity cap re-priced at the close). All render the same
+  // "(market)" indicator.
   const isDerivedOdds =
     pick.grading_odds_source === "pinnacle_at_post" ||
     pick.grading_odds_source === "consensus_at_post" ||
-    pick.grading_odds_source === "pinnacle_close";
+    pick.grading_odds_source === "pinnacle_close" ||
+    pick.grading_odds_source === "posted_capped";
   // outcome-only: capper posted no odds and we have no honest close-line
   // proxy (player props, or ML where Pinnacle is missing). Hide the odds
   // and profit cells; the row still shows W/L via the bar color.
