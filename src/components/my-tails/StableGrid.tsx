@@ -31,7 +31,7 @@ export function StableGrid({
     if (!supabase || !session?.user?.id) return;
     const prevRows = rows;
     const prevScopes = scopes;
-    setRows(rows.filter((r) => r.capper_id !== capperId));
+    setRows(rows.filter((r) => String(r.capper_id) !== capperId));
     if (scopes[capperId]) {
       const nextScopes = { ...scopes };
       delete nextScopes[capperId];
@@ -56,7 +56,7 @@ export function StableGrid({
     const remaining = (scopes[capperId] ?? []).filter((m) => m !== market);
     const nextScopes = { ...scopes };
     if (remaining.length === 0) {
-      setRows(rows.filter((r) => r.capper_id !== capperId));
+      setRows(rows.filter((r) => String(r.capper_id) !== capperId));
       delete nextScopes[capperId];
     } else {
       nextScopes[capperId] = remaining;
