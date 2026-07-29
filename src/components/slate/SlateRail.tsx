@@ -111,12 +111,12 @@ export function SlateRailStrip({ games }: { games: RailGame[] }) {
   return (
     <div
       data-rail-horizontal
-      className="xl:hidden sticky top-16 z-20 bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]"
+      className="xl:hidden sticky top-16 z-10 h-[46px] bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]"
     >
       <nav
         ref={navRef}
         aria-label="Jump to game"
-        className="mx-auto max-w-[1400px] flex gap-1.5 overflow-x-auto no-scrollbar px-4 sm:px-7 py-2"
+        className="mx-auto max-w-[1400px] h-full flex items-center gap-1.5 overflow-x-auto no-scrollbar px-4 sm:px-7"
       >
         {games.map((g, i) => {
           const on = g.game_id === activeId;
