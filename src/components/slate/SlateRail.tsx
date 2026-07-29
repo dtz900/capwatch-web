@@ -24,15 +24,14 @@ export function SlateRail({ games }: { games: RailGame[] }) {
   const firstQuietId = games.find((g) => g.sharp_count === 0)?.game_id ?? null;
 
   // Scroll-spy: one observer over the real rendered sections. rootMargin
-  // carves out the 64px nav plus the card's own sticky strip so a game
+  // carves out the 64px nav, the below-xl horizontal strip (measured, 0 when
+  // it is display:none at xl), and the card's own sticky strip, so a game
   // highlights when it becomes readable, not when its top slips under the bars.
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return;
     const stripH =
       document.querySelector("[data-card-strip]")?.getBoundingClientRect()
         .height ?? 96;
-    // Below xl a horizontal rail strip pins under the nav; at xl it is
-    // display:none, so its measured height is 0 and this term drops out.
     const railH =
       document.querySelector("[data-rail-horizontal]")?.getBoundingClientRect()
         .height ?? 0;
@@ -80,16 +79,67 @@ export function SlateRail({ games }: { games: RailGame[] }) {
 
   return (
     <>
-      {/* DESKTOP (>= xl): fixed vertical rail in the left gutter. Eats 0 column width. */}
+      {/* NARROW (< xl): horizontal logo strip pinned under the nav. Full width
+          as the first item of the flex-col, so it eats 0 horizontal room from
+          the board. */}
+      <div
+        data-rail-horizontal
+        className="xl:hidden w-full sticky top-16 z-20 -mx-4 sm:-mx-7 bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]"
+      >
+        <nav
+          aria-label="Jump to game"
+          className="flex gap-1.5 overflow-x-auto no-scrollbar px-4 sm:px-7 py-2"
+        >
+          {games.map((g) => {
+            const on = g.game_id === activeId;
+            const quiet = g.sharp_count === 0;
+            const live = railLifecycle(g.game_state) === "live";
+            return (
+              <a
+                key={g.game_id}
+                href={`#game-${g.game_id}`}
+                onClick={jump(g.game_id)}
+                aria-current={on ? "true" : undefined}
+                aria-label={`Jump to ${g.away_team ?? "away"} versus ${g.home_team ?? "home"}`}
+                className={`relative flex items-center gap-0.5 shrink-0 px-1.5 py-1 rounded-md ${
+                  quiet ? "opacity-60" : ""
+                } ${
+                  on
+                    ? "bg-[rgba(255,255,255,0.05)] ring-1 ring-inset ring-[rgba(255,255,255,0.14)]"
+                    : ""
+                }`}
+              >
+                <TeamLogo abbr={g.away_team} size={20} flat />
+                <span className="px-0.5 text-[10px] font-bold lowercase text-[var(--color-text-muted)]">
+                  v
+                </span>
+                <TeamLogo abbr={g.home_team} size={20} flat />
+                {live && (
+                  <span
+                    aria-hidden
+                    className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--color-pos)] animate-pulse"
+                  />
+                )}
+              </a>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* DESKTOP (>= xl): in-flow sticky vertical rail column. It is a flex
+          sibling of the board, so the board fills the remaining width.
+          overflow-x-hidden guarantees the rail never grows a horizontal
+          scrollbar. */}
       <aside
         aria-label="Jump to game"
-        className="hidden xl:block fixed top-[80px] z-20 w-[168px]"
-        style={{ left: "calc(50% - 460px - 12px - 168px)" }}
+        className="hidden xl:block sticky top-16 self-start shrink-0 w-[220px]
+                   max-h-[calc(100dvh-4rem)] overflow-y-auto overflow-x-hidden
+                   scrollbar-subtle pr-1 py-1"
       >
         <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold px-2 pb-2">
           On the board
         </div>
-        <nav className="flex flex-col gap-0.5 max-h-[calc(100vh-96px)] overflow-y-auto scrollbar-subtle pr-1">
+        <nav className="flex flex-col gap-0.5">
           {games.map((g) => {
             const on = g.game_id === activeId;
             const quiet = g.sharp_count === 0;
@@ -121,11 +171,11 @@ export function SlateRail({ games }: { games: RailGame[] }) {
                   )}
                   <TeamLogo abbr={g.away_team} size={18} flat />
                   <span className="font-bold tabular-nums">{g.away_team}</span>
-                  <span className="opacity-40">@</span>
+                  <span className="opacity-40">v</span>
                   <TeamLogo abbr={g.home_team} size={18} flat />
                   <span className="font-bold tabular-nums">{g.home_team}</span>
                   <span
-                    className={`ml-auto flex items-center gap-1 text-[10px] uppercase tracking-[0.12em] tabular-nums whitespace-nowrap ${
+                    className={`ml-auto flex items-center gap-1 text-[10px] uppercase tracking-[0.10em] tabular-nums whitespace-nowrap ${
                       live ? "text-[var(--color-pos)]" : ""
                     }`}
                   >
@@ -143,49 +193,6 @@ export function SlateRail({ games }: { games: RailGame[] }) {
           })}
         </nav>
       </aside>
-
-      {/* NARROW (< xl): horizontal logo strip pinned under the nav. Sibling of
-          main, own sticky context, eats 0 horizontal column width. */}
-      <div
-        data-rail-horizontal
-        className="xl:hidden sticky top-16 z-20 bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]"
-      >
-        <nav
-          aria-label="Jump to game"
-          className="flex gap-1.5 overflow-x-auto no-scrollbar px-3 py-2"
-        >
-          {games.map((g) => {
-            const on = g.game_id === activeId;
-            const quiet = g.sharp_count === 0;
-            const live = railLifecycle(g.game_state) === "live";
-            return (
-              <a
-                key={g.game_id}
-                href={`#game-${g.game_id}`}
-                onClick={jump(g.game_id)}
-                aria-current={on ? "true" : undefined}
-                aria-label={`Jump to ${g.away_team ?? "away"} at ${g.home_team ?? "home"}`}
-                className={`relative flex items-center gap-0.5 shrink-0 px-1.5 py-1 rounded-md ${
-                  quiet ? "opacity-60" : ""
-                } ${
-                  on
-                    ? "bg-[rgba(255,255,255,0.05)] ring-1 ring-inset ring-[rgba(255,255,255,0.14)]"
-                    : ""
-                }`}
-              >
-                <TeamLogo abbr={g.away_team} size={20} flat />
-                <TeamLogo abbr={g.home_team} size={20} flat />
-                {live && (
-                  <span
-                    aria-hidden
-                    className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--color-pos)] animate-pulse"
-                  />
-                )}
-              </a>
-            );
-          })}
-        </nav>
-      </div>
     </>
   );
 }
