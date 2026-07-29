@@ -31,7 +31,12 @@ export function SlateRail({ games }: { games: RailGame[] }) {
     const stripH =
       document.querySelector("[data-card-strip]")?.getBoundingClientRect()
         .height ?? 96;
-    const topInset = NAV_H + Math.round(stripH) + 8;
+    // Below xl a horizontal rail strip pins under the nav; at xl it is
+    // display:none, so its measured height is 0 and this term drops out.
+    const railH =
+      document.querySelector("[data-rail-horizontal]")?.getBoundingClientRect()
+        .height ?? 0;
+    const topInset = NAV_H + Math.round(railH) + Math.round(stripH) + 8;
     let raf = 0;
     const io = new IntersectionObserver(
       (entries) => {
@@ -141,7 +146,10 @@ export function SlateRail({ games }: { games: RailGame[] }) {
 
       {/* NARROW (< xl): horizontal logo strip pinned under the nav. Sibling of
           main, own sticky context, eats 0 horizontal column width. */}
-      <div className="xl:hidden sticky top-16 z-20 bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]">
+      <div
+        data-rail-horizontal
+        className="xl:hidden sticky top-16 z-20 bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]"
+      >
         <nav
           aria-label="Jump to game"
           className="flex gap-1.5 overflow-x-auto no-scrollbar px-3 py-2"
@@ -156,6 +164,7 @@ export function SlateRail({ games }: { games: RailGame[] }) {
                 href={`#game-${g.game_id}`}
                 onClick={jump(g.game_id)}
                 aria-current={on ? "true" : undefined}
+                aria-label={`Jump to ${g.away_team ?? "away"} at ${g.home_team ?? "home"}`}
                 className={`relative flex items-center gap-0.5 shrink-0 px-1.5 py-1 rounded-md ${
                   quiet ? "opacity-60" : ""
                 } ${
