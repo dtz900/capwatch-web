@@ -5,7 +5,7 @@ import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
 import { DateToggle } from "@/components/slate/DateToggle";
 import { CapperDayRanking } from "@/components/slate/CapperDayRanking";
-import { SlateRail } from "@/components/slate/SlateRail";
+import { SlateRailStrip, SlateRailColumn } from "@/components/slate/SlateRail";
 import { buildRailGames } from "@/lib/rail";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchSlate } from "@/lib/api";
@@ -174,12 +174,15 @@ export default async function SlatePage({ searchParams }: PageProps) {
         ])}
       />
       <TopNav />
+      {/* Mobile strip is a full-width sibling of <main> so it spans the
+          viewport and stays aligned with the board. It self-hides at xl. */}
+      <SlateRailStrip games={railGames} />
       <main className="max-w-[1400px] mx-auto px-4 sm:px-7 pb-24">
         {/* Two-column: a sticky matchup rail plus the board filling the rest.
             The flex wrapper must NOT get overflow or transform: it would break
             the nav sticky (top-0) and the GameBlock sticky strips (top-16). */}
         <div className="flex flex-col xl:flex-row xl:items-start gap-4 xl:gap-8">
-          <SlateRail games={railGames} />
+          <SlateRailColumn games={railGames} />
           <div className="min-w-0 flex-1">
             <header className="pt-12 pb-3 flex items-end justify-between gap-4 flex-wrap">
               <div>
