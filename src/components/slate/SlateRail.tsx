@@ -111,7 +111,7 @@ export function SlateRailStrip({ games }: { games: RailGame[] }) {
   return (
     <div
       data-rail-horizontal
-      className="xl:hidden sticky top-16 z-10 h-[46px] bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]"
+      className="xl:hidden sticky top-16 z-20 h-[46px] bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]"
     >
       <nav
         ref={navRef}

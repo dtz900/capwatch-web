@@ -249,7 +249,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
           hairline plus 2px team-color split at the bottom frame it. */}
       <div
         data-card-strip
-        className="sticky top-[110px] xl:top-16 z-20 bg-[#15151a]
+        className="sticky top-[110px] xl:top-16 z-10 bg-[#15151a]
                    border-t border-[rgba(255,255,255,0.10)]"
       >
         <div className="px-4 sm:px-6 py-4 sm:py-5">
