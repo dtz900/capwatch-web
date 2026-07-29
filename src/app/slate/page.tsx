@@ -5,6 +5,8 @@ import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
 import { DateToggle } from "@/components/slate/DateToggle";
 import { CapperDayRanking } from "@/components/slate/CapperDayRanking";
+import { SlateRail } from "@/components/slate/SlateRail";
+import { buildRailGames } from "@/lib/rail";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchSlate } from "@/lib/api";
 import { breadcrumbNode } from "@/lib/jsonld";
@@ -138,6 +140,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
   const totalPicks = allPicks.length;
   const gamesWithPicks = data.games.filter((g) => g.picks.length > 0);
   const gamesWithoutPicks = data.games.filter((g) => g.picks.length === 0);
+  const railGames = buildRailGames(gamesWithPicks, gamesWithoutPicks);
   const uniqueSharps = new Set(allPicks.map((p) => p.capper_id)).size;
   const totalGames = data.games.length;
   const ds = data.day_summary;
@@ -171,77 +174,85 @@ export default async function SlatePage({ searchParams }: PageProps) {
         ])}
       />
       <TopNav />
-      <main className="max-w-[920px] mx-auto px-4 sm:px-7 pb-24">
-        <header className="pt-12 pb-3 flex items-end justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-[44px] font-extrabold tracking-[-0.03em] leading-[1]">
-              {dateParam === "today" ? "Tonight's slate" : "Tomorrow's slate"}
-            </h1>
-            <p className="text-[13px] text-[var(--color-text-muted)] font-medium mt-3 tabular-nums">
-              {summaryLine}
-            </p>
-            <p className="text-[12px] text-[var(--color-text-muted)] font-medium mt-2 max-w-[640px]">
-              Sharps are ranked by their season straight-pick performance (units profit, min 10 graded picks).
-              Parlay legs route to the team they back but do not count toward the season rank.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <DateToggle current={dateParam} />
-            <ShareLinkButton
-              basePath="/slate"
-              queryParams={{ date: dateParam !== "today" ? dateParam : undefined }}
-            />
-          </div>
-        </header>
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-7 pb-24">
+        {/* Two-column: a sticky matchup rail plus the board filling the rest.
+            The flex wrapper must NOT get overflow or transform: it would break
+            the nav sticky (top-0) and the GameBlock sticky strips (top-16). */}
+        <div className="flex flex-col xl:flex-row xl:items-start gap-4 xl:gap-8">
+          <SlateRail games={railGames} />
+          <div className="min-w-0 flex-1">
+            <header className="pt-12 pb-3 flex items-end justify-between gap-4 flex-wrap">
+              <div>
+                <h1 className="text-[44px] font-extrabold tracking-[-0.03em] leading-[1]">
+                  {dateParam === "today" ? "Tonight's slate" : "Tomorrow's slate"}
+                </h1>
+                <p className="text-[13px] text-[var(--color-text-muted)] font-medium mt-3 tabular-nums">
+                  {summaryLine}
+                </p>
+                <p className="text-[12px] text-[var(--color-text-muted)] font-medium mt-2 max-w-[640px]">
+                  Sharps are ranked by their season straight-pick performance (units profit, min 10 graded picks).
+                  Parlay legs route to the team they back but do not count toward the season rank.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <DateToggle current={dateParam} />
+                <ShareLinkButton
+                  basePath="/slate"
+                  queryParams={{ date: dateParam !== "today" ? dateParam : undefined }}
+                />
+              </div>
+            </header>
 
-        {data.games.length === 0 ? (
-          <div className="mt-12 text-center">
-            <div className="text-[14px] font-semibold text-[var(--color-text-soft)] mb-1">
-              No MLB games on the slate.
-            </div>
-            <div className="text-[12px] text-[var(--color-text-muted)]">
-              Check back when games are scheduled.
-            </div>
-          </div>
-        ) : (
-          <>
-            {gamesWithPicks.length > 0 && (
-              <div className="mt-2 mb-5">
-                <SportsbookAd
-                  creative={BETMGM_1080x356}
-                  placement="slate-inline"
-                  className="w-full"
-                />
-              </div>
-            )}
-            {ds.graded_count > 0 && (data.capper_summary?.length ?? 0) > 0 && (
-              <div className="mb-5">
-                <CapperDayRanking
-                  summary={data.capper_summary}
-                  totalGraded={ds.graded_count}
-                  totalPending={ds.pending_count}
-                />
-              </div>
-            )}
-            <div className="flex flex-col gap-5 mt-2">
-              {gamesWithPicks.map((g) => (
-                <GameBlock key={g.game_id} game={g} />
-              ))}
-            </div>
-            {gamesWithoutPicks.length > 0 && (
-              <div className="mt-10 pt-6 border-t border-[rgba(255,255,255,0.06)]">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-2">
-                  Quiet · {gamesWithoutPicks.length} {gamesWithoutPicks.length === 1 ? "game" : "games"} with no picks tweeted
+            {data.games.length === 0 ? (
+              <div className="mt-12 text-center">
+                <div className="text-[14px] font-semibold text-[var(--color-text-soft)] mb-1">
+                  No MLB games on the slate.
                 </div>
-                <div className="flex flex-col">
-                  {gamesWithoutPicks.map((g) => (
-                    <QuietGameStrip key={g.game_id} game={g} />
+                <div className="text-[12px] text-[var(--color-text-muted)]">
+                  Check back when games are scheduled.
+                </div>
+              </div>
+            ) : (
+              <>
+                {gamesWithPicks.length > 0 && (
+                  <div className="mt-2 mb-5">
+                    <SportsbookAd
+                      creative={BETMGM_1080x356}
+                      placement="slate-inline"
+                      className="w-full"
+                    />
+                  </div>
+                )}
+                {ds.graded_count > 0 && (data.capper_summary?.length ?? 0) > 0 && (
+                  <div className="mb-5">
+                    <CapperDayRanking
+                      summary={data.capper_summary}
+                      totalGraded={ds.graded_count}
+                      totalPending={ds.pending_count}
+                    />
+                  </div>
+                )}
+                <div className="flex flex-col gap-5 mt-2">
+                  {gamesWithPicks.map((g) => (
+                    <GameBlock key={g.game_id} game={g} />
                   ))}
                 </div>
-              </div>
+                {gamesWithoutPicks.length > 0 && (
+                  <div className="mt-10 pt-6 border-t border-[rgba(255,255,255,0.06)]">
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-2">
+                      Quiet · {gamesWithoutPicks.length} {gamesWithoutPicks.length === 1 ? "game" : "games"} with no picks tweeted
+                    </div>
+                    <div className="flex flex-col">
+                      {gamesWithoutPicks.map((g) => (
+                        <QuietGameStrip key={g.game_id} game={g} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
 
         <footer className="mt-16 text-[11px] text-[var(--color-text-muted)] font-medium">
           Picks refresh every 60 seconds. Outcomes hit the leaderboard once games are graded.

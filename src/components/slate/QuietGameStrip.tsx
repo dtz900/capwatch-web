@@ -32,7 +32,8 @@ export function QuietGameStrip({ game }: { game: SlateGame }) {
   return (
     <div
       id={`game-${game.game_id}`}
-      className="flex items-center justify-between gap-3 py-2 text-[12px]"
+      data-slate-game={game.game_id}
+      className="flex items-center justify-between gap-3 py-2 text-[12px] scroll-mt-[112px] xl:scroll-mt-[96px]"
     >
       <div className="flex items-center gap-2 min-w-0 text-[var(--color-text-muted)]">
         <TeamLogo abbr={game.away_team} size={16} />
