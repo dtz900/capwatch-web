@@ -5,6 +5,8 @@ import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
 import { DateToggle } from "@/components/slate/DateToggle";
 import { CapperDayRanking } from "@/components/slate/CapperDayRanking";
+import { SlateRail } from "@/components/slate/SlateRail";
+import { buildRailGames } from "@/lib/rail";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchSlate } from "@/lib/api";
 import { breadcrumbNode } from "@/lib/jsonld";
@@ -138,6 +140,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
   const totalPicks = allPicks.length;
   const gamesWithPicks = data.games.filter((g) => g.picks.length > 0);
   const gamesWithoutPicks = data.games.filter((g) => g.picks.length === 0);
+  const railGames = buildRailGames(gamesWithPicks, gamesWithoutPicks);
   const uniqueSharps = new Set(allPicks.map((p) => p.capper_id)).size;
   const totalGames = data.games.length;
   const ds = data.day_summary;
@@ -171,6 +174,10 @@ export default async function SlatePage({ searchParams }: PageProps) {
         ])}
       />
       <TopNav />
+      {/* SlateRail is a SIBLING of <main>, never a wrapper. Do NOT wrap
+          TopNav + SlateRail + main in a container with overflow or transform:
+          it would break the nav sticky and the GameBlock sticky strips. */}
+      <SlateRail games={railGames} />
       <main className="max-w-[920px] mx-auto px-4 sm:px-7 pb-24">
         <header className="pt-12 pb-3 flex items-end justify-between gap-4 flex-wrap">
           <div>
