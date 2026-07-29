@@ -137,11 +137,10 @@ export function SlateRail({ games }: { games: RailGame[] }) {
         </nav>
       </div>
 
-      {/* DESKTOP (>= xl): full-height column of matchup boxes. Each box is a
-          mini scoreboard (team abbreviations with the score underneath). The
-          boxes flex to fill the whole viewport height. overflow-x-hidden means
-          the rail never grows a horizontal scrollbar; overflow-y-auto lets a
-          very long slate scroll internally without shrinking boxes to nothing. */}
+      {/* DESKTOP (>= xl): one full-height rectangle divided into a row per
+          matchup. Rows flex to fill the viewport height with no scrollbar, so
+          the rail is responsive to the screen size. The active row is marked by
+          a ribbon on the left edge, not a full fill. */}
       <aside
         aria-label="Jump to game"
         className="hidden xl:flex flex-col sticky top-16 self-start shrink-0 w-[220px]
@@ -150,7 +149,7 @@ export function SlateRail({ games }: { games: RailGame[] }) {
         <div className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold px-1 pb-2">
           On the board
         </div>
-        <nav className="flex-1 min-h-0 flex flex-col gap-1.5 overflow-y-auto overflow-x-hidden scrollbar-subtle pr-1">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden border border-[rgba(255,255,255,0.08)] divide-y divide-[rgba(255,255,255,0.08)]">
           {games.map((g) => {
             const on = g.game_id === activeId;
             const quiet = g.sharp_count === 0;
@@ -165,70 +164,73 @@ export function SlateRail({ games }: { games: RailGame[] }) {
                 onClick={jump(g.game_id)}
                 aria-current={on ? "true" : undefined}
                 aria-label={`Jump to ${g.away_team ?? "away"} versus ${g.home_team ?? "home"}`}
-                className={`flex-1 min-h-[52px] flex flex-col items-center justify-center gap-1
-                  rounded-lg border px-2 py-1.5 transition-colors ${
-                    quiet ? "opacity-60" : ""
-                  } ${
+                className={`relative flex-1 min-h-0 overflow-hidden flex flex-col justify-center gap-0.5 px-3
+                  transition-colors ${quiet ? "opacity-60" : ""} ${
                     on
-                      ? "border-[rgba(247,243,233,0.35)] bg-[rgba(255,255,255,0.06)]"
-                      : "border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.02)] hover:bg-[rgba(255,255,255,0.04)]"
+                      ? "text-[var(--color-text)]"
+                      : "text-[var(--color-text-soft)] hover:bg-[rgba(255,255,255,0.03)]"
                   }`}
               >
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1 w-full leading-none">
-                  <span className="flex items-center justify-center gap-1 min-w-0 text-[11px] font-bold tracking-tight">
+                {on && (
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#f7f3e9]"
+                  />
+                )}
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 leading-none">
+                  <span className="flex items-center gap-1 min-w-0 text-[11px] font-bold tracking-tight">
                     <TeamLogo abbr={g.away_team} size={14} flat />
                     <span className="truncate">{g.away_team}</span>
                   </span>
-                  <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">
+                  <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-50">
                     v
                   </span>
-                  <span className="flex items-center justify-center gap-1 min-w-0 text-[11px] font-bold tracking-tight">
+                  <span className="flex items-center justify-end gap-1 min-w-0 text-[11px] font-bold tracking-tight">
                     <span className="truncate">{g.home_team}</span>
                     <TeamLogo abbr={g.home_team} size={14} flat />
                   </span>
                 </div>
-
-                {showScore && (
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1 w-full leading-none">
-                    <span
-                      className="text-center text-[16px] font-extrabold tabular-nums"
-                      style={{ color: awayColor }}
-                    >
-                      {g.away_score ?? "-"}
-                    </span>
-                    <span />
-                    <span
-                      className="text-center text-[16px] font-extrabold tabular-nums"
-                      style={{ color: homeColor }}
-                    >
-                      {g.home_score ?? "-"}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-1 text-[9px] uppercase tracking-[0.14em] font-bold leading-none">
-                  {life === "live" ? (
-                    <span className="flex items-center gap-1 text-[var(--color-pos)]">
-                      <span
-                        aria-hidden
-                        className="w-1.5 h-1.5 rounded-full bg-[var(--color-pos)] animate-pulse"
-                      />
-                      {g.inning_half && g.inning != null
-                        ? `${g.inning_half.toUpperCase()} ${g.inning}`
-                        : "LIVE"}
-                    </span>
-                  ) : life === "final" ? (
-                    <span className="text-[var(--color-text-muted)]">FINAL</span>
-                  ) : (
-                    <span className="text-[var(--color-text-muted)]">
-                      {timeET(g.game_time)}
-                    </span>
-                  )}
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 leading-none">
+                  <span
+                    className="text-left text-[15px] font-extrabold tabular-nums"
+                    style={showScore ? { color: awayColor } : undefined}
+                  >
+                    {showScore ? g.away_score ?? "-" : ""}
+                  </span>
+                  <span
+                    className={`flex items-center gap-1 text-[8px] uppercase tracking-[0.12em] font-bold whitespace-nowrap ${
+                      life === "live"
+                        ? "text-[var(--color-pos)]"
+                        : "text-[var(--color-text-muted)]"
+                    }`}
+                  >
+                    {life === "live" ? (
+                      <>
+                        <span
+                          aria-hidden
+                          className="w-1 h-1 rounded-full bg-[var(--color-pos)] animate-pulse"
+                        />
+                        {g.inning_half && g.inning != null
+                          ? `${g.inning_half.toUpperCase()} ${g.inning}`
+                          : "LIVE"}
+                      </>
+                    ) : life === "final" ? (
+                      "FINAL"
+                    ) : (
+                      timeET(g.game_time)
+                    )}
+                  </span>
+                  <span
+                    className="text-right text-[15px] font-extrabold tabular-nums"
+                    style={showScore ? { color: homeColor } : undefined}
+                  >
+                    {showScore ? g.home_score ?? "-" : ""}
+                  </span>
                 </div>
               </a>
             );
           })}
-        </nav>
+        </div>
       </aside>
     </>
   );
