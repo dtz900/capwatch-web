@@ -227,6 +227,10 @@ export interface HistoryPick {
    * brand-killer pattern (capper pulling the receipt after the bet
    * went bad). Always false for multi-leg parlays. */
   deleted_after_game_start?: boolean;
+  /** Posted after the bound game's first pitch: a live entry at in-game
+   * odds. The badge tells followers what they're tailing; live prices
+   * have no meaningful close comparison so CLV math excludes them. */
+  is_live?: boolean;
 }
 
 /** Per-market straight-pick stats + cumulative trajectory, precomputed by the

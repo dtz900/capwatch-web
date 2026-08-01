@@ -153,6 +153,17 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
             )}
             {selectionNode}
           </span>
+          {pick.is_live && (
+            <span
+              className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
+                         text-[9px] uppercase tracking-[0.12em] font-bold
+                         bg-[rgba(25,245,124,0.10)] border border-[rgba(25,245,124,0.45)]
+                         text-[var(--color-pos)]"
+              title="Live entry: posted after first pitch at in-game odds."
+            >
+              Live
+            </span>
+          )}
           {pick.deleted_after_game_start && (
             <span
               className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
