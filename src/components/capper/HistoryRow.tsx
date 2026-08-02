@@ -310,8 +310,19 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           )}
           {selectionNode}
         </div>
-        {(pick.deleted_after_game_start || pick.was_deleted_on_x) && (
-          <div className="mt-1.5">
+        {(pick.is_live || pick.deleted_after_game_start || pick.was_deleted_on_x) && (
+          <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+            {pick.is_live && (
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded
+                           text-[9px] uppercase tracking-[0.12em] font-bold
+                           bg-[rgba(25,245,124,0.10)] border border-[rgba(25,245,124,0.45)]
+                           text-[var(--color-pos)]"
+                title="Live entry: posted after first pitch at in-game odds."
+              >
+                Live
+              </span>
+            )}
             {pick.deleted_after_game_start ? (
               <span
                 className="inline-flex items-center px-1.5 py-0.5 rounded
@@ -322,7 +333,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
               >
                 Deleted after first pitch
               </span>
-            ) : (
+            ) : pick.was_deleted_on_x ? (
               <span
                 className="inline-flex items-center px-1.5 py-0.5 rounded
                            text-[9px] uppercase tracking-[0.12em] font-bold
@@ -332,7 +343,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
               >
                 Deleted on X
               </span>
-            )}
+            ) : null}
           </div>
         )}
         <div className="mt-1 text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums flex items-center gap-3 flex-wrap">
