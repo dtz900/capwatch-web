@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { EmailAlertsToggle } from "@/components/account/EmailAlertsToggle";
 import { vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchPickOutcomes } from "@/lib/api";
@@ -235,6 +236,14 @@ export default function AccountPage() {
             to build your stable.
           </p>
         )}
+      </div>
+
+      {/* Notifications */}
+      <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
+        <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+          Notifications
+        </h2>
+        <EmailAlertsToggle />
       </div>
 
       {/* Bet slip record */}
