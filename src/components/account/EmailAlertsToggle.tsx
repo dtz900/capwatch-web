@@ -28,7 +28,9 @@ export function EmailAlertsToggle() {
         .select("email_tail_alerts")
         .eq("user_id", userId)
         .maybeSingle();
-      if (!cancelled && !error && data) setEnabled(Boolean(data.email_tail_alerts));
+      if (!cancelled && !error) {
+        setEnabled(data ? Boolean(data.email_tail_alerts) : true);
+      }
     })();
     return () => {
       cancelled = true;
@@ -40,11 +42,12 @@ export function EmailAlertsToggle() {
     setPending(true);
     const next = !enabled;
     setEnabled(next);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("ts_profiles")
       .update({ email_tail_alerts: next })
-      .eq("user_id", userId);
-    if (error) setEnabled(!next);
+      .eq("user_id", userId)
+      .select("email_tail_alerts");
+    if (error || !data || data.length === 0) setEnabled(!next);
     setPending(false);
   }
 
