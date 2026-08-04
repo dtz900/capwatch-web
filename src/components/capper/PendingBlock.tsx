@@ -5,7 +5,7 @@ import { XIcon } from "@/components/icons/XIcon";
 import { AffiliatePicker } from "@/components/affiliate/AffiliatePicker";
 import { AffiliateDisclaimer } from "@/components/affiliate/AffiliateDisclaimer";
 import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
-import { displayUnits } from "@/lib/formatters";
+import { formatStake } from "@/lib/formatters";
 import type { SportsbookSummary } from "@/lib/api";
 import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
@@ -31,8 +31,7 @@ function formatStakeUnits(u: number | null): string | null {
   // Clamp implausible stakes (e.g. the vision parser reading "$1,000.00" as a
   // 1000-unit bet) to 1u, using the same ceiling as the grader and the other
   // surfaces so a legit 6.4u play is shown, not collapsed to 1u.
-  const clamped = displayUnits(u);
-  return `${clamped.toFixed(clamped % 1 === 0 ? 0 : 1)}u`;
+  return formatStake(u);
 }
 
 function PendingRow({

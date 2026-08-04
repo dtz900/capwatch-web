@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatUnits, formatUnits2, formatRoi, formatWinRate, formatStreak, formatHandle, formatPickDate, displayUnits } from "@/lib/formatters";
+import { formatUnits, formatUnits2, formatUnitsSmart, formatRoi, formatWinRate, formatStreak, formatHandle, formatPickDate, displayUnits, trimUnits, formatStake, MAX_DECLARED_UNITS } from "@/lib/formatters";
 
 describe("formatUnits", () => {
   it("formats positive with + and one decimal", () => {
@@ -58,20 +58,66 @@ describe("formatUnits2", () => {
 describe("displayUnits", () => {
   // ChalkItSpreads posted "Pete Alonso o0.5 Hits +100 6.4u". The display cap
   // must honor that (the grader stores it at 6.4u), not collapse it to 1u.
-  it("honors declared stakes up to the grader cap (10u)", () => {
+  it("honors declared stakes up to the grader cap", () => {
     expect(displayUnits(6.4)).toBe(6.4);
     expect(displayUnits(3.2)).toBe(3.2);
-    expect(displayUnits(10)).toBe(10);
+    expect(displayUnits(25)).toBe(25);
+    expect(displayUnits(MAX_DECLARED_UNITS)).toBe(MAX_DECLARED_UNITS);
   });
   it("clamps implausible stakes to 1u (e.g. a dollar figure misread as units)", () => {
     expect(displayUnits(1000)).toBe(1);
-    expect(displayUnits(10.1)).toBe(1);
+    expect(displayUnits(MAX_DECLARED_UNITS + 0.1)).toBe(1);
   });
   it("defaults missing or non-positive to 1u", () => {
     expect(displayUnits(null)).toBe(1);
     expect(displayUnits(undefined)).toBe(1);
     expect(displayUnits(0)).toBe(1);
     expect(displayUnits(-2)).toBe(1);
+  });
+});
+
+describe("trimUnits", () => {
+  it("keeps quarter-unit stakes exact instead of rounding to 1 decimal", () => {
+    expect(trimUnits(1.25)).toBe("1.25");
+    expect(trimUnits(2.75)).toBe("2.75");
+  });
+  it("drops trailing zeros and the decimal point on whole numbers", () => {
+    expect(trimUnits(1)).toBe("1");
+    expect(trimUnits(1.5)).toBe("1.5");
+    expect(trimUnits(0.5)).toBe("0.5");
+  });
+  it("cleans float artifacts", () => {
+    expect(trimUnits(0.1 + 0.2)).toBe("0.3");
+  });
+});
+
+describe("formatStake", () => {
+  it("renders declared stakes exactly", () => {
+    expect(formatStake(1.25)).toBe("1.25u");
+    expect(formatStake(6.4)).toBe("6.4u");
+    expect(formatStake(1)).toBe("1u");
+  });
+  it("clamps missing or implausible stakes to the 1u baseline", () => {
+    expect(formatStake(null)).toBe("1u");
+    expect(formatStake(undefined)).toBe("1u");
+    expect(formatStake(0)).toBe("1u");
+    expect(formatStake(1000)).toBe("1u");
+  });
+});
+
+describe("formatUnitsSmart", () => {
+  it("uses 2 decimals when 1 decimal would round the value", () => {
+    expect(formatUnitsSmart(1.25)).toBe("+1.25");
+    expect(formatUnitsSmart(-1.25)).toBe("-1.25");
+  });
+  it("keeps 1 decimal when it is exact", () => {
+    expect(formatUnitsSmart(3)).toBe("+3.0");
+    expect(formatUnitsSmart(1.3)).toBe("+1.3");
+    expect(formatUnitsSmart(-2.5)).toBe("-2.5");
+  });
+  it("uses 2 decimals below 1 so small values don't render as +0.0", () => {
+    expect(formatUnitsSmart(0.91)).toBe("+0.91");
+    expect(formatUnitsSmart(-0.05)).toBe("-0.05");
   });
 });
 

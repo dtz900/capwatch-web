@@ -4,6 +4,7 @@ import { XIcon } from "@/components/icons/XIcon";
 import { SignalsIcon } from "@/components/icons/SignalsIcon";
 import { OutcomeBadge } from "./OutcomeBadge";
 import { formatPickText } from "@/lib/bet-format";
+import { trimUnits } from "@/lib/formatters";
 import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
 import type { SlatePick } from "@/lib/types";
 
@@ -20,8 +21,7 @@ function formatPostedAt(iso: string | null): string | null {
 }
 
 function formatStakeUnits(u: number): string {
-  if (u >= 1) return `${u.toFixed(u % 1 === 0 ? 0 : 1)}u`;
-  return `${u.toFixed(2)}u`;
+  return `${trimUnits(u)}u`;
 }
 
 interface Props {
