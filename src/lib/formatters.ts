@@ -10,12 +10,14 @@ export function formatUnits2(units: number): string {
 
 /**
  * Like formatUnits but switches to 2 decimals when the magnitude is below 1
- * so very small profits/losses don't render as "+0.0".
+ * (so very small profits/losses don't render as "+0.0") or when 1 decimal
+ * would round the value (so +1.25u never displays as +1.3u).
  */
 export function formatUnitsSmart(units: number): string {
   const sign = units >= 0 ? "+" : "-";
   const abs = Math.abs(units);
-  const decimals = abs < 1 ? 2 : 1;
+  const oneDecimalIsExact = Math.abs(abs * 10 - Math.round(abs * 10)) < 1e-9;
+  const decimals = abs < 1 || !oneDecimalIsExact ? 2 : 1;
   return `${sign}${abs.toFixed(decimals)}`;
 }
 
@@ -53,6 +55,20 @@ export const MAX_DECLARED_UNITS = 50;
 export function displayUnits(units: number | null | undefined): number {
   if (units == null || units <= 0) return 1;
   return units > MAX_DECLARED_UNITS ? 1 : units;
+}
+
+/**
+ * Exact units value for display: up to 2 decimals, trailing zeros trimmed
+ * (1 -> "1", 1.25 -> "1.25", 1.5 -> "1.5"). Stakes are declared facts, so
+ * never round them to 1 decimal: a 1.25u play must not display as 1.3u.
+ */
+export function trimUnits(value: number): string {
+  return String(parseFloat(value.toFixed(2)));
+}
+
+/** Canonical stake string for a pick, e.g. "1u", "1.25u", "6.4u". */
+export function formatStake(units: number | null | undefined): string {
+  return `${trimUnits(displayUnits(units))}u`;
 }
 
 /**

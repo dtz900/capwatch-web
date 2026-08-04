@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 import { netOdds, slipProfit, type SlipEntry } from "@/lib/betslip";
+import { trimUnits } from "@/lib/formatters";
 import { StatusPill } from "@/components/my-tails/StatusPill";
 import { VipTeaser } from "@/components/capper/VipTeaser";
 
@@ -14,7 +15,9 @@ import { VipTeaser } from "@/components/capper/VipTeaser";
 const SLIP_TEAL = "#2fd9c0";
 
 function unitsStr(v: number): string {
-  return `${v >= 0 ? "+" : ""}${v.toFixed(1)}u`;
+  // 1 decimal when exact, 2 when rounding would lie (+1.25u must not show +1.3u)
+  const oneDecimalIsExact = Math.abs(v * 10 - Math.round(v * 10)) < 1e-9;
+  return `${v >= 0 ? "+" : ""}${v.toFixed(oneDecimalIsExact ? 1 : 2)}u`;
 }
 
 function oddsStr(o: number): string {
@@ -103,7 +106,7 @@ export function SlipEntryRow({
       {graded && (
         <div className="mt-2.5 flex items-center justify-between border-t border-dashed border-[rgba(47,217,192,0.18)] pt-2.5">
           <span className="text-[11px] tabular-nums text-[#6da399]">
-            {entry.stake.toFixed(1)}u to win {(entry.stake * netOdds(entry.odds)).toFixed(2)}u
+            {trimUnits(entry.stake)}u to win {(entry.stake * netOdds(entry.odds)).toFixed(2)}u
           </span>
           <div className="flex items-center gap-2">
             {profit !== null && (
@@ -363,7 +366,7 @@ export function BetSlipRail() {
               <div className="flex items-center justify-between">
                 <span className="text-[#6da399]">Total wager</span>
                 <span className="font-extrabold text-white">
-                  {pending.wager.toFixed(1)}u
+                  {trimUnits(pending.wager)}u
                 </span>
               </div>
               <div className="flex items-center justify-between">

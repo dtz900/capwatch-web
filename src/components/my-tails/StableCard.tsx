@@ -7,7 +7,7 @@ import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { Sparkline } from "@/components/leaderboard/Sparkline";
 import { MomentumStrip } from "@/components/leaderboard/MomentumStrip";
 import { StatusPill } from "@/components/my-tails/StatusPill";
-import { formatUnits } from "@/lib/formatters";
+import { formatUnits, formatUnitsSmart } from "@/lib/formatters";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 
 export function StableCard({
@@ -226,8 +226,7 @@ export function StableCard({
                           p.profit_units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
                         }`}
                       >
-                        {p.profit_units >= 0 ? "+" : ""}
-                        {p.profit_units.toFixed(1)}u
+                        {formatUnitsSmart(p.profit_units)}u
                       </span>
                     )}
                     <StatusPill outcome={p.outcome} />
