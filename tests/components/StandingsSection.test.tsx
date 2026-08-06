@@ -54,6 +54,24 @@ describe("StandingsSection", () => {
     expect(screen.queryByRole("button", { name: "Tonight" })).not.toBeInTheDocument();
   });
 
+  it("collapses the weekly view while the day still has pending picks", () => {
+    const { container } = render(
+      <StandingsSection daily={[dayRow]} totalGraded={2} totalPending={5} week={week} dayLabel="Tonight" />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "This week" }));
+    expect(container.querySelector("details")).not.toBeNull();
+    expect(screen.getByText("@weekguy")).toBeInTheDocument();
+  });
+
+  it("shows the weekly view prominent once the day is complete", () => {
+    const { container } = render(
+      <StandingsSection daily={[dayRow]} totalGraded={2} totalPending={0} week={week} dayLabel="Tonight" />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "This week" }));
+    expect(container.querySelector("details")).toBeNull();
+    expect(screen.getByText("@weekguy")).toBeInTheDocument();
+  });
+
   it("renders nothing when neither view has graded rows", () => {
     const { container } = render(
       <StandingsSection daily={[]} totalGraded={0} totalPending={0} week={null} dayLabel="Tonight" />,
