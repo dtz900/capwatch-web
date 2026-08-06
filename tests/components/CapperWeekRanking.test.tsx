@@ -34,6 +34,22 @@ describe("CapperWeekRanking", () => {
     expect(screen.queryByText("@pendingonly")).not.toBeInTheDocument();
   });
 
+  it("renders a collapsed details strip when collapsed", () => {
+    const { container } = render(<CapperWeekRanking week={week} collapsed />);
+    const details = container.querySelector("details");
+    expect(details).not.toBeNull();
+    expect(details!.open).toBe(false);
+    expect(screen.getByText("Show ranking")).toBeInTheDocument();
+    // rows still exist inside the collapsed details
+    expect(screen.getByText("@sharpguy")).toBeInTheDocument();
+  });
+
+  it("renders the prominent card when not collapsed", () => {
+    const { container } = render(<CapperWeekRanking week={week} />);
+    expect(container.querySelector("details")).toBeNull();
+    expect(container.querySelector("section")).not.toBeNull();
+  });
+
   it("returns nothing when no capper has graded picks", () => {
     const empty = { ...week, capper_summary: [week.capper_summary[1]] };
     const { container } = render(<CapperWeekRanking week={empty} />);

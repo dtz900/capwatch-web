@@ -34,7 +34,12 @@ export function StandingsSection({ daily, totalGraded, totalPending, week, dayLa
     ) : undefined;
 
   if ((tab === "week" || !dailyHasRows) && week && weekHasRows) {
-    return <CapperWeekRanking week={week} toggleSlot={pills} />;
+    // While tonight is still grading, the weekly total stays a collapsed
+    // strip (same treatment as the live daily view) so it doesn't read as
+    // tonight's result. It goes prominent once the day is complete.
+    return (
+      <CapperWeekRanking week={week} toggleSlot={pills} collapsed={totalPending > 0} />
+    );
   }
   return (
     <CapperDayRanking

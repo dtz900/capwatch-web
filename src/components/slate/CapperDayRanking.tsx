@@ -77,7 +77,7 @@ export function CapperDayRanking({ summary, totalGraded, totalPending, toggleSlo
   );
 }
 
-function Chevron() {
+export function Chevron() {
   return (
     <svg
       width="10"
