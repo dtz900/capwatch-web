@@ -8,6 +8,7 @@ import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LivePicksIndicator } from "./LivePicksIndicator";
 import { Sparkline } from "./Sparkline";
 import { XIcon } from "@/components/icons/XIcon";
+import { XProfileLink } from "@/components/analytics/XProfileLink";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import { buildProfileHref } from "@/lib/profileHref";
 import type { CapperRow, Window } from "@/lib/types";
@@ -70,11 +71,13 @@ export function StandingsRow({ rank, capper, window }: Props) {
           <Sparkline values={capper.trajectory_units ?? []} />
         </div>
         <div className="text-right relative">
-          <a aria-label="View on X" target="_blank" rel="noopener"
-             href={capper.handle ? `https://x.com/${capper.handle}` : "#"}
-             className="inline-flex w-7 h-7 rounded-md bg-[rgba(255,255,255,0.04)] items-center justify-center text-[var(--color-text-muted)]">
+          <XProfileLink
+            handle={capper.handle}
+            surface="leaderboard"
+            className="inline-flex w-7 h-7 rounded-md bg-[rgba(255,255,255,0.04)] items-center justify-center text-[var(--color-text-muted)]"
+          >
             <XIcon size={11} />
-          </a>
+          </XProfileLink>
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { DeletedPicksPill } from "@/components/leaderboard/DeletedPicksPill";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { XIcon } from "@/components/icons/XIcon";
+import { XProfileLink } from "@/components/analytics/XProfileLink";
 import { RecentTrajectory } from "@/components/capper/RecentTrajectory";
 import { formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
@@ -71,16 +72,14 @@ export function CapperHero({
         <div className="text-[14px] text-[var(--color-text-muted)] font-semibold flex items-center gap-2 flex-wrap">
           {c.handle ? formatHandle(c.handle) : ""}
           {c.handle && (
-            <a
-              href={`https://x.com/${c.handle}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="View on X"
+            <XProfileLink
+              handle={c.handle}
+              surface="profile"
               className="w-7 h-7 inline-flex items-center justify-center rounded-md bg-[rgba(255,255,255,0.04)]
                          text-[var(--color-text-soft)] hover:text-white hover:bg-[rgba(255,255,255,0.10)] transition-colors"
             >
               <XIcon size={12} glow />
-            </a>
+            </XProfileLink>
           )}
         </div>
         {tagline && (

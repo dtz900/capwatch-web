@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@vercel/analytics";
 
 interface Props {
   /** Path component of the URL to share, e.g. "/cappers/foo" or "/slate". */
@@ -34,6 +35,7 @@ export function ShareLinkButton({
   const [error, setError] = useState(false);
 
   const onClick = async () => {
+    track("share_click", { path: basePath });
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(queryParams)) {
       if (v != null && v !== "") qs.set(k, v);
