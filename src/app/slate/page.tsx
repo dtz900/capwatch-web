@@ -4,11 +4,11 @@ import { TopNav } from "@/components/nav/TopNav";
 import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
 import { DateToggle } from "@/components/slate/DateToggle";
-import { CapperDayRanking } from "@/components/slate/CapperDayRanking";
+import { StandingsSection } from "@/components/slate/StandingsSection";
 import { SlateRailStrip, SlateRailColumn } from "@/components/slate/SlateRail";
 import { buildRailGames } from "@/lib/rail";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { fetchSlate } from "@/lib/api";
+import { fetchSlate, fetchWeekStandings } from "@/lib/api";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
@@ -136,6 +136,15 @@ export default async function SlatePage({ searchParams }: PageProps) {
     );
   }
 
+  // Weekly (Mon-Sun) standings rollup for the standings toggle. Null on any
+  // failure: the card then renders daily-only, exactly as before the toggle.
+  let week: Awaited<ReturnType<typeof fetchWeekStandings>> = null;
+  try {
+    week = await fetchWeekStandings(data.date);
+  } catch {
+    week = null;
+  }
+
   const allPicks = data.games.flatMap((g) => g.picks);
   const totalPicks = allPicks.length;
   const gamesWithPicks = data.games.filter((g) => g.picks.length > 0);
@@ -226,12 +235,15 @@ export default async function SlatePage({ searchParams }: PageProps) {
                     />
                   </div>
                 )}
-                {ds.graded_count > 0 && (data.capper_summary?.length ?? 0) > 0 && (
+                {((ds.graded_count > 0 && (data.capper_summary?.length ?? 0) > 0) ||
+                  (week?.capper_summary?.some((c) => c.graded_count > 0) ?? false)) && (
                   <div className="mb-5">
-                    <CapperDayRanking
-                      summary={data.capper_summary}
+                    <StandingsSection
+                      daily={data.capper_summary ?? []}
                       totalGraded={ds.graded_count}
                       totalPending={ds.pending_count}
+                      week={week}
+                      dayLabel={dateParam === "tomorrow" ? "Tomorrow" : "Tonight"}
                     />
                   </div>
                 )}

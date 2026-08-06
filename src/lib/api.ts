@@ -1,5 +1,12 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
 import { withKvCache } from "./kv-cache";
+import {
+  currentSlateDay,
+  weekBoundsFor,
+  weekDaysToFetch,
+  sumWeekStandings,
+  type WeekStandings,
+} from "./week-standings";
 import type {
   LeaderboardResponse,
   Window,
@@ -142,6 +149,33 @@ export async function fetchSlate(date: string = "today"): Promise<SlateResponse>
     });
     if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
     return (await res.json()) as SlateResponse;
+  });
+}
+
+// Weekly rollup gets its own KV entry so a cold render does not fan out
+// seven upstream slate calls per request. days.length is in the key so a
+// new day rolling into the week busts the cache immediately.
+const WEEK_TTL_SEC = 120;
+
+export async function fetchWeekStandings(
+  slateDateIso: string,
+): Promise<WeekStandings | null> {
+  const days = weekDaysToFetch(slateDateIso, currentSlateDay());
+  if (days.length === 0) return null;
+  const bounds = weekBoundsFor(slateDateIso);
+  const cacheKey = `slate:week:v1:${bounds.monday}:${days.length}`;
+  return withKvCache<WeekStandings>(cacheKey, WEEK_TTL_SEC, async () => {
+    // Promise.all is deliberate: one failed day fails the whole rollup
+    // (the page then hides the toggle) instead of rendering a partial week.
+    const responses = await Promise.all(days.map((d) => fetchSlate(d)));
+    return sumWeekStandings(
+      responses.map((r) => ({
+        date: r.date,
+        day_summary: r.day_summary,
+        capper_summary: r.capper_summary ?? [],
+      })),
+      bounds,
+    );
   });
 }
 

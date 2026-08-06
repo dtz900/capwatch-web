@@ -8,15 +8,17 @@ interface Props {
   summary: SlateCapperSummary[];
   totalGraded: number;
   totalPending: number;
+  /** Optional day/week pills rendered in the header (StandingsSection). */
+  toggleSlot?: React.ReactNode;
 }
 
-function formatRecord(c: SlateCapperSummary): string {
+export function formatRecord(c: SlateCapperSummary): string {
   let r = `${c.wins}-${c.losses}`;
   if (c.pushes > 0) r += `-${c.pushes}`;
   return r;
 }
 
-export function CapperDayRanking({ summary, totalGraded, totalPending }: Props) {
+export function CapperDayRanking({ summary, totalGraded, totalPending, toggleSlot }: Props) {
   // Ranking is "how did they do" — needs at least one graded outcome per
   // capper to mean anything. Fully pending cappers stay on the slate itself.
   const ranked = summary.filter((c) => c.graded_count > 0);
@@ -40,13 +42,14 @@ export function CapperDayRanking({ summary, totalGraded, totalPending }: Props) 
   if (isFinal) {
     return (
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-5 sm:px-7 sm:py-6">
-        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-[20px] sm:text-[22px] font-extrabold tracking-[-0.02em] leading-none">
             {headline}
           </h2>
           <span className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold tabular-nums">
             {subtitle}
           </span>
+          {toggleSlot ? <div className="ml-auto">{toggleSlot}</div> : null}
         </div>
         {rows}
       </section>
@@ -62,6 +65,7 @@ export function CapperDayRanking({ summary, totalGraded, totalPending }: Props) 
             {headline} · {subtitle}
           </span>
         </div>
+        {toggleSlot ? <span className="shrink-0">{toggleSlot}</span> : null}
         <span className="text-[11px] text-[var(--color-text-muted)] font-semibold shrink-0 flex items-center gap-1">
           <span className="group-open:hidden">Show ranking</span>
           <span className="hidden group-open:inline">Hide</span>
@@ -88,7 +92,7 @@ function Chevron() {
   );
 }
 
-function CapperRow({
+export function CapperRow({
   rank,
   capper,
   prominent,
