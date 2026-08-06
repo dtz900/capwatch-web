@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@vercel/analytics";
 import { CapperDayRanking } from "./CapperDayRanking";
 import { CapperWeekRanking } from "./CapperWeekRanking";
 import type { WeekStandings } from "@/lib/week-standings";
@@ -28,9 +29,14 @@ export function StandingsSection({ daily, totalGraded, totalPending, week, dayLa
 
   if (!dailyHasRows && !weekHasRows) return null;
 
+  const switchTab = (t: Tab) => {
+    if (t !== tab) track("slate_standings_toggle", { view: t });
+    setTab(t);
+  };
+
   const pills =
     dailyHasRows && weekHasRows ? (
-      <TogglePills tab={tab} onChange={setTab} dayLabel={dayLabel} />
+      <TogglePills tab={tab} onChange={switchTab} dayLabel={dayLabel} />
     ) : undefined;
 
   if ((tab === "week" || !dailyHasRows) && week && weekHasRows) {

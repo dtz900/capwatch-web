@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { track } from "@vercel/analytics";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -100,6 +101,7 @@ export function TailButton({
           .from("capper_follows")
           .insert({ user_id: session.user.id, capper_id: capperId, market: "all" });
         if (error) setFollows(before);
+        else track("tail_capper", { capper_id: capperId });
       }
     } finally {
       setPending(false);

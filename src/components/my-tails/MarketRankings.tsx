@@ -4,6 +4,7 @@ import Link from "next/link";
 import { buildEdgeView, MARKET_LABELS, VERDICT_WORDS, toneCls } from "@/lib/edges";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { XIcon } from "@/components/icons/XIcon";
+import { XProfileLink } from "@/components/analytics/XProfileLink";
 import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
@@ -161,15 +162,14 @@ function DivisionStrip({ market, rows }: { market: string; rows: RankedEdgeRow[]
                   buildEdgeView(champ).verdict.label}
               </span>
               {champ.handle && (
-                <a
-                  href={`https://x.com/${champ.handle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${champ.handle} on X`}
+                <XProfileLink
+                  handle={champ.handle}
+                  surface="my_tails"
+                  ariaLabel={`${champ.handle} on X`}
                   className="inline-flex h-6 w-6 items-center justify-center self-center rounded-md bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
                 >
                   <XIcon size={11} />
-                </a>
+                </XProfileLink>
               )}
             </div>
             <div className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">

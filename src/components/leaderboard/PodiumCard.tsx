@@ -10,6 +10,7 @@ import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LivePicksIndicator } from "./LivePicksIndicator";
 import Image from "next/image";
 import { XIcon } from "@/components/icons/XIcon";
+import { XProfileLink } from "@/components/analytics/XProfileLink";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
 import { buildProfileHref } from "@/lib/profileHref";
@@ -113,17 +114,15 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
           <span className="opacity-50">·</span>
           <span>{RANK_LABEL[rank]}</span>
         </div>
-        <a
-          aria-label="View on X"
-          target="_blank"
-          rel="noopener"
-          href={capper.handle ? `https://x.com/${capper.handle}` : "#"}
+        <XProfileLink
+          handle={capper.handle}
+          surface="podium"
           className="w-8 h-8 flex items-center justify-center bg-[rgba(255,255,255,0.04)]
                      rounded-lg text-[var(--color-text-soft)] hover:text-white
                      hover:bg-[rgba(255,255,255,0.10)] transition-colors"
         >
           <XIcon size={13} glow />
-        </a>
+        </XProfileLink>
       </div>
 
       {/* Avatar + name + status pills */}

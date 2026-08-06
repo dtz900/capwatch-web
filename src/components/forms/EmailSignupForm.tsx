@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@vercel/analytics";
 import { submitEmailSignup } from "@/lib/api";
 
 interface Props {
@@ -27,6 +28,7 @@ export function EmailSignupForm({
     setStatus("submitting");
     const result = await submitEmailSignup({ email, source });
     if (result === "ok") {
+      track("email_signup", { source });
       setStatus("ok");
       setEmail("");
     } else if (result === "invalid_email") {
