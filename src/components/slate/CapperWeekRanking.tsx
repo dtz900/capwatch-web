@@ -45,13 +45,15 @@ export function CapperWeekRanking({ week, toggleSlot, collapsed = false }: Props
               This week · {range} · {subtitle}
             </span>
           </div>
-          {toggleSlot ? <span className="shrink-0">{toggleSlot}</span> : null}
           <span className="text-[11px] text-[var(--color-text-muted)] font-semibold shrink-0 flex items-center gap-1">
             <span className="group-open:hidden">Show ranking</span>
             <span className="hidden group-open:inline">Hide</span>
             <Chevron />
           </span>
         </summary>
+        {/* Pills below the header, mirroring CapperDayRanking's live view:
+            the summary row keeps its full width for the counts on mobile. */}
+        {toggleSlot ? <div className="mt-3 flex">{toggleSlot}</div> : null}
         {rows}
       </details>
     );

@@ -44,6 +44,16 @@ describe("CapperWeekRanking", () => {
     expect(screen.getByText("@sharpguy")).toBeInTheDocument();
   });
 
+  it("keeps the toggle out of the collapsed summary row, below the header instead", () => {
+    const { container } = render(
+      <CapperWeekRanking week={week} collapsed toggleSlot={<button>pills</button>} />,
+    );
+    const summary = container.querySelector("summary")!;
+    expect(summary.querySelector("button")).toBeNull();
+    const details = container.querySelector("details")!;
+    expect(details.querySelector("button")).not.toBeNull();
+  });
+
   it("renders the prominent card when not collapsed", () => {
     const { container } = render(<CapperWeekRanking week={week} />);
     expect(container.querySelector("details")).toBeNull();

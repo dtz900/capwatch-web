@@ -65,13 +65,16 @@ export function CapperDayRanking({ summary, totalGraded, totalPending, toggleSlo
             {headline} · {subtitle}
           </span>
         </div>
-        {toggleSlot ? <span className="shrink-0">{toggleSlot}</span> : null}
         <span className="text-[11px] text-[var(--color-text-muted)] font-semibold shrink-0 flex items-center gap-1">
           <span className="group-open:hidden">Show ranking</span>
           <span className="hidden group-open:inline">Hide</span>
           <Chevron />
         </span>
       </summary>
+      {/* Pills live below the header, not in the summary row: on mobile they
+          crowd out the graded/pending counts, and while collapsed there is
+          nothing to toggle anyway (details content is hidden). */}
+      {toggleSlot ? <div className="mt-3 flex">{toggleSlot}</div> : null}
       {rows}
     </details>
   );
