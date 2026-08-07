@@ -75,6 +75,9 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
   const avatarSize = isGold ? 56 : 44;
 
   const tagline = identityTagline(capper);
+  // Mirrors StreakBadge's own render gate (no badge under a 2-day run), so the
+  // tagline row doesn't reserve space for a badge that renders nothing.
+  const hasStreak = Math.abs(capper.current_day_streak ?? 0) >= 2;
 
   return (
     <div
@@ -143,7 +146,6 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
               <span className="truncate">{capper.display_name ?? capper.handle}</span>
               {capper.has_paid_program && <PaidProgramPill />}
               <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
-              <StreakBadge streak={capper.current_day_streak} size="md" />
             </div>
             <div className="text-[var(--color-text-muted)] text-sm font-medium">
               {formatHandle(capper.handle)}
@@ -164,7 +166,6 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
               <span className="truncate">{capper.display_name ?? capper.handle}</span>
               {capper.has_paid_program && <PaidProgramPill />}
               <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
-              <StreakBadge streak={capper.current_day_streak} size="md" />
             </div>
           </div>
         </div>
@@ -178,10 +179,26 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
         <LivePicksIndicator capperId={capper.capper_id} initialCount={capper.live_picks_count} />
       </div>
 
-      {/* Identity tagline */}
+      {/* Identity tagline, then the streak badge on its OWN row.
+          The badge used to sit inline with the display name, where its 44px
+          icon and "heating up · 2d" text competed with the name for the same
+          row -- it truncated long names and inflated the card's intrinsic
+          width, which is what broke the podium's fr ratio. Sharing the tagline
+          row instead just moved the squeeze ("Moneyline grin..." at 1024 on a
+          275px side card), so it gets its own line: nothing to compete with at
+          any width, at a size matched to the 11px row rather than the 22px
+          name. */}
       {tagline && (
-        <div className="relative text-[11px] text-[var(--color-text-soft)] font-semibold mb-4 italic">
+        <div
+          className={`relative text-[11px] text-[var(--color-text-soft)] font-semibold italic
+                      ${hasStreak ? "mb-2" : "mb-4"}`}
+        >
           {tagline}
+        </div>
+      )}
+      {hasStreak && (
+        <div className="relative mb-4">
+          <StreakBadge streak={capper.current_day_streak} size="sm" showLabel />
         </div>
       )}
 
