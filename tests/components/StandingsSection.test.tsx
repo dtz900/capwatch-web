@@ -72,6 +72,24 @@ describe("StandingsSection", () => {
     expect(screen.getByText("@weekguy")).toBeInTheDocument();
   });
 
+  it("stays expanded when switching from the daily to the weekly view", () => {
+    const { container } = render(
+      <StandingsSection daily={[dayRow]} totalGraded={2} totalPending={5} week={week} dayLabel="Tonight" />,
+    );
+    const daily = container.querySelector("details")!;
+    expect(daily.open).toBe(false);
+    // Browsers flip `open` then fire `toggle`; jsdom queues that event
+    // asynchronously, so drive both steps explicitly to keep this synchronous.
+    daily.open = true;
+    fireEvent(daily, new Event("toggle"));
+    expect(container.querySelector("details")!.open).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "This week" }));
+    const weekly = container.querySelector("details")!;
+    expect(weekly.open).toBe(true);
+    expect(screen.getByText("@weekguy")).toBeInTheDocument();
+  });
+
   it("renders nothing when neither view has graded rows", () => {
     const { container } = render(
       <StandingsSection daily={[]} totalGraded={0} totalPending={0} week={null} dayLabel="Tonight" />,

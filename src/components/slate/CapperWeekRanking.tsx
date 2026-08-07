@@ -8,6 +8,10 @@ interface Props {
    * Used while the day's slate is still grading so the running weekly
    * total doesn't outshine the in-progress night. */
   collapsed?: boolean;
+  /** Controlled open state, shared with the daily view so switching tabs
+   * keeps the panel open instead of remounting closed. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 function fmtDay(iso: string): string {
@@ -17,7 +21,13 @@ function fmtDay(iso: string): string {
 
 /** Weekly counterpart of CapperDayRanking. Prominent card once the day is
  * final; collapsed details strip while the day is still live. */
-export function CapperWeekRanking({ week, toggleSlot, collapsed = false }: Props) {
+export function CapperWeekRanking({
+  week,
+  toggleSlot,
+  collapsed = false,
+  open,
+  onOpenChange,
+}: Props) {
   const ranked = week.capper_summary.filter((c) => c.graded_count > 0);
   if (ranked.length === 0) return null;
 
@@ -38,16 +48,24 @@ export function CapperWeekRanking({ week, toggleSlot, collapsed = false }: Props
 
   if (collapsed) {
     return (
-      <details className="group rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4">
+      <details
+        className="group rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4"
+        open={open}
+        onToggle={(e) => onOpenChange?.(e.currentTarget.open)}
+      >
         <summary className="list-none cursor-pointer select-none flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold truncate">
-              This week · {range} · {subtitle}
+            {/* The date range is dropped on mobile: "This week" already says
+                it, and the graded/pending counts matter more in that space. */}
+            <span className="text-[10px] uppercase tracking-[0.06em] sm:tracking-[0.18em] text-[var(--color-text-muted)] font-bold truncate">
+              This week<span className="hidden sm:inline"> · {range}</span> · {subtitle}
             </span>
           </div>
           <span className="text-[11px] text-[var(--color-text-muted)] font-semibold shrink-0 flex items-center gap-1">
-            <span className="group-open:hidden">Show ranking</span>
-            <span className="hidden group-open:inline">Hide</span>
+            <span className="hidden sm:inline">
+              <span className="group-open:hidden">Show ranking</span>
+              <span className="hidden group-open:inline">Hide</span>
+            </span>
             <Chevron />
           </span>
         </summary>
