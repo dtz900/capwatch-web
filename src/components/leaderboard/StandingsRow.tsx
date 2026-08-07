@@ -4,7 +4,6 @@ import { PickTiles } from "./PickTiles";
 import { StreakBadge } from "./StreakBadge";
 import { StatusPill } from "./StatusPill";
 import { PaidProgramPill } from "./PaidProgramPill";
-import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LivePicksIndicator } from "./LivePicksIndicator";
 import { Sparkline } from "./Sparkline";
 import { XIcon } from "@/components/icons/XIcon";
@@ -39,7 +38,6 @@ export function StandingsRow({ rank, capper, window }: Props) {
         <div className="text-xs text-[var(--color-text-muted)] font-medium flex items-center gap-1.5 flex-wrap">
           {capper.handle ? formatHandle(capper.handle) : ""}
           {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
-          <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
           <LivePicksIndicator capperId={capper.capper_id} initialCount={capper.live_picks_count} />
         </div>
       </div>

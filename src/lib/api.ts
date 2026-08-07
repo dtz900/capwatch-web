@@ -413,40 +413,6 @@ export async function fetchCapperProfileAdmin(
   return (await res.json()) as CapperProfile;
 }
 
-export interface DeletedPick {
-  id: number;
-  raw_id: number;
-  market: string | null;
-  selection: string | null;
-  line: number | null;
-  odds_taken: number | null;
-  units: number | null;
-  parlay_id: number | null;
-  parlay_leg_index: number | null;
-  posted_at: string;
-  tweet_deleted_at: string;
-  tweet_body: string;
-  /** When non-null, refers to a still-live capper_picks.id with the same
-   * selection/market/line/odds within +/- 24h, suggesting this row was
-   * an edit or duplicate ingest rather than a real deletion. */
-  likely_duplicate_of: number | null;
-  /** When non-null, the deleted tweet was followed within an hour by a
-   * still-live tweet from the same capper with the same body content.
-   * This is "delete and repost", effectively an edit, not a credibility-
-   * affecting deletion. URL points to the live replacement tweet. */
-  replacement_tweet_url: string | null;
-}
-
-export interface DeletedPicksResponse {
-  handle: string;
-  items: DeletedPick[];
-  summary: {
-    total: number;
-    reposted: number;
-    truly_deleted: number;
-  };
-}
-
 export type EmailSignupStatus = "ok" | "invalid_email" | "error";
 
 export async function submitEmailSignup(input: { email: string; source?: string }): Promise<EmailSignupStatus> {
@@ -482,14 +448,6 @@ export async function fetchPipelineStatus(): Promise<PipelineStatusResponse | nu
   } catch {
     return null;
   }
-}
-
-export async function fetchDeletedPicks(handle: string): Promise<DeletedPicksResponse> {
-  const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}/deleted-picks`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (res.status === 404) throw new Error("not_found");
-  if (!res.ok) throw new Error(`Deleted picks fetch failed: ${res.status}`);
-  return res.json() as Promise<DeletedPicksResponse>;
 }
 
 const PALACE_TTL_SEC = 30;
