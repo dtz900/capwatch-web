@@ -26,6 +26,10 @@ export function StandingsSection({ daily, totalGraded, totalPending, week, dayLa
   const dailyHasRows = totalGraded > 0 && daily.some((c) => c.graded_count > 0);
   const weekHasRows = (week?.capper_summary ?? []).some((c) => c.graded_count > 0);
   const [tab, setTab] = useState<Tab>(dailyHasRows ? "day" : "week");
+  // Shared across both views: the day and week panels are separate <details>
+  // elements, so without lifting this, switching tabs remounts a fresh one
+  // that defaults to closed and the ranking snaps shut under the user.
+  const [expanded, setExpanded] = useState(false);
 
   if (!dailyHasRows && !weekHasRows) return null;
 
@@ -44,7 +48,13 @@ export function StandingsSection({ daily, totalGraded, totalPending, week, dayLa
     // strip (same treatment as the live daily view) so it doesn't read as
     // tonight's result. It goes prominent once the day is complete.
     return (
-      <CapperWeekRanking week={week} toggleSlot={pills} collapsed={totalPending > 0} />
+      <CapperWeekRanking
+        week={week}
+        toggleSlot={pills}
+        collapsed={totalPending > 0}
+        open={expanded}
+        onOpenChange={setExpanded}
+      />
     );
   }
   return (
@@ -53,6 +63,8 @@ export function StandingsSection({ daily, totalGraded, totalPending, week, dayLa
       totalGraded={totalGraded}
       totalPending={totalPending}
       toggleSlot={pills}
+      open={expanded}
+      onOpenChange={setExpanded}
     />
   );
 }

@@ -10,6 +10,12 @@ interface Props {
   totalPending: number;
   /** Optional day/week pills rendered in the header (StandingsSection). */
   toggleSlot?: React.ReactNode;
+  /** Controlled open state for the live (collapsed) variant. StandingsSection
+   * owns this so switching between the day and week views keeps the panel
+   * open: each view is its own <details>, and an uncontrolled one would
+   * remount closed. Left undefined the element stays uncontrolled. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function formatRecord(c: SlateCapperSummary): string {
@@ -18,7 +24,14 @@ export function formatRecord(c: SlateCapperSummary): string {
   return r;
 }
 
-export function CapperDayRanking({ summary, totalGraded, totalPending, toggleSlot }: Props) {
+export function CapperDayRanking({
+  summary,
+  totalGraded,
+  totalPending,
+  toggleSlot,
+  open,
+  onOpenChange,
+}: Props) {
   // Ranking is "how did they do" — needs at least one graded outcome per
   // capper to mean anything. Fully pending cappers stay on the slate itself.
   const ranked = summary.filter((c) => c.graded_count > 0);
@@ -57,17 +70,27 @@ export function CapperDayRanking({ summary, totalGraded, totalPending, toggleSlo
   }
 
   return (
-    <details className="group rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4">
+    <details
+      className="group rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4"
+      open={open}
+      onToggle={(e) => onOpenChange?.(e.currentTarget.open)}
+    >
       <summary className="list-none cursor-pointer select-none flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className="inline-flex w-1.5 h-1.5 rounded-full bg-[var(--color-pos)] animate-pulse shrink-0" />
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold truncate">
+          {/* Tighter tracking on mobile so the graded/pending counts fit
+              without truncating; full letter-spacing returns at sm. */}
+          <span className="text-[10px] uppercase tracking-[0.06em] sm:tracking-[0.18em] text-[var(--color-text-muted)] font-bold truncate">
             {headline} · {subtitle}
           </span>
         </div>
         <span className="text-[11px] text-[var(--color-text-muted)] font-semibold shrink-0 flex items-center gap-1">
-          <span className="group-open:hidden">Show ranking</span>
-          <span className="hidden group-open:inline">Hide</span>
+          {/* Label is desktop-only: on mobile the counts need every pixel of
+              the summary row, and the chevron already reads as expandable. */}
+          <span className="hidden sm:inline">
+            <span className="group-open:hidden">Show ranking</span>
+            <span className="hidden group-open:inline">Hide</span>
+          </span>
           <Chevron />
         </span>
       </summary>
