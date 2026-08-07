@@ -1,6 +1,5 @@
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
-import { DeletedPicksPill } from "@/components/leaderboard/DeletedPicksPill";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { XIcon } from "@/components/icons/XIcon";
 import { XProfileLink } from "@/components/analytics/XProfileLink";
@@ -66,7 +65,6 @@ export function CapperHero({
             {c.display_name ?? c.handle}
           </h1>
           {c.has_paid_program && <PaidProgramPill />}
-          <DeletedPicksPill count={windowAgg?.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
           <StreakBadge streak={c.current_day_streak} size="md" />
         </div>
         <div className="text-[14px] text-[var(--color-text-muted)] font-semibold flex items-center gap-2 flex-wrap">

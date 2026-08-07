@@ -6,7 +6,6 @@ import { BiggestWin } from "./BiggestWin";
 import { Sparkline } from "./Sparkline";
 import { MomentumStrip } from "./MomentumStrip";
 import { PaidProgramPill } from "./PaidProgramPill";
-import { DeletedPicksPill } from "./DeletedPicksPill";
 import { LivePicksIndicator } from "./LivePicksIndicator";
 import Image from "next/image";
 import { XIcon } from "@/components/icons/XIcon";
@@ -145,7 +144,6 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
             <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 min-w-0 tracking-[-0.02em] ${nameSize}`}>
               <span className="truncate">{capper.display_name ?? capper.handle}</span>
               {capper.has_paid_program && <PaidProgramPill />}
-              <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
             </div>
             <div className="text-[var(--color-text-muted)] text-sm font-medium">
               {formatHandle(capper.handle)}
@@ -165,7 +163,6 @@ export function PodiumCard({ rank, variant, capper, window }: Props) {
             <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 min-w-0 tracking-[-0.02em] ${nameSize}`}>
               <span className="truncate">{capper.display_name ?? capper.handle}</span>
               {capper.has_paid_program && <PaidProgramPill />}
-              <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
             </div>
           </div>
         </div>
