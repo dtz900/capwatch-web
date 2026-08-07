@@ -41,6 +41,13 @@ const TONE = {
 interface Props {
   streak?: number | null;
   size?: "xs" | "sm" | "md";
+  /**
+   * Force the word label ("heating up · 2d") at every width, independent of
+   * size. Label visibility is otherwise tied to size, which couples "how big
+   * is the icon" to "how much text fits" -- fine for the dense rows, wrong for
+   * the podium tagline row, which wants the full label next to a SMALL icon.
+   */
+  showLabel?: boolean;
 }
 
 const DIM = { xs: 24, sm: 32, md: 44 } as const;
@@ -51,7 +58,7 @@ const DIM = { xs: 24, sm: 32, md: 44 } as const;
  * No background chip, so transparent icons read clean against the row. Renders
  * nothing when the capper is not on a 2+ day run.
  */
-export function StreakBadge({ streak, size = "sm" }: Props) {
+export function StreakBadge({ streak, size = "sm", showLabel = false }: Props) {
   const value = streak ?? 0;
   const tier = streakTier(value);
   if (!tier) return null;
@@ -78,11 +85,15 @@ export function StreakBadge({ streak, size = "sm" }: Props) {
       <img src={tier.icon} alt="" className="streak-icon shrink-0" style={iconStyle} />
       {/* xs (slate standings rows) is icon-only on mobile: the row has no room
           for handle + count, and the tooltip still carries the number. */}
-      <span className={size === "xs" ? "hidden sm:inline" : ""}>
+      <span className={!showLabel && size === "xs" ? "hidden sm:inline" : ""}>
         {/* On the dense desktop rows show just the day count; mobile and the
-            podium (size md) have room for the full label. xs is dense at every
-            width, so it never shows the label. */}
-        <span className={size === "sm" ? "sm:hidden" : size === "xs" ? "hidden" : ""}>
+            podium have room for the full label. xs is dense at every width, so
+            it never shows the label unless showLabel overrides. */}
+        <span
+          className={
+            showLabel ? "" : size === "sm" ? "sm:hidden" : size === "xs" ? "hidden" : ""
+          }
+        >
           {tier.label}
           <span className="opacity-50"> · </span>
         </span>
