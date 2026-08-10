@@ -10,6 +10,7 @@ import {
   type PlayerSearchResult,
   type GameSearchResult,
 } from "./actions";
+import { sideSelection } from "./sideSelection";
 
 interface Props {
   pickId: number;
@@ -21,6 +22,9 @@ interface Props {
   units: number | null;
   playerId: number | null;
   gameId: string | null;
+  /** Date of the bound game (mlb_predictions.game_date), when known. Drives
+   * the side-selector matchup lookup. */
+  gameDate: string | null;
   postedAt: string | null;
 }
 
@@ -112,6 +116,35 @@ export function FixPanel(props: Props) {
     );
   };
 
+  // Side selector: when the game is bound but the grader couldn't tell which
+  // team the capper is on ("Sox ML" is Red Sox or White Sox), the fix is one
+  // click: rewrite the selection's team token to the chosen side's abbr. The
+  // patch clears the stale grade so the next grader pass regrades it.
+  const [matchup, setMatchup] = useState<GameSearchResult | null>(null);
+
+  const loadMatchup = async () => {
+    if (!props.gameId) return;
+    const dates = [props.gameDate, props.postedAt?.slice(0, 10)].filter(
+      (d): d is string => !!d,
+    );
+    for (const d of dates) {
+      const games = await searchGamesAction(d);
+      const hit = games.find((g) => String(g.game_pk) === props.gameId);
+      if (hit) {
+        setMatchup(hit);
+        return;
+      }
+    }
+  };
+
+  const onPickSide = (abbr: string) => {
+    const next = sideSelection(props.selection, abbr);
+    runAction(
+      () => patchPickAction(props.pickId, { selection: next }),
+      `Selection → ${next} (regrades on next grader pass)`,
+    );
+  };
+
   const onPickMarket = (m: string) => {
     runAction(() => patchPickAction(props.pickId, { market: m }), `Market → ${m}`);
   };
@@ -178,7 +211,10 @@ export function FixPanel(props: Props) {
       <div className="mt-2 flex justify-end">
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen(true);
+            void loadMatchup();
+          }}
           className="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-[0.10em]
                      bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
         >
@@ -202,6 +238,40 @@ export function FixPanel(props: Props) {
           <OutcomeButton label="Void" tone="muted" disabled={pending} onClick={() => onMarkOutcome("void")} />
         </div>
       </div>
+
+      {/* Section 1.5: Side selector. Shown whenever the pick has a bound,
+          findable game. Fixes the "game bound but side ambiguous" class
+          ("Sox ML") without hand-typing anything. */}
+      {matchup && (
+        <div className="border-t border-[rgba(255,255,255,0.06)] pt-3">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold mb-2">
+            Which side? ({matchup.away_team} @ {matchup.home_team})
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            {[
+              { abbr: matchup.away_team, tag: "away" },
+              { abbr: matchup.home_team, tag: "home" },
+            ].map(({ abbr, tag }) =>
+              abbr ? (
+                <button
+                  key={tag}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => onPickSide(abbr)}
+                  title={`Rewrite selection to "${sideSelection(props.selection, abbr)}"`}
+                  className="px-4 py-1.5 rounded-md text-[11px] font-extrabold uppercase tracking-[0.10em]
+                             bg-[rgba(192,132,252,0.15)] text-[#c084fc] hover:bg-[rgba(192,132,252,0.25)] disabled:opacity-50"
+                >
+                  {abbr} <span className="opacity-60 font-bold">({tag})</span>
+                </button>
+              ) : null,
+            )}
+            <span className="text-[9px] text-[var(--color-text-muted)]">
+              Rewrites the selection so the grader knows the team, then regrades.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Section 2: Reason-specific edit (if any) */}
       {lane !== "none" && (
