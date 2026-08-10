@@ -390,6 +390,7 @@ function ProblemRow({
         units={p.units}
         playerId={p.player_id}
         gameId={p.game_id}
+        gameDate={p.game_date}
         postedAt={p.posted_at}
       />
     </div>
