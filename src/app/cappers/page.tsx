@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
+import { StatusPill } from "@/components/leaderboard/StatusPill";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { ChevronIcon } from "@/components/icons/ChevronIcon";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -179,8 +180,9 @@ function CapperIndexRow({
             {c.has_paid_program && <PaidProgramPill />}
             <StreakBadge streak={c.current_day_streak} />
           </div>
-          <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate mt-[3px]">
-            {c.handle ? formatHandle(c.handle) : ""}
+          <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-[3px] flex items-center gap-1.5 min-w-0">
+            <span className="truncate">{c.handle ? formatHandle(c.handle) : ""}</span>
+            {c.activity_status !== "active" && <StatusPill status={c.activity_status} />}
           </div>
         </div>
         <div className="text-right text-[13px] text-[var(--color-text-soft)] font-semibold tabular-nums">
@@ -211,8 +213,9 @@ function CapperIndexRow({
               {c.has_paid_program && <PaidProgramPill />}
               <StreakBadge streak={c.current_day_streak} />
             </div>
-            <div className="text-[12px] text-[var(--color-text-muted)] font-medium truncate mt-[2px]">
-              {c.handle ? formatHandle(c.handle) : ""}
+            <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-[2px] flex items-center gap-1.5 min-w-0">
+              <span className="truncate">{c.handle ? formatHandle(c.handle) : ""}</span>
+              {c.activity_status !== "active" && <StatusPill status={c.activity_status} />}
             </div>
           </div>
         </div>
