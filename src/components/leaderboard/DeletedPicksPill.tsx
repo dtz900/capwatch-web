@@ -77,6 +77,9 @@ export function DeletedPicksPill({ count, handle }: Props) {
         type="button"
         aria-label={`${count} deleted slips. Click for details.`}
         onClick={(e) => {
+          // Both guards matter: the pill renders inside whole-row <Link>
+          // anchors on /cappers, where an unprevented click navigates.
+          e.preventDefault();
           e.stopPropagation();
           setOpen(true);
         }}
@@ -94,10 +97,16 @@ export function DeletedPicksPill({ count, handle }: Props) {
           className="fixed inset-0 z-50 flex items-start justify-center bg-black/85 backdrop-blur-sm px-4 py-10 overflow-y-auto"
           aria-modal="true"
           role="dialog"
+          onClick={(e) => e.preventDefault()}
         >
           <div
             ref={dialogRef}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              // preventDefault so clicks inside the dialog can't trigger a
+              // wrapping <Link>'s navigation (/cappers rows are anchors).
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             className="w-full max-w-2xl rounded-xl border border-[rgba(255,255,255,0.10)]
                        bg-[#15151a] shadow-2xl"
           >
