@@ -12,6 +12,7 @@ interface SearchOption {
   displayName: string | null;
   profileImageUrl: string | null;
   picksCount: number;
+  accountDeleted: boolean;
 }
 
 const MAX_RESULTS = 8;
@@ -47,6 +48,7 @@ export function NavSearch() {
           displayName: r.display_name,
           profileImageUrl: r.profile_image_url,
           picksCount: r.picks_count,
+          accountDeleted: r.account_deleted_at != null,
         }));
       setOptions(opts);
     } catch {
@@ -188,6 +190,7 @@ export function NavSearch() {
                     handle={r.handle}
                     size={32}
                     apiIntegrated={r.handle === "fadeai_"}
+                    accountDeleted={r.accountDeleted}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="text-[14px] font-bold text-[var(--color-text)] truncate">

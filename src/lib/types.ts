@@ -45,6 +45,8 @@ export interface CapperRow {
   follower_count: number | null;
   profile_image_url: string | null;
   has_paid_program: boolean;
+  /** Set when the capper deleted their whole X account. */
+  account_deleted_at?: string | null;
   picks_count: number;
   wins: number;
   losses: number;

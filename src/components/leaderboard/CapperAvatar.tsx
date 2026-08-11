@@ -6,6 +6,9 @@ interface Props {
   size?: number;
   className?: string;
   apiIntegrated?: boolean;
+  /** Capper deleted their whole X account. Dims the avatar and stamps an
+   * angled DELETED band over it (GTA-wasted style), scaled to `size`. */
+  accountDeleted?: boolean;
 }
 
 export function CapperAvatar({
@@ -14,12 +17,14 @@ export function CapperAvatar({
   size = 48,
   className = "",
   apiIntegrated = false,
+  accountDeleted = false,
 }: Props) {
   const initials = (handle ?? "??").replace(/^@/, "").slice(0, 2).toUpperCase();
 
+  let avatar: React.ReactNode;
   if (apiIntegrated) {
     const innerSize = size - 4;
-    return (
+    avatar = (
       <div
         className={`relative rounded-full flex items-center justify-center shrink-0 ${className}`}
         style={{
@@ -49,27 +54,54 @@ export function CapperAvatar({
         </div>
       </div>
     );
-  }
-
-  const wrap = `relative rounded-full overflow-hidden border border-[rgba(255,255,255,0.10)] bg-[#2a2a2e] flex items-center justify-center shrink-0 ${className}`;
-  const dim = { width: size, height: size };
-
-  if (!url) {
-    return (
+  } else {
+    const wrap = `relative rounded-full overflow-hidden border border-[rgba(255,255,255,0.10)] bg-[#2a2a2e] flex items-center justify-center shrink-0 ${className}`;
+    const dim = { width: size, height: size };
+    avatar = (
       <div className={wrap} style={dim}>
-        <span
-          className="text-[var(--color-text)] font-bold"
-          style={{ fontSize: size * 0.35 }}
-        >
-          {initials}
-        </span>
+        {url ? (
+          <Image src={url} alt={initials} width={size} height={size} />
+        ) : (
+          <span
+            className="text-[var(--color-text)] font-bold"
+            style={{ fontSize: size * 0.35 }}
+          >
+            {initials}
+          </span>
+        )}
       </div>
     );
   }
 
+  if (!accountDeleted) return avatar;
+
+  // GTA-wasted style band: oversized relative to the avatar so it spills
+  // past the edges. Scales with `size` so it works from 40px list rows to
+  // the 72px profile hero.
+  const stampFont = Math.max(9, Math.round(size * 0.21));
   return (
-    <div className={wrap} style={dim}>
-      <Image src={url} alt={initials} width={size} height={size} />
+    <div
+      className="relative shrink-0"
+      style={{ width: size, height: size }}
+      title="This X account has been deleted. The graded record stands."
+    >
+      <div className="opacity-35 grayscale">{avatar}</div>
+      <span
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12
+                   whitespace-nowrap font-black uppercase
+                   pointer-events-none select-none z-10"
+        style={{
+          fontSize: stampFont,
+          letterSpacing: "0.16em",
+          padding: `${Math.max(2, Math.round(size * 0.045))}px ${Math.max(6, Math.round(size * 0.17))}px`,
+          color: "#d63c3c",
+          background: "rgba(0,0,0,0.82)",
+          textShadow: "0 1px 0 rgba(0,0,0,0.9)",
+          boxShadow: "0 0 0 1px rgba(0,0,0,0.6)",
+        }}
+      >
+        Deleted
+      </span>
     </div>
   );
 }

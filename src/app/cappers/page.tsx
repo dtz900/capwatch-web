@@ -170,7 +170,7 @@ function CapperIndexRow({
                   ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
     >
       <div className={`${DESKTOP_GRID} px-6 py-[18px]`}>
-        <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} />
+        <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} accountDeleted={c.account_deleted_at != null} />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
@@ -202,7 +202,7 @@ function CapperIndexRow({
 
       <div className="sm:hidden block px-4 py-3.5">
         <div className="flex items-center gap-3 min-w-0">
-          <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} />
+          <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} accountDeleted={c.account_deleted_at != null} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
