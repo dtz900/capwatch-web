@@ -294,6 +294,9 @@ export interface CapperProfile {
     has_paid_program: boolean;
     last_pick_at: string | null;
     last_tweet_at: string | null;
+    /** Set when the capper deleted their whole X account (not just tweets).
+     * Drives the DELETED stamp over the hero avatar. */
+    account_deleted_at?: string | null;
     /** Signed per-day hot/cold streak; mirrors the leaderboard StreakBadge. */
     current_day_streak?: number;
   };
