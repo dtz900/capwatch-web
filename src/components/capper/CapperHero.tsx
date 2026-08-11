@@ -60,27 +60,13 @@ export function CapperHero({
 
   return (
     <header className="flex items-start gap-5 flex-wrap mb-6">
-      {accountDeleted ? (
-        <div
-          className="relative shrink-0"
-          title="This X account has been deleted. The graded record stands."
-        >
-          <div className="opacity-35 grayscale">
-            <CapperAvatar url={c.profile_image_url} handle={c.handle} size={72} apiIntegrated={isModel} />
-          </div>
-          <span
-            className="absolute inset-0 m-auto h-fit w-fit -rotate-12
-                       text-[11px] font-extrabold uppercase tracking-[0.14em]
-                       text-[var(--color-neg)] bg-[rgba(20,20,24,0.85)]
-                       border-2 border-[var(--color-neg)] rounded
-                       px-1.5 py-0.5 pointer-events-none select-none"
-          >
-            Deleted
-          </span>
-        </div>
-      ) : (
-        <CapperAvatar url={c.profile_image_url} handle={c.handle} size={72} apiIntegrated={isModel} />
-      )}
+      <CapperAvatar
+        url={c.profile_image_url}
+        handle={c.handle}
+        size={72}
+        apiIntegrated={isModel}
+        accountDeleted={accountDeleted}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <h1 className="text-[24px] sm:text-[32px] font-extrabold tracking-[-0.02em] leading-none">
