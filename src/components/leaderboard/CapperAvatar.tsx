@@ -1,4 +1,9 @@
 import Image from "next/image";
+import { Titan_One } from "next/font/google";
+
+// Closest cleanly-licensed match to GTA's Pricedown for the DELETED stamp.
+// Self-hosted by next/font at build time; no runtime font request.
+const stampFont = Titan_One({ weight: "400", subsets: ["latin"] });
 
 interface Props {
   url: string | null;
@@ -75,10 +80,10 @@ export function CapperAvatar({
 
   if (!accountDeleted) return avatar;
 
-  // GTA-wasted style band: oversized relative to the avatar so it spills
-  // past the edges. Scales with `size` so it works from 40px list rows to
-  // the 72px profile hero.
-  const stampFont = Math.max(9, Math.round(size * 0.21));
+  // GTA-wasted style stamp: chunky lowercase letters with a black outline
+  // (like the "wasted" patch), oversized so it spills past the avatar
+  // edges. Scales with `size` from 32px search rows to the 72px hero.
+  const stampSize = Math.max(10, Math.round(size * 0.26));
   return (
     <div
       className="relative shrink-0"
@@ -87,20 +92,19 @@ export function CapperAvatar({
     >
       <div className="opacity-35 grayscale">{avatar}</div>
       <span
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12
-                   whitespace-nowrap font-black uppercase
-                   pointer-events-none select-none z-10"
+        className={`${stampFont.className} absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12
+                   whitespace-nowrap lowercase
+                   pointer-events-none select-none z-10`}
         style={{
-          fontSize: stampFont,
-          letterSpacing: "0.16em",
-          padding: `${Math.max(2, Math.round(size * 0.045))}px ${Math.max(6, Math.round(size * 0.17))}px`,
-          color: "#d63c3c",
-          background: "rgba(0,0,0,0.82)",
-          textShadow: "0 1px 0 rgba(0,0,0,0.9)",
-          boxShadow: "0 0 0 1px rgba(0,0,0,0.6)",
+          fontSize: stampSize,
+          letterSpacing: "0.01em",
+          color: "#d21f2b",
+          WebkitTextStroke: `${Math.max(1, Math.round(stampSize / 12))}px #000`,
+          paintOrder: "stroke fill",
+          textShadow: "0 0 8px rgba(0,0,0,0.85), 0 2px 2px rgba(0,0,0,0.7)",
         }}
       >
-        Deleted
+        deleted
       </span>
     </div>
   );
