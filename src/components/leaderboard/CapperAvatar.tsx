@@ -83,17 +83,17 @@ export function CapperAvatar({
   // GTA-wasted style stamp: chunky lowercase letters with a black outline
   // (like the "wasted" patch), oversized so it spills past the avatar
   // edges. Scales with `size` from 32px search rows to the 72px hero.
-  const stampSize = Math.max(10, Math.round(size * 0.26));
+  const stampSize = Math.max(11, Math.round(size * 0.31));
   return (
     <div
       className="relative shrink-0"
       style={{ width: size, height: size }}
       title="This X account has been deleted. The graded record stands."
     >
-      <div className="opacity-35 grayscale">{avatar}</div>
+      <div className="opacity-50 grayscale">{avatar}</div>
       <span
         className={`${stampFont.className} absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12
-                   whitespace-nowrap lowercase
+                   whitespace-nowrap uppercase
                    pointer-events-none select-none z-10`}
         style={{
           fontSize: stampSize,
