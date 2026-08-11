@@ -51,13 +51,15 @@ export function DeletedPicksPill({ count, handle }: Props) {
 
   if (!count || count <= 0) return null;
 
+  // The count is SLIPS (deleted tweets that had parsed picks), not
+  // individual picks: a deleted 15-leg parlay slip counts once.
   // Without a handle we fall back to the original tooltip-only pill (e.g.
   // older call sites that don't yet pass it). The clickable variant only
   // activates when the caller can route to a specific capper.
   if (!handle) {
     return (
       <span
-        title={`${count} parsed pick${count === 1 ? "" : "s"} where the source tweet was deleted from X.`}
+        title={`${count} slip${count === 1 ? "" : "s"} deleted from X after the picks were parsed.`}
         className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.12em]
                    bg-[rgba(239,68,68,0.10)] text-[var(--color-neg)]
                    border border-[rgba(239,68,68,0.30)]
@@ -73,7 +75,7 @@ export function DeletedPicksPill({ count, handle }: Props) {
     <>
       <button
         type="button"
-        aria-label={`${count} deleted picks. Click for details.`}
+        aria-label={`${count} deleted slips. Click for details.`}
         onClick={(e) => {
           e.stopPropagation();
           setOpen(true);
@@ -102,7 +104,7 @@ export function DeletedPicksPill({ count, handle }: Props) {
             <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.06)] px-5 py-3">
               <div>
                 <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
-                  Deleted picks
+                  Deleted slips
                 </div>
                 <div className="text-[13px] font-bold text-[var(--color-text)] mt-0.5">
                   @{handle}
@@ -128,22 +130,32 @@ export function DeletedPicksPill({ count, handle }: Props) {
               final outcome.
             </div>
 
-            {data && data.summary && (
-              <div className="px-5 py-3 flex items-center gap-4 border-b border-[rgba(255,255,255,0.04)] text-[11px] flex-wrap">
-                <span className="text-[var(--color-text-muted)] uppercase tracking-[0.10em] font-bold">
-                  Breakdown
-                </span>
-                <span className="text-[var(--color-pos)] tabular-nums font-bold">
-                  {data.summary.reposted} reposted
-                </span>
-                <span className="text-[var(--color-neg)] tabular-nums font-bold">
-                  {data.summary.truly_deleted} removed
-                </span>
-                <span className="text-[var(--color-text-muted)] tabular-nums ml-auto">
-                  {data.summary.total} total
-                </span>
-              </div>
-            )}
+            {data && data.summary && (() => {
+              // The pill counts SLIPS (deleted tweets), so the breakdown
+              // must too. Items are individual picks; group by raw_id. A
+              // slip is "reposted" when its picks carry a replacement URL.
+              const reposted = new Set<number>();
+              const removed = new Set<number>();
+              for (const p of data.items) {
+                (p.replacement_tweet_url != null ? reposted : removed).add(p.raw_id);
+              }
+              return (
+                <div className="px-5 py-3 flex items-center gap-4 border-b border-[rgba(255,255,255,0.04)] text-[11px] flex-wrap">
+                  <span className="text-[var(--color-text-muted)] uppercase tracking-[0.10em] font-bold">
+                    Breakdown
+                  </span>
+                  <span className="text-[var(--color-pos)] tabular-nums font-bold">
+                    {reposted.size} slip{reposted.size === 1 ? "" : "s"} reposted
+                  </span>
+                  <span className="text-[var(--color-neg)] tabular-nums font-bold">
+                    {removed.size} slip{removed.size === 1 ? "" : "s"} removed
+                  </span>
+                  <span className="text-[var(--color-text-muted)] tabular-nums ml-auto">
+                    {data.summary.total} pick{data.summary.total === 1 ? "" : "s"} total
+                  </span>
+                </div>
+              );
+            })()}
 
             <div className="scrollbar-subtle px-5 py-4 max-h-[60vh] overflow-y-auto">
               {loading && (
