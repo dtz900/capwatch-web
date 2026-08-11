@@ -4,6 +4,8 @@ import { TopNav } from "@/components/nav/TopNav";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { StatusPill } from "@/components/leaderboard/StatusPill";
+import { DeletedPicksPill } from "@/components/leaderboard/DeletedPicksPill";
+import { LivePicksIndicator } from "@/components/leaderboard/LivePicksIndicator";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { ChevronIcon } from "@/components/icons/ChevronIcon";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -183,6 +185,8 @@ function CapperIndexRow({
           <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-[3px] flex items-center gap-1.5 min-w-0">
             <span className="truncate">{c.handle ? formatHandle(c.handle) : ""}</span>
             {c.activity_status !== "active" && <StatusPill status={c.activity_status} />}
+            <DeletedPicksPill count={c.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
+            <LivePicksIndicator capperId={c.capper_id} initialCount={c.live_picks_count} />
           </div>
         </div>
         <div className="text-right text-[13px] text-[var(--color-text-soft)] font-semibold tabular-nums">
@@ -216,6 +220,8 @@ function CapperIndexRow({
             <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-[2px] flex items-center gap-1.5 min-w-0">
               <span className="truncate">{c.handle ? formatHandle(c.handle) : ""}</span>
               {c.activity_status !== "active" && <StatusPill status={c.activity_status} />}
+              <DeletedPicksPill count={c.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
+              <LivePicksIndicator capperId={c.capper_id} initialCount={c.live_picks_count} />
             </div>
           </div>
         </div>
