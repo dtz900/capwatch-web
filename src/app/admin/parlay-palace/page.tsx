@@ -8,11 +8,21 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
+// Curation floor: parlays below this profit aren't worth a palace page.
+const MIN_PROFIT_UNITS = 20;
+
 export default async function AdminPalacePage() {
   let items = [] as Awaited<ReturnType<typeof fetchPalaceCandidates>>;
   let err: string | null = null;
   try { items = await fetchPalaceCandidates(); }
   catch (e) { err = e instanceof Error ? e.message : String(e); }
+
+  const belowFloor = items.filter(
+    (i) => i.profit_units < MIN_PROFIT_UNITS,
+  ).length;
+  items = items
+    .filter((i) => i.profit_units >= MIN_PROFIT_UNITS)
+    .sort((a, b) => (b.graded_at ?? "").localeCompare(a.graded_at ?? ""));
 
   const counts = {
     candidate: items.filter((i) => i.status === "candidate").length,
@@ -48,6 +58,12 @@ export default async function AdminPalacePage() {
         </div>
       )}
       <PalaceQueueTable items={items} />
+      {belowFloor > 0 && (
+        <div className="text-[11px] text-[var(--color-text-muted)] font-medium mt-3 px-1">
+          {belowFloor} parlay{belowFloor === 1 ? "" : "s"} under +
+          {MIN_PROFIT_UNITS}u hidden.
+        </div>
+      )}
     </main>
   );
 }
