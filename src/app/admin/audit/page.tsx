@@ -10,7 +10,8 @@ interface PageProps {
     kind?: "void" | "ungraded";
     pick_id?: string;
     offset?: string;
-    sort?: "oldest" | "newest";
+    sort?: "oldest" | "newest" | "sport";
+    sport?: "MLB" | "NFL";
     show_acked?: string;
   }>;
 }
@@ -58,7 +59,9 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   const pickIdLookup = Number.isFinite(pickIdParsed) && pickIdParsed > 0 ? pickIdParsed : undefined;
   // Newest-first by default: in the ack model the queue is the un-acked
   // set, so the freshest un-triaged problems are what matter.
-  const sort: "oldest" | "newest" = sp.sort === "oldest" ? "oldest" : "newest";
+  const sort: "oldest" | "newest" | "sport" =
+    sp.sort === "oldest" || sp.sort === "sport" ? sp.sort : "newest";
+  const sport = sp.sport === "MLB" || sp.sport === "NFL" ? sp.sport : undefined;
   const showAcked = sp.show_acked === "true";
 
   const data = await fetchAudit({
@@ -67,6 +70,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     kind,
     pick_id: pickIdLookup,
     sort,
+    sport,
     show_acked: showAcked,
     limit: PAGE_SIZE,
     offset,
@@ -82,6 +86,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
       kind: string;
       offset: string;
       sort: string;
+      sport: string;
       show_acked: string;
     }>,
   ) => {
@@ -90,14 +95,16 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     const c = overrides.capper ?? capper ?? "";
     const k = overrides.kind ?? kind ?? "";
     const o = overrides.offset ?? "";
-    // Newest is the default now, so only encode "oldest".
-    const s = overrides.sort ?? (sort === "oldest" ? "oldest" : "");
+    // Newest is the default now, so only encode "oldest" / "sport".
+    const s = overrides.sort ?? (sort !== "newest" ? sort : "");
+    const spo = overrides.sport ?? sport ?? "";
     const sa = overrides.show_acked ?? (showAcked ? "true" : "");
     if (r) params.set("reason", r);
     if (c) params.set("capper", c);
     if (k) params.set("kind", k);
     if (o) params.set("offset", o);
     if (s) params.set("sort", s);
+    if (spo) params.set("sport", spo);
     if (sa) params.set("show_acked", sa);
     const qs = params.toString();
     return qs ? `/admin/audit?${qs}` : "/admin/audit";
@@ -226,6 +233,26 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
           </div>
           <div className="mt-3 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
+              Sport
+            </span>
+            {(["", "MLB", "NFL"] as const).map((s) => {
+              const n = s ? (data.by_sport?.[s] ?? 0) : null;
+              return (
+                <Link
+                  key={s || "all"}
+                  href={buildHref({ sport: s, offset: "" })}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
+                    (sport ?? "") === s
+                      ? "bg-[rgba(255,255,255,0.08)] text-[var(--color-text)]"
+                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                  }`}
+                >
+                  {s || "All"}
+                  {n !== null && <span className="ml-1 font-medium">({n})</span>}
+                </Link>
+              );
+            })}
+            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
               Kind
             </span>
             {(["", "void", "ungraded"] as const).map((k) => (
@@ -244,7 +271,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
               Sort
             </span>
-            {(["newest", "oldest"] as const).map((s) => (
+            {(["newest", "oldest", "sport"] as const).map((s) => (
               <Link
                 key={s}
                 href={buildHref({ sort: s })}
@@ -254,7 +281,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 }`}
               >
-                {s === "oldest" ? "Oldest first" : "Newest first"}
+                {s === "oldest" ? "Oldest first" : s === "sport" ? "By sport" : "Newest first"}
               </Link>
             ))}
             <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
@@ -284,7 +311,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
         </section>
 
         <AuditTable
-          key={`${reason ?? ""}|${capper ?? ""}|${kind ?? ""}|${sort}|${offset}|${showAcked}`}
+          key={`${reason ?? ""}|${capper ?? ""}|${kind ?? ""}|${sort}|${sport ?? ""}|${offset}|${showAcked}`}
           problems={data.problems}
           showAcked={showAcked}
         />
