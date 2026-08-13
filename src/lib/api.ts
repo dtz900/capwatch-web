@@ -222,7 +222,10 @@ export interface AuditFilters {
   capper?: string;
   kind?: "void" | "ungraded";
   pick_id?: number;
-  sort?: "oldest" | "newest";
+  /** "sport" groups the queue MLB-first, newest within each block. */
+  sort?: "oldest" | "newest" | "sport";
+  /** Filter the whole queue (actionable + pending + settled) to one sport. */
+  sport?: "MLB" | "NFL";
   show_acked?: boolean;
   limit?: number;
   offset?: number;
@@ -231,6 +234,8 @@ export interface AuditFilters {
 export interface AuditProblem {
   pick_id: number;
   capper_id: number;
+  /** "MLB" | "NFL" (server defaults missing values to MLB). */
+  sport?: string;
   capper_handle: string | null;
   capper_display_name: string | null;
   kind: "void" | "ungraded";
@@ -277,6 +282,9 @@ export interface AuditResponse {
     needs_you?: number;
   };
   by_reason: Record<string, number>;
+  /** Actionable-queue split by sport, unaffected by the active sport filter
+   * (chip counts stay stable while one sport is selected). */
+  by_sport?: Record<string, number>;
   total_problems: number;
   limit: number;
   offset: number;
@@ -304,6 +312,7 @@ export async function fetchAudit(filters: AuditFilters = {}): Promise<AuditRespo
   if (filters.kind) params.set("kind", filters.kind);
   if (filters.pick_id != null) params.set("pick_id", String(filters.pick_id));
   if (filters.sort) params.set("sort", filters.sort);
+  if (filters.sport) params.set("sport_filter", filters.sport);
   if (filters.show_acked) params.set("show_acked", "true");
   if (filters.limit != null) params.set("limit", String(filters.limit));
   if (filters.offset != null) params.set("offset", String(filters.offset));
