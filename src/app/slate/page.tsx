@@ -15,9 +15,10 @@ import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1080x356 } from "@/lib/affiliates";
 import { buildSlateOgFingerprint } from "./_slate-og-renderer";
+import { anonymizeStandings } from "@/lib/contentExclude";
 
 interface PageProps {
-  searchParams: Promise<{ date?: string; v?: string; game?: string; name?: string; matchup?: string }>;
+  searchParams: Promise<{ date?: string; v?: string; game?: string; name?: string; matchup?: string; snapshot?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -238,11 +239,23 @@ export default async function SlatePage({ searchParams }: PageProps) {
                 {((ds.graded_count > 0 && (data.capper_summary?.length ?? 0) > 0) ||
                   (week?.capper_summary?.some((c) => c.graded_count > 0) ?? false)) && (
                   <div className="mb-5">
+                    {/* snapshot=1 is the screenshot-for-posts render: standings
+                        rows for content-anonymized handles lose their identity
+                        (rank/record/units stay true). The plain page never
+                        anonymizes anyone. See lib/contentExclude.ts. */}
                     <StandingsSection
-                      daily={data.capper_summary ?? []}
+                      daily={
+                        sp.snapshot === "1"
+                          ? anonymizeStandings(data.capper_summary)
+                          : (data.capper_summary ?? [])
+                      }
                       totalGraded={ds.graded_count}
                       totalPending={ds.pending_count}
-                      week={week}
+                      week={
+                        sp.snapshot === "1" && week
+                          ? { ...week, capper_summary: anonymizeStandings(week.capper_summary) }
+                          : week
+                      }
                       dayLabel={dateParam === "tomorrow" ? "Tomorrow" : "Tonight"}
                     />
                   </div>
