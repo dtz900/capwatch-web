@@ -44,7 +44,9 @@ export function clampOdds(v: number): number | null {
 
 export function clampStake(v: number): number | null {
   if (!Number.isFinite(v)) return null;
-  return v >= 0.1 && v <= 10 ? Math.round(v * 10) / 10 : null;
+  // Two decimals: quarter-unit stakes (1.75u) are first-class; tenth-rounding
+  // silently turned 1.75 into 1.8 (David hit it on the stake stepper).
+  return v >= 0.1 && v <= 10 ? Math.round(v * 100) / 100 : null;
 }
 
 /** Default stake for a slip entry: the user's assigned per-capper stake
