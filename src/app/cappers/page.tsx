@@ -6,6 +6,7 @@ import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { StatusPill } from "@/components/leaderboard/StatusPill";
 import { DeletedPicksPill } from "@/components/leaderboard/DeletedPicksPill";
 import { LivePicksIndicator } from "@/components/leaderboard/LivePicksIndicator";
+import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { ChevronIcon } from "@/components/icons/ChevronIcon";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -83,6 +84,13 @@ export default async function CappersIndexPage() {
     );
   }
 
+  // Seed the live-picks context with the SSR counts, same as the homepage;
+  // the provider polls every 30s after mount.
+  const liveInitial: Record<number, number> = {};
+  for (const r of cappers) {
+    if (r.live_picks_count > 0) liveInitial[Number(r.capper_id)] = r.live_picks_count;
+  }
+
   return (
     <>
       <JsonLd
@@ -92,6 +100,9 @@ export default async function CappersIndexPage() {
         ])}
       />
       <TopNav />
+      {/* Provider gives directory rows the same 30s live-pick polling as the
+          homepage; without it the indicator froze at the SSR value (Codex #68). */}
+      <LivePicksProvider initial={liveInitial}>
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <header className="pt-12 pb-8">
           <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2.5">
@@ -149,6 +160,7 @@ export default async function CappersIndexPage() {
           </div>
         </footer>
       </main>
+      </LivePicksProvider>
     </>
   );
 }
@@ -167,11 +179,20 @@ function CapperIndexRow({
     c.roi_pct >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]";
 
   return (
-    <Link
-      href={c.handle ? `/cappers/${c.handle}` : "#"}
-      className={`group/row block hover:bg-[rgba(255,255,255,0.022)] transition-colors duration-150
+    // Overlay-link row: the anchor is an absolutely positioned sibling, not a
+    // wrapper, because DeletedPicksPill renders a <button> (with a dialog) and
+    // nested interactive elements inside an <a> are invalid for browsers and
+    // assistive tech (Codex #68). Interactive children re-stack above the
+    // overlay with relative z-10.
+    <div
+      className={`group/row relative block hover:bg-[rgba(255,255,255,0.022)] transition-colors duration-150
                   ${isLast ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
     >
+      <Link
+        href={c.handle ? `/cappers/${c.handle}` : "#"}
+        aria-label={`${c.display_name ?? c.handle ?? "capper"} profile`}
+        className="absolute inset-0"
+      />
       <div className={`${DESKTOP_GRID} px-6 py-[18px]`}>
         <CapperAvatar url={c.profile_image_url} handle={c.handle} size={40} apiIntegrated={isModel} accountDeleted={c.account_deleted_at != null} />
         <div className="min-w-0">
@@ -185,7 +206,9 @@ function CapperIndexRow({
           <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-[3px] flex items-center gap-1.5 min-w-0">
             <span className="truncate">{c.handle ? formatHandle(c.handle) : ""}</span>
             {c.activity_status !== "active" && <StatusPill status={c.activity_status} />}
-            <DeletedPicksPill count={c.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
+            <span className="relative z-10">
+              <DeletedPicksPill count={c.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
+            </span>
             <LivePicksIndicator capperId={c.capper_id} initialCount={c.live_picks_count} />
           </div>
         </div>
@@ -220,7 +243,9 @@ function CapperIndexRow({
             <div className="text-[12px] text-[var(--color-text-muted)] font-medium mt-[2px] flex items-center gap-1.5 min-w-0">
               <span className="truncate">{c.handle ? formatHandle(c.handle) : ""}</span>
               {c.activity_status !== "active" && <StatusPill status={c.activity_status} />}
-              <DeletedPicksPill count={c.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
+              <span className="relative z-10">
+                <DeletedPicksPill count={c.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
+              </span>
               <LivePicksIndicator capperId={c.capper_id} initialCount={c.live_picks_count} />
             </div>
           </div>
@@ -244,6 +269,6 @@ function CapperIndexRow({
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

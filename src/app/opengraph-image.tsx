@@ -1,6 +1,10 @@
 import { renderRootOg, size, alt, contentType } from "./_root-og";
 
 export const runtime = "nodejs";
+// Renders per-request since the KV fetchers went no-store (deliberate:
+// freshness over CDN caching, Codex #76). Explicit so the build doesn't
+// attempt a static render, fail on the uncached fetch, and log an error.
+export const dynamic = "force-dynamic";
 export { size, alt, contentType };
 
 // File-convention fallback. Used by scrapers that don't follow our explicit

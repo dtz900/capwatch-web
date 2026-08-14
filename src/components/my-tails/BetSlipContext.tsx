@@ -66,6 +66,15 @@ export function BetSlipProvider({
   // during render) so addFromPick reads live stakes without depending on the
   // map and re-creating per keystroke.
   const capperStakesRef = useRef<Record<string, number>>(initialStakes);
+  // The provider owns the write debounce (Codex #73): the in-memory stake
+  // updates SYNCHRONOUSLY on every tap so an add-to-slip inside the debounce
+  // window reads the displayed value, and only the DB write per capper is
+  // debounced. Pending writes flush on unmount so a quick navigation can't
+  // discard a visibly accepted change.
+  const stakeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Last value confirmed in the DB per capper; the rollback target when a
+  // debounced write fails.
+  const persistedStakesRef = useRef<Record<string, number>>({ ...initialStakes });
 
   useEffect(() => {
     if (!supabase || !userId) {
@@ -284,31 +293,21 @@ export function BetSlipProvider({
     [supabase, userId, entries]
   );
 
-  const setCapperStake = useCallback(
-    (capperId: number, stake: number | null) => {
+  const persistCapperStake = useCallback(
+    (capperId: number, value: number | null) => {
       if (!supabase || !userId) return;
       const key = String(capperId);
-      const clamped = stake === null ? null : clampStake(stake);
-      if (stake !== null && clamped === null) return; // rejected input, keep old
-      const prev = capperStakesRef.current[key] ?? null;
-      if (prev === clamped) return;
-      setCapperStakes((m) => {
-        const next = { ...m };
-        if (clamped === null) delete next[key];
-        else next[key] = clamped;
-        capperStakesRef.current = next;
-        return next;
-      });
       // One stake per capper: applied to every follow row (whole-capper or
       // scoped) so the setting survives scope toggles.
       supabase
         .from("capper_follows")
-        .update({ default_stake: clamped })
+        .update({ default_stake: value })
         .eq("user_id", userId)
         .eq("capper_id", capperId)
         .then(({ error }) => {
           if (error) {
             console.error("capper stake update failed:", error);
+            const prev = persistedStakesRef.current[key] ?? null;
             setCapperStakes((m) => {
               const next = { ...m };
               if (prev === null) delete next[key];
@@ -316,34 +315,74 @@ export function BetSlipProvider({
               capperStakesRef.current = next;
               return next;
             });
+          } else if (value === null) {
+            delete persistedStakesRef.current[key];
+          } else {
+            persistedStakesRef.current[key] = value;
           }
         });
     },
     [supabase, userId]
   );
 
+  const setCapperStake = useCallback(
+    (capperId: number, stake: number | null) => {
+      if (!supabase || !userId) return;
+      const key = String(capperId);
+      const clamped = stake === null ? null : clampStake(stake);
+      if (stake !== null && clamped === null) return; // rejected input, keep old
+      if ((capperStakesRef.current[key] ?? null) === clamped) return;
+      // Synchronous local update: display and addFromPick see it immediately.
+      setCapperStakes((m) => {
+        const next = { ...m };
+        if (clamped === null) delete next[key];
+        else next[key] = clamped;
+        capperStakesRef.current = next;
+        return next;
+      });
+      // Debounce only the DB write: a run of stepper taps lands as one call.
+      const existing = stakeTimersRef.current.get(key);
+      if (existing) clearTimeout(existing);
+      stakeTimersRef.current.set(
+        key,
+        setTimeout(() => {
+          stakeTimersRef.current.delete(key);
+          persistCapperStake(capperId, capperStakesRef.current[key] ?? null);
+        }, 500)
+      );
+    },
+    [supabase, userId, persistCapperStake]
+  );
+
+  useEffect(() => {
+    const timers = stakeTimersRef.current;
+    return () => {
+      // Unmount flush: commit any pending debounced stake immediately so a
+      // fast navigation never drops an accepted change.
+      for (const [key, t] of timers) {
+        clearTimeout(t);
+        persistCapperStake(Number(key), capperStakesRef.current[key] ?? null);
+      }
+      timers.clear();
+    };
+  }, [persistCapperStake]);
+
   const startFresh = useCallback(() => {
     if (!supabase || !userId) return;
     const prev = resetAt;
-    const now = new Date().toISOString();
-    setResetAt(now);
+    // Optimistic with the browser clock; replaced by the DB's now() from the
+    // RPC. The boundary must come from the database clock because
+    // user_bet_slips.created_at does (Codex #72: a skewed device clock made
+    // the tally boundary inconsistent either direction).
+    setResetAt(new Date().toISOString());
     (async () => {
-      // Update-then-insert instead of upsert: the INSERT policy pins
-      // tier='free', and an upsert's conflict-update would try to write
-      // tier on existing rows (VIP rows must keep their tier).
-      const { data, error } = await supabase
-        .from("ts_profiles")
-        .update({ slip_reset_at: now })
-        .eq("user_id", userId)
-        .select("user_id");
-      if (!error && data && data.length > 0) return;
-      const { error: insErr } = await supabase
-        .from("ts_profiles")
-        .insert({ user_id: userId, tier: "free", slip_reset_at: now });
-      if (error || insErr) {
-        console.error("start fresh failed:", error ?? insErr);
+      const { data, error } = await supabase.rpc("slip_start_fresh");
+      if (error || !data) {
+        console.error("start fresh failed:", error);
         setResetAt(prev);
+        return;
       }
+      setResetAt(data as string);
     })();
   }, [supabase, userId, resetAt]);
 

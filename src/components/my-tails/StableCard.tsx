@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import { MARKET_LABELS, toneCls } from "@/lib/edges";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
@@ -32,15 +32,10 @@ export function StableCard({
   // Assigned slip stake for this capper, driven by a tap stepper (no text
   // input: this card language has no form fields). AUTO = the capper's own
   // posted units carry to the slip, else 1u. Steps of 0.25u; stepping below
-  // 0.25u returns to AUTO. Taps update a local pending value instantly and
-  // the provider write is debounced so a run of taps is one DB write.
-  const assigned = slip?.capperStakes[String(capper.capper_id)];
-  const [pendingStake, setPendingStake] = useState<number | null | undefined>(undefined);
-  const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (commitTimer.current) clearTimeout(commitTimer.current);
-  }, []);
-  const shownStake = pendingStake !== undefined ? pendingStake : (assigned ?? null);
+  // 0.25u returns to AUTO. Every tap commits to the provider SYNCHRONOUSLY
+  // (so an immediate add-to-slip uses the displayed stake); the provider
+  // owns the debounced DB write and flushes it on unmount (Codex #73).
+  const shownStake = slip?.capperStakes[String(capper.capper_id)] ?? null;
   const stepStake = (dir: 1 | -1) => {
     if (!slip) return;
     const cur = shownStake;
@@ -53,14 +48,7 @@ export function StableCard({
           ? null
           : Math.round((cur - 0.25) * 4) / 4;
     if (next === cur) return;
-    setPendingStake(next);
-    if (commitTimer.current) clearTimeout(commitTimer.current);
-    commitTimer.current = setTimeout(() => {
-      // The provider updates its map synchronously, so clearing the pending
-      // value in the same tick hands display back without a flash.
-      slip.setCapperStake(Number(capper.capper_id), next);
-      setPendingStake(undefined);
-    }, 500);
+    slip.setCapperStake(Number(capper.capper_id), next);
   };
   return (
     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">

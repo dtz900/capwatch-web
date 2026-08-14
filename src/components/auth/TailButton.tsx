@@ -75,24 +75,39 @@ export function TailButton({
         if (error) setFollows(before);
       } else if (scoped) {
         // Scoped -> whole capper: replace the market rows with an 'all' row.
+        // default_stake rides along so the assigned slip stake survives the
+        // conversion (Codex #72: delete+insert flows were dropping it).
         setFollows(["all"]);
-        const { error: delErr } = await supabase
+        const { data: deletedRows, error: delErr } = await supabase
           .from("capper_follows")
           .delete()
           .eq("user_id", session.user.id)
-          .eq("capper_id", capperId);
+          .eq("capper_id", capperId)
+          .select("market, default_stake");
         if (delErr) {
           setFollows(before);
           return;
         }
+        const carriedStake =
+          deletedRows?.find((r) => r.default_stake != null)?.default_stake ?? null;
         const { error } = await supabase
           .from("capper_follows")
-          .insert({ user_id: session.user.id, capper_id: capperId, market: "all" });
+          .insert({
+            user_id: session.user.id,
+            capper_id: capperId,
+            market: "all",
+            default_stake: carriedStake,
+          });
         if (error) {
           setFollows(before);
           // Best effort restore of the scoped rows we removed above.
           await supabase.from("capper_follows").insert(
-            before.map((m) => ({ user_id: session.user.id, capper_id: capperId, market: m }))
+            before.map((m) => ({
+              user_id: session.user.id,
+              capper_id: capperId,
+              market: m,
+              default_stake: carriedStake,
+            }))
           );
         }
       } else {
