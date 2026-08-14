@@ -19,6 +19,11 @@ export interface BetSlipCtx {
   removeEntry: (id: number) => void;
   updateEntry: (id: number, patch: { stake?: number; odds?: number }) => void;
   totals: { today: number; allTime: number; pending: number };
+  /** Per-capper assigned slip stake; null/absent = auto (capper's units, else 1u). */
+  capperStakes: Record<string, number>;
+  setCapperStake: (capperId: number, stake: number | null) => void;
+  /** Wipe the running tally: history rows stay, the baseline moves to now. */
+  startFresh: () => void;
   teaserOpen: boolean;
   closeTeaser: () => void;
 }
@@ -32,9 +37,15 @@ export function useBetSlip(): BetSlipCtx | null {
 
 export function BetSlipProvider({
   todayDate,
+  initialStakes = {},
+  initialResetAt = null,
   children,
 }: {
   todayDate: string | null;
+  /** Server-loaded capper_follows.default_stake by capper id. */
+  initialStakes?: Record<string, number>;
+  /** Server-loaded ts_profiles.slip_reset_at. */
+  initialResetAt?: string | null;
   children: React.ReactNode;
 }) {
   const { session, entitlements } = useAuth();
@@ -48,7 +59,13 @@ export function BetSlipProvider({
   );
   const [entries, setEntries] = useState<SlipEntry[] | null>(null);
   const [teaserOpen, setTeaserOpen] = useState(false);
+  const [capperStakes, setCapperStakes] = useState<Record<string, number>>(initialStakes);
+  const [resetAt, setResetAt] = useState<string | null>(initialResetAt);
   const insertingKeysRef = useRef<Set<string>>(new Set());
+  // Mirror of capperStakes for callbacks; written in the setter path (never
+  // during render) so addFromPick reads live stakes without depending on the
+  // map and re-creating per keystroke.
+  const capperStakesRef = useRef<Record<string, number>>(initialStakes);
 
   useEffect(() => {
     if (!supabase || !userId) {
@@ -141,7 +158,9 @@ export function BetSlipProvider({
       }
       insertingKeysRef.current.add(dedupKey);
 
-      const payload = slipInsertFromPick(userId, p, todayDate);
+      const payload = slipInsertFromPick(
+        userId, p, todayDate, capperStakesRef.current[String(p.capper_id)] ?? null
+      );
       if (!payload) {
         insertingKeysRef.current.delete(dedupKey);
         return;
@@ -265,9 +284,72 @@ export function BetSlipProvider({
     [supabase, userId, entries]
   );
 
+  const setCapperStake = useCallback(
+    (capperId: number, stake: number | null) => {
+      if (!supabase || !userId) return;
+      const key = String(capperId);
+      const clamped = stake === null ? null : clampStake(stake);
+      if (stake !== null && clamped === null) return; // rejected input, keep old
+      const prev = capperStakesRef.current[key] ?? null;
+      if (prev === clamped) return;
+      setCapperStakes((m) => {
+        const next = { ...m };
+        if (clamped === null) delete next[key];
+        else next[key] = clamped;
+        capperStakesRef.current = next;
+        return next;
+      });
+      // One stake per capper: applied to every follow row (whole-capper or
+      // scoped) so the setting survives scope toggles.
+      supabase
+        .from("capper_follows")
+        .update({ default_stake: clamped })
+        .eq("user_id", userId)
+        .eq("capper_id", capperId)
+        .then(({ error }) => {
+          if (error) {
+            console.error("capper stake update failed:", error);
+            setCapperStakes((m) => {
+              const next = { ...m };
+              if (prev === null) delete next[key];
+              else next[key] = prev;
+              capperStakesRef.current = next;
+              return next;
+            });
+          }
+        });
+    },
+    [supabase, userId]
+  );
+
+  const startFresh = useCallback(() => {
+    if (!supabase || !userId) return;
+    const prev = resetAt;
+    const now = new Date().toISOString();
+    setResetAt(now);
+    (async () => {
+      // Update-then-insert instead of upsert: the INSERT policy pins
+      // tier='free', and an upsert's conflict-update would try to write
+      // tier on existing rows (VIP rows must keep their tier).
+      const { data, error } = await supabase
+        .from("ts_profiles")
+        .update({ slip_reset_at: now })
+        .eq("user_id", userId)
+        .select("user_id");
+      if (!error && data && data.length > 0) return;
+      const { error: insErr } = await supabase
+        .from("ts_profiles")
+        .insert({ user_id: userId, tier: "free", slip_reset_at: now });
+      if (error || insErr) {
+        console.error("start fresh failed:", error ?? insErr);
+        setResetAt(prev);
+      }
+    })();
+  }, [supabase, userId, resetAt]);
+
   const totals = useMemo(
-    () => slipTotals(entries ?? [], todayDate),
-    [entries, todayDate]
+    () => slipTotals(entries ?? [], todayDate, resetAt),
+    [entries, todayDate, resetAt]
   );
 
   // The slip renders as a daily card: only today's entries show. History
@@ -282,9 +364,11 @@ export function BetSlipProvider({
   const value = useMemo(
     () => ({
       entries: todayEntries, inSlip, inSlipParlay, addFromPick, removeEntry, updateEntry, totals,
+      capperStakes, setCapperStake, startFresh,
       teaserOpen, closeTeaser: () => setTeaserOpen(false),
     }),
-    [todayEntries, inSlip, inSlipParlay, addFromPick, removeEntry, updateEntry, totals, teaserOpen]
+    [todayEntries, inSlip, inSlipParlay, addFromPick, removeEntry, updateEntry, totals,
+     capperStakes, setCapperStake, startFresh, teaserOpen]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -160,6 +160,14 @@ export function BetSlipRail() {
   // Default expanded; the stored preference is applied after mount so the
   // server and client render the same initial markup.
   const [collapsed, setCollapsed] = useState(false);
+  // Two-tap "start fresh": first tap arms the confirm, second tap wipes.
+  // Arms disarm on a timer so a stray tap can't linger as a loaded gun.
+  const [confirmFresh, setConfirmFresh] = useState(false);
+  useEffect(() => {
+    if (!confirmFresh) return;
+    const t = setTimeout(() => setConfirmFresh(false), 4000);
+    return () => clearTimeout(t);
+  }, [confirmFresh]);
   // The collapsed stub scrolls with the page; when it leaves the viewport a
   // small fixed tag takes over (mobile) so the slip is always reachable.
   const stubRef = useRef<HTMLButtonElement | null>(null);
@@ -186,7 +194,7 @@ export function BetSlipRail() {
     return () => obs.disconnect();
   }, [collapsed]);
   if (!slip) return null;
-  const { entries, totals, removeEntry, updateEntry, teaserOpen, closeTeaser } = slip;
+  const { entries, totals, removeEntry, updateEntry, startFresh, teaserOpen, closeTeaser } = slip;
   const pending = pendingTotals(entries ?? []);
   const count = entries?.length ?? 0;
 
@@ -402,6 +410,30 @@ export function BetSlipRail() {
                 {unitsStr(totals.allTime)}
               </div>
             </div>
+          </div>
+          <div className="mt-1.5 text-right">
+            <button
+              onClick={() => {
+                if (!confirmFresh) {
+                  setConfirmFresh(true);
+                  return;
+                }
+                setConfirmFresh(false);
+                startFresh();
+              }}
+              aria-label={
+                confirmFresh
+                  ? "Confirm: reset the all-time tally to zero"
+                  : "Start fresh: reset the all-time tally"
+              }
+              className={`text-[10px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                confirmFresh
+                  ? "text-[var(--color-neg)]"
+                  : "text-[#4c7d72] hover:text-[#cfe8e0]"
+              }`}
+            >
+              {confirmFresh ? "Tap again to zero the tally" : "Start fresh"}
+            </button>
           </div>
         </div>
       )}

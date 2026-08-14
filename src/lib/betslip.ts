@@ -47,6 +47,25 @@ export function clampStake(v: number): number | null {
   return v >= 0.1 && v <= 10 ? Math.round(v * 10) / 10 : null;
 }
 
+/** Default stake for a slip entry: the user's assigned per-capper stake
+    wins, else the capper's own posted units carry over, else 1u. Every
+    source passes through clampStake so a wild capper stake (10u+ ladder
+    schemes) can't blow past the slip's range. */
+export function defaultStake(
+  capperStake: number | null | undefined,
+  pick: TodayPickEntry,
+): number {
+  if (capperStake != null) {
+    const s = clampStake(capperStake);
+    if (s !== null) return s;
+  }
+  if (pick.units != null) {
+    const s = clampStake(pick.units);
+    if (s !== null) return s;
+  }
+  return 1.0;
+}
+
 /** Insert payload for user_bet_slips, or null when the pick has no id to
     bind to. A parlay tail is ONE row at the capper's combined odds (the
     feed's default, user-editable in the slip). Snapshot fields keep the
@@ -55,6 +74,7 @@ export function slipInsertFromPick(
   userId: string,
   pick: TodayPickEntry,
   gameDate: string | null,
+  capperStake?: number | null,
 ): Record<string, unknown> | null {
   if (pick.kind === "parlay") {
     if (pick.parlay_id == null) return null;
@@ -62,7 +82,7 @@ export function slipInsertFromPick(
       user_id: userId,
       pick_id: null,
       parlay_id: pick.parlay_id,
-      stake: 1.0,
+      stake: defaultStake(capperStake, pick),
       odds: pick.odds_taken ?? -110,
       capper_id: pick.capper_id,
       capper_handle: pick.handle,
@@ -78,7 +98,7 @@ export function slipInsertFromPick(
     user_id: userId,
     pick_id: pick.pick_id,
     parlay_id: null,
-    stake: 1.0,
+    stake: defaultStake(capperStake, pick),
     odds: pick.odds_taken ?? -110,
     capper_id: pick.capper_id,
     capper_handle: pick.handle,
@@ -93,11 +113,15 @@ export function slipInsertFromPick(
 export function slipTotals(
   entries: SlipEntry[],
   todayIso: string | null,
+  resetIso?: string | null,
 ): { today: number; allTime: number; pending: number } {
   let today = 0;
   let allTime = 0;
   let pending = 0;
   for (const e of entries) {
+    // "Start fresh" baseline: rows logged before the reset stay in the
+    // table (future bet-log history) but stop counting toward the tally.
+    if (resetIso && e.created_at < resetIso) continue;
     const p = slipProfit(e.outcome, e.stake, e.odds);
     if (p === null) {
       pending += 1;

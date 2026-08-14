@@ -69,11 +69,33 @@ export default async function MyTailsPage({
 
   const { data: follows, error: followsError } = await supabase
     .from("capper_follows")
-    .select("capper_id, market")
+    .select("capper_id, market, default_stake")
     .eq("user_id", user.id);
   if (followsError) console.error("my-tails follows query failed:", followsError);
-  const followRows = (follows ?? []) as { capper_id: number; market: string }[];
+  const followRows = (follows ?? []) as {
+    capper_id: number;
+    market: string;
+    default_stake: number | null;
+  }[];
   const ids = [...new Set(followRows.map((f) => f.capper_id))];
+
+  // Assigned slip stake per capper (first non-null across the capper's
+  // follow rows; the setter writes them all so they agree).
+  const stakesByCapper: Record<string, number> = {};
+  for (const f of followRows) {
+    if (f.default_stake != null && stakesByCapper[String(f.capper_id)] === undefined) {
+      stakesByCapper[String(f.capper_id)] = Number(f.default_stake);
+    }
+  }
+
+  // "Start fresh" baseline for the slip tally.
+  const { data: slipProfile, error: slipProfileError } = await supabase
+    .from("ts_profiles")
+    .select("slip_reset_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (slipProfileError) console.error("my-tails reset query failed:", slipProfileError);
+  const slipResetAt = (slipProfile?.slip_reset_at as string | null) ?? null;
 
   // Market Masters is paid-tier inventory (decisions/log.md 2026-07-11):
   // held out of the free launch entirely and only fetched once the tier is
@@ -161,7 +183,11 @@ export default async function MyTailsPage({
   return (
     <>
       <TopNav />
-      <BetSlipProvider todayDate={today.date || null}>
+      <BetSlipProvider
+        todayDate={today.date || null}
+        initialStakes={stakesByCapper}
+        initialResetAt={slipResetAt}
+      >
       {/* Content spans the leaderboard's exact container (max-w-[1240px]) so
           the card grid spreads like the podiums. The bet slip lives in the
           header row as a ticket stub that scrolls with the page; once opened
