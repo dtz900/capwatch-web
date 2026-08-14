@@ -403,6 +403,9 @@ export interface TodayPickEntry {
   selection: string | null;
   line: number | null;
   odds_taken: number | null;
+  /** The capper's own posted stake in units; the slip's default when the
+      user has no per-capper stake assigned. */
+  units?: number | null;
   posted_at: string | null;
   outcome: "W" | "L" | "P" | "V" | null;
   profit_units: number | null;

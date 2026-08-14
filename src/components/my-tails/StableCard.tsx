@@ -29,6 +29,26 @@ export function StableCard({
   const [openParlays, setOpenParlays] = useState<Set<number>>(new Set());
   const scoped = scopes.length > 0;
   const positive = (capper.units_profit ?? 0) >= 0;
+  // Assigned slip stake for this capper. Empty input = auto (the capper's
+  // own posted units carry to the slip, else 1u). The provider map is the
+  // source of truth; the local draft only exists while the field is being
+  // edited, so no sync effect is needed.
+  const assigned = slip?.capperStakes[String(capper.capper_id)];
+  const [stakeDraft, setStakeDraft] = useState<string | null>(null);
+  const stakeInput = stakeDraft ?? (assigned != null ? String(assigned) : "");
+  const commitStake = () => {
+    setStakeDraft(null); // provider value (or rejection rollback) shows next
+    if (!slip || stakeDraft === null) return;
+    const trimmed = stakeDraft.trim();
+    if (trimmed === "") {
+      slip.setCapperStake(Number(capper.capper_id), null);
+      return;
+    }
+    const v = Number(trimmed);
+    // Non-numeric or out-of-range input never reaches the provider map, so
+    // dropping the draft snaps the field back to the assigned value.
+    if (Number.isFinite(v)) slip.setCapperStake(Number(capper.capper_id), v);
+  };
   return (
     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
       <button
@@ -157,6 +177,31 @@ export function StableCard({
             })}
           </div>
         )}
+        {slip && (
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+              Slip stake
+            </span>
+            <span className="flex items-baseline gap-0.5">
+              <input
+                aria-label={`Slip stake for ${capper.display_name ?? capper.handle}`}
+                type="number"
+                step="0.25"
+                min={0.1}
+                max={10}
+                placeholder="auto"
+                value={stakeInput}
+                onChange={(e) => setStakeDraft(e.target.value)}
+                onBlur={commitStake}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                }}
+                className="w-12 bg-transparent text-right text-[13px] font-bold tabular-nums text-[var(--color-text)] outline-none border-b border-[var(--color-border)] focus:border-[var(--color-text-soft)] placeholder:text-[var(--color-text-muted)] placeholder:font-normal [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="text-[11px] font-bold text-[var(--color-text-muted)]">u</span>
+            </span>
+          </div>
+        )}
         <div className="mt-4 border-t border-[var(--color-border)] pt-3">
           <div className="flex items-baseline justify-between">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
@@ -214,6 +259,14 @@ export function StableCard({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {p.units != null && (
+                      <span
+                        className="text-[10px] font-bold tabular-nums text-[var(--color-text-muted)]"
+                        title="Capper's posted stake"
+                      >
+                        {p.units}u
+                      </span>
+                    )}
                     {p.odds_taken != null && (
                       <span className="text-xs font-semibold tabular-nums text-[var(--color-text-soft)]">
                         {p.odds_taken > 0 ? "+" : ""}
