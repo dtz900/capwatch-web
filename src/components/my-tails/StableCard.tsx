@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import { MARKET_LABELS, toneCls } from "@/lib/edges";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
@@ -7,7 +7,7 @@ import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { Sparkline } from "@/components/leaderboard/Sparkline";
 import { MomentumStrip } from "@/components/leaderboard/MomentumStrip";
 import { StatusPill } from "@/components/my-tails/StatusPill";
-import { formatUnits, formatUnitsSmart } from "@/lib/formatters";
+import { formatUnits, formatUnitsSmart, trimUnits } from "@/lib/formatters";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 
 export function StableCard({
@@ -29,25 +29,38 @@ export function StableCard({
   const [openParlays, setOpenParlays] = useState<Set<number>>(new Set());
   const scoped = scopes.length > 0;
   const positive = (capper.units_profit ?? 0) >= 0;
-  // Assigned slip stake for this capper. Empty input = auto (the capper's
-  // own posted units carry to the slip, else 1u). The provider map is the
-  // source of truth; the local draft only exists while the field is being
-  // edited, so no sync effect is needed.
+  // Assigned slip stake for this capper, driven by a tap stepper (no text
+  // input: this card language has no form fields). AUTO = the capper's own
+  // posted units carry to the slip, else 1u. Steps of 0.25u; stepping below
+  // 0.25u returns to AUTO. Taps update a local pending value instantly and
+  // the provider write is debounced so a run of taps is one DB write.
   const assigned = slip?.capperStakes[String(capper.capper_id)];
-  const [stakeDraft, setStakeDraft] = useState<string | null>(null);
-  const stakeInput = stakeDraft ?? (assigned != null ? String(assigned) : "");
-  const commitStake = () => {
-    setStakeDraft(null); // provider value (or rejection rollback) shows next
-    if (!slip || stakeDraft === null) return;
-    const trimmed = stakeDraft.trim();
-    if (trimmed === "") {
-      slip.setCapperStake(Number(capper.capper_id), null);
-      return;
-    }
-    const v = Number(trimmed);
-    // Non-numeric or out-of-range input never reaches the provider map, so
-    // dropping the draft snaps the field back to the assigned value.
-    if (Number.isFinite(v)) slip.setCapperStake(Number(capper.capper_id), v);
+  const [pendingStake, setPendingStake] = useState<number | null | undefined>(undefined);
+  const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (commitTimer.current) clearTimeout(commitTimer.current);
+  }, []);
+  const shownStake = pendingStake !== undefined ? pendingStake : (assigned ?? null);
+  const stepStake = (dir: 1 | -1) => {
+    if (!slip) return;
+    const cur = shownStake;
+    const next: number | null =
+      dir === 1
+        ? cur === null
+          ? 1.0
+          : Math.min(10, Math.round((cur + 0.25) * 4) / 4)
+        : cur === null || cur <= 0.25
+          ? null
+          : Math.round((cur - 0.25) * 4) / 4;
+    if (next === cur) return;
+    setPendingStake(next);
+    if (commitTimer.current) clearTimeout(commitTimer.current);
+    commitTimer.current = setTimeout(() => {
+      // The provider updates its map synchronously, so clearing the pending
+      // value in the same tick hands display back without a flash.
+      slip.setCapperStake(Number(capper.capper_id), next);
+      setPendingStake(undefined);
+    }, 500);
   };
   return (
     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
@@ -182,24 +195,43 @@ export function StableCard({
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
               Slip stake
             </span>
-            <span className="flex items-baseline gap-0.5">
-              <input
-                aria-label={`Slip stake for ${capper.display_name ?? capper.handle}`}
-                type="number"
-                step="0.25"
-                min={0.1}
-                max={10}
-                placeholder="auto"
-                value={stakeInput}
-                onChange={(e) => setStakeDraft(e.target.value)}
-                onBlur={commitStake}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            {/* Framed stepper pill, same chrome as the card: no text input.
+                AUTO carries the capper's posted units to the slip. */}
+            <div className="flex items-stretch overflow-hidden rounded-lg ring-1 ring-[var(--color-border)] bg-[rgba(255,255,255,0.03)]">
+              <button
+                aria-label={`Decrease slip stake for ${capper.display_name ?? capper.handle}`}
+                onClick={(ev) => {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  stepStake(-1);
                 }}
-                className="w-12 bg-transparent text-right text-[13px] font-bold tabular-nums text-[var(--color-text)] outline-none border-b border-[var(--color-border)] focus:border-[var(--color-text-soft)] placeholder:text-[var(--color-text-muted)] placeholder:font-normal [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <span className="text-[11px] font-bold text-[var(--color-text-muted)]">u</span>
-            </span>
+                disabled={shownStake === null}
+                className="h-7 w-7 text-sm font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text)] disabled:opacity-30 disabled:hover:text-[var(--color-text-muted)]"
+              >
+                {"−"}
+              </button>
+              <span
+                title="AUTO carries the capper's posted units"
+                className={`flex min-w-12 items-center justify-center border-x border-[var(--color-border)] px-1.5 text-[12px] font-extrabold tabular-nums ${
+                  shownStake === null
+                    ? "tracking-[0.12em] text-[var(--color-text-muted)]"
+                    : "text-[var(--color-text)]"
+                }`}
+              >
+                {shownStake === null ? "AUTO" : `${trimUnits(shownStake)}u`}
+              </span>
+              <button
+                aria-label={`Increase slip stake for ${capper.display_name ?? capper.handle}`}
+                onClick={(ev) => {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  stepStake(1);
+                }}
+                className="h-7 w-7 text-sm font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              >
+                {"+"}
+              </button>
+            </div>
           </div>
         )}
         <div className="mt-4 border-t border-[var(--color-border)] pt-3">
