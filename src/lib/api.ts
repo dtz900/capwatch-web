@@ -24,6 +24,14 @@ import type {
 // purge. The /api/admin/purge-caches route is wired for the explicit case
 // (Refresh Aggregates button), but these TTLs cap the worst-case delay
 // for organic visitors during background cron writes.
+//
+// KV-wrapped fetchers hit the API with cache: "no-store" ON PURPOSE. The KV
+// TTL is the one and only data-freshness bound; letting the inner fetch also
+// sit in Next's 60s data cache created a poisoned-refill loop: the parse
+// cron's purge cleared KV + ISR, the page regenerated, the regeneration read
+// a still-cached 60s fetch entry, and the fresh caches got refilled with
+// PRE-PICK data for another cycle. Users saw "0 live picks", refreshed three
+// times, and only the third walked every layer forward (David, 2026-08-13).
 const LEADERBOARD_TTL_SEC = 15;
 const SLATE_TTL_SEC = 15;
 const PROFILE_TTL_SEC = 5;
@@ -120,7 +128,7 @@ export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<Lea
   const cacheKey = `lb:v1:${params.toString()}`;
   return withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, async () => {
     const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {
-      next: { revalidate: REVALIDATE_SECONDS },
+      cache: "no-store",
     });
     if (!res.ok) {
       throw new Error(`Leaderboard fetch failed: ${res.status}`);
@@ -145,7 +153,7 @@ export async function fetchSlate(date: string = "today"): Promise<SlateResponse>
   const cacheKey = `slate:v1:${date}`;
   return withKvCache<SlateResponse>(cacheKey, SLATE_TTL_SEC, async () => {
     const res = await fetchWithRetry(`${API_BASE}/api/public/slate?date=${encodeURIComponent(date)}`, {
-      next: { revalidate: REVALIDATE_SECONDS },
+      cache: "no-store",
     });
     if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
     return (await res.json()) as SlateResponse;
@@ -391,7 +399,7 @@ export async function fetchCapperProfile(
   const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}${qs ? `?${qs}` : ""}`;
   const cacheKey = `profile:v1:${handle.toLowerCase()}:${qs}`;
   return withKvCache<CapperProfile>(cacheKey, PROFILE_TTL_SEC, async () => {
-    const res = await fetchWithRetry(url, { next: { revalidate: REVALIDATE_SECONDS } });
+    const res = await fetchWithRetry(url, { cache: "no-store" });
     if (res.status === 404) throw new Error("not_found");
     if (!res.ok) throw new Error(`Capper profile fetch failed: ${res.status}`);
     return (await res.json()) as CapperProfile;
@@ -513,7 +521,7 @@ export async function fetchPalaceList(
   return withKvCache<PalaceEntry[]>(cacheKey, PALACE_TTL_SEC, async () => {
     const res = await fetchWithRetry(
       `${API_BASE}/api/public/parlay-palace?${p}`,
-      { next: { revalidate: REVALIDATE_SECONDS } });
+      { cache: "no-store" });
     if (!res.ok) throw new Error(`Palace list failed: ${res.status}`);
     const body = (await res.json()) as { entries: PalaceEntry[] };
     return body.entries ?? [];
@@ -540,7 +548,7 @@ export async function fetchPalaceEntry(
   return withKvCache<PalaceEntry | null>(cacheKey, PALACE_TTL_SEC, async () => {
     const res = await fetchWithRetry(
       `${API_BASE}/api/public/parlay-palace/${encodeURIComponent(slug)}`,
-      { next: { revalidate: REVALIDATE_SECONDS } });
+      { cache: "no-store" });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`Palace entry failed: ${res.status}`);
     const body = (await res.json()) as { entry: PalaceEntry };
@@ -695,8 +703,11 @@ export async function fetchPalaceCandidates(): Promise<PalaceCandidate[]> {
 export async function fetchTodayPicks(capperIds: number[]): Promise<TodayPicksResponse> {
   if (capperIds.length === 0) return { date: "", picks: [] };
   const qs = new URLSearchParams({ capper_ids: capperIds.slice(0, 50).join(",") });
+  // No data cache: my-tails is force-dynamic and this strip is exactly where
+  // a just-posted pick must not lag behind a refresh (same staleness class
+  // as the profile fix above; the API itself is the freshness bound here).
   const res = await fetch(`${API_BASE}/api/public/picks/today?${qs}`, {
-    next: { revalidate: 60 },
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`today picks fetch failed: ${res.status}`);
   return res.json();

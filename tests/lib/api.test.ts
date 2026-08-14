@@ -20,7 +20,9 @@ describe("fetchLeaderboard", () => {
     expect(out).toEqual(sample);
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringMatching(/\/api\/public\/cappers\?window=all_time&sort=roi_pct&bet_type=all&min_picks=5&active_only=true/),
-      expect.objectContaining({ next: { revalidate: 60 } }),
+      // no-store on purpose: KV is the only data-freshness bound; the Next
+      // data cache caused the stale-profile poisoned-refill loop.
+      expect.objectContaining({ cache: "no-store" }),
     );
   });
 
