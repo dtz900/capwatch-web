@@ -84,6 +84,17 @@ export function SportsbookAd({
       {showDisclosure && (
         <div className="mt-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-bold opacity-70 text-center whitespace-nowrap">
           Sponsored · 21+ ·{" "}
+          {/* Bonus code rides with the link per CJ guidance: a signup that
+              types the code attributes even when the click cookie is lost. */}
+          {creative.bonusCode && (
+            <>
+              Code{" "}
+              <span className="text-[var(--color-text-soft)] opacity-100">
+                {creative.bonusCode}
+              </span>
+              {" "}·{" "}
+            </>
+          )}
           <a
             href="https://sports.betmgm.com/en/sports/terms-conditions"
             target="_blank"
