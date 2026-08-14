@@ -49,6 +49,13 @@ export interface SportsbookCreative {
    * future rotator has the data.
    */
   legalStates: "all" | string[];
+  /**
+   * Publisher-specific bonus code, when the network has issued one.
+   * Rendered next to the ad: CJ's guidance (Andy Yu, 2026-08-12) is to
+   * promote the code alongside the publisher-specific tracking link so a
+   * signup still attributes when the click cookie is lost.
+   */
+  bonusCode?: string;
 }
 
 /**
@@ -58,10 +65,14 @@ export interface SportsbookCreative {
  *   - Mobile (clickUrlMobile): CJ creative 17163619, OneLink → App Store
  *     or Play Store, attribution via Branch deferred deep link, $50 per
  *     App Qualified Player. This pairing has $141.56 3-month EPC.
- *   - Desktop (clickUrlDesktop): CJ creative 17235791, mediaserver web
- *     flow, visitor can create an account in-browser, $50 per Web
- *     Qualified Player. Replaces the previous desktop dead-end where
- *     laptop visitors landed on the iOS App Store page.
+ *   - Desktop (clickUrlDesktop): CJ tracking link 17324564, the
+ *     PUBLISHER-SPECIFIC link CJ issued 2026-08-12 (Andy Yu email) paired
+ *     with bonus code FADAI. Verified 2026-08-14 to resolve through
+ *     cj.dotomi/emjcd to the betmgmpartners mediaserver WEB flow, same
+ *     "$1,500 Paid Back" offer. Replaced generic link 17235791. Mobile
+ *     deliberately stays on the OneLink app flow: the new link is a web
+ *     destination, and CJ's enhanced mobile attribution is listed as
+ *     future work in the same email.
  *
  * Image stays the same across devices (BetMGM 1080x356 banner art from
  * CJ creative 17163619). Compliance: both URLs are CJ-provided affiliate
@@ -76,12 +87,13 @@ export const BETMGM_1080x356: SportsbookCreative = {
   advertiser: "BetMGM",
   size: "1080x356",
   clickUrlMobile: "https://www.anrdoezrs.net/click-101754995-17163619",
-  clickUrlDesktop: "https://www.jdoqocy.com/click-101754995-17235791",
+  clickUrlDesktop: "https://www.anrdoezrs.net/click-101754995-17324564",
   imageUrl: "https://www.ftjcfx.com/image-101754995-17163619",
   width: 1080,
   height: 356,
   alt: "BetMGM Sportsbook — Get up to $1,500 paid back if your first bet does not win",
   legalStates: "all",
+  bonusCode: "FADAI",
 };
 
 /**
@@ -102,6 +114,7 @@ export const BETMGM_300x250: SportsbookCreative = {
   height: 250,
   alt: "BetMGM Sportsbook offer",
   legalStates: "all",
+  bonusCode: "FADAI",
 };
 
 /**
