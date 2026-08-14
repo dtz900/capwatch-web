@@ -17,11 +17,15 @@ export default async function AdminPalacePage() {
   try { items = await fetchPalaceCandidates(); }
   catch (e) { err = e instanceof Error ? e.message : String(e); }
 
+  // The floor gates NEW candidates only. Drafts and published entries always
+  // show regardless of profit: the unpublish control lives on the table row,
+  // so hiding a sub-floor published entry stranded it live with no way to
+  // pull it from the UI (Codex #70).
   const belowFloor = items.filter(
-    (i) => i.profit_units < MIN_PROFIT_UNITS,
+    (i) => i.status === "candidate" && i.profit_units < MIN_PROFIT_UNITS,
   ).length;
   items = items
-    .filter((i) => i.profit_units >= MIN_PROFIT_UNITS)
+    .filter((i) => i.status !== "candidate" || i.profit_units >= MIN_PROFIT_UNITS)
     .sort((a, b) => (b.graded_at ?? "").localeCompare(a.graded_at ?? ""));
 
   const counts = {

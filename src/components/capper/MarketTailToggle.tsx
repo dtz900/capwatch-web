@@ -64,28 +64,42 @@ export function MarketTailToggle({
         setTailing(true);
         // A whole-capper tail converts to scoped: drop the 'all' row first.
         // select() returns the deleted rows so we know whether one existed
-        // and can restore it if the scoped insert then fails.
+        // and can restore it if the scoped insert then fails. default_stake
+        // rides along so the assigned slip stake survives the conversion
+        // (Codex #72: delete+insert flows were silently dropping it).
         const { data: deleted, error: delErr } = await supabase
           .from("capper_follows")
           .delete()
           .eq("user_id", session.user.id)
           .eq("capper_id", capperId)
           .eq("market", "all")
-          .select("market");
+          .select("market, default_stake");
         if (delErr) {
           setTailing(false);
           return;
         }
+        const carriedStake =
+          deleted?.find((r) => r.default_stake != null)?.default_stake ?? null;
         const { error } = await supabase
           .from("capper_follows")
-          .insert({ user_id: session.user.id, capper_id: capperId, market });
+          .insert({
+            user_id: session.user.id,
+            capper_id: capperId,
+            market,
+            default_stake: carriedStake,
+          });
         if (error) {
           setTailing(false);
           if (deleted && deleted.length > 0) {
             // Best effort restore of the whole-capper tail we removed above.
             await supabase
               .from("capper_follows")
-              .insert({ user_id: session.user.id, capper_id: capperId, market: "all" });
+              .insert({
+                user_id: session.user.id,
+                capper_id: capperId,
+                market: "all",
+                default_stake: carriedStake,
+              });
           }
         }
       }
