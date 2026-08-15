@@ -6,18 +6,18 @@ import type { SlateCapperSummary } from "@/lib/types";
 
 /**
  * Final-standings card: the shareable image for the nightly leaderboard
- * thread, replacing the manual slate-page screenshot. Renders the day's
- * top 10 by net units exactly as the site computes them (fetchSlate's
- * capper_summary carries staking-scheme-corrected numbers), so the image
- * can never disagree with tailslips.com/slate.
+ * thread. Data comes from fetchSlate's capper_summary (staking-scheme
+ * corrected), so the image can never disagree with tailslips.com/slate.
  *
  *   /og/standings            -> today's slate
  *   /og/standings?date=ISO   -> a specific slate date
  *
- * Design language matches the site: avatars, a visually heavier podium
- * (top 3), off-white on near-black, green/red reserved for units.
- * Everyone renders, same as the site (content policy: exclusions apply
- * to tweet TEXT and tags only, never the board itself).
+ * Design: the night's winner is CROWNED, not listed: hero panel with the
+ * TailSlips crown over their avatar and the night's focal number; 02-03
+ * as supporting cast; 04-10 compact. Gold is reserved for the crown
+ * moment, green/red for units, off-white for everything else.
+ * Everyone renders, same as the site (content exclusions apply to tweet
+ * TEXT and tags only, never the board).
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,12 +33,12 @@ const HAIR = "rgba(247, 243, 233, 0.10)";
 const PANEL_BG = "rgba(255, 255, 255, 0.02)";
 const POS = "#4ade80";
 const NEG = "#f87171";
+const GOLD = "#f5c54a";
+const GOLD_DIM = "rgba(245, 197, 74, 0.45)";
 
-async function logoDataUri(): Promise<string | null> {
+async function fileDataUri(name: string): Promise<string | null> {
   try {
-    const buf = await readFile(
-      join(process.cwd(), "public", "logo-horizontal-aligned-tight.png"),
-    );
+    const buf = await readFile(join(process.cwd(), "public", name));
     return `data:image/png;base64,${buf.toString("base64")}`;
   } catch {
     return null;
@@ -58,11 +58,17 @@ async function avatarDataUri(url: string | null): Promise<string | null> {
     const type = res.headers.get("content-type") ?? "image/jpeg";
     if (!type.startsWith("image/")) return null;
     const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length > 400_000) return null; // sanity: avatars are small
+    if (buf.length > 400_000) return null;
     return `data:${type};base64,${buf.toString("base64")}`;
   } catch {
     return null;
   }
+}
+
+/** Twitter serves _normal (48px) avatar URLs; the hero needs the 400x400. */
+function bigAvatarUrl(url: string | null): string | null {
+  if (!url) return null;
+  return url.replace("_normal.", "_400x400.");
 }
 
 function record(c: SlateCapperSummary): string {
@@ -102,17 +108,18 @@ export async function GET(request: Request): Promise<Response> {
     // fall through to the empty-card render
   }
 
-  const [logo, ...avatars] = await Promise.all([
-    logoDataUri(),
-    ...rows.map((c) => avatarDataUri(c.profile_image_url)),
+  const hero = rows[0];
+  const [logo, crown, heroAvatar, ...avatars] = await Promise.all([
+    fileDataUri("logo-horizontal-aligned-tight.png"),
+    fileDataUri("logo-crown.png"),
+    hero ? avatarDataUri(bigAvatarUrl(hero.profile_image_url)) : Promise.resolve(null),
+    ...rows.slice(1).map((c) => avatarDataUri(c.profile_image_url)),
   ]);
 
-  const podium = rows.slice(0, 3);
+  const supporting = rows.slice(1, 3);
   const rest = rows.slice(3);
 
-  const rankColor = (i: number) => (i === 0 ? OFF : i < 3 ? OFF_DIM : OFF_FAINT);
-
-  const avatar = (c: SlateCapperSummary, i: number, size: number) => {
+  const smallAvatar = (c: SlateCapperSummary, i: number, size: number) => {
     const uri = avatars[i];
     if (uri) {
       return (
@@ -122,10 +129,7 @@ export async function GET(request: Request): Promise<Response> {
           alt=""
           width={size}
           height={size}
-          style={{
-            borderRadius: size,
-            border: `1px solid ${HAIR}`,
-          }}
+          style={{ borderRadius: size, border: `1px solid ${HAIR}` }}
         />
       );
     }
@@ -160,7 +164,7 @@ export async function GET(request: Request): Promise<Response> {
           flexDirection: "column",
           background: BG,
           color: OFF,
-          padding: "34px 52px 24px",
+          padding: "30px 48px 22px",
           fontFamily: "Arial, sans-serif",
         }}
       >
@@ -172,16 +176,16 @@ export async function GET(request: Request): Promise<Response> {
           }}
         >
           <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-            <span style={{ fontSize: 42, fontWeight: 800, letterSpacing: -1 }}>
+            <span style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1 }}>
               Final standings
             </span>
-            <span style={{ fontSize: 21, color: OFF_DIM, fontWeight: 700 }}>
+            <span style={{ fontSize: 20, color: OFF_DIM, fontWeight: 700 }}>
               {dateLabel}
             </span>
           </div>
           <span
             style={{
-              fontSize: 17,
+              fontSize: 16,
               color: OFF_FAINT,
               fontWeight: 700,
               letterSpacing: 2,
@@ -192,7 +196,7 @@ export async function GET(request: Request): Promise<Response> {
           </span>
         </div>
 
-        {rows.length === 0 ? (
+        {!hero ? (
           <div
             style={{
               display: "flex",
@@ -202,83 +206,103 @@ export async function GET(request: Request): Promise<Response> {
               background: PANEL_BG,
               border: `1px solid ${HAIR}`,
               borderRadius: 16,
-              marginTop: 20,
+              marginTop: 18,
             }}
           >
             <span style={{ fontSize: 26, color: OFF_DIM }}>No graded picks yet.</span>
           </div>
         ) : (
-          <div
-            style={{
-              display: "flex",
-              flexGrow: 1,
-              marginTop: 20,
-              gap: 22,
-            }}
-          >
-            {/* Podium panel: the top 3 carry the card. */}
+          <div style={{ display: "flex", flexGrow: 1, marginTop: 18, gap: 20 }}>
+            {/* Hero: the night's crowned winner. Gold lives here and only
+                here; a faint radial glow lifts the panel off the page. */}
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                width: 555,
-                background: PANEL_BG,
-                border: `1px solid ${HAIR}`,
-                borderRadius: 16,
-                padding: "6px 26px",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 430,
+                background:
+                  "radial-gradient(circle at 50% 32%, rgba(245,197,74,0.10), rgba(255,255,255,0.015) 62%)",
+                border: `1px solid ${GOLD_DIM}`,
+                borderRadius: 18,
+                gap: 10,
+                paddingTop: 6,
               }}
             >
-              {podium.map((c, i) => (
-                <div
-                  key={c.capper_id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    flexGrow: 1,
-                    gap: 18,
-                    borderBottom: i < podium.length - 1 ? `1px solid ${HAIR}` : "none",
-                  }}
-                >
-                  <span
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  letterSpacing: 4,
+                  textTransform: "uppercase",
+                  color: GOLD,
+                }}
+              >
+                Tonight&apos;s top sharp
+              </span>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                {crown && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={crown} alt="" width={64} style={{ marginBottom: -6 }} />
+                )}
+                {heroAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={heroAvatar}
+                    alt=""
+                    width={128}
+                    height={128}
                     style={{
-                      fontSize: 26,
-                      fontWeight: 800,
-                      color: rankColor(i),
-                      width: 40,
+                      borderRadius: 128,
+                      border: `3px solid ${GOLD_DIM}`,
                     }}
-                  >
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  {avatar(c, i, 62)}
+                  />
+                ) : (
                   <div
                     style={{
+                      width: 128,
+                      height: 128,
+                      borderRadius: 128,
+                      background: "rgba(255,255,255,0.06)",
+                      border: `3px solid ${GOLD_DIM}`,
                       display: "flex",
-                      flexDirection: "column",
-                      flexGrow: 1,
-                      gap: 2,
-                    }}
-                  >
-                    <span style={{ fontSize: 27, fontWeight: 800 }}>
-                      @{c.handle ?? c.display_name ?? "capper"}
-                    </span>
-                    <span style={{ fontSize: 19, color: OFF_DIM, fontWeight: 700 }}>
-                      {record(c)} · {c.graded_count} graded
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 34,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 46,
                       fontWeight: 800,
-                      color: c.net_units >= 0 ? POS : NEG,
+                      color: OFF_DIM,
                     }}
                   >
-                    {units(c.net_units)}
-                  </span>
-                </div>
-              ))}
+                    {(hero.handle ?? "??").slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <span style={{ fontSize: 30, fontWeight: 800 }}>
+                @{hero.handle ?? hero.display_name ?? "capper"}
+              </span>
+              <span
+                style={{
+                  fontSize: 62,
+                  fontWeight: 800,
+                  lineHeight: 1,
+                  color: hero.net_units >= 0 ? POS : NEG,
+                }}
+              >
+                {units(hero.net_units)}
+              </span>
+              <span style={{ fontSize: 19, color: OFF_DIM, fontWeight: 700 }}>
+                {record(hero)} · {hero.graded_count} graded
+              </span>
             </div>
 
-            {/* Ranks 4-10, compact. */}
+            {/* Supporting cast: 02-03 prominent, 04-10 compact. */}
             <div
               style={{
                 display: "flex",
@@ -286,24 +310,66 @@ export async function GET(request: Request): Promise<Response> {
                 flexGrow: 1,
                 background: PANEL_BG,
                 border: `1px solid ${HAIR}`,
-                borderRadius: 16,
-                padding: "4px 22px",
+                borderRadius: 18,
+                padding: "2px 24px",
               }}
             >
+              {supporting.map((c, i) => (
+                <div
+                  key={c.capper_id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 15,
+                    height: 66,
+                    borderBottom: `1px solid ${HAIR}`,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 21,
+                      fontWeight: 800,
+                      color: OFF_DIM,
+                      width: 34,
+                    }}
+                  >
+                    {String(i + 2).padStart(2, "0")}
+                  </span>
+                  {smallAvatar(c, i, 44)}
+                  <span style={{ fontSize: 24, fontWeight: 800, flexGrow: 1 }}>
+                    @{c.handle ?? c.display_name ?? "capper"}
+                  </span>
+                  <span style={{ fontSize: 18, color: OFF_DIM, fontWeight: 700 }}>
+                    {record(c)}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 26,
+                      fontWeight: 800,
+                      color: c.net_units >= 0 ? POS : NEG,
+                      width: 112,
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    {units(c.net_units)}
+                  </span>
+                </div>
+              ))}
               {rest.map((c, i) => (
                 <div
                   key={c.capper_id}
                   style={{
                     display: "flex",
                     alignItems: "center",
+                    gap: 12,
                     flexGrow: 1,
-                    gap: 13,
                     borderBottom: i < rest.length - 1 ? `1px solid ${HAIR}` : "none",
                   }}
                 >
                   <span
                     style={{
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: 800,
                       color: OFF_FAINT,
                       width: 30,
@@ -311,25 +377,19 @@ export async function GET(request: Request): Promise<Response> {
                   >
                     {String(i + 4).padStart(2, "0")}
                   </span>
-                  {avatar(c, i + 3, 34)}
-                  <span
-                    style={{
-                      fontSize: 19,
-                      fontWeight: 700,
-                      flexGrow: 1,
-                    }}
-                  >
+                  {smallAvatar(c, i + 2, 30)}
+                  <span style={{ fontSize: 18, fontWeight: 700, flexGrow: 1 }}>
                     @{c.handle ?? c.display_name ?? "capper"}
                   </span>
-                  <span style={{ fontSize: 16, color: OFF_DIM, fontWeight: 700 }}>
+                  <span style={{ fontSize: 15, color: OFF_DIM, fontWeight: 700 }}>
                     {record(c)}
                   </span>
                   <span
                     style={{
-                      fontSize: 19,
+                      fontSize: 18,
                       fontWeight: 800,
                       color: c.net_units >= 0 ? POS : NEG,
-                      width: 92,
+                      width: 88,
                       display: "flex",
                       justifyContent: "flex-end",
                     }}
@@ -347,16 +407,16 @@ export async function GET(request: Request): Promise<Response> {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginTop: 18,
+            marginTop: 16,
           }}
         >
           {logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logo} alt="TailSlips" height={28} />
+            <img src={logo} alt="TailSlips" height={26} />
           ) : (
-            <span style={{ fontSize: 24, fontWeight: 800 }}>TailSlips</span>
+            <span style={{ fontSize: 22, fontWeight: 800 }}>TailSlips</span>
           )}
-          <span style={{ fontSize: 19, color: OFF_DIM, fontWeight: 700 }}>
+          <span style={{ fontSize: 18, color: OFF_DIM, fontWeight: 700 }}>
             tailslips.com/slate
           </span>
         </div>
