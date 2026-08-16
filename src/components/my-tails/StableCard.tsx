@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import { MARKET_LABELS, toneCls } from "@/lib/edges";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
@@ -9,6 +9,47 @@ import { MomentumStrip } from "@/components/leaderboard/MomentumStrip";
 import { StatusPill } from "@/components/my-tails/StatusPill";
 import { formatUnits, formatUnitsSmart, trimUnits } from "@/lib/formatters";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
+
+/** localStorage key holding the capper ids whose lifetime block is folded. */
+const HIDE_KEY = "ts:stable:hideProfit";
+const HIDE_EVENT = "ts:stable:hideProfit:change";
+
+/** Tiny external store over localStorage so every card (and every tab)
+ *  agrees on which lifetime blocks are folded, without setState-in-effect. */
+function readHidden(): string {
+  try {
+    return window.localStorage.getItem(HIDE_KEY) ?? "[]";
+  } catch {
+    return "[]";
+  }
+}
+function subscribeHidden(cb: () => void): () => void {
+  window.addEventListener("storage", cb);
+  window.addEventListener(HIDE_EVENT, cb);
+  return () => {
+    window.removeEventListener("storage", cb);
+    window.removeEventListener(HIDE_EVENT, cb);
+  };
+}
+function writeHidden(ids: number[]): void {
+  try {
+    window.localStorage.setItem(HIDE_KEY, JSON.stringify(ids));
+  } catch {
+    // preference is a nicety; never let storage break the toggle
+  }
+  window.dispatchEvent(new Event(HIDE_EVENT));
+}
+
+/** Eye / eye-off, sized to sit beside the untail control. */
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+      {off && <path d="M3 3l18 18" />}
+    </svg>
+  );
+}
 
 export function StableCard({
   capper,
@@ -27,6 +68,26 @@ export function StableCard({
 }) {
   const slip = useBetSlip();
   const [openParlays, setOpenParlays] = useState<Set<number>>(new Set());
+  // Per-capper "hide the lifetime block" toggle. A capper can win a night by
+  // 19u while sitting red for the season, and the season figure sitting above
+  // that night is both off-message and unkind to the capper, so the eye folds
+  // the card straight from the name to the momentum strip. Persisted per
+  // capper in localStorage; read after mount so SSR markup stays stable.
+  const hiddenRaw = useSyncExternalStore(subscribeHidden, readHidden, () => "[]");
+  const hiddenIds = useMemo<number[]>(() => {
+    try {
+      const parsed = JSON.parse(hiddenRaw);
+      return Array.isArray(parsed) ? parsed.map(Number) : [];
+    } catch {
+      return [];
+    }
+  }, [hiddenRaw]);
+  const profitHidden = hiddenIds.includes(Number(capper.capper_id));
+  const toggleProfit = () => {
+    const id = Number(capper.capper_id);
+    const kept = hiddenIds.filter((x) => x !== id);
+    writeHidden(profitHidden ? kept : [...kept, id]);
+  };
   const scoped = scopes.length > 0;
   const positive = (capper.units_profit ?? 0) >= 0;
   // Assigned slip stake for this capper, driven by a tap stepper (no text
@@ -52,6 +113,19 @@ export function StableCard({
   };
   return (
     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
+      <button
+        aria-label={
+          profitHidden
+            ? `Show lifetime profit for ${capper.display_name ?? capper.handle}`
+            : `Hide lifetime profit for ${capper.display_name ?? capper.handle}`
+        }
+        aria-pressed={profitHidden}
+        onClick={toggleProfit}
+        className="absolute right-9 top-3 z-10 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        title={profitHidden ? "Show net profit" : "Hide net profit"}
+      >
+        <EyeIcon off={profitHidden} />
+      </button>
       <button
         aria-label={`Untail ${capper.display_name ?? capper.handle}`}
         onClick={onUntail}
@@ -85,6 +159,7 @@ export function StableCard({
       </Link>
         {!scoped && (
           <>
+            {!profitHidden && (
             <div className="mt-4 flex items-end justify-between gap-3">
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
@@ -107,8 +182,9 @@ export function StableCard({
                 <Sparkline values={capper.trajectory_units} width={116} height={38} />
               )}
             </div>
+            )}
             {capper.last_picks && capper.last_picks.length > 0 && (
-              <div className="mt-3">
+              <div className={profitHidden ? "mt-4" : "mt-3"}>
                 <MomentumStrip picks={capper.last_picks} />
               </div>
             )}
