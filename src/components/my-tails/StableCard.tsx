@@ -113,19 +113,24 @@ export function StableCard({
   };
   return (
     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
-      <button
-        aria-label={
-          profitHidden
-            ? `Show lifetime profit for ${capper.display_name ?? capper.handle}`
-            : `Hide lifetime profit for ${capper.display_name ?? capper.handle}`
-        }
-        aria-pressed={profitHidden}
-        onClick={toggleProfit}
-        className="absolute right-9 top-3 z-10 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-        title={profitHidden ? "Show net profit" : "Hide net profit"}
-      >
-        <EyeIcon off={profitHidden} />
-      </button>
+      {/* Only unscoped cards render the lifetime block, so only they get
+          the eye; a scoped card would have a button that changes nothing
+          (Codex, PR #85). */}
+      {!scoped && (
+        <button
+          aria-label={
+            profitHidden
+              ? `Show lifetime profit for ${capper.display_name ?? capper.handle}`
+              : `Hide lifetime profit for ${capper.display_name ?? capper.handle}`
+          }
+          aria-pressed={profitHidden}
+          onClick={toggleProfit}
+          className="absolute right-9 top-3 z-10 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          title={profitHidden ? "Show net profit" : "Hide net profit"}
+        >
+          <EyeIcon off={profitHidden} />
+        </button>
+      )}
       <button
         aria-label={`Untail ${capper.display_name ?? capper.handle}`}
         onClick={onUntail}
