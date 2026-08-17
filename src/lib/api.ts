@@ -86,6 +86,10 @@ export interface LeaderboardFilters {
   bet_type: BetTypeFilter;
   min_picks: number;
   active_only: boolean;
+  /** Rows to return. The backend caps at 500 and defaults to 100; pass 500
+   *  for roster-style surfaces (My Tails, nav search) that need every
+   *  capper rather than a top-N slice. */
+  limit?: number;
 }
 
 /**
@@ -125,6 +129,7 @@ export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<Lea
     min_picks: String(filters.min_picks),
     active_only: String(filters.active_only),
   });
+  if (filters.limit != null) params.set("limit", String(filters.limit));
   const cacheKey = `lb:v1:${params.toString()}`;
   return withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, async () => {
     const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {

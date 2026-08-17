@@ -22,6 +22,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       bet_type: "all",
       min_picks: 0,
       active_only: false,
+      // limit=500: every capper profile gets a sitemap entry, not the top 100.
+      limit: 500,
     });
     capperEntries = data.leaderboard
       .filter((r) => r.handle)
