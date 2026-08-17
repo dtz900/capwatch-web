@@ -58,6 +58,8 @@ export default async function CappersIndexPage() {
       bet_type: "all",
       min_picks: 0,
       active_only: false,
+      // limit=500: the directory lists every tracked capper, not the top 100.
+      limit: 500,
     });
     cappers = [...data.leaderboard].sort((a, b) =>
       (a.display_name ?? a.handle ?? "").localeCompare(b.display_name ?? b.handle ?? ""),

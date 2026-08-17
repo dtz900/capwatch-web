@@ -31,12 +31,17 @@ export default async function MyTailsPage({
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // limit=500 (the backend max) on purpose: this response is the lookup
+  // table for the user's stable, not a top-N board. At the default 100 rows
+  // any tailed capper below the 100th by season profit fell out of byId and
+  // was silently dropped from the page (dbunk_picks at -185u, 2026-08-16).
   const lb = await fetchLeaderboard({
     window: "season",
     sort: "units_profit",
     bet_type: "all",
     min_picks: 0,
     active_only: false,
+    limit: 500,
   });
   const byId = new Map<string, CapperRow>(lb.leaderboard.map((r) => [String(r.capper_id), r]));
   const top3 = lb.leaderboard.slice(0, 3);

@@ -37,7 +37,8 @@ export function NavSearch() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${API_BASE}/api/public/cappers?window=all_time&sort=units_profit&bet_type=all&min_picks=0&active_only=false`,
+        // limit=500: search must see every tracked capper, not the top 100.
+        `${API_BASE}/api/public/cappers?window=all_time&sort=units_profit&bet_type=all&min_picks=0&active_only=false&limit=500`,
       );
       if (!res.ok) throw new Error(`status ${res.status}`);
       const data = (await res.json()) as LeaderboardResponse;
