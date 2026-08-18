@@ -9,7 +9,8 @@ import { ImageResponse } from "next/og";
 // nothing is stored.
 //
 // Params:
-//   date  YYYY-MM-DD, used only for the default-freshness note
+//   date  YYYY-MM-DD, rendered as the slip's day label (default 2026-08-17,
+//         matching the baked-in picks; pass it when overriding rows)
 //   p     repeatable rows, "selection|matchup|capper|odds|stake|profit"
 //         e.g. p=Reds ML|STL @ CIN|swampy_swami|%2B102|1|1.02
 //   today signed units for the TODAY box, e.g. 5.39
@@ -22,6 +23,7 @@ const size = { width: 1200, height: 630 };
 const BG = "#0a0a0c";
 const TEXT = "#f7f3e9";
 const POS = "#19f57c";
+const NEG = "#ef4444";
 const SLIP_TEAL = "#2fd9c0";
 const SUB = "#6da399";
 const FAINT = "#4c7d72";
@@ -58,7 +60,21 @@ function parseRows(sp: URLSearchParams): SlipRow[] {
       });
     }
   }
-  return out.length > 0 ? out : DEFAULT_ROWS;
+  // The 630px canvas fits exactly three ticket legs plus the P&L footer;
+  // more would clip out the bottom of a non-scrolling PNG.
+  const rows = out.length > 0 ? out : DEFAULT_ROWS;
+  return rows.slice(0, 3);
+}
+
+const MONTH_ABBR = [
+  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+];
+
+function dateLabel(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  if (!m || !d) return iso;
+  return `${MONTH_ABBR[m - 1]} ${d}`;
 }
 
 function unitsStr(v: number): string {
@@ -82,8 +98,19 @@ async function readPublicPngDataUri(filename: string): Promise<string | null> {
   }
 }
 
-/* Ticket leg, mirroring SlipEntryRow's graded state at ~1.4x scale. */
+/* Ticket leg, mirroring SlipEntryRow's graded state at ~1.4x scale. Outcome
+   follows the sign of profit, same semantics as the real rail. */
 function slipEntryRow(r: SlipRow) {
+  const won = r.profit > 0;
+  const push = r.profit === 0;
+  const resColor = push ? SUB : won ? POS : NEG;
+  const pill = push ? "PUSH" : won ? "WON" : "LOST";
+  const pillBg = push ? "rgba(255,255,255,0.06)" : won ? "rgba(25,245,124,0.15)" : "rgba(239,68,68,0.15)";
+  const pillBorder = push
+    ? "1px solid rgba(255,255,255,0.20)"
+    : won
+      ? "1px solid rgba(25,245,124,0.40)"
+      : "1px solid rgba(239,68,68,0.40)";
   return (
     <div
       style={{
@@ -121,23 +148,23 @@ function slipEntryRow(r: SlipRow) {
       >
         <div style={{ display: "flex", fontSize: 15, color: SUB }}>{toWin(r.odds, r.stake)}</div>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ display: "flex", fontSize: 19, fontWeight: 800, color: POS, marginRight: 10 }}>
+          <div style={{ display: "flex", fontSize: 19, fontWeight: 800, color: resColor, marginRight: 10 }}>
             {unitsStr(r.profit)}
           </div>
           <div
             style={{
               display: "flex",
               borderRadius: 8,
-              border: "1px solid rgba(25,245,124,0.40)",
-              background: "rgba(25,245,124,0.15)",
+              border: pillBorder,
+              background: pillBg,
               padding: "3px 10px",
               fontSize: 13,
               fontWeight: 700,
               letterSpacing: 1.4,
-              color: POS,
+              color: resColor,
             }}
           >
-            WON
+            {pill}
           </div>
         </div>
       </div>
@@ -145,7 +172,11 @@ function slipEntryRow(r: SlipRow) {
   );
 }
 
-function ticket(rows: SlipRow[], today: number, logoUri: string | null) {
+function ticket(rows: SlipRow[], today: number, dateIso: string, logoUri: string | null) {
+  const totalColor = today > 0 ? POS : today < 0 ? NEG : SUB;
+  // The slip is always a dated sample night, never a live "today", so the
+  // footer names the date instead of presenting old results as current.
+  const dayLabel = dateLabel(dateIso);
   return (
     <div
       style={{
@@ -218,9 +249,9 @@ function ticket(rows: SlipRow[], today: number, logoUri: string | null) {
         >
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", fontSize: 12, fontWeight: 700, letterSpacing: 2, color: FAINT }}>
-              TODAY
+              {dayLabel}
             </div>
-            <div style={{ display: "flex", marginTop: 4, fontSize: 30, fontWeight: 800, color: POS, lineHeight: 1 }}>
+            <div style={{ display: "flex", marginTop: 4, fontSize: 30, fontWeight: 800, color: totalColor, lineHeight: 1 }}>
               {unitsStr(today)}
             </div>
           </div>
@@ -228,7 +259,7 @@ function ticket(rows: SlipRow[], today: number, logoUri: string | null) {
             <div style={{ display: "flex", fontSize: 12, fontWeight: 700, letterSpacing: 2, color: FAINT }}>
               ALL TIME
             </div>
-            <div style={{ display: "flex", marginTop: 4, fontSize: 30, fontWeight: 800, color: POS, lineHeight: 1 }}>
+            <div style={{ display: "flex", marginTop: 4, fontSize: 30, fontWeight: 800, color: totalColor, lineHeight: 1 }}>
               {unitsStr(today)}
             </div>
           </div>
@@ -251,7 +282,7 @@ function ticket(rows: SlipRow[], today: number, logoUri: string | null) {
   );
 }
 
-function card(rows: SlipRow[], today: number, logoUri: string | null) {
+function card(rows: SlipRow[], today: number, dateIso: string, logoUri: string | null) {
   return (
     <div
       style={{
@@ -323,7 +354,7 @@ function card(rows: SlipRow[], today: number, logoUri: string | null) {
         </div>
       </div>
 
-      {ticket(rows, today, logoUri)}
+      {ticket(rows, today, dateIso, logoUri)}
     </div>
   );
 }
@@ -333,9 +364,10 @@ export async function GET(request: Request): Promise<Response> {
   const rows = parseRows(sp);
   const todayParam = Number(sp.get("today"));
   const today = sp.get("today") !== null && Number.isFinite(todayParam) ? todayParam : DEFAULT_TODAY;
+  const dateIso = sp.get("date") ?? "2026-08-17";
 
   const logoUri = await readPublicPngDataUri("logo-horizontal-aligned-tight.png");
-  const img = new ImageResponse(card(rows, today, logoUri), { ...size });
+  const img = new ImageResponse(card(rows, today, dateIso, logoUri), { ...size });
   const buf = await img.arrayBuffer();
   return new Response(buf, {
     headers: { "content-type": "image/png", "cache-control": "no-store, max-age=0" },
