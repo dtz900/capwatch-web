@@ -28,6 +28,12 @@ const PANEL_BG = "rgba(255, 255, 255, 0.02)";
 const PRIMARY_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
 const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
 
+// Handles that must never be NAMED on X-shareable surfaces (the OG card is
+// scraped into @TailSlips tweets). Mirrors NO_TAG_HANDLES in the platform's
+// daily_leaderboard_tweet.py. Their picks still count toward the side tallies;
+// only the name callout is suppressed. Site pages are unaffected.
+const X_SUPPRESSED_HANDLES = new Set(["winwhenhot"]);
+
 interface MarqueeSide {
   team: string | null;
   count: number;
@@ -244,11 +250,20 @@ function buildMarqueeBlock(
 ): MarqueeBlock {
   const awayHandles: string[] = [];
   const homeHandles: string[] = [];
+  let awayCount = 0;
+  let homeCount = 0;
   for (const p of game.picks) {
     const side = pickMlSide(p, game.away_team, game.home_team);
     const h = p.handle;
-    if (side === "away" && h) awayHandles.push(h);
-    else if (side === "home" && h) homeHandles.push(h);
+    if (!h) continue;
+    const named = !X_SUPPRESSED_HANDLES.has(h.toLowerCase());
+    if (side === "away") {
+      awayCount += 1;
+      if (named) awayHandles.push(h);
+    } else if (side === "home") {
+      homeCount += 1;
+      if (named) homeHandles.push(h);
+    }
   }
   return {
     awayTeam: game.away_team,
@@ -261,8 +276,8 @@ function buildMarqueeBlock(
     totalPicks: game.picks.length,
     sharpCount: new Set(game.picks.map((p) => p.capper_id)).size,
     featuredLabel,
-    away: { team: game.away_team, count: awayHandles.length, handles: awayHandles },
-    home: { team: game.home_team, count: homeHandles.length, handles: homeHandles },
+    away: { team: game.away_team, count: awayCount, handles: awayHandles },
+    home: { team: game.home_team, count: homeCount, handles: homeHandles },
   };
 }
 
