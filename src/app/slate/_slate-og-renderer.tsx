@@ -38,6 +38,7 @@ interface MarqueeSide {
   team: string | null;
   count: number;
   handles: string[];
+  medianOdds: number | null;
 }
 
 interface MarqueeBlock {
@@ -97,20 +98,32 @@ async function readLogoDataUri(): Promise<string | null> {
   }
 }
 
-// Manrope is the site's sans (next/font/google in layout.tsx). The OG image is
-// rendered by satori, which has no access to next/font, so without loading the
-// real face here the card falls back to satori's plain default — the "cheap
-// font" look. Bundled WOFFs in public/fonts keep the render fast and offline.
-type OgFont = { name: string; data: Buffer; weight: 500 | 700 | 800; style: "normal" };
+// Satori has no access to next/font, so every face the card uses is bundled in
+// public/fonts and loaded from disk. Two roles: Manrope (the site sans) carries
+// the big scoreboard numbers and team marks, JetBrains Mono carries labels,
+// handles and stat strips. Missing files degrade to satori's default instead
+// of failing the render.
+type OgFont = {
+  name: string;
+  data: Buffer;
+  weight: 400 | 500 | 700 | 800;
+  style: "normal" | "italic";
+};
+const FONT_FILES: Array<{ file: string; name: string; weight: OgFont["weight"]; style: OgFont["style"] }> = [
+  { file: "manrope-500.woff", name: "Manrope", weight: 500, style: "normal" },
+  { file: "manrope-700.woff", name: "Manrope", weight: 700, style: "normal" },
+  { file: "manrope-800.woff", name: "Manrope", weight: 800, style: "normal" },
+  { file: "jetbrains-mono-500.ttf", name: "JetBrains Mono", weight: 500, style: "normal" },
+  { file: "jetbrains-mono-700.ttf", name: "JetBrains Mono", weight: 700, style: "normal" },
+];
 let FONT_CACHE: OgFont[] | null = null;
-async function loadManropeFonts(): Promise<OgFont[]> {
+async function loadCardFonts(): Promise<OgFont[]> {
   if (FONT_CACHE) return FONT_CACHE;
-  const weights: Array<500 | 700 | 800> = [500, 700, 800];
   const out: OgFont[] = [];
-  for (const w of weights) {
+  for (const f of FONT_FILES) {
     try {
-      const buf = await readFile(join(process.cwd(), "public", "fonts", `manrope-${w}.woff`));
-      out.push({ name: "Manrope", data: buf, weight: w, style: "normal" });
+      const buf = await readFile(join(process.cwd(), "public", "fonts", f.file));
+      out.push({ name: f.name, data: buf, weight: f.weight, style: f.style });
     } catch {
       // Missing font file falls back to satori's default; not fatal.
     }
@@ -250,6 +263,8 @@ function buildMarqueeBlock(
 ): MarqueeBlock {
   const awayHandles: string[] = [];
   const homeHandles: string[] = [];
+  const awayOdds: number[] = [];
+  const homeOdds: number[] = [];
   let awayCount = 0;
   let homeCount = 0;
   for (const p of game.picks) {
@@ -260,9 +275,11 @@ function buildMarqueeBlock(
     if (side === "away") {
       awayCount += 1;
       if (named) awayHandles.push(h);
+      if (isAmericanOdds(p.odds_taken)) awayOdds.push(p.odds_taken as number);
     } else if (side === "home") {
       homeCount += 1;
       if (named) homeHandles.push(h);
+      if (isAmericanOdds(p.odds_taken)) homeOdds.push(p.odds_taken as number);
     }
   }
   return {
@@ -276,9 +293,30 @@ function buildMarqueeBlock(
     totalPicks: game.picks.length,
     sharpCount: new Set(game.picks.map((p) => p.capper_id)).size,
     featuredLabel,
-    away: { team: game.away_team, count: awayCount, handles: awayHandles },
-    home: { team: game.home_team, count: homeCount, handles: homeHandles },
+    away: { team: game.away_team, count: awayCount, handles: awayHandles, medianOdds: medianInt(awayOdds) },
+    home: { team: game.home_team, count: homeCount, handles: homeHandles, medianOdds: medianInt(homeOdds) },
   };
+}
+
+// Valid American prices live outside (-100, 100). Anything inside that band is
+// a mis-stored value (decimal odds, a stray line number) and would poison the
+// consensus figure.
+function isAmericanOdds(v: number | null | undefined): boolean {
+  return typeof v === "number" && Number.isFinite(v) && Math.abs(v) >= 100 && Math.abs(v) <= 10000;
+}
+
+function medianInt(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const med = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const rounded = Math.round(med);
+  // An even count straddling the +/-100 gap can average into the invalid band.
+  return Math.abs(rounded) >= 100 ? rounded : null;
+}
+
+function formatAmericanOdds(n: number): string {
+  return n > 0 ? `+${n}` : `${n}`;
 }
 
 export interface RenderSlateOpts {
@@ -320,7 +358,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
     hasAnyPicks: allPicks.length > 0,
   };
 
-  const fonts = await loadManropeFonts();
+  const fonts = await loadCardFonts();
 
   try {
     const primary = new ImageResponse(buildJsx(inputs), { ...size, fonts });
@@ -461,8 +499,25 @@ function TeamLogo({ src, size: s }: { src: string | null; size: number }) {
   );
 }
 
+// Broadcast-scoreboard chrome: team-color washes, glowing focal numbers,
+// pill chips, and a pick'em split bar. Mono carries small labels and stats.
+const MONO = "JetBrains Mono";
+const CHIP_BG = "rgba(255, 255, 255, 0.05)";
+const CHIP_BORDER = "rgba(247, 243, 233, 0.16)";
+
+function hexWithAlpha(color: string, alpha: number): string {
+  if (color.startsWith("#")) {
+    const [r, g, b] = hexToRgb(color);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  const m = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (m) return `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${alpha})`;
+  return color;
+}
+
 function buildJsx(inputs: RenderInputs) {
-  const { logoDataUri, marquee, hasAnyPicks } = inputs;
+  const { logoDataUri, marquee, hasAnyPicks, totalGames, picksTotal, dateLabel } = inputs;
+  const dayWord = dateLabel.toLowerCase();
 
   const awayC = marquee ? displayTeamColor(teamColor(marquee.awayTeam)) : OFF;
   const homeC = marquee ? displayTeamColor(teamColor(marquee.homeTeam)) : OFF;
@@ -475,73 +530,168 @@ function buildJsx(inputs: RenderInputs) {
         height: "100%",
         background: BG,
         color: OFF,
-        padding: `${px(24)}px ${px(44)}px ${px(20)}px`,
         display: "flex",
         flexDirection: "column",
         fontFamily: "Manrope, sans-serif",
         position: "relative",
+        overflow: "hidden",
       }}
     >
-      {/* Top hairline: team-color split when a game is featured, else off-white. */}
+      {/* Team-color arena washes pouring in from each side. */}
+      {marquee ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            backgroundImage: `linear-gradient(105deg, ${hexWithAlpha(awayC, 0.34)} 0%, rgba(10,10,12,0) 46%), linear-gradient(255deg, ${hexWithAlpha(homeC, 0.34)} 0%, rgba(10,10,12,0) 46%)`,
+          }}
+        />
+      ) : null}
+      {/* Floor shadow so the lower third stays legible under the washes. */}
       <div
         style={{
           position: "absolute",
           top: 0,
           left: 0,
           right: 0,
-          height: px(4),
+          bottom: 0,
+          display: "flex",
+          backgroundImage:
+            "linear-gradient(180deg, rgba(10,10,12,0) 46%, rgba(10,10,12,0.55) 74%, rgba(10,10,12,0.85) 100%)",
+        }}
+      />
+
+      {/* Split team-color rule across the very top. */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: px(5),
           display: "flex",
           background: marquee
             ? `linear-gradient(90deg, ${awayC} 0%, ${awayC} 50%, ${homeC} 50%, ${homeC} 100%)`
             : OFF,
-          opacity: 0.9,
         }}
       />
 
-      {/* Header: wordmark + status/time */}
+      {/* Content column. */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: px(12),
+          flexDirection: "column",
+          flex: 1,
+          padding: `${px(30)}px ${px(52)}px ${px(24)}px`,
+          position: "relative",
         }}
       >
-        <Wordmark logo={logoDataUri} height={38} />
+        {/* Header: wordmark left, status pill + time right. */}
         <div
           style={{
-            fontSize: px(16),
-            fontWeight: 800,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            color: OFF_DIM,
-            display: "flex",
-          }}
-        >
-          {timeLabel ? `Pre-game · ${timeLabel}` : "Tonight's MLB slate"}
-        </div>
-      </div>
-
-      {marquee ? (
-        <Scoreboard marquee={marquee} awayC={awayC} homeC={homeC} />
-      ) : (
-        <div
-          style={{
-            flex: 1,
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontSize: px(34),
-            fontWeight: 800,
-            color: OFF,
-            textAlign: "center",
+            justifyContent: "space-between",
           }}
         >
-          {hasAnyPicks
-            ? "Sharps are posting. Check the board."
-            : "Sharps haven't posted yet. Check back as picks hit Twitter."}
+          <Wordmark logo={logoDataUri} height={32} />
+          <div style={{ display: "flex", alignItems: "center", gap: px(14) }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: px(8),
+                padding: `${px(6)}px ${px(14)}px`,
+                borderRadius: px(999),
+                border: `${px(1)}px solid ${CHIP_BORDER}`,
+                background: CHIP_BG,
+                fontFamily: MONO,
+                fontWeight: 700,
+                fontSize: px(13),
+                letterSpacing: px(2.4),
+                textTransform: "uppercase",
+                color: OFF,
+              }}
+            >
+              <div
+                style={{
+                  width: px(8),
+                  height: px(8),
+                  borderRadius: px(4),
+                  background: "#4ade80",
+                  display: "flex",
+                }}
+              />
+              Pre-game
+            </div>
+            {timeLabel ? (
+              <div
+                style={{
+                  display: "flex",
+                  fontFamily: MONO,
+                  fontWeight: 500,
+                  fontSize: px(14),
+                  letterSpacing: px(2),
+                  textTransform: "uppercase",
+                  color: OFF_DIM,
+                }}
+              >
+                {timeLabel}
+              </div>
+            ) : null}
+          </div>
         </div>
-      )}
+
+        {marquee ? (
+          <Scoreboard marquee={marquee} awayC={awayC} homeC={homeC} />
+        ) : (
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: px(40),
+              fontWeight: 800,
+              color: OFF,
+              textAlign: "center",
+            }}
+          >
+            {hasAnyPicks
+              ? "Sharps are posting. Check the board."
+              : "Sharps haven't posted yet."}
+          </div>
+        )}
+
+        {/* Baseline ticker. Lives in the band X's caption overlays in-feed,
+            so nothing critical is down here. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: px(14),
+            fontFamily: MONO,
+            fontWeight: 500,
+            fontSize: px(12),
+            letterSpacing: px(2.4),
+            textTransform: "uppercase",
+            color: "rgba(247, 243, 233, 0.45)",
+          }}
+        >
+          <div style={{ display: "flex" }}>
+            {totalGames} {totalGames === 1 ? "game" : "games"} {dayWord} · {picksTotal}{" "}
+            {picksTotal === 1 ? "pick" : "picks"} tracked
+          </div>
+          <div style={{ display: "flex", color: "rgba(247, 243, 233, 0.70)", fontWeight: 700 }}>
+            tailslips.com
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -555,102 +705,192 @@ function Scoreboard({
   awayC: string;
   homeC: string;
 }) {
-  const awayWash = teamColor(marquee.awayTeam);
-  const homeWash = teamColor(marquee.homeTeam);
   const awayPitcher = shortPitcher(marquee.awayStarter);
   const homePitcher = shortPitcher(marquee.homeStarter);
   const pitcherLine =
     awayPitcher && homePitcher ? `${awayPitcher} vs ${homePitcher}` : awayPitcher ?? homePitcher;
-  const metaBits = [
-    `${marquee.totalPicks} ${marquee.totalPicks === 1 ? "pick" : "picks"} from ${marquee.sharpCount} ${marquee.sharpCount === 1 ? "sharp" : "sharps"}`,
-    pitcherLine,
-  ].filter(Boolean);
+
+  const mlTotal = marquee.away.count + marquee.home.count;
+  const awayShare = mlTotal > 0 ? marquee.away.count / mlTotal : 0.5;
+  const awayPct = Math.round(awayShare * 100);
+  const homePct = 100 - awayPct;
 
   return (
-    // Card sizes to its content (not flex:1). The dark space below it is the
-    // reserve X's caption bar overlays in-feed; a content-height card avoids a
-    // big empty band inside the framed panels.
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        background: PANEL_BG,
-        border: `${px(1)}px solid ${HAIR}`,
-        borderRadius: px(16),
-        overflow: "hidden",
-        position: "relative",
-      }}
-    >
-      {/* Card header strip: FEATURED tag + game meta line */}
+    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      {/* Matchup stage: team blocks flanking the center badge. */}
       <div
         style={{
           display: "flex",
+          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "space-between",
-          padding: `${px(12)}px ${px(22)}px`,
-          borderBottom: `${px(1)}px solid ${HAIR}`,
+          flex: 1,
+          marginTop: px(10),
         }}
       >
-        <div
-          style={{
-            fontSize: px(13),
-            fontWeight: 800,
-            letterSpacing: 2.2,
-            textTransform: "uppercase",
-            color: OFF_DIM,
-            padding: `${px(4)}px ${px(10)}px`,
-            border: `${px(1)}px solid ${HAIR}`,
-            borderRadius: px(5),
-            display: "flex",
-          }}
-        >
-          {marquee.featuredLabel}
-        </div>
-        <div
-          style={{
-            fontSize: px(17),
-            fontWeight: 600,
-            color: OFF_DIM,
-            letterSpacing: 0.2,
-            display: "flex",
-          }}
-        >
-          {metaBits.join("  ·  ")}
-        </div>
-      </div>
-
-      {/* Two team panels + center @ */}
-      <div style={{ display: "flex", flexDirection: "row" }}>
         <TeamPanel
           abbr={marquee.awayTeam}
           logo={marquee.awayLogoDataUri}
           color={awayC}
-          wash={awayWash}
           count={marquee.away.count}
           handles={marquee.away.handles}
+          medianOdds={marquee.away.medianOdds}
         />
+
+        {/* Center badge column. */}
         <div
           style={{
-            width: px(64),
+            width: px(230),
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "flex-start",
-            paddingTop: px(58),
-            borderLeft: `${px(1)}px solid ${HAIR}`,
-            borderRight: `${px(1)}px solid ${HAIR}`,
+            gap: px(12),
           }}
         >
-          <div style={{ fontSize: px(30), fontWeight: 700, color: OFF_FAINT, display: "flex" }}>@</div>
+          <div
+            style={{
+              width: px(92),
+              height: px(92),
+              borderRadius: px(46),
+              border: `${px(2)}px solid ${CHIP_BORDER}`,
+              background: "rgba(10, 10, 12, 0.75)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: px(40),
+              fontWeight: 800,
+              color: OFF_DIM,
+            }}
+          >
+            @
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontFamily: MONO,
+              fontWeight: 700,
+              fontSize: px(11),
+              letterSpacing: px(3),
+              textTransform: "uppercase",
+              color: "rgba(247, 243, 233, 0.50)",
+            }}
+          >
+            {marquee.featuredLabel}
+          </div>
+          {pitcherLine ? (
+            <div
+              style={{
+                display: "flex",
+                fontFamily: MONO,
+                fontWeight: 500,
+                fontSize: px(13),
+                letterSpacing: px(0.5),
+                color: "rgba(247, 243, 233, 0.60)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {pitcherLine}
+            </div>
+          ) : null}
         </div>
+
         <TeamPanel
           abbr={marquee.homeTeam}
           logo={marquee.homeLogoDataUri}
           color={homeC}
-          wash={homeWash}
           count={marquee.home.count}
           handles={marquee.home.handles}
+          medianOdds={marquee.home.medianOdds}
         />
+      </div>
+
+      {/* Pick'em split bar: who the room is on. With zero moneyline picks a
+          50/50 bar would fake an even consensus, so render a quiet empty
+          track with an honest label instead. */}
+      <div style={{ display: "flex", flexDirection: "column", marginTop: px(16) }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: px(8),
+            fontFamily: MONO,
+            textTransform: "uppercase",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontWeight: 700,
+              fontSize: px(16),
+              letterSpacing: px(1),
+              color: awayC,
+            }}
+          >
+            {mlTotal > 0 ? `${awayPct}%` : ""}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontWeight: 700,
+              fontSize: px(12),
+              letterSpacing: px(3.2),
+              color: "rgba(247, 243, 233, 0.55)",
+            }}
+          >
+            {mlTotal > 0
+              ? `${mlTotal} ${mlTotal === 1 ? "sharp" : "sharps"} on the moneyline`
+              : "no moneyline picks yet"}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontWeight: 700,
+              fontSize: px(16),
+              letterSpacing: px(1),
+              color: homeC,
+            }}
+          >
+            {mlTotal > 0 ? `${homePct}%` : ""}
+          </div>
+        </div>
+        {mlTotal > 0 ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              height: px(16),
+              borderRadius: px(8),
+              overflow: "hidden",
+              border: `${px(1)}px solid rgba(247, 243, 233, 0.10)`,
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.max(4, Math.min(96, awayShare * 100))}%`,
+                background: `linear-gradient(90deg, ${awayC} 0%, ${hexWithAlpha(awayC, 0.55)} 100%)`,
+                display: "flex",
+              }}
+            />
+            <div style={{ width: px(3), background: BG, display: "flex" }} />
+            <div
+              style={{
+                flex: 1,
+                background: `linear-gradient(90deg, ${hexWithAlpha(homeC, 0.55)} 0%, ${homeC} 100%)`,
+                display: "flex",
+              }}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              height: px(16),
+              borderRadius: px(8),
+              border: `${px(1)}px solid rgba(247, 243, 233, 0.10)`,
+              background: "rgba(255, 255, 255, 0.03)",
+            }}
+          />
+        )}
       </div>
     </div>
   );
@@ -660,16 +900,16 @@ function TeamPanel({
   abbr,
   logo,
   color,
-  wash,
   count,
   handles,
+  medianOdds,
 }: {
   abbr: string | null;
   logo: string | null;
   color: string;
-  wash: string;
   count: number;
   handles: string[];
+  medianOdds: number | null;
 }) {
   const visible = handles.slice(0, 2);
   // Remainder counts from the side tally, not the named list, so sharps with
@@ -682,101 +922,157 @@ function TeamPanel({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        position: "relative",
-        overflow: "hidden",
       }}
     >
-      {/* Team-color wash, strongest at the top, fading down. */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: "flex",
-          opacity: 0.2,
-          background: `linear-gradient(180deg, ${wash} 0%, transparent 62%)`,
-        }}
-      />
-      {/* Solid team-color cap at the very top. */}
-      <div style={{ height: px(5), width: "100%", background: color, display: "flex" }} />
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: `${px(20)}px ${px(18)}px ${px(26)}px`,
-          position: "relative",
-        }}
-      >
-        <TeamLogo src={logo} size={88} />
+      {/* Team identity: logo + heavy tracked abbr. */}
+      <div style={{ display: "flex", alignItems: "center", gap: px(16) }}>
+        <TeamLogo src={logo} size={64} />
         <div
           style={{
-            fontSize: px(44),
+            fontSize: px(46),
             fontWeight: 800,
-            letterSpacing: -1,
+            letterSpacing: px(3),
             color,
-            marginTop: px(4),
             display: "flex",
           }}
         >
           {abbr ?? "?"}
         </div>
+      </div>
 
-        {/* Giant focal count. */}
-        <div
-          style={{
-            fontSize: px(88),
-            fontWeight: 800,
-            lineHeight: 1,
-            letterSpacing: -3,
-            color,
-            marginTop: px(6),
-            display: "flex",
-          }}
-        >
-          {count}
-        </div>
-        <div
-          style={{
-            fontSize: px(15),
-            fontWeight: 800,
-            letterSpacing: 1.8,
-            textTransform: "uppercase",
-            color: OFF_DIM,
-            marginTop: px(2),
-            display: "flex",
-          }}
-        >
-          {count === 1 ? "sharp" : "sharps"} on moneyline
-        </div>
+      {/* Glowing focal count. */}
+      <div
+        style={{
+          fontSize: px(172),
+          fontWeight: 800,
+          lineHeight: 1,
+          color,
+          marginTop: px(4),
+          display: "flex",
+          textShadow: `0 0 ${px(52)}px ${hexWithAlpha(color, 0.5)}`,
+        }}
+      >
+        {count}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          fontFamily: MONO,
+          fontWeight: 700,
+          fontSize: px(12),
+          letterSpacing: px(3.4),
+          textTransform: "uppercase",
+          color: "rgba(247, 243, 233, 0.50)",
+          marginTop: px(4),
+        }}
+      >
+        {count === 1 ? "sharp" : "sharps"}
+      </div>
 
-        {/* Who's backing this side. */}
-        <div
-          style={{
-            fontSize: px(21),
-            fontWeight: 700,
-            color: OFF,
-            marginTop: px(12),
-            display: "flex",
-            flexWrap: "nowrap",
-            overflow: "hidden",
-            gap: px(10),
-          }}
-        >
-          {count === 0 ? (
-            <span style={{ color: OFF_FAINT, fontStyle: "italic", display: "flex" }}>no sharps yet</span>
-          ) : (
-            visible.map((h, i) => (
-              <span key={`${h}-${i}`} style={{ display: "flex", whiteSpace: "nowrap" }}>
-                @{h}
-              </span>
-            ))
-          )}
-          {extra > 0 ? <span style={{ color: OFF_FAINT, display: "flex" }}>+{extra}</span> : null}
-        </div>
+      {/* Consensus price the sharps are laying. Height is reserved even when
+          a side has no clean odds so both columns stay vertically aligned. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: px(8),
+          marginTop: px(10),
+          height: px(30),
+          fontFamily: MONO,
+        }}
+      >
+        {medianOdds !== null && count > 0 ? (
+          <div
+            style={{
+              display: "flex",
+              fontWeight: 500,
+              fontSize: px(12),
+              letterSpacing: px(2),
+              textTransform: "uppercase",
+              color: "rgba(247, 243, 233, 0.45)",
+            }}
+          >
+            consensus
+          </div>
+        ) : null}
+        {medianOdds !== null && count > 0 ? (
+          <div
+            style={{
+              display: "flex",
+              fontWeight: 700,
+              fontSize: px(20),
+              color,
+            }}
+          >
+            {formatAmericanOdds(medianOdds)}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Handle chips. */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "nowrap",
+          overflow: "hidden",
+          gap: px(8),
+          marginTop: px(12),
+        }}
+      >
+        {count === 0 ? (
+          <div
+            style={{
+              display: "flex",
+              padding: `${px(5)}px ${px(12)}px`,
+              borderRadius: px(999),
+              border: `${px(1)}px solid rgba(247, 243, 233, 0.10)`,
+              fontFamily: MONO,
+              fontWeight: 500,
+              fontSize: px(12),
+              letterSpacing: px(1.6),
+              textTransform: "uppercase",
+              color: "rgba(247, 243, 233, 0.35)",
+            }}
+          >
+            no sharps yet
+          </div>
+        ) : (
+          visible.map((h, i) => (
+            <div
+              key={`${h}-${i}`}
+              style={{
+                display: "flex",
+                padding: `${px(5)}px ${px(12)}px`,
+                borderRadius: px(999),
+                border: `${px(1)}px solid ${CHIP_BORDER}`,
+                background: CHIP_BG,
+                fontFamily: MONO,
+                fontWeight: 500,
+                fontSize: px(13),
+                color: "rgba(247, 243, 233, 0.85)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              @{h}
+            </div>
+          ))
+        )}
+        {extra > 0 ? (
+          <div
+            style={{
+              display: "flex",
+              padding: `${px(5)}px ${px(12)}px`,
+              borderRadius: px(999),
+              border: `${px(1)}px solid rgba(247, 243, 233, 0.10)`,
+              fontFamily: MONO,
+              fontWeight: 700,
+              fontSize: px(13),
+              color: "rgba(247, 243, 233, 0.50)",
+            }}
+          >
+            +{extra}
+          </div>
+        ) : null}
       </div>
     </div>
   );
