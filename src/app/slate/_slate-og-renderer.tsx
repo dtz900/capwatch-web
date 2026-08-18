@@ -672,7 +672,9 @@ function TeamPanel({
   handles: string[];
 }) {
   const visible = handles.slice(0, 2);
-  const extra = handles.length - visible.length;
+  // Remainder counts from the side tally, not the named list, so sharps with
+  // suppressed handles still show up anonymously in the +N.
+  const extra = Math.max(0, count - visible.length);
   return (
     <div
       style={{
@@ -764,7 +766,7 @@ function TeamPanel({
             gap: px(10),
           }}
         >
-          {visible.length === 0 ? (
+          {count === 0 ? (
             <span style={{ color: OFF_FAINT, fontStyle: "italic", display: "flex" }}>no sharps yet</span>
           ) : (
             visible.map((h, i) => (
