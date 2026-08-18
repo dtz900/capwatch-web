@@ -80,6 +80,19 @@ async function fetchWithRetry(
   throw lastErr;
 }
 
+// Social scrapers (Twitterbot most of all) give a page roughly 4-5 seconds
+// TOTAL to return HTML before they give up and cache "no card" for that URL.
+// generateMetadata paths therefore must never ride out fetchWithRetry's full
+// retry budget. withDeadline races a fetch against a hard deadline and hands
+// back `fallback` on expiry; the original promise keeps running, so it still
+// populates Next's fetch cache and the next hit is fast.
+export function withDeadline<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 export interface LeaderboardFilters {
   window: Window;
   sort: Sort;

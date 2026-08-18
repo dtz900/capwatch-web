@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { fetchLeaderboard, fetchSlate } from "@/lib/api";
+import { fetchLeaderboard, fetchSlate, withDeadline } from "@/lib/api";
 import { pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
 import type { SlateGame } from "@/lib/types";
@@ -395,8 +395,31 @@ export async function buildSlateOgFingerprint(
   let sharps = 0;
   let seasonPicks = 0;
   let contentHash = "";
-  try {
-    const slate = await fetchSlate(dateParam);
+  // Both fetches run under withDeadline AND concurrently: this function sits
+  // on the metadata path, and Twitterbot caches "no card" for any page whose
+  // HTML outlives its ~4-5s scrape budget. A date-only fingerprint on expiry
+  // beats a card that never attaches; the racing fetches keep warming the
+  // cache behind it. Failures resolve to null so one bad API never rejects
+  // the pair.
+  const [slate, lb] = await Promise.all([
+    withDeadline<Awaited<ReturnType<typeof fetchSlate>> | null>(
+      fetchSlate(dateParam).catch(() => null),
+      1500,
+      null,
+    ),
+    withDeadline<Awaited<ReturnType<typeof fetchLeaderboard>> | null>(
+      fetchLeaderboard({
+        window: "season",
+        sort: "units_profit",
+        bet_type: "all",
+        min_picks: 10,
+        active_only: true,
+      }).catch(() => null),
+      1200,
+      null,
+    ),
+  ]);
+  if (slate) {
     const allPicks = slate.games.flatMap((g) => g.picks);
     picks = allPicks.length;
     sharps = new Set(allPicks.map((p) => p.capper_id)).size;
@@ -419,21 +442,8 @@ export async function buildSlateOgFingerprint(
         ]),
       })),
     );
-  } catch {
-    // Falls back to date-only fingerprint when slate API is unreachable.
   }
-  try {
-    const lb = await fetchLeaderboard({
-      window: "season",
-      sort: "units_profit",
-      bet_type: "all",
-      min_picks: 10,
-      active_only: true,
-    });
-    seasonPicks = lb.platform_stats?.graded_picks_total ?? 0;
-  } catch {
-    // Leaderboard fingerprint is optional.
-  }
+  seasonPicks = lb?.platform_stats?.graded_picks_total ?? 0;
   const etDay = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
     year: "numeric",

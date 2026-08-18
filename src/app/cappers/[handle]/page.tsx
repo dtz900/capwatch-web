@@ -19,7 +19,7 @@ import { SimilarCappers } from "@/components/capper/SimilarCappers";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1080x356 } from "@/lib/affiliates";
-import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard } from "@/lib/api";
+import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard, withDeadline } from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, faqNode } from "@/lib/jsonld";
 import { formatRangeLabel, marketFilterLabel } from "@/lib/capperFilters";
 import {
@@ -163,14 +163,24 @@ export async function generateMetadata({
 
   try {
     // history_limit must be >= 1 per the Railway API validator; we don't use
-    // history rows here so use the minimum.
-    const profile = await fetchCapperProfile(handle, {
-      history_limit: 1,
-      history_offset: 0,
-      bet_type: betType !== "all" ? betType : undefined,
-      start: range?.start,
-      end: range?.end,
-    });
+    // history rows here so use the minimum. Deadline-raced: Twitterbot caches
+    // "no card" for any page whose HTML outlives its ~4-5s scrape budget, and
+    // a cold profile fetch alone can eat that (David's delete-and-repost-3x
+    // ritual on capper replies was this). Expiry throws into the generic-meta
+    // catch below, whose seedless OG URL still renders a full card because
+    // the image route fetches its own data.
+    const profile = await withDeadline<Awaited<ReturnType<typeof fetchCapperProfile>> | null>(
+      fetchCapperProfile(handle, {
+        history_limit: 1,
+        history_offset: 0,
+        bet_type: betType !== "all" ? betType : undefined,
+        start: range?.start,
+        end: range?.end,
+      }),
+      2000,
+      null,
+    );
+    if (!profile) throw new Error("capper metadata deadline");
     const allTimeAgg = profile.aggregates["all_time"];
     const filteredAgg = profile.aggregates[window] ?? allTimeAgg;
     const rangeAgg = range ? profile.range_aggregate ?? null : null;

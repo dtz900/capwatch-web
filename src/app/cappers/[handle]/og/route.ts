@@ -38,9 +38,17 @@ export async function GET(
     ? (bt as BetTypeFilter)
     : "all";
   const market = mk ? mk.trim() : undefined;
+  // rs/re carry a custom date range. Normally the seed params render the
+  // range card directly, but when metadata was built under deadline pressure
+  // the URL arrives seedless and the renderer must self-fetch WITH the range,
+  // or the card would show the plain window record under a range share.
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+  const rs = (url.searchParams.get("rs") ?? "").trim();
+  const re = (url.searchParams.get("re") ?? "").trim();
+  const range = isoDate.test(rs) && isoDate.test(re) && rs <= re ? { start: rs, end: re } : undefined;
   const seed =
     rec && Number.isFinite(units) && Number.isFinite(roi) && Number.isFinite(picks)
       ? { record: rec, units, roi, picks, filterLabel: fl, trajectory, avatarUrl: av }
       : undefined;
-  return renderCapperOg(handle, { window, bet_type, market: market || undefined, seed });
+  return renderCapperOg(handle, { window, bet_type, market: market || undefined, seed, range });
 }
