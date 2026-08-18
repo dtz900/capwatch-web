@@ -717,14 +717,16 @@ function Scoreboard({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-      {/* Matchup stage: team blocks flanking the center badge. */}
+      {/* Matchup stage: team blocks flanking the center badge. Content-sized
+          (not flex:1) so the split bar rides directly under the chips and
+          stays clear of X's bottom caption scrim; the spacer after the bar
+          absorbs the slack instead. */}
       <div
         style={{
           display: "flex",
           flexDirection: "row",
           alignItems: "center",
-          flex: 1,
-          marginTop: px(10),
+          marginTop: px(24),
         }}
       >
         <TeamPanel
@@ -806,7 +808,7 @@ function Scoreboard({
       {/* Pick'em split bar: who the room is on. With zero moneyline picks a
           50/50 bar would fake an even consensus, so render a quiet empty
           track with an honest label instead. */}
-      <div style={{ display: "flex", flexDirection: "column", marginTop: px(16) }}>
+      <div style={{ display: "flex", flexDirection: "column", marginTop: px(24) }}>
         <div
           style={{
             display: "flex",
@@ -892,6 +894,9 @@ function Scoreboard({
           />
         )}
       </div>
+
+      {/* Slack lands below the bar, inside X's caption scrim band. */}
+      <div style={{ display: "flex", flex: 1 }} />
     </div>
   );
 }
