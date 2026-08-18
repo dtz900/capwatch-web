@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchCapperProfile, fetchLeaderboard } from "@/lib/api";
 import { formatRecord, formatRoiNumeric, formatUnitsForTitle } from "@/lib/seo";
-import { marketFilterLabel } from "@/lib/capperFilters";
+import { formatRangeLabel, marketFilterLabel } from "@/lib/capperFilters";
 import type { BetTypeFilter, Window } from "@/lib/types";
 
 export const size = { width: 1200, height: 630 };
@@ -240,6 +240,10 @@ export interface RenderOpts {
   /** When set, render the per-market straight-pick slice (e.g. "spread"),
    * matching the page's Market filter. A market implies straights. */
   market?: string;
+  /** Custom date range. On the seedless path the profile fetch scopes to it
+   * and the card renders range_aggregate numbers with a range label, so a
+   * deadline-degraded range share never shows plain-window stats. */
+  range?: { start: string; end: string };
   seed?: {
     record?: string;
     units?: number;
@@ -260,6 +264,7 @@ export async function renderCapperOg(
   const window: Window = opts.window ?? DEFAULT_OG_WINDOW;
   const market = opts.market;
   const seed = opts.seed;
+  const range = opts.range;
   // A specific market scopes to straight picks; market_slices are identical on
   // the all/straights rows, so fetch straights when a market is requested.
   const bet_type: BetTypeFilter = market ? "straights" : opts.bet_type ?? "all";
@@ -290,6 +295,8 @@ export async function renderCapperOg(
       history_limit: 1,
       history_offset: 0,
       bet_type: bet_type !== "all" ? bet_type : undefined,
+      start: range?.start,
+      end: range?.end,
     });
     const agg = profile.aggregates[window] ?? profile.aggregates["all_time"];
     displayName = profile.capper.display_name;
@@ -299,7 +306,16 @@ export async function renderCapperOg(
     // subline is consistent regardless of the requested filter window.
     const trackedSinceSrc =
       profile.aggregates["all_time"]?.tracked_since ?? agg?.tracked_since ?? null;
-    if (market && slice) {
+    const rangeAgg = range ? profile.range_aggregate ?? null : null;
+    if (range && rangeAgg && rangeAgg.picks_count > 0) {
+      record = formatRecord(rangeAgg);
+      unitsRaw = rangeAgg.units_profit;
+      roiPct = rangeAgg.roi_pct ?? 0;
+      picksCount = rangeAgg.picks_count;
+      trackedSince = trackedSinceSrc;
+      trajectorySeries = rangeAgg.trajectory ?? [];
+      hasData = true;
+    } else if (market && slice) {
       marketLabel = marketFilterLabel(market);
       trajectorySeries = slice.trajectory ?? [];
       if (slice.picks_count > 0) {
@@ -350,8 +366,9 @@ export async function renderCapperOg(
     roiPct,
     picksCount,
     trackedSinceLabel: trackedSince ? formatTrackedSince(trackedSince) : "",
-    filterLabel:
-      market && marketLabel
+    filterLabel: range
+      ? formatRangeLabel(range.start, range.end)
+      : market && marketLabel
         ? [marketLabel, windowLabel(window)].filter(Boolean).join(" · ")
         : seed?.filterLabel
           ? seed.filterLabel

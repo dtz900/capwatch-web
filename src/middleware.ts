@@ -5,6 +5,17 @@ import { NextRequest, NextResponse } from "next/server";
 // ADMIN_USER / ADMIN_PASS on the server. Browser prompts on first hit;
 // header is then cached for the session.
 export async function middleware(req: NextRequest) {
+  // Social-scraper visibility: Vercel's request logs don't carry the user
+  // agent, so when a card mysteriously fails to attach there is no way to
+  // tell whether the platform's crawler ever reached us. One log line per
+  // scraper hit makes "did Twitterbot fetch, and what did it get" a grep.
+  const ua = req.headers.get("user-agent") ?? "";
+  if (/twitterbot|facebookexternalhit|slackbot|discordbot|linkedinbot|telegrambot|whatsapp/i.test(ua)) {
+    console.log(
+      `[scrape] ${req.method} ${req.nextUrl.pathname}${req.nextUrl.search} ua="${ua.slice(0, 100)}"`,
+    );
+  }
+
   if (req.nextUrl.pathname.startsWith("/admin")) {
     const user = process.env.ADMIN_USER;
     const pass = process.env.ADMIN_PASS;

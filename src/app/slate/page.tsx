@@ -32,7 +32,10 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // Deadline, not just try/catch: Twitterbot caches "no card" for any URL
   // whose HTML takes longer than its ~4-5s scrape budget, and a cold slate
   // API response alone can eat that. Static defaults ship on expiry while the
-  // real fetch keeps warming the cache for the next hit.
+  // real fetch keeps warming the cache for the next hit. The description
+  // fetch and the fingerprint (which has its own internal deadlines) run
+  // CONCURRENTLY so the worst case stays ~1.5s, not the sum of the races.
+  const fpPromise = buildSlateOgFingerprint(dateParam);
   try {
     const data = await withDeadline<Awaited<ReturnType<typeof fetchSlate>> | null>(
       fetchSlate(dateParam),
@@ -62,7 +65,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // as a manual escape hatch for layout-only redesigns where the data
   // hasn't changed but we still want X to refresh.
   const OG_CARD_VERSION = "16"; // bump on any _slate-og-renderer.tsx redesign
-  const fp = await buildSlateOgFingerprint(dateParam);
+  const fp = await fpPromise;
   const ogQs = new URLSearchParams();
   ogQs.set("date", dateParam);
   // ?game=AWAY-HOME (or a game_id) features that matchup on the OG card;
