@@ -8,7 +8,7 @@ import { StandingsSection } from "@/components/slate/StandingsSection";
 import { SlateRailStrip, SlateRailColumn } from "@/components/slate/SlateRail";
 import { buildRailGames } from "@/lib/rail";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { fetchSlate, fetchWeekStandings } from "@/lib/api";
+import { fetchSlate, fetchWeekStandings, withDeadline } from "@/lib/api";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
@@ -29,17 +29,27 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   let title = `${dayLabel} MLB slate`;
   let description = `${dayLabel} MLB slate. What every tracked sharp is betting, ranked by leaderboard, grouped by game.`;
 
+  // Deadline, not just try/catch: Twitterbot caches "no card" for any URL
+  // whose HTML takes longer than its ~4-5s scrape budget, and a cold slate
+  // API response alone can eat that. Static defaults ship on expiry while the
+  // real fetch keeps warming the cache for the next hit.
   try {
-    const data = await fetchSlate(dateParam);
-    const totalPicks = data.games.reduce((s, g) => s + g.picks.length, 0);
-    const sharpsCount = new Set(
-      data.games.flatMap((g) => g.picks.map((p) => p.capper_id)),
-    ).size;
-    const gamesWithPicks = data.games.filter((g) => g.picks.length > 0).length;
-    title = `${dayLabel} MLB slate · ${gamesWithPicks} games, ${totalPicks} picks from ${sharpsCount} sharps`;
-    description = totalPicks > 0
-      ? `${dayLabel} MLB slate on ${SITE_NAME}: ${totalPicks} picks from ${sharpsCount} tracked sharps across ${gamesWithPicks} games. Grouped by game, ranked by leaderboard performance.`
-      : `${dayLabel} MLB slate on ${SITE_NAME}: ${data.games.length} games on the board, no picks tweeted yet. Check back as cappers post.`;
+    const data = await withDeadline<Awaited<ReturnType<typeof fetchSlate>> | null>(
+      fetchSlate(dateParam),
+      1500,
+      null,
+    );
+    if (data) {
+      const totalPicks = data.games.reduce((s, g) => s + g.picks.length, 0);
+      const sharpsCount = new Set(
+        data.games.flatMap((g) => g.picks.map((p) => p.capper_id)),
+      ).size;
+      const gamesWithPicks = data.games.filter((g) => g.picks.length > 0).length;
+      title = `${dayLabel} MLB slate · ${gamesWithPicks} games, ${totalPicks} picks from ${sharpsCount} sharps`;
+      description = totalPicks > 0
+        ? `${dayLabel} MLB slate on ${SITE_NAME}: ${totalPicks} picks from ${sharpsCount} tracked sharps across ${gamesWithPicks} games. Grouped by game, ranked by leaderboard performance.`
+        : `${dayLabel} MLB slate on ${SITE_NAME}: ${data.games.length} games on the board, no picks tweeted yet. Check back as cappers post.`;
+    }
   } catch {
     // fall through with the static defaults above
   }

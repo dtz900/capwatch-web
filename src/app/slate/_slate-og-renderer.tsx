@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { fetchLeaderboard, fetchSlate } from "@/lib/api";
+import { fetchLeaderboard, fetchSlate, withDeadline } from "@/lib/api";
 import { pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
 import type { SlateGame } from "@/lib/types";
@@ -395,42 +395,56 @@ export async function buildSlateOgFingerprint(
   let sharps = 0;
   let seasonPicks = 0;
   let contentHash = "";
+  // Both fetches run under withDeadline: this function sits on the metadata
+  // path, and Twitterbot caches "no card" for any page whose HTML outlives
+  // its ~4-5s scrape budget. A date-only fingerprint on expiry beats a card
+  // that never attaches; the racing fetch still warms the cache behind it.
   try {
-    const slate = await fetchSlate(dateParam);
-    const allPicks = slate.games.flatMap((g) => g.picks);
-    picks = allPicks.length;
-    sharps = new Set(allPicks.map((p) => p.capper_id)).size;
-    contentHash = hashSlateFingerprint(
-      slate.games.map((g) => ({
-        game: g.game_id,
-        away: g.away_team,
-        home: g.home_team,
-        picks: g.picks.map((p) => [
-          p.capper_id,
-          p.handle,
-          p.kind,
-          p.market,
-          p.selection,
-          p.line,
-          p.odds_taken,
-          p.posted_at,
-          p.tweet_url,
-          p.outcome,
-        ]),
-      })),
+    const slate = await withDeadline<Awaited<ReturnType<typeof fetchSlate>> | null>(
+      fetchSlate(dateParam),
+      1500,
+      null,
     );
+    if (slate) {
+      const allPicks = slate.games.flatMap((g) => g.picks);
+      picks = allPicks.length;
+      sharps = new Set(allPicks.map((p) => p.capper_id)).size;
+      contentHash = hashSlateFingerprint(
+        slate.games.map((g) => ({
+          game: g.game_id,
+          away: g.away_team,
+          home: g.home_team,
+          picks: g.picks.map((p) => [
+            p.capper_id,
+            p.handle,
+            p.kind,
+            p.market,
+            p.selection,
+            p.line,
+            p.odds_taken,
+            p.posted_at,
+            p.tweet_url,
+            p.outcome,
+          ]),
+        })),
+      );
+    }
   } catch {
     // Falls back to date-only fingerprint when slate API is unreachable.
   }
   try {
-    const lb = await fetchLeaderboard({
-      window: "season",
-      sort: "units_profit",
-      bet_type: "all",
-      min_picks: 10,
-      active_only: true,
-    });
-    seasonPicks = lb.platform_stats?.graded_picks_total ?? 0;
+    const lb = await withDeadline<Awaited<ReturnType<typeof fetchLeaderboard>> | null>(
+      fetchLeaderboard({
+        window: "season",
+        sort: "units_profit",
+        bet_type: "all",
+        min_picks: 10,
+        active_only: true,
+      }),
+      1200,
+      null,
+    );
+    seasonPicks = lb?.platform_stats?.graded_picks_total ?? 0;
   } catch {
     // Leaderboard fingerprint is optional.
   }
