@@ -516,7 +516,8 @@ function hexWithAlpha(color: string, alpha: number): string {
 }
 
 function buildJsx(inputs: RenderInputs) {
-  const { logoDataUri, marquee, hasAnyPicks, totalGames, picksTotal } = inputs;
+  const { logoDataUri, marquee, hasAnyPicks, totalGames, picksTotal, dateLabel } = inputs;
+  const dayWord = dateLabel.toLowerCase();
 
   const awayC = marquee ? displayTeamColor(teamColor(marquee.awayTeam)) : OFF;
   const homeC = marquee ? displayTeamColor(teamColor(marquee.homeTeam)) : OFF;
@@ -683,7 +684,7 @@ function buildJsx(inputs: RenderInputs) {
           }}
         >
           <div style={{ display: "flex" }}>
-            {totalGames} {totalGames === 1 ? "game" : "games"} tonight · {picksTotal}{" "}
+            {totalGames} {totalGames === 1 ? "game" : "games"} {dayWord} · {picksTotal}{" "}
             {picksTotal === 1 ? "pick" : "picks"} tracked
           </div>
           <div style={{ display: "flex", color: "rgba(247, 243, 233, 0.70)", fontWeight: 700 }}>
@@ -802,7 +803,9 @@ function Scoreboard({
         />
       </div>
 
-      {/* Pick'em split bar: who the room is on. */}
+      {/* Pick'em split bar: who the room is on. With zero moneyline picks a
+          50/50 bar would fake an even consensus, so render a quiet empty
+          track with an honest label instead. */}
       <div style={{ display: "flex", flexDirection: "column", marginTop: px(16) }}>
         <div
           style={{
@@ -823,7 +826,7 @@ function Scoreboard({
               color: awayC,
             }}
           >
-            {awayPct}%
+            {mlTotal > 0 ? `${awayPct}%` : ""}
           </div>
           <div
             style={{
@@ -834,7 +837,9 @@ function Scoreboard({
               color: "rgba(247, 243, 233, 0.55)",
             }}
           >
-            {mlTotal} {mlTotal === 1 ? "sharp" : "sharps"} on the moneyline
+            {mlTotal > 0
+              ? `${mlTotal} ${mlTotal === 1 ? "sharp" : "sharps"} on the moneyline`
+              : "no moneyline picks yet"}
           </div>
           <div
             style={{
@@ -845,35 +850,47 @@ function Scoreboard({
               color: homeC,
             }}
           >
-            {homePct}%
+            {mlTotal > 0 ? `${homePct}%` : ""}
           </div>
         </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            height: px(16),
-            borderRadius: px(8),
-            overflow: "hidden",
-            border: `${px(1)}px solid rgba(247, 243, 233, 0.10)`,
-          }}
-        >
+        {mlTotal > 0 ? (
           <div
             style={{
-              width: `${Math.max(4, Math.min(96, awayShare * 100))}%`,
-              background: `linear-gradient(90deg, ${awayC} 0%, ${hexWithAlpha(awayC, 0.55)} 100%)`,
               display: "flex",
+              flexDirection: "row",
+              height: px(16),
+              borderRadius: px(8),
+              overflow: "hidden",
+              border: `${px(1)}px solid rgba(247, 243, 233, 0.10)`,
             }}
-          />
-          <div style={{ width: px(3), background: BG, display: "flex" }} />
+          >
+            <div
+              style={{
+                width: `${Math.max(4, Math.min(96, awayShare * 100))}%`,
+                background: `linear-gradient(90deg, ${awayC} 0%, ${hexWithAlpha(awayC, 0.55)} 100%)`,
+                display: "flex",
+              }}
+            />
+            <div style={{ width: px(3), background: BG, display: "flex" }} />
+            <div
+              style={{
+                flex: 1,
+                background: `linear-gradient(90deg, ${hexWithAlpha(homeC, 0.55)} 0%, ${homeC} 100%)`,
+                display: "flex",
+              }}
+            />
+          </div>
+        ) : (
           <div
             style={{
-              flex: 1,
-              background: `linear-gradient(90deg, ${hexWithAlpha(homeC, 0.55)} 0%, ${homeC} 100%)`,
               display: "flex",
+              height: px(16),
+              borderRadius: px(8),
+              border: `${px(1)}px solid rgba(247, 243, 233, 0.10)`,
+              background: "rgba(255, 255, 255, 0.03)",
             }}
           />
-        </div>
+        )}
       </div>
     </div>
   );
@@ -975,7 +992,7 @@ function TeamPanel({
               color: "rgba(247, 243, 233, 0.45)",
             }}
           >
-            avg ml
+            consensus
           </div>
         ) : null}
         {medianOdds !== null && count > 0 ? (
