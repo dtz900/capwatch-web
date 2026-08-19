@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { ReactNode } from "react";
+import { Resvg } from "@resvg/resvg-js";
 import { ImageResponse } from "next/og";
+import satori from "satori";
 import { fetchLeaderboard, fetchSlate, withDeadline } from "@/lib/api";
 import { pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
@@ -354,10 +357,32 @@ function formatAmericanOdds(n: number): string {
 export interface RenderSlateOpts {
   dateParam?: "today" | "tomorrow";
   gameSlug?: string;
+  // Supersampling factor for NATIVE-media posts (post_slate_card.py passes
+  // ?scale=2). The OG-crawler path stays at 1x: a 2x canvas has timed out
+  // Twitterbot's cold scrape before (blank card cached) and would mismatch
+  // the declared og:image dimensions. Native upload has no crawler and no
+  // dimension declaration, so 2x there is safe, and X's in-feed recompression
+  // is what made the 1200px upload look fuzzy.
+  scale?: 1 | 2;
+}
+
+// Supersample by rendering satori's SVG at the 1x logical layout and letting
+// resvg rasterize it at scale x. Text and shapes are vector paths, and the
+// team-logo/wordmark bitmaps are embedded at full source resolution, so
+// everything rasterizes crisp. (A CSS transform: scale() wrapper was tried
+// first and satori dropped every <img> inside the transformed subtree.)
+async function renderScaledPng(node: ReactNode, fonts: OgFont[], scale: number): Promise<Uint8Array<ArrayBuffer>> {
+  const svg = await satori(node, { width: size.width, height: size.height, fonts });
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: "width", value: size.width * scale },
+    font: { loadSystemFonts: false },
+  });
+  return new Uint8Array(resvg.render().asPng());
 }
 
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
+  const scale = opts.scale === 2 ? 2 : 1;
   const [slateResult, logoDataUri] = await Promise.allSettled([
     fetchSlate(dateParam),
     readLogoDataUri(),
@@ -404,16 +429,20 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   const cacheControl = degraded ? FALLBACK_CACHE : PRIMARY_CACHE;
 
   try {
-    const primary = new ImageResponse(buildJsx(inputs), { ...size, fonts });
-    const buf = await primary.arrayBuffer();
+    const buf =
+      scale === 2
+        ? await renderScaledPng(buildJsx(inputs), fonts, scale)
+        : await new ImageResponse(buildJsx(inputs), { ...size, fonts }).arrayBuffer();
     return new Response(buf, {
       headers: { "content-type": "image/png", "cache-control": cacheControl },
     });
   } catch (err) {
     console.error("[slate-og-renderer] primary render failed", err);
     try {
-      const fallback = new ImageResponse(buildFallbackJsx(logo), { ...size, fonts });
-      const buf = await fallback.arrayBuffer();
+      const buf =
+        scale === 2
+          ? await renderScaledPng(buildFallbackJsx(logo), fonts, scale)
+          : await new ImageResponse(buildFallbackJsx(logo), { ...size, fonts }).arrayBuffer();
       return new Response(buf, {
         headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
       });

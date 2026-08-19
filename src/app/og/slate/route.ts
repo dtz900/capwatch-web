@@ -28,5 +28,9 @@ export async function GET(request: Request): Promise<Response> {
     url.searchParams.get("name") ??
     url.searchParams.get("matchup") ??
     undefined;
-  return renderSlateOg({ dateParam, gameSlug });
+  // scale=2 renders a 2400x1260 supersample for NATIVE media uploads
+  // (post_slate_card.py). The OG-crawler path must stay 1x; see
+  // RenderSlateOpts.scale in _slate-og-renderer.tsx.
+  const scale = url.searchParams.get("scale") === "2" ? 2 : (1 as const);
+  return renderSlateOg({ dateParam, gameSlug, scale });
 }
