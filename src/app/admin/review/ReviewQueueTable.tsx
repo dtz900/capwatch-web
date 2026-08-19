@@ -140,6 +140,12 @@ function ReviewRow({ item: it, onError }: RowProps) {
             {it.parser_version && <span>parser: {it.parser_version}</span>}
           </div>
 
+          {it.review_reason && (
+            <div className="text-[11px] font-semibold text-amber-400/90 bg-amber-400/10 border border-amber-400/20 rounded-md px-2.5 py-1.5 mb-2 break-words">
+              held: {it.review_reason}
+            </div>
+          )}
+
           {it.tweet_excerpt && (
             <blockquote className="text-[12px] text-[var(--color-text-soft)] font-medium border-l-2 border-[rgba(255,255,255,0.1)] pl-3 py-0.5 mt-1 whitespace-pre-line break-words">
               {it.tweet_excerpt}

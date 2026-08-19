@@ -362,6 +362,9 @@ export interface ReviewQueueItem {
   tweet_id: string | null;
   tweet_url: string | null;
   tweet_excerpt: string;
+  /** Why the pipeline held it (rescue / quarantine marker from the active
+   * extraction's notes), e.g. "pick_shaped_rescue: two picks, no odds". */
+  review_reason: string | null;
   posted_at: string | null;
   parsed_at: string | null;
   parser_version: string | null;
