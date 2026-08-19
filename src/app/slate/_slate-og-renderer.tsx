@@ -367,11 +367,21 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
 
   const fonts = await loadCardFonts();
 
+  // A successfully rendered card can still be DEGRADED: slate API down (empty
+  // "no picks" state that isn't real) or a featured game whose team logos
+  // failed to download. The long primary cache would pin that for the
+  // fingerprint's lifetime; degraded renders take the short fallback cache
+  // and heal on the next request.
+  const degraded =
+    slateResult.status !== "fulfilled" ||
+    (featuredGame != null && (teamLogos.away == null || teamLogos.home == null));
+  const cacheControl = degraded ? FALLBACK_CACHE : PRIMARY_CACHE;
+
   try {
     const primary = new ImageResponse(buildJsx(inputs), { ...size, fonts });
     const buf = await primary.arrayBuffer();
     return new Response(buf, {
-      headers: { "content-type": "image/png", "cache-control": PRIMARY_CACHE },
+      headers: { "content-type": "image/png", "cache-control": cacheControl },
     });
   } catch (err) {
     console.error("[slate-og-renderer] primary render failed", err);
@@ -435,6 +445,12 @@ export async function buildSlateOgFingerprint(
         game: g.game_id,
         away: g.away_team,
         home: g.home_team,
+        // Schedule fields render on the card, so they must move the URL too:
+        // a pitcher swap or time change with no pick movement would otherwise
+        // keep serving the long-cached stale card.
+        time: g.game_time,
+        awaySp: g.away_starter,
+        homeSp: g.home_starter,
         picks: g.picks.map((p) => [
           p.capper_id,
           p.handle,

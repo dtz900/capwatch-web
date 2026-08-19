@@ -382,11 +382,19 @@ export async function renderCapperOg(
     rank,
   };
 
+  // A successfully rendered card can still be DEGRADED: profile fetch failed
+  // (hasData false) or a configured avatar failed to download. The long
+  // primary cache would pin that degraded card for the fingerprint's whole
+  // lifetime, so degraded renders take the short fallback cache instead and
+  // heal on the next request.
+  const degraded = !hasData || (avatarSourceUrl != null && avatarDataUri == null);
+  const cacheControl = degraded ? FALLBACK_CACHE : PRIMARY_CACHE;
+
   try {
     const primary = new ImageResponse(buildPremiumOgJsx(inputs), { ...size });
     const buf = await primary.arrayBuffer();
     return new Response(buf, {
-      headers: { "content-type": "image/png", "cache-control": PRIMARY_CACHE },
+      headers: { "content-type": "image/png", "cache-control": cacheControl },
     });
   } catch (err) {
     console.error("[og-renderer] primary render failed", { handle, err });
