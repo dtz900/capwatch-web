@@ -25,7 +25,14 @@ const OFF_FAINT = "rgba(247, 243, 233, 0.40)"; // tertiary
 const HAIR = "rgba(247, 243, 233, 0.12)"; // borders / seams
 const PANEL_BG = "rgba(255, 255, 255, 0.02)";
 
-const PRIMARY_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
+// The og:image URL is content-fingerprinted (h= hash, pick counts, card
+// version), so a long CDN cache is safe: data changes mint a new URL. A long
+// s-maxage is also what lets X's image pipeline succeed. Its fetcher retries
+// the image repeatedly with a tight per-fetch budget (2026-08-18 wire capture:
+// 10+ image fetches, card degraded to imageless summary), and with a 60s edge
+// cache every retry was another cold multi-second render. With a warm CDN HIT
+// the retry lands in ~100ms and the large-image card attaches.
+const PRIMARY_CACHE = "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400";
 const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
 
 // Handles that must never be NAMED on X-shareable surfaces (the OG card is

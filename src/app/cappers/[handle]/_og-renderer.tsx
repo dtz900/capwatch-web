@@ -158,7 +158,11 @@ interface RenderInputs {
   rank: number | null;
 }
 
-const PRIMARY_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=300";
+// Capper og URLs are fingerprinted with picks_count + refreshed_at, so a
+// long CDN cache is safe (data changes mint a new URL) and it is what lets
+// X's tight-budget image fetcher land a warm HIT instead of retrying cold
+// renders. See the slate renderer's PRIMARY_CACHE note for the wire capture.
+const PRIMARY_CACHE = "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400";
 const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
 
 async function fetchAvatarDataUri(url: string | null): Promise<string | null> {
