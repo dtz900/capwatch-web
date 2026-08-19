@@ -767,6 +767,7 @@ function Scoreboard({
           logo={marquee.awayLogoDataUri}
           color={awayC}
           count={marquee.away.count}
+          pct={mlTotal > 0 ? awayPct : null}
           handles={marquee.away.handles}
           medianOdds={marquee.away.medianOdds}
         />
@@ -833,6 +834,7 @@ function Scoreboard({
           logo={marquee.homeLogoDataUri}
           color={homeC}
           count={marquee.home.count}
+          pct={mlTotal > 0 ? homePct : null}
           handles={marquee.home.handles}
           medianOdds={marquee.home.medianOdds}
         />
@@ -842,51 +844,25 @@ function Scoreboard({
           50/50 bar would fake an even consensus, so render a quiet empty
           track with an honest label instead. */}
       <div style={{ display: "flex", flexDirection: "column", marginTop: px(24) }}>
+        {/* The per-side heroes carry the percents now, so the bar keeps just
+            the centered total label. */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "center",
             marginBottom: px(8),
             fontFamily: MONO,
             textTransform: "uppercase",
+            fontWeight: 700,
+            fontSize: px(12),
+            letterSpacing: px(3.2),
+            color: "rgba(247, 243, 233, 0.55)",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              fontWeight: 700,
-              fontSize: px(16),
-              letterSpacing: px(1),
-              color: awayC,
-            }}
-          >
-            {mlTotal > 0 ? `${awayPct}%` : ""}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontWeight: 700,
-              fontSize: px(12),
-              letterSpacing: px(3.2),
-              color: "rgba(247, 243, 233, 0.55)",
-            }}
-          >
-            {mlTotal > 0
-              ? `${mlTotal} ${mlTotal === 1 ? "sharp" : "sharps"} on the moneyline`
-              : "no moneyline picks yet"}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontWeight: 700,
-              fontSize: px(16),
-              letterSpacing: px(1),
-              color: homeC,
-            }}
-          >
-            {mlTotal > 0 ? `${homePct}%` : ""}
-          </div>
+          {mlTotal > 0
+            ? `${mlTotal} ${mlTotal === 1 ? "sharp" : "sharps"} on the moneyline`
+            : "no moneyline picks yet"}
         </div>
         {mlTotal > 0 ? (
           <div
@@ -939,6 +915,7 @@ function TeamPanel({
   logo,
   color,
   count,
+  pct,
   handles,
   medianOdds,
 }: {
@@ -946,6 +923,8 @@ function TeamPanel({
   logo: string | null;
   color: string;
   count: number;
+  /** This side's share of moneyline sharps; null when the game has none. */
+  pct: number | null;
   handles: string[];
   medianOdds: number | null;
 }) {
@@ -978,33 +957,38 @@ function TeamPanel({
         </div>
       </div>
 
-      {/* Glowing focal count. */}
+      {/* Glowing focal figure. The hero is the SHARE (a percent can't be
+          misread as a run total the way a bare count next to a team abbr
+          was); the raw sharp count moves to a readable subline. */}
       <div
         style={{
-          fontSize: px(172),
+          fontSize: px(148),
           fontWeight: 800,
           lineHeight: 1,
           color,
-          marginTop: px(4),
+          marginTop: px(6),
           display: "flex",
+          letterSpacing: px(-3),
           textShadow: `0 0 ${px(52)}px ${hexWithAlpha(color, 0.5)}`,
         }}
       >
-        {count}
+        {pct !== null ? `${pct}%` : count}
       </div>
       <div
         style={{
           display: "flex",
           fontFamily: MONO,
           fontWeight: 700,
-          fontSize: px(12),
-          letterSpacing: px(3.4),
+          fontSize: px(14),
+          letterSpacing: px(2.6),
           textTransform: "uppercase",
-          color: "rgba(247, 243, 233, 0.50)",
-          marginTop: px(4),
+          color: "rgba(247, 243, 233, 0.72)",
+          marginTop: px(8),
         }}
       >
-        {count === 1 ? "sharp" : "sharps"}
+        {pct !== null
+          ? `${count} ${count === 1 ? "sharp" : "sharps"} on the ml`
+          : `${count === 1 ? "sharp" : "sharps"}`}
       </div>
 
       {/* Consensus price the sharps are laying. Height is reserved even when
