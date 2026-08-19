@@ -97,6 +97,8 @@ export interface SlatePick {
   has_paid_program: boolean;
   kind: "straight" | "parlay_leg";
   leg_count: number | null;
+  /** Stable parlay identity; optional because older API payloads omit it. */
+  parlay_id?: number | null;
   market: string | null;
   selection: string | null;
   line: number | null;
