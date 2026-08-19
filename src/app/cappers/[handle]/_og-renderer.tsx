@@ -158,7 +158,11 @@ interface RenderInputs {
   rank: number | null;
 }
 
-const PRIMARY_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=300";
+// Capper og URLs are fingerprinted with picks_count + refreshed_at, so a
+// long CDN cache is safe (data changes mint a new URL) and it is what lets
+// X's tight-budget image fetcher land a warm HIT instead of retrying cold
+// renders. See the slate renderer's PRIMARY_CACHE note for the wire capture.
+const PRIMARY_CACHE = "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400";
 const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
 
 async function fetchAvatarDataUri(url: string | null): Promise<string | null> {
@@ -378,11 +382,19 @@ export async function renderCapperOg(
     rank,
   };
 
+  // A successfully rendered card can still be DEGRADED: profile fetch failed
+  // (hasData false) or a configured avatar failed to download. The long
+  // primary cache would pin that degraded card for the fingerprint's whole
+  // lifetime, so degraded renders take the short fallback cache instead and
+  // heal on the next request.
+  const degraded = !hasData || (avatarSourceUrl != null && avatarDataUri == null);
+  const cacheControl = degraded ? FALLBACK_CACHE : PRIMARY_CACHE;
+
   try {
     const primary = new ImageResponse(buildPremiumOgJsx(inputs), { ...size });
     const buf = await primary.arrayBuffer();
     return new Response(buf, {
-      headers: { "content-type": "image/png", "cache-control": PRIMARY_CACHE },
+      headers: { "content-type": "image/png", "cache-control": cacheControl },
     });
   } catch (err) {
     console.error("[og-renderer] primary render failed", { handle, err });

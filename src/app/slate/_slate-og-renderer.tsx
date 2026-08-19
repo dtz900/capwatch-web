@@ -25,7 +25,14 @@ const OFF_FAINT = "rgba(247, 243, 233, 0.40)"; // tertiary
 const HAIR = "rgba(247, 243, 233, 0.12)"; // borders / seams
 const PANEL_BG = "rgba(255, 255, 255, 0.02)";
 
-const PRIMARY_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
+// The og:image URL is content-fingerprinted (h= hash, pick counts, card
+// version), so a long CDN cache is safe: data changes mint a new URL. A long
+// s-maxage is also what lets X's image pipeline succeed. Its fetcher retries
+// the image repeatedly with a tight per-fetch budget (2026-08-18 wire capture:
+// 10+ image fetches, card degraded to imageless summary), and with a 60s edge
+// cache every retry was another cold multi-second render. With a warm CDN HIT
+// the retry lands in ~100ms and the large-image card attaches.
+const PRIMARY_CACHE = "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400";
 const FALLBACK_CACHE = "public, max-age=30, s-maxage=30, stale-while-revalidate=120";
 
 // Handles that must never be NAMED on X-shareable surfaces (the OG card is
@@ -360,11 +367,21 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
 
   const fonts = await loadCardFonts();
 
+  // A successfully rendered card can still be DEGRADED: slate API down (empty
+  // "no picks" state that isn't real) or a featured game whose team logos
+  // failed to download. The long primary cache would pin that for the
+  // fingerprint's lifetime; degraded renders take the short fallback cache
+  // and heal on the next request.
+  const degraded =
+    slateResult.status !== "fulfilled" ||
+    (featuredGame != null && (teamLogos.away == null || teamLogos.home == null));
+  const cacheControl = degraded ? FALLBACK_CACHE : PRIMARY_CACHE;
+
   try {
     const primary = new ImageResponse(buildJsx(inputs), { ...size, fonts });
     const buf = await primary.arrayBuffer();
     return new Response(buf, {
-      headers: { "content-type": "image/png", "cache-control": PRIMARY_CACHE },
+      headers: { "content-type": "image/png", "cache-control": cacheControl },
     });
   } catch (err) {
     console.error("[slate-og-renderer] primary render failed", err);
@@ -428,6 +445,12 @@ export async function buildSlateOgFingerprint(
         game: g.game_id,
         away: g.away_team,
         home: g.home_team,
+        // Schedule fields render on the card, so they must move the URL too:
+        // a pitcher swap or time change with no pick movement would otherwise
+        // keep serving the long-cached stale card.
+        time: g.game_time,
+        awaySp: g.away_starter,
+        homeSp: g.home_starter,
         picks: g.picks.map((p) => [
           p.capper_id,
           p.handle,
