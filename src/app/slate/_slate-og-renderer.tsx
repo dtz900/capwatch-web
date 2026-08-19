@@ -4,7 +4,7 @@ import { ImageResponse } from "next/og";
 import { fetchLeaderboard, fetchSlate, withDeadline } from "@/lib/api";
 import { pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
-import type { SlateGame } from "@/lib/types";
+import type { SlateGame, SlatePick } from "@/lib/types";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
 // a 2x canvas made the cold render heavier (Twitterbot timed out and cached a
@@ -262,6 +262,27 @@ function resolveRequestedGame(games: SlateGame[], slug: string | undefined): Sla
   return null;
 }
 
+/**
+ * Bets, not rows: the slate API emits every parlay LEG as its own pick row,
+ * so raw row counts overstate what a human calls picks (2026-08-18 card
+ * shipped "483 picks tracked" when the board carried 305 straights + 39
+ * parlays = 344 bets). A parlay is one bet; its legs share a tweet_url, and
+ * legs of multi-game parlays appear under several game blocks, so distinct
+ * tweet_url is the parlay identity available client-side.
+ */
+export function slateBetCount(picks: SlatePick[]): number {
+  let straights = 0;
+  const parlays = new Set<string>();
+  for (const p of picks) {
+    if (p.kind === "parlay_leg") {
+      parlays.add(p.tweet_url ?? `${p.capper_id}:${p.posted_at ?? ""}`);
+    } else {
+      straights += 1;
+    }
+  }
+  return straights + parlays.size;
+}
+
 function buildMarqueeBlock(
   game: SlateGame,
   awayLogoDataUri: string | null,
@@ -297,7 +318,7 @@ function buildMarqueeBlock(
     gameTime: game.game_time,
     awayStarter: game.away_starter,
     homeStarter: game.home_starter,
-    totalPicks: game.picks.length,
+    totalPicks: slateBetCount(game.picks),
     sharpCount: new Set(game.picks.map((p) => p.capper_id)).size,
     featuredLabel,
     away: { team: game.away_team, count: awayCount, handles: awayHandles, medianOdds: medianInt(awayOdds) },
@@ -344,6 +365,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   const games = slate?.games ?? [];
   const allPicks = games.flatMap((g) => g.picks);
   const sharpsPosted = new Set(allPicks.map((p) => p.capper_id)).size;
+  const betsTotal = slateBetCount(allPicks);
 
   const requestedGame = resolveRequestedGame(games, opts.gameSlug);
   const featuredGame = requestedGame ?? pickMarqueeGame(games);
@@ -360,7 +382,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
     dateLabel: dateParam === "tomorrow" ? "Tomorrow" : "Tonight",
     totalGames: games.length,
     sharpsPosted,
-    picksTotal: allPicks.length,
+    picksTotal: betsTotal,
     marquee,
     hasAnyPicks: allPicks.length > 0,
   };
