@@ -10,10 +10,32 @@ export async function middleware(req: NextRequest) {
   // tell whether the platform's crawler ever reached us. One log line per
   // scraper hit makes "did Twitterbot fetch, and what did it get" a grep.
   const ua = req.headers.get("user-agent") ?? "";
-  if (/twitterbot|facebookexternalhit|slackbot|discordbot|linkedinbot|telegrambot|whatsapp/i.test(ua)) {
+  const isScraper =
+    /twitterbot|facebookexternalhit|slackbot|discordbot|linkedinbot|telegrambot|whatsapp/i.test(ua);
+  if (isScraper) {
     console.log(
       `[scrape] ${req.method} ${req.nextUrl.pathname}${req.nextUrl.search} ua="${ua.slice(0, 100)}"`,
     );
+  }
+
+  // Card crawlers cap how much HTML they ingest (Twitterbot ~2MB) and the
+  // full slate page ships ~3.6MB, so the crawler downloads, hits its cap,
+  // discards, and never fetches the og:image: no card, ever (2026-08-18
+  // ATL-MIN incident: 10+ Twitterbot HTML fetches, zero image fetches).
+  // Rewrite scraper hits on shareable pages to /scrape shims that emit the
+  // identical metadata over a near-empty body. The visible URL never
+  // changes; humans never see the shim.
+  // Exactly /slate or a one-segment /cappers/<handle> profile. Deeper paths
+  // (og, twitter-image, opengraph-image file-convention routes) must reach
+  // their real handlers, and substring checks would both break those and
+  // false-positive handles that merely start with "og".
+  if (
+    isScraper &&
+    (req.nextUrl.pathname === "/slate" || /^\/cappers\/[^/]+$/.test(req.nextUrl.pathname))
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/scrape${req.nextUrl.pathname}`;
+    return NextResponse.rewrite(url);
   }
 
   if (req.nextUrl.pathname.startsWith("/admin")) {
