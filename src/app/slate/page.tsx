@@ -14,7 +14,7 @@ import { SITE_NAME } from "@/lib/seo";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1080x356 } from "@/lib/affiliates";
-import { buildSlateOgFingerprint } from "./_slate-og-renderer";
+import { buildSlateOgFingerprint, slateBetCount } from "./_slate-og-renderer";
 
 interface PageProps {
   searchParams: Promise<{ date?: string; v?: string; game?: string; name?: string; matchup?: string }>;
@@ -43,7 +43,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       null,
     );
     if (data) {
-      const totalPicks = data.games.reduce((s, g) => s + g.picks.length, 0);
+      // Bets, not rows: parlay legs are separate rows in the slate payload
+      // and would overstate the count (see slateBetCount).
+      const totalPicks = slateBetCount(data.games.flatMap((g) => g.picks));
       const sharpsCount = new Set(
         data.games.flatMap((g) => g.picks.map((p) => p.capper_id)),
       ).size;
