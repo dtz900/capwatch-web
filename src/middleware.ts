@@ -25,10 +25,13 @@ export async function middleware(req: NextRequest) {
   // Rewrite scraper hits on shareable pages to /scrape shims that emit the
   // identical metadata over a near-empty body. The visible URL never
   // changes; humans never see the shim.
+  // Exactly /slate or a one-segment /cappers/<handle> profile. Deeper paths
+  // (og, twitter-image, opengraph-image file-convention routes) must reach
+  // their real handlers, and substring checks would both break those and
+  // false-positive handles that merely start with "og".
   if (
     isScraper &&
-    (req.nextUrl.pathname === "/slate" ||
-      (req.nextUrl.pathname.startsWith("/cappers/") && !req.nextUrl.pathname.includes("/og")))
+    (req.nextUrl.pathname === "/slate" || /^\/cappers\/[^/]+$/.test(req.nextUrl.pathname))
   ) {
     const url = req.nextUrl.clone();
     url.pathname = `/scrape${req.nextUrl.pathname}`;
