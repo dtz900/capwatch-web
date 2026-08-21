@@ -198,6 +198,69 @@ export async function unackAuditAction(pickIds: number[]): Promise<AckResult> {
   }
 }
 
+export interface ManualLegInput {
+  selection: string;
+  game_id?: string | null;
+  stat_name?: string | null;
+  market?: string | null;
+  direction?: string | null;
+  line?: number | null;
+  odds?: number | null;
+  player_id?: number | null;
+  player_name?: string | null;
+}
+
+export interface ManualBetInput {
+  capper: string;
+  legs: ManualLegInput[];
+  units?: number | null;
+  combined_odds?: number | null;
+  sport?: string;
+  posted_at?: string | null;
+  raw_id?: number | null;
+  tweet_url?: string | null;
+  is_live?: boolean;
+}
+
+export type ManualBetResult =
+  | { ok: true; created_pick_ids: number[]; parlay_id: number | null; capper_handle: string | null }
+  | { ok: false; error: string };
+
+/** Manually enter a bet the parser missed or mangled. One leg = straight,
+ * two+ legs = parlay (combined odds + units on leg 0). Rows land
+ * admin_locked + provenance manual_admin so re-binders and parser re-runs
+ * never fight the entry. */
+export async function addManualBetAction(input: ManualBetInput): Promise<ManualBetResult> {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/picks/manual`, {
+      method: "POST",
+      headers: adminHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as {
+      created_pick_ids: number[];
+      parlay_id: number | null;
+      capper_handle: string | null;
+    };
+    revalidatePath("/admin/audit");
+    revalidatePath("/");
+    revalidatePath("/cappers");
+    if (data.capper_handle) revalidatePath(`/cappers/${data.capper_handle}`);
+    return {
+      ok: true,
+      created_pick_ids: data.created_pick_ids ?? [],
+      parlay_id: data.parlay_id ?? null,
+      capper_handle: data.capper_handle ?? null,
+    };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export interface PlayerSearchResult {
   player_id: number;
   full_name: string;
