@@ -1012,7 +1012,7 @@ function TeamPanel({
         </div>
       </div>
 
-      {/* Glowing focal figure. The hero is the SHARE (a percent can't be
+      {/* Focal figure. The hero is the SHARE (a percent can't be
           misread as a run total the way a bare count next to a team abbr
           was); the raw sharp count moves to a readable subline. */}
       <div
@@ -1024,7 +1024,13 @@ function TeamPanel({
           marginTop: px(6),
           display: "flex",
           letterSpacing: px(-3),
-          textShadow: `0 0 ${px(52)}px ${hexWithAlpha(color, 0.5)}`,
+          // No text glow. The 52px same-hue halo that used to sit here
+          // hugged the glyph edge and read as blur on the 2x native-media
+          // card (David, 2026-08-21: "the soft glow contrasting with the
+          // number makes it look fuzzy"); the team-color panel wash already
+          // carries the scoreboard feel. Do NOT reintroduce a wide blur:
+          // resvg panics (Rust unwrap on None) on a ~120px text-shadow and
+          // kills the process, and that cannot be caught from JS.
         }}
       >
         {pct !== null ? `${pct}%` : count}
