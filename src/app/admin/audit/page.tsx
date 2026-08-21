@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fetchAudit } from "@/lib/api";
+import { AddBetPanel } from "./AddBetPanel";
 import { AuditTable } from "./AuditTable";
 import { BulkCapperAck } from "./BulkCapperAck";
 
@@ -127,6 +128,8 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             their own sections below.
           </p>
         </header>
+
+        <AddBetPanel />
 
         {data.error && (
           <section className="mb-6 rounded-2xl border border-[rgba(248,113,113,0.40)] bg-[rgba(248,113,113,0.05)] px-5 py-4">
