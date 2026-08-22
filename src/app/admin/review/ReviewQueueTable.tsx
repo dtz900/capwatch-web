@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { ReviewQueueItem } from "@/lib/api";
 import {
   approvePickAction,
+  batchRejectPicksAction,
   bindAndApprovePickAction,
   rejectPickAction,
   searchGamesForReviewAction,
@@ -19,7 +20,40 @@ interface Props {
 }
 
 export function ReviewQueueTable({ items }: Props) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  // Bulk triage (David 2026-08-21: "select multiple picks in the review
+  // queue and reject them in mass"). Selection is client-local; a refresh
+  // after the action drops the rejected rows out of the queue.
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkPending, startBulk] = useTransition();
+  const allIds = items.map((it) => it.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+
+  const toggle = (id: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(allIds));
+
+  const rejectSelected = () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Reject ${ids.length} pick${ids.length === 1 ? "" : "s"}? This drops their grades.`)) return;
+    setError(null);
+    startBulk(async () => {
+      const res = await batchRejectPicksAction(ids);
+      if (!res.ok) {
+        setError(`bulk reject: ${res.error}`);
+        return;
+      }
+      setSelected(new Set());
+      router.refresh();
+    });
+  };
 
   if (items.length === 0) {
     return (
@@ -39,13 +73,38 @@ export function ReviewQueueTable({ items }: Props) {
         </div>
       )}
       <div className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto] gap-3 px-5 py-3 border-b border-[var(--color-border)] text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
+        <div className="grid grid-cols-[auto_1fr_auto] gap-3 px-5 py-3 border-b border-[var(--color-border)] text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold items-center">
+          <input
+            type="checkbox"
+            aria-label="select all"
+            checked={allSelected}
+            onChange={toggleAll}
+            className="accent-[var(--color-pos)]"
+          />
           <div>Capper · pick · tweet</div>
-          <div className="text-right">Action</div>
+          <div className="text-right flex items-center gap-3 justify-end">
+            {selected.size > 0 && (
+              <button
+                type="button"
+                disabled={bulkPending}
+                onClick={rejectSelected}
+                className="px-3 py-1.5 rounded-md bg-[rgba(255,80,80,0.85)] text-white text-[11px] font-extrabold normal-case tracking-normal disabled:opacity-50 hover:opacity-100"
+              >
+                {bulkPending ? "Rejecting..." : `Reject selected (${selected.size})`}
+              </button>
+            )}
+            <span>Action</span>
+          </div>
         </div>
         <ul>
           {items.map((it) => (
-            <ReviewRow key={it.id} item={it} onError={setError} />
+            <ReviewRow
+              key={it.id}
+              item={it}
+              onError={setError}
+              checked={selected.has(it.id)}
+              onToggle={() => toggle(it.id)}
+            />
           ))}
         </ul>
       </div>
@@ -56,9 +115,11 @@ export function ReviewQueueTable({ items }: Props) {
 interface RowProps {
   item: ReviewQueueItem;
   onError: (msg: string | null) => void;
+  checked: boolean;
+  onToggle: () => void;
 }
 
-function ReviewRow({ item: it, onError }: RowProps) {
+function ReviewRow({ item: it, onError, checked, onToggle }: RowProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -77,7 +138,14 @@ function ReviewRow({ item: it, onError }: RowProps) {
 
   return (
     <li className="border-b border-[var(--color-border)] last:border-b-0">
-      <div className="grid grid-cols-[1fr_auto] gap-4 px-5 py-4 items-start">
+      <div className="grid grid-cols-[auto_1fr_auto] gap-4 px-5 py-4 items-start">
+        <input
+          type="checkbox"
+          aria-label={`select pick ${it.id}`}
+          checked={checked}
+          onChange={onToggle}
+          className="mt-1 accent-[var(--color-pos)]"
+        />
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             {it.capper_profile_image_url && (

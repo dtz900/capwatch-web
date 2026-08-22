@@ -41,6 +41,36 @@ export async function rejectPickAction(pickId: number): Promise<ReviewActionResu
   return postNoBody(`/api/admin/picks/${pickId}/reject`);
 }
 
+export type BatchRejectResult =
+  | { ok: true; rejected: number; missing: number[] }
+  | { ok: false; error: string };
+
+/** Bulk reject from the review queue. Same per-pick semantics as the single
+ * reject (status -> rejected, grade rows dropped, parlay grades cleared),
+ * one round trip. */
+export async function batchRejectPicksAction(pickIds: number[]): Promise<BatchRejectResult> {
+  if (pickIds.length === 0) return { ok: true, rejected: 0, missing: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/picks/batch-reject`, {
+      method: "POST",
+      headers: adminHeaders(),
+      body: JSON.stringify({ pick_ids: pickIds }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as { rejected: number; missing: number[] };
+    revalidatePath("/admin/review");
+    revalidatePath("/admin/audit");
+    revalidatePath("/");
+    revalidatePath("/cappers");
+    return { ok: true, rejected: data.rejected ?? 0, missing: data.missing ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 /**
  * Atomic bind-and-approve. Sends a single PATCH that sets game_id (and
  * optionally player_id) AND flips review_status to 'auto_approved'. The
