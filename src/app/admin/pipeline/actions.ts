@@ -197,6 +197,10 @@ export interface StreamGap {
   // side from stream_gap_backfills so the admin UI's "✓ backfilled" mark
   // survives page reloads.
   backfilled_at?: string | null;
+  /** Set when the stream worker's automatic gap sweep (core.stream_gap_sweep)
+   * covered this gap window; no manual backfill needed. */
+  auto_swept_at?: string | null;
+  auto_sweep?: { found?: number | null; inserted?: number | null; reason?: string | null } | null;
 }
 
 export interface StreamEvent {
