@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { ReviewQueueItem } from "@/lib/api";
 import {
   approvePickAction,
+  batchApprovePicksAction,
   batchRejectPicksAction,
   bindAndApprovePickAction,
   rejectPickAction,
@@ -38,6 +39,30 @@ export function ReviewQueueTable({ items }: Props) {
       return next;
     });
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(allIds));
+
+  const [notice, setNotice] = useState<string | null>(null);
+  const approveSelected = () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Approve ${ids.length} pick${ids.length === 1 ? "" : "s"} as-is? Unbound straights are skipped and reported.`)) return;
+    setError(null);
+    setNotice(null);
+    startBulk(async () => {
+      const res = await batchApprovePicksAction(ids);
+      if (!res.ok) {
+        setError(`bulk approve: ${res.error}`);
+        return;
+      }
+      if (res.skipped.length > 0) {
+        setNotice(
+          `Approved ${res.approved}. Skipped ${res.skipped.length}: ` +
+            res.skipped.map((s) => `pid=${s.pick_id} (${s.reason})`).join("; "),
+        );
+      }
+      setSelected(new Set());
+      router.refresh();
+    });
+  };
 
   const rejectSelected = () => {
     const ids = Array.from(selected);
@@ -72,6 +97,11 @@ export function ReviewQueueTable({ items }: Props) {
           {error}
         </div>
       )}
+      {notice && (
+        <div className="rounded-md border border-amber-400/30 bg-amber-400/10 text-[12px] text-amber-300 font-medium px-3 py-2 mb-3 break-words">
+          {notice}
+        </div>
+      )}
       <div className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] overflow-hidden">
         <div className="grid grid-cols-[auto_1fr_auto] gap-3 px-5 py-3 border-b border-[var(--color-border)] text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold items-center">
           <input
@@ -83,6 +113,16 @@ export function ReviewQueueTable({ items }: Props) {
           />
           <div>Capper · pick · tweet</div>
           <div className="text-right flex items-center gap-3 justify-end">
+            {selected.size > 0 && (
+              <button
+                type="button"
+                disabled={bulkPending}
+                onClick={approveSelected}
+                className="px-3 py-1.5 rounded-md bg-[var(--color-pos)] text-black text-[11px] font-extrabold normal-case tracking-normal disabled:opacity-50 hover:opacity-90"
+              >
+                {bulkPending ? "Working..." : `Approve selected (${selected.size})`}
+              </button>
+            )}
             {selected.size > 0 && (
               <button
                 type="button"

@@ -71,6 +71,39 @@ export async function batchRejectPicksAction(pickIds: number[]): Promise<BatchRe
   }
 }
 
+export type BatchApproveResult =
+  | { ok: true; approved: number; skipped: { pick_id: number; reason: string }[] }
+  | { ok: false; error: string };
+
+/** Bulk approve-as-is from the review queue. Same per-pick rules as the
+ * single Approve (needs_review only; unbound straights refused), but the
+ * batch approves what it can and reports the rest with reasons. */
+export async function batchApprovePicksAction(pickIds: number[]): Promise<BatchApproveResult> {
+  if (pickIds.length === 0) return { ok: true, approved: 0, skipped: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/picks/batch-approve`, {
+      method: "POST",
+      headers: adminHeaders(),
+      body: JSON.stringify({ pick_ids: pickIds }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as {
+      approved: number;
+      skipped: { pick_id: number; reason: string }[];
+    };
+    revalidatePath("/admin/review");
+    revalidatePath("/admin/audit");
+    revalidatePath("/");
+    revalidatePath("/cappers");
+    return { ok: true, approved: data.approved ?? 0, skipped: data.skipped ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 /**
  * Atomic bind-and-approve. Sends a single PATCH that sets game_id (and
  * optionally player_id) AND flips review_status to 'auto_approved'. The
