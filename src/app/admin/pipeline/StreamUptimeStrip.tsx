@@ -199,7 +199,11 @@ export function StreamUptimeStrip({ hours = DEFAULT_HOURS }: Props) {
             // Server-side "already backfilled" wins over in-memory state
             // so the mark survives page reloads.
             const persistedDone = Boolean(g.backfilled_at) && bf?.status !== "running";
-            const isDone = persistedDone || bf?.status === "ok";
+            // The worker's reconnect/startup sweep (core.stream_gap_sweep)
+            // already re-queried X for this window; treat as done so the
+            // manual button is only live for gaps nothing covered.
+            const autoSwept = Boolean(g.auto_swept_at) && bf?.status !== "running";
+            const isDone = persistedDone || autoSwept || bf?.status === "ok";
             return (
               <div key={i} className="flex flex-col gap-0.5">
                 <div className="text-[11px] tabular-nums flex items-center gap-3 text-[var(--color-text-soft)]">
@@ -221,6 +225,8 @@ export function StreamUptimeStrip({ hours = DEFAULT_HOURS }: Props) {
                       title={
                         persistedDone && g.backfilled_at
                           ? `Backfilled ${formatTimestamp(g.backfilled_at)}`
+                          : autoSwept && g.auto_swept_at
+                          ? `Auto-swept ${formatTimestamp(g.auto_swept_at)}`
                           : undefined
                       }
                       className={`text-[10px] uppercase tracking-[0.10em] font-bold px-2 py-0.5 rounded transition-colors ${
@@ -234,7 +240,9 @@ export function StreamUptimeStrip({ hours = DEFAULT_HOURS }: Props) {
                       }`}
                     >
                       {isDone
-                        ? "✓ backfilled"
+                        ? persistedDone || bf?.status === "ok"
+                          ? "✓ backfilled"
+                          : "✓ auto-swept"
                         : isRunning
                         ? "running..."
                         : bf?.status === "error"
@@ -259,6 +267,14 @@ export function StreamUptimeStrip({ hours = DEFAULT_HOURS }: Props) {
                 {!bf?.message && persistedDone && g.backfilled_at && (
                   <div className="text-[10px] pl-[18px] text-[#5eead4]">
                     backfilled {formatTimestamp(g.backfilled_at)}
+                  </div>
+                )}
+                {!bf?.message && !persistedDone && autoSwept && g.auto_swept_at && (
+                  <div className="text-[10px] pl-[18px] text-[#5eead4]">
+                    auto-swept {formatTimestamp(g.auto_swept_at)}
+                    {g.auto_sweep
+                      ? ` · ${g.auto_sweep.reason ?? "sweep"} · found ${g.auto_sweep.found ?? 0}, recovered ${g.auto_sweep.inserted ?? 0}`
+                      : ""}
                   </div>
                 )}
               </div>
