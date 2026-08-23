@@ -17,7 +17,7 @@ export interface BetSlipCtx {
   inSlipParlay: (parlayId: number | null) => boolean;
   addFromPick: (p: TodayPickEntry) => void;
   removeEntry: (id: number) => void;
-  updateEntry: (id: number, patch: { stake?: number; odds?: number }) => void;
+  updateEntry: (id: number, patch: { stake?: number; odds?: number | null }) => void;
   totals: { today: number; allTime: number; pending: number };
   /** Per-capper assigned slip stake; null/absent = auto (capper's units, else 1u). */
   capperStakes: Record<string, number>;
@@ -97,7 +97,8 @@ export function BetSlipProvider({
         return;
       }
       const rows: SlipEntry[] = (data ?? []).map((r) => ({
-        ...(r as Omit<SlipEntry, "outcome">),
+        ...(r as Omit<SlipEntry, "outcome" | "market_odds">),
+        market_odds: null,
         outcome: null,
       }));
       const ids = rows.map((r) => r.pick_id).filter((x): x is number => x != null);
@@ -112,16 +113,22 @@ export function BetSlipProvider({
       }
       if (cancelled) return;
       setEntries(
-        rows.map((r) => ({
-          ...r,
-          outcome:
+        rows.map((r) => {
+          const graded =
             r.pick_id != null
-              ? outcomes.picks[r.pick_id]?.outcome ?? null
+              ? outcomes.picks[r.pick_id] ?? null
               : r.parlay_id != null
-                ? outcomes.parlays[r.parlay_id]?.outcome ?? null
-                // pick purged upstream: render from snapshot, count as void
-                : "V",
-        }))
+                ? outcomes.parlays[r.parlay_id] ?? null
+                : null;
+          return {
+            ...r,
+            market_odds: graded?.market_odds ?? null,
+            outcome:
+              graded?.outcome ??
+              // pick purged upstream: render from snapshot, count as void
+              (r.pick_id == null && r.parlay_id == null ? "V" : null),
+          };
+        })
       );
     })();
     return () => {
@@ -182,7 +189,8 @@ export function BetSlipProvider({
         pick_id: (payload.pick_id as number | null) ?? null,
         parlay_id: (payload.parlay_id as number | null) ?? null,
         stake: payload.stake as number,
-        odds: payload.odds as number,
+        odds: (payload.odds as number | null) ?? null,
+        market_odds: null,
         capper_id: p.capper_id,
         capper_handle: p.handle,
         matchup: (payload.matchup as string | null) ?? null,
@@ -222,7 +230,11 @@ export function BetSlipProvider({
             setEntries((prev) => (prev ?? []).filter((e) => e.id !== tempId));
             return;
           }
-          const real: SlipEntry = { ...(data as Omit<SlipEntry, "outcome">), outcome: null };
+          const real: SlipEntry = {
+            ...(data as Omit<SlipEntry, "outcome" | "market_odds">),
+            market_odds: null,
+            outcome: null,
+          };
           setEntries((prev) => {
             const list = prev ?? [];
             // The initial load can resolve between the optimistic set and
@@ -266,13 +278,20 @@ export function BetSlipProvider({
   );
 
   const updateEntry = useCallback(
-    (id: number, patch: { stake?: number; odds?: number }) => {
+    (id: number, patch: { stake?: number; odds?: number | null }) => {
       if (!supabase || !userId) return;
       const target = (entries ?? []).find((e) => e.id === id);
       if (!target || target.outcome !== null) return; // graded = locked
       const stake = patch.stake !== undefined ? clampStake(patch.stake) : target.stake;
-      const odds = patch.odds !== undefined ? clampOdds(patch.odds) : target.odds;
-      if (stake === null || odds === null) return; // rejected input, keep old
+      // odds: undefined = untouched; null = back to "follow market";
+      // a number passes through the clamp and rejects out of range.
+      const odds =
+        patch.odds === undefined ? target.odds
+        : patch.odds === null ? null
+        : clampOdds(patch.odds);
+      if (stake === null || (patch.odds !== undefined && patch.odds !== null && odds === null)) {
+        return; // rejected input, keep old
+      }
       setEntries((prev) =>
         (prev ?? []).map((e) => (e.id === id ? { ...e, stake, odds } : e))
       );

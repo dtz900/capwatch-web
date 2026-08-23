@@ -735,8 +735,11 @@ export async function fetchTodayPicks(capperIds: number[]): Promise<TodayPicksRe
 }
 
 export interface PickOutcomeMaps {
-  picks: Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null }>;
-  parlays: Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null }>;
+  /** market_odds: the price the pick GRADED at (posted or Pinnacle stamp);
+   * null for outcome-only grades where no close was available. Resolves
+   * slip rows stored with odds NULL ("follow market"). */
+  picks: Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null; market_odds: number | null }>;
+  parlays: Record<number, { outcome: "W" | "L" | "P" | "V"; graded_at: string | null; market_odds: number | null }>;
 }
 
 /** Grades for sets of pick ids and parlay ids, keyed by id. Ungraded ids
@@ -759,12 +762,14 @@ export async function fetchPickOutcomes(
     const res = await fetch(`${API_BASE}/api/public/picks/outcomes?${qs}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`pick outcomes fetch failed: ${res.status}`);
     const body = (await res.json()) as {
-      outcomes: { pick_id: number; outcome: "W" | "L" | "P" | "V"; graded_at: string | null }[];
-      parlay_outcomes?: { parlay_id: number; outcome: "W" | "L" | "P" | "V"; graded_at: string | null }[];
+      outcomes: { pick_id: number; outcome: "W" | "L" | "P" | "V"; graded_at: string | null; market_odds?: number | null }[];
+      parlay_outcomes?: { parlay_id: number; outcome: "W" | "L" | "P" | "V"; graded_at: string | null; market_odds?: number | null }[];
     };
-    for (const o of body.outcomes) out.picks[o.pick_id] = { outcome: o.outcome, graded_at: o.graded_at };
+    for (const o of body.outcomes) {
+      out.picks[o.pick_id] = { outcome: o.outcome, graded_at: o.graded_at, market_odds: o.market_odds ?? null };
+    }
     for (const o of body.parlay_outcomes ?? []) {
-      out.parlays[o.parlay_id] = { outcome: o.outcome, graded_at: o.graded_at };
+      out.parlays[o.parlay_id] = { outcome: o.outcome, graded_at: o.graded_at, market_odds: o.market_odds ?? null };
     }
   }
   return out;
