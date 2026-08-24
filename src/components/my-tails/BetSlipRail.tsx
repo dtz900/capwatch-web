@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
-import { netOdds, slipProfit, type SlipEntry } from "@/lib/betslip";
+import { effectiveOdds, netOdds, slipProfit, type SlipEntry } from "@/lib/betslip";
 import { trimUnits } from "@/lib/formatters";
 import { StatusPill } from "@/components/my-tails/StatusPill";
 import { VipTeaser } from "@/components/capper/VipTeaser";
@@ -20,8 +20,9 @@ function unitsStr(v: number): string {
   return `${v >= 0 ? "+" : ""}${v.toFixed(oneDecimalIsExact ? 1 : 2)}u`;
 }
 
-function oddsStr(o: number): string {
-  return `${o > 0 ? "+" : ""}${o}`;
+function oddsStr(o: number | null): string {
+  // Null = the row follows the market and no close ever landed (outcome-only)
+  return o === null ? "MKT" : `${o > 0 ? "+" : ""}${o}`;
 }
 
 /** One slip entry, styled as a ticket leg. Shared by the desktop rail and
@@ -36,14 +37,16 @@ export function SlipEntryRow({
 }: {
   entry: SlipEntry;
   onRemove: (id: number) => void;
-  onUpdate: (id: number, patch: { stake?: number; odds?: number }) => void;
+  onUpdate: (id: number, patch: { stake?: number; odds?: number | null }) => void;
 }) {
   const graded = entry.outcome !== null;
-  const profit = slipProfit(entry.outcome, entry.stake, entry.odds);
+  // Odds NULL = "follow market": settles at the price the pick grades at.
+  const settledOdds = effectiveOdds(entry.odds, entry.market_odds);
+  const profit = slipProfit(entry.outcome, entry.stake, settledOdds);
   // Local input state so commits happen on blur; the provider is the
   // source of truth.
   const [wager, setWager] = useState(String(entry.stake));
-  const [odds, setOdds] = useState(String(entry.odds));
+  const [odds, setOdds] = useState(entry.odds === null ? "" : String(entry.odds));
 
   return (
     <li className="rounded-lg bg-[rgba(8,12,11,0.75)] ring-1 ring-[rgba(47,217,192,0.10)] p-3.5">
@@ -62,15 +65,22 @@ export function SlipEntryRow({
           <div className="flex items-center gap-2">
             {graded ? (
               <span className="text-[16px] font-extrabold tabular-nums" style={{ color: SLIP_TEAL }}>
-                {oddsStr(entry.odds)}
+                {oddsStr(settledOdds)}
               </span>
             ) : (
               <input
-                aria-label={`Odds for ${entry.selection}`}
+                aria-label={`Odds for ${entry.selection}, blank follows market`}
                 type="number"
                 value={odds}
+                placeholder="MKT"
                 onChange={(e) => setOdds(e.target.value)}
-                onBlur={() => onUpdate(entry.id, { odds: Number(odds) })}
+                // Blank = follow market (settle at the graded price);
+                // a number is the user's own price and wins over market.
+                onBlur={() =>
+                  onUpdate(entry.id, {
+                    odds: odds.trim() === "" ? null : Number(odds),
+                  })
+                }
                 style={{ color: SLIP_TEAL }}
                 className="w-16 bg-transparent text-right text-[16px] font-extrabold tabular-nums outline-none border-b border-transparent focus:border-[rgba(47,217,192,0.6)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
@@ -106,7 +116,9 @@ export function SlipEntryRow({
       {graded && (
         <div className="mt-2.5 flex items-center justify-between border-t border-dashed border-[rgba(47,217,192,0.18)] pt-2.5">
           <span className="text-[11px] tabular-nums text-[#6da399]">
-            {trimUnits(entry.stake)}u to win {(entry.stake * netOdds(entry.odds)).toFixed(2)}u
+            {trimUnits(entry.stake)}u
+            {settledOdds !== null &&
+              ` to win ${(entry.stake * netOdds(settledOdds)).toFixed(2)}u`}
           </span>
           <div className="flex items-center gap-2">
             {profit !== null && (
@@ -130,16 +142,23 @@ export function SlipEntryRow({
   );
 }
 
-/** Sum stake and potential payout across the still-pending entries. */
-function pendingTotals(entries: SlipEntry[]): { wager: number; toWin: number } {
+/** Sum stake and potential payout across the still-pending entries. A
+    follow-market entry has no price until it grades, so its payout is
+    previewed at -110 and the total is marked approximate. */
+function pendingTotals(entries: SlipEntry[]): {
+  wager: number; toWin: number; approx: boolean;
+} {
   let wager = 0;
   let toWin = 0;
+  let approx = false;
   for (const e of entries) {
     if (e.outcome !== null) continue;
     wager += e.stake;
-    toWin += e.stake * netOdds(e.odds);
+    const o = effectiveOdds(e.odds, e.market_odds);
+    if (o === null) approx = true;
+    toWin += e.stake * netOdds(o ?? -110);
   }
-  return { wager, toWin };
+  return { wager, toWin, approx };
 }
 
 const COLLAPSE_KEY = "ts-betslip-collapsed";
@@ -380,7 +399,7 @@ export function BetSlipRail() {
               <div className="flex items-center justify-between">
                 <span className="text-[#6da399]">To win</span>
                 <span className="font-extrabold" style={{ color: SLIP_TEAL }}>
-                  {pending.toWin.toFixed(2)}u
+                  {pending.approx ? "~" : ""}{pending.toWin.toFixed(2)}u
                 </span>
               </div>
             </div>

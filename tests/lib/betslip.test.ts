@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
-  netOdds, slipProfit, clampOdds, clampStake, slipInsertFromPick, slipTotals,
-  type SlipEntry,
+  effectiveOdds, netOdds, slipProfit, clampOdds, clampStake,
+  slipInsertFromPick, slipTotals, type SlipEntry,
 } from "@/lib/betslip";
 import { fetchPickOutcomes } from "@/lib/api";
 import type { TodayPickEntry } from "@/lib/types";
@@ -18,7 +18,8 @@ const basePick: TodayPickEntry = {
 
 function entry(over: Partial<SlipEntry> = {}): SlipEntry {
   return {
-    id: 1, pick_id: 9001, parlay_id: null, stake: 1.0, odds: 142, capper_id: 69,
+    id: 1, pick_id: 9001, parlay_id: null, stake: 1.0, odds: 142, market_odds: null,
+    capper_id: 69,
     capper_handle: "tonestakes", matchup: "PHI @ CIN", market: "ML",
     selection: "Reds ML", line: null, game_date: "2026-07-09",
     created_at: "2026-07-09T16:05:00Z", outcome: null, ...over,
@@ -38,6 +39,17 @@ describe("betslip math", () => {
     expect(slipProfit("P", 3, 142)).toBe(0);
     expect(slipProfit("V", 3, 142)).toBe(0);
     expect(slipProfit(null, 3, 142)).toBeNull();
+  });
+
+  it("a win with no resolvable odds pays 0, never a fabricated price", () => {
+    expect(slipProfit("W", 2, null)).toBe(0);
+    expect(slipProfit("L", 2, null)).toBe(-2);
+  });
+
+  it("effectiveOdds prefers the user's odds, falls back to market", () => {
+    expect(effectiveOdds(142, -250)).toBe(142);
+    expect(effectiveOdds(null, -250)).toBe(-250);
+    expect(effectiveOdds(null, null)).toBeNull();
   });
 
   it("clampOdds accepts American 100..10000 absolute (parlay combineds), rejects the rest", () => {
@@ -69,9 +81,9 @@ describe("slipInsertFromPick", () => {
     });
   });
 
-  it("defaults odds to -110 when the pick has none", () => {
+  it("stores odds NULL (follow market) when the pick has none", () => {
     const row = slipInsertFromPick("user-1", { ...basePick, odds_taken: null }, "2026-07-09");
-    expect(row?.odds).toBe(-110);
+    expect(row?.odds).toBeNull();
   });
 
   it("builds a parlay payload binding parlay_id at the combined odds", () => {
@@ -109,24 +121,40 @@ describe("slipTotals", () => {
     expect(t.allTime).toBeCloseTo(-1.0);
     expect(t.pending).toBe(1);
   });
+
+  it("follow-market entries settle at market_odds once graded", () => {
+    const entries = [
+      // -250 chalk win at market pays 0.4u, not the old -110 default's 0.909u
+      entry({ id: 1, outcome: "W", stake: 1, odds: null, market_odds: -250, game_date: "2026-07-09" }),
+      // outcome-only (no close): win counts, pays 0
+      entry({ id: 2, outcome: "W", stake: 1, odds: null, market_odds: null, game_date: "2026-07-09" }),
+    ];
+    const t = slipTotals(entries, "2026-07-09");
+    expect(t.today).toBeCloseTo(0.4);
+    expect(t.pending).toBe(0);
+  });
 });
 
 describe("fetchPickOutcomes", () => {
   it("maps pick and parlay outcomes by id and returns empty maps for no ids", async () => {
     const payload = {
       outcomes: [
-        { pick_id: 1, outcome: "W", graded_at: "2026-07-09T05:00:00Z" },
+        { pick_id: 1, outcome: "W", graded_at: "2026-07-09T05:00:00Z", market_odds: -145 },
         { pick_id: 2, outcome: "V", graded_at: null },
       ],
-      parlay_outcomes: [{ parlay_id: 501, outcome: "L", graded_at: null }],
+      parlay_outcomes: [{ parlay_id: 501, outcome: "L", graded_at: null, market_odds: 646 }],
     };
     const spy = vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true, json: async () => payload,
     } as unknown as Response);
     const out = await fetchPickOutcomes([1, 2], [501]);
-    expect(out.picks[1]).toEqual({ outcome: "W", graded_at: "2026-07-09T05:00:00Z" });
+    expect(out.picks[1]).toEqual({
+      outcome: "W", graded_at: "2026-07-09T05:00:00Z", market_odds: -145,
+    });
     expect(out.picks[2].outcome).toBe("V");
+    expect(out.picks[2].market_odds).toBeNull();
     expect(out.parlays[501].outcome).toBe("L");
+    expect(out.parlays[501].market_odds).toBe(646);
     expect(spy).toHaveBeenCalledWith(
       expect.stringMatching(/\/api\/public\/picks\/outcomes\?pick_ids=1%2C2/),
       expect.objectContaining({ cache: "no-store" }),

@@ -120,7 +120,7 @@ export default function AccountPage() {
         pick_id: number | null;
         parlay_id: number | null;
         stake: number;
-        odds: number;
+        odds: number | null;
       }[];
       const ids = rows.map((r) => r.pick_id).filter((x): x is number => x != null);
       const pids = rows.map((r) => r.parlay_id).filter((x): x is number => x != null);
@@ -133,12 +133,14 @@ export default function AccountPage() {
       if (cancelled) return;
       const summary: SlipSummary = { wins: 0, losses: 0, pushes: 0, pending: 0, units: 0 };
       for (const r of rows) {
-        const outcome =
+        const graded =
           r.pick_id != null
-            ? outcomes.picks[r.pick_id]?.outcome ?? null
+            ? outcomes.picks[r.pick_id] ?? null
             : r.parlay_id != null
-              ? outcomes.parlays[r.parlay_id]?.outcome ?? null
-              : "V";
+              ? outcomes.parlays[r.parlay_id] ?? null
+              : null;
+        const outcome =
+          graded?.outcome ?? (r.pick_id == null && r.parlay_id == null ? "V" : null);
         if (outcome === null) {
           summary.pending += 1;
           continue;
@@ -146,7 +148,9 @@ export default function AccountPage() {
         if (outcome === "W") summary.wins += 1;
         else if (outcome === "L") summary.losses += 1;
         else summary.pushes += 1;
-        summary.units += slipProfit(outcome, r.stake, r.odds) ?? 0;
+        // odds NULL = follow market: settle at the graded price
+        summary.units +=
+          slipProfit(outcome, r.stake, r.odds ?? graded?.market_odds ?? null) ?? 0;
       }
       setSlip(summary);
     })();

@@ -31,7 +31,7 @@ interface SlipRow {
   pick_id: number | null;
   parlay_id: number | null;
   stake: number;
-  odds: number;
+  odds: number | null;
   selection: string | null;
   capper_handle: string | null;
   created_at: string;
@@ -119,12 +119,14 @@ export default async function AdminUsersPage() {
     let lastSlipAt: string | null = null;
     for (const s of myslips) {
       if (lastSlipAt === null || s.created_at > lastSlipAt) lastSlipAt = s.created_at;
-      const outcome =
+      const graded =
         s.pick_id != null
-          ? outcomes.picks[s.pick_id]?.outcome ?? null
+          ? outcomes.picks[s.pick_id] ?? null
           : s.parlay_id != null
-            ? outcomes.parlays[s.parlay_id]?.outcome ?? null
-            : "V";
+            ? outcomes.parlays[s.parlay_id] ?? null
+            : null;
+      const outcome =
+        graded?.outcome ?? (s.pick_id == null && s.parlay_id == null ? "V" : null);
       if (outcome === null) {
         slip.pending += 1;
         continue;
@@ -132,7 +134,8 @@ export default async function AdminUsersPage() {
       if (outcome === "W") slip.wins += 1;
       else if (outcome === "L") slip.losses += 1;
       else slip.pushes += 1;
-      slip.units += slipProfit(outcome, s.stake, s.odds) ?? 0;
+      // odds NULL = follow market: settle at the graded price
+      slip.units += slipProfit(outcome, s.stake, s.odds ?? graded?.market_odds ?? null) ?? 0;
     }
 
     return {

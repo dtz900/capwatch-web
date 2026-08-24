@@ -1,12 +1,17 @@
 import type { TodayPickEntry } from "@/lib/types";
 
-/** One user_bet_slips row plus the client-joined outcome. */
+/** One user_bet_slips row plus the client-joined outcome. odds NULL means
+ * "follow market": the row settles at market_odds (the price the pick
+ * graded at) instead of a stored number. */
 export interface SlipEntry {
   id: number;
   pick_id: number | null;
   parlay_id: number | null;
   stake: number;
-  odds: number;
+  odds: number | null;
+  /** Client-joined from the outcomes endpoint; null until graded (or when
+   * no close was available). Never stored on the row. */
+  market_odds: number | null;
   capper_id: number | null;
   capper_handle: string | null;
   matchup: string | null;
@@ -22,14 +27,27 @@ export function netOdds(odds: number): number {
   return odds > 0 ? odds / 100 : 100 / Math.abs(odds);
 }
 
-/** Profit in units at the USER's stake and odds. Null while pending. */
+/** The odds a slip row settles at: the user's entered odds win, else the
+ * market price the pick graded at. Null = unknown (pending, or an
+ * outcome-only grade with no close). */
+export function effectiveOdds(
+  odds: number | null,
+  marketOdds: number | null,
+): number | null {
+  return odds ?? marketOdds ?? null;
+}
+
+/** Profit in units at the USER's stake and resolved odds. Null while
+ * pending. A win with no resolvable odds (outcome-only pick, no close
+ * available) pays 0 rather than fabricating a price, the same stance the
+ * capper pages take. */
 export function slipProfit(
   outcome: SlipEntry["outcome"],
   stake: number,
-  odds: number,
+  odds: number | null,
 ): number | null {
   if (outcome === null) return null;
-  if (outcome === "W") return stake * netOdds(odds);
+  if (outcome === "W") return odds === null ? 0 : stake * netOdds(odds);
   if (outcome === "L") return -stake;
   return 0; // push and void return the stake
 }
@@ -85,7 +103,9 @@ export function slipInsertFromPick(
       pick_id: null,
       parlay_id: pick.parlay_id,
       stake: defaultStake(capperStake, pick),
-      odds: pick.odds_taken ?? -110,
+      // No posted odds = follow market: the row settles at the price the
+      // pick grades at (Pinnacle stamp) instead of a fabricated -110.
+      odds: pick.odds_taken ?? null,
       capper_id: pick.capper_id,
       capper_handle: pick.handle,
       matchup: null,
@@ -101,7 +121,7 @@ export function slipInsertFromPick(
     pick_id: pick.pick_id,
     parlay_id: null,
     stake: defaultStake(capperStake, pick),
-    odds: pick.odds_taken ?? -110,
+    odds: pick.odds_taken ?? null,
     capper_id: pick.capper_id,
     capper_handle: pick.handle,
     matchup: pick.matchup,
@@ -124,7 +144,7 @@ export function slipTotals(
     // "Start fresh" baseline: rows logged before the reset stay in the
     // table (future bet-log history) but stop counting toward the tally.
     if (resetIso && e.created_at < resetIso) continue;
-    const p = slipProfit(e.outcome, e.stake, e.odds);
+    const p = slipProfit(e.outcome, e.stake, effectiveOdds(e.odds, e.market_odds));
     if (p === null) {
       pending += 1;
       continue;
