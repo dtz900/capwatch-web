@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { fetchSlate } from "@/lib/api";
+import { fetchSlate, fetchWeekStandings } from "@/lib/api";
 import type { SlateCapperSummary } from "@/lib/types";
 
 /**
@@ -9,8 +9,11 @@ import type { SlateCapperSummary } from "@/lib/types";
  * thread. Data comes from fetchSlate's capper_summary (staking-scheme
  * corrected), so the image can never disagree with tailslips.com/slate.
  *
- *   /og/standings            -> today's slate
- *   /og/standings?date=ISO   -> a specific slate date
+ *   /og/standings                  -> today's slate
+ *   /og/standings?date=ISO         -> a specific slate date
+ *   /og/standings?date=ISO&week=1  -> the Mon-Sun week containing that
+ *                                     date, summed exactly the way the
+ *                                     site's week toggle sums it
  *
  * Design: winner poster split. The night's top sharp takes the left half
  * (210px avatar wearing the 3D crown, units at poster scale); ranks 2-10
@@ -94,23 +97,39 @@ function unitColor(v: number): string {
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || "today";
+  const week = url.searchParams.get("week") === "1";
+
+  const fmt = (iso: string) =>
+    new Date(`${iso}T12:00:00Z`)
+      .toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+      .toUpperCase();
 
   let rows: SlateCapperSummary[] = [];
   let dateLabel = "";
   let graded = 0;
   let sharps = 0;
   try {
-    const slate = await fetchSlate(date);
-    rows = (slate.capper_summary ?? [])
+    let summary: SlateCapperSummary[] = [];
+    if (week) {
+      // The week needs a concrete slate date to anchor Mon-Sun; "today"
+      // resolves through the daily fetch first.
+      const anchor = date === "today" ? (await fetchSlate("today")).date : date;
+      const wk = await fetchWeekStandings(anchor);
+      if (!wk) throw new Error("no week data");
+      summary = wk.capper_summary ?? [];
+      graded = wk.summary?.graded_count ?? 0;
+      dateLabel = `WEEK OF ${fmt(wk.week_start)}`;
+    } else {
+      const slate = await fetchSlate(date);
+      summary = slate.capper_summary ?? [];
+      graded = slate.day_summary?.graded_count ?? 0;
+      dateLabel = fmt(slate.date);
+    }
+    rows = summary
       .filter((c) => c.graded_count > 0)
       .sort((a, b) => b.net_units - a.net_units)
       .slice(0, 10);
-    sharps = (slate.capper_summary ?? []).filter((c) => c.graded_count > 0).length;
-    graded = slate.day_summary?.graded_count ?? 0;
-    const d = new Date(`${slate.date}T12:00:00Z`);
-    dateLabel = d
-      .toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
-      .toUpperCase();
+    sharps = summary.filter((c) => c.graded_count > 0).length;
   } catch {
     // fall through to the empty-card render
   }
@@ -180,7 +199,7 @@ export async function GET(request: Request): Promise<Response> {
         {/* Marquee */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
           <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: 5, color: OFF }}>
-            FINAL STANDINGS · {dateLabel}
+            {week ? "WEEK FINAL" : "FINAL STANDINGS"} · {dateLabel}
           </span>
           <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: 3, color: OFF_FAINT }}>
             {graded} PICKS · {sharps} SHARPS
@@ -235,7 +254,7 @@ export async function GET(request: Request): Promise<Response> {
               <span
                 style={{ fontSize: 13, fontWeight: 800, letterSpacing: 3, color: OFF_FAINT }}
               >
-                TONIGHT&apos;S TOP SHARP · {record(hero)} · {hero.graded_count} GRADED
+                {week ? "SHARP OF THE WEEK" : "TONIGHT'S TOP SHARP"} · {record(hero)} · {hero.graded_count} GRADED
               </span>
               <span
                 style={{
