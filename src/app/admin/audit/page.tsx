@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { fetchAudit } from "@/lib/api";
 import { AddBetPanel } from "./AddBetPanel";
+import { PickShapedQueue } from "./PickShapedQueue";
+import { fetchPickShapedFlags } from "./actions";
 import { AuditTable } from "./AuditTable";
 import { BulkCapperAck } from "./BulkCapperAck";
 
@@ -64,6 +66,8 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     sp.sort === "oldest" || sp.sort === "sport" ? sp.sort : "newest";
   const sport = sp.sport === "MLB" || sp.sport === "NFL" ? sp.sport : undefined;
   const showAcked = sp.show_acked === "true";
+
+  const pickShapedFlags = await fetchPickShapedFlags();
 
   const data = await fetchAudit({
     reason,
@@ -130,6 +134,10 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
         </header>
 
         <AddBetPanel />
+
+        <section className="mb-6">
+          <PickShapedQueue flags={pickShapedFlags} />
+        </section>
 
         {data.error && (
           <section className="mb-6 rounded-2xl border border-[rgba(248,113,113,0.40)] bg-[rgba(248,113,113,0.05)] px-5 py-4">

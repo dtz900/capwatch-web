@@ -52,6 +52,45 @@ async function call(path: string, init: RequestInit): Promise<ActionResult> {
   }
 }
 
+export interface PickShapedFlag {
+  raw_id: number;
+  capper_id: number;
+  handle: string | null;
+  posted_at: string;
+  flagged_at: string;
+  status: string;
+  reason: string | null;
+  tweet_text: string | null;
+  tweet_url: string | null;
+}
+
+// Server-side fetch (not a mutation): the nightly pick-shaped
+// reconciliation queue. Rendered on the audit page so the pre-board skim
+// and manual entry live in one place.
+export async function fetchPickShapedFlags(): Promise<PickShapedFlag[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/pick-shaped?status=open`, {
+      headers: adminHeaders(),
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { flags?: PickShapedFlag[] };
+    return body.flags ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function resolvePickShapedFlagAction(
+  rawId: number,
+  status: "dismissed" | "handled",
+): Promise<ActionResult> {
+  return call(`/api/admin/pick-shaped/${rawId}/resolve?status=${status}`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+}
+
 export async function patchPickAction(pickId: number, patch: PickPatchInput): Promise<ActionResult> {
   const cleaned: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(patch)) {
