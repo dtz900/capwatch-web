@@ -12,7 +12,7 @@ import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPr
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
-import { BETMGM_1080x356 } from "@/lib/affiliates";
+import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
 import { fetchLeaderboard, minPicksForWindow, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
@@ -183,7 +183,7 @@ export default async function Home({ searchParams }: PageProps) {
           {rows.length > 0 && (
             <div className="my-8 flex justify-center">
               <SportsbookAd
-                creative={BETMGM_1080x356}
+                creative={BETMGM_1940x500_FOOTBALL}
                 placement="home-inline"
               />
             </div>
