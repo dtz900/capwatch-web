@@ -57,6 +57,15 @@ export interface SportsbookCreative {
    * signup still attributes when the click cookie is lost.
    */
   bonusCode?: string;
+  /**
+   * CJ's 1x1 impression pixel for this link, when the creative is not
+   * served from CJ's own CDN. A CJ-hosted banner counts an impression
+   * as a side effect of serving the image through their redirector; a
+   * self-hosted one never touches CJ, so without this pixel the account
+   * reports clicks against zero impressions. Copy it verbatim from the
+   * link's Get Code panel so it matches the link being clicked.
+   */
+  impressionPixelUrl?: string;
 }
 
 /**
@@ -140,6 +149,11 @@ export const BETMGM_1940x500_FOOTBALL: SportsbookCreative = {
   alt: "BetMGM Sportsbook. Get up to $1,500 paid back in bonus bets if your first bet does not win",
   legalStates: "all",
   bonusCode: "TAILSLIPS",
+  // From link 17324564's Get Code panel. Required because the banner art
+  // is self-hosted: CJ counted impressions by serving the old creative
+  // through ftjcfx.com, and nothing reaches them now. Same link ID as the
+  // click URL, so impressions and clicks reconcile.
+  impressionPixelUrl: "https://www.tqlkg.com/image-101754995-17324564",
 };
 
 /**
