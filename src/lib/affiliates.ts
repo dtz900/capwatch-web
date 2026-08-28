@@ -93,10 +93,12 @@ export const BETMGM_1080x356: SportsbookCreative = {
   height: 356,
   alt: "BetMGM Sportsbook — Get up to $1,500 paid back if your first bet does not win",
   legalStates: "all",
-  // bonusCode deliberately unset (2026-08-14): CJ issued "FADAI", which both
-  // may be a typo and cross-links TailSlips to Fade AI on-site (ownership
-  // stays private). David is requesting "TAILSLIPS" from CJ; set it here
-  // once the registered code is confirmed and the display returns.
+  // CJ registered "TAILSLIPS" as the publisher code (Andy Yu email,
+  // 2026-08-27), replacing the earlier "FADAI" issue that both looked
+  // like a typo and cross-linked TailSlips to Fade AI on-site. Renders
+  // next to the banner so a signup still attributes when the click
+  // cookie is lost.
+  bonusCode: "TAILSLIPS",
 };
 
 /**
