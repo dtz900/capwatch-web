@@ -13,7 +13,7 @@ import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
-import { BETMGM_1080x356 } from "@/lib/affiliates";
+import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
 import { buildSlateOgFingerprint, slateBetCount } from "./_slate-og-renderer";
 
 interface PageProps {
@@ -244,7 +244,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
                 {gamesWithPicks.length > 0 && (
                   <div className="mt-2 mb-5">
                     <SportsbookAd
-                      creative={BETMGM_1080x356}
+                      creative={BETMGM_1940x500_FOOTBALL}
                       placement="slate-inline"
                       className="w-full"
                     />

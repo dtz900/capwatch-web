@@ -18,7 +18,7 @@ import { FaqSection } from "@/components/capper/FaqSection";
 import { SimilarCappers } from "@/components/capper/SimilarCappers";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
-import { BETMGM_1080x356 } from "@/lib/affiliates";
+import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard, withDeadline } from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, faqNode } from "@/lib/jsonld";
 import { formatRangeLabel, marketFilterLabel } from "@/lib/capperFilters";
@@ -490,7 +490,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
 
           {hasPicks && (
             <div className="mb-8 flex justify-center">
-              <SportsbookAd creative={BETMGM_1080x356} placement="capper-inline" />
+              <SportsbookAd creative={BETMGM_1940x500_FOOTBALL} placement="capper-inline" />
             </div>
           )}
 

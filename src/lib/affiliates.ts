@@ -12,6 +12,7 @@ export type SportsbookCreativeSize =
   | "300x250"
   | "120x600"
   | "1080x356"
+  | "1940x500"
   | "728x90"
   | "320x50";
 
@@ -91,12 +92,54 @@ export const BETMGM_1080x356: SportsbookCreative = {
   imageUrl: "https://www.ftjcfx.com/image-101754995-17163619",
   width: 1080,
   height: 356,
-  alt: "BetMGM Sportsbook — Get up to $1,500 paid back if your first bet does not win",
+  alt: "BetMGM Sportsbook. Get up to $1,500 paid back if your first bet does not win",
   legalStates: "all",
-  // bonusCode deliberately unset (2026-08-14): CJ issued "FADAI", which both
-  // may be a typo and cross-links TailSlips to Fade AI on-site (ownership
-  // stays private). David is requesting "TAILSLIPS" from CJ; set it here
-  // once the registered code is confirmed and the display returns.
+  // CJ registered "TAILSLIPS" as the publisher code (Andy Yu email,
+  // 2026-08-27), replacing the earlier "FADAI" issue that both looked
+  // like a typo and cross-linked TailSlips to Fade AI on-site. Renders
+  // next to the banner so a signup still attributes when the click
+  // cookie is lost.
+  bonusCode: "TAILSLIPS",
+};
+
+/**
+ * 1940x500 football wide rectangle, same "$1,500 Paid Back" offer.
+ *
+ * Currently the primary creative on every placement. Two differences from
+ * BETMGM_1080x356:
+ *
+ *   1. Self-hosted. This came out of BetMGM's approved asset export (Box,
+ *      ATL_MS_2293333 > 500kb > ACQ > Additional Sizes) via Andy Yu's
+ *      2026-08-27 email rather than CJ's creative library, so there is no
+ *      ftjcfx.com wrapper to point at and the file lives in /public. The
+ *      tradeoff: if BetMGM refreshes the offer terms, a CJ-hosted banner
+ *      would update itself and this one will not. Open ask to Andy for a
+ *      CJ-hosted cut of this size.
+ *   2. Both devices use publisher link 17324564, per Andy's instruction to
+ *      move every BetMGM placement onto the publisher-specific link. That
+ *      gives up the OneLink app-install flow on mobile (the pairing with
+ *      the $141.56 EPC) in exchange for correct publisher attribution.
+ *      Revisit if CJ issues a publisher-specific app link.
+ *
+ * Ratio is 3.88:1 against the old creative's 3.03:1, so it renders about
+ * 22% shorter at the same width. Legal copy is baked into the art: 21+,
+ * 1-800-GAMBLER plus state helplines, 7-day bonus-bet expiry, and the
+ * NY/NV/Ontario/Puerto Rico exclusion. Do not crop this image; that block
+ * sits along the bottom edge.
+ *
+ * Commissions $0 in IN, WV, NJ, MI like every other BetMGM creative.
+ */
+export const BETMGM_1940x500_FOOTBALL: SportsbookCreative = {
+  advertiser: "BetMGM",
+  size: "1940x500",
+  clickUrlMobile: "https://www.anrdoezrs.net/click-101754995-17324564",
+  clickUrlDesktop: "https://www.anrdoezrs.net/click-101754995-17324564",
+  imageUrl: "/betmgm-1940x500-football.jpg",
+  width: 1940,
+  height: 500,
+  alt: "BetMGM Sportsbook. Get up to $1,500 paid back in bonus bets if your first bet does not win",
+  legalStates: "all",
+  bonusCode: "TAILSLIPS",
 };
 
 /**

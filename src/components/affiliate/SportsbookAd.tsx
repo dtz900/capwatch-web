@@ -82,17 +82,21 @@ export function SportsbookAd({
         />
       </a>
       {showDisclosure && (
-        <div className="mt-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-bold opacity-70 text-center whitespace-nowrap">
-          Sponsored · 21+ ·{" "}
+        // Wraps rather than nowrap: with a bonus code the string reaches
+        // ~342px, and a nowrap strip forces the whole ad block wider than
+        // the 288px content column on a 320px phone, pushing the banner
+        // past the right gutter. Centered wrapping reads fine on two lines.
+        <div className="mt-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-bold opacity-70 text-center text-balance">
+          Sponsored · 21+ ·{" "}
           {/* Bonus code rides with the link per CJ guidance: a signup that
               types the code attributes even when the click cookie is lost. */}
           {creative.bonusCode && (
             <>
-              Code{" "}
+              Code{" "}
               <span className="text-[var(--color-text-soft)] opacity-100">
                 {creative.bonusCode}
               </span>
-              {" "}·{" "}
+              {" "}·{" "}
             </>
           )}
           <a
@@ -103,7 +107,7 @@ export function SportsbookAd({
           >
             Terms
           </a>
-          {" "}· 1-800-GAMBLER
+          {" "}· 1-800-GAMBLER
         </div>
       )}
     </div>
