@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buildClickUrl, type SportsbookCreative } from "@/lib/affiliates";
 
 interface Props {
@@ -53,9 +53,44 @@ export function SportsbookAd({
     }
   }, [creative]);
 
+  // CJ impression pixel. Fires once, when the ad actually scrolls into
+  // view, which matches how the old CJ-hosted banner behaved (it carried
+  // loading="lazy", so an impression only counted on view) and keeps the
+  // numbers continuous with account history. Requested imperatively via
+  // new Image() rather than rendered: no DOM node, no state, and no
+  // setState-in-effect. Deliberately not cache-busted, matching the tag
+  // CJ ships; adding one would count a fresh impression on every render.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const url = creative.impressionPixelUrl;
+    const el = rootRef.current;
+    if (!url || !el) return;
+    let fired = false;
+    const fire = () => {
+      if (fired) return;
+      fired = true;
+      new Image().src = url;
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      fire();
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          fire();
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.01 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [creative.impressionPixelUrl]);
+
   const href = buildClickUrl(clickUrl, placement);
   return (
-    <div className={className}>
+    <div className={className} ref={rootRef}>
       {/* Canvas + frame styling. The PNG creative has an alpha channel
           and was designed for light publishers, so we paint a warm
           off-white behind it (#f7f3e9 reads as cream, less harsh than
