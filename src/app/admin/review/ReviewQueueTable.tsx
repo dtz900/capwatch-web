@@ -152,6 +152,56 @@ export function ReviewQueueTable({ items }: Props) {
   );
 }
 
+/** All review timing renders in PT explicitly (David 2026-08-30: he
+ * approved a card without being able to see that six games had already
+ * started; times must be normalized to his timezone, not the browser's). */
+function fmtPT(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "America/Los_Angeles",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function fmtMins(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function GameTiming({ item: it }: { item: ReviewQueueItem }) {
+  if (!it.game_commence_time) return null;
+  const started = it.game_started_minutes_before_post;
+  const pregameMins =
+    started == null && it.posted_at
+      ? Math.round(
+          (new Date(it.game_commence_time).getTime() -
+            new Date(it.posted_at).getTime()) /
+            60000,
+        )
+      : null;
+  return (
+    <div className="flex items-center gap-2 flex-wrap mb-2">
+      <span className="text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums">
+        {it.game_label && <span>{it.game_label} · </span>}
+        first pitch {fmtPT(it.game_commence_time)} PT
+        {it.posted_at && <span> · tweeted {fmtPT(it.posted_at)} PT</span>}
+      </span>
+      {started != null ? (
+        <span className="text-[10px] uppercase tracking-[0.1em] font-extrabold text-red-400 bg-red-400/10 border border-red-400/25 rounded-md px-2 py-0.5">
+          started {fmtMins(started)} before tweet
+        </span>
+      ) : pregameMins != null && pregameMins >= 0 ? (
+        <span className="text-[10px] uppercase tracking-[0.1em] font-bold text-[var(--color-text-muted)]">
+          pregame · {fmtMins(pregameMins)} before first pitch
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 interface RowProps {
   item: ReviewQueueItem;
   onError: (msg: string | null) => void;
@@ -247,6 +297,8 @@ function ReviewRow({ item: it, onError, checked, onToggle }: RowProps) {
             {it.player_name && <span>player: {it.player_name}</span>}
             {it.parser_version && <span>parser: {it.parser_version}</span>}
           </div>
+
+          <GameTiming item={it} />
 
           {it.review_reason && (
             <div className="text-[11px] font-semibold text-amber-400/90 bg-amber-400/10 border border-amber-400/20 rounded-md px-2.5 py-1.5 mb-2 break-words">
