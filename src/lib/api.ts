@@ -378,6 +378,13 @@ export interface ReviewQueueItem {
   player_name: string | null;
   was_image_parsed: boolean | null;
   parlay_id: number | null;
+  /** ISO start time of the bound game, null when unbound. */
+  game_commence_time: string | null;
+  /** "AWY @ HOM" for the bound game, null when unbound. */
+  game_label: string | null;
+  /** Minutes the game had been RUNNING when the tweet posted (positive
+   * int); null when pregame, unbound, or timestamps were unparsable. */
+  game_started_minutes_before_post: number | null;
 }
 
 export interface ReviewQueueResponse {
