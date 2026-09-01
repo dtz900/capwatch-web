@@ -337,10 +337,12 @@ export interface GameSearchResult {
 export async function searchGamesAction(
   date: string,
   team?: string,
+  sport?: string,
 ): Promise<GameSearchResult[]> {
   try {
     const params = new URLSearchParams({ date });
     if (team) params.set("team", team);
+    if (sport) params.set("sport", sport);
     const res = await fetch(`${API_BASE}/api/admin/games/search?${params}`, {
       headers: adminHeaders(),
       cache: "no-store",
