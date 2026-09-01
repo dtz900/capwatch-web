@@ -5,7 +5,7 @@
 // "Phillies ML + Dodgers ML" parlay). One leg = straight, two+ = parlay
 // with ticket odds + units on leg 0. Everything lands admin_locked.
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   addManualBetAction,
   searchGamesAction,
@@ -103,6 +103,9 @@ export function AddBetPanel() {
   const [legs, setLegs] = useState<LegDraft[]>([{ ...EMPTY_LEG }]);
   const [gameDate, setGameDate] = useState(todayEt());
   const [sport, setSport] = useState<"MLB" | "NFL">("MLB");
+  // Guards the in-flight game search against a sport toggle racing it
+  // (Codex P2, PR #110): a lookup resolves only if its sport still matches.
+  const sportRef = useRef(sport);
   const [games, setGames] = useState<GameSearchResult[]>([]);
   const [gameTargetIdx, setGameTargetIdx] = useState(0);
   const [playerQuery, setPlayerQuery] = useState("");
@@ -116,7 +119,9 @@ export function AddBetPanel() {
 
   const loadGames = () =>
     startTransition(async () => {
-      setGames(await searchGamesAction(gameDate, undefined, sport));
+      const requested = sport;
+      const results = await searchGamesAction(gameDate, undefined, requested);
+      if (sportRef.current === requested) setGames(results);
     });
 
   const loadPlayers = () =>
@@ -214,7 +219,11 @@ export function AddBetPanel() {
             type="button"
             onClick={() => {
               setSport(sp);
+              sportRef.current = sp;
               setGames([]);
+              // A bound game from the other sport would submit an MLB
+              // game_id under sport NFL (Codex P1, PR #110); unbind all.
+              setLegs((ls) => ls.map((l) => ({ ...l, game: null })));
             }}
             className={`px-2.5 py-1.5 rounded text-[10px] font-bold ${
               sport === sp
