@@ -235,6 +235,14 @@ export interface HistoryPick {
    * odds. The badge tells followers what they're tailing; live prices
    * have no meaningful close comparison so CLV math excludes them. */
   is_live?: boolean;
+  /** Bankroll-challenge rung: the capper rolls one bank forward day by day
+   * ("$100 into $178", then "$178 into $352"). The stake comes from the
+   * chain's own bank math rather than a stated per-pick number, so the row
+   * has to say so; a 1.78u single is otherwise indistinguishable from a
+   * capper who simply liked one more than usual. */
+  ladder_chain_id?: string | null;
+  /** Rung ordinal inside ladder_chain_id, from the capper's own "Day N". */
+  ladder_day?: number | null;
 }
 
 /** Per-market straight-pick stats + cumulative trajectory, precomputed by the
