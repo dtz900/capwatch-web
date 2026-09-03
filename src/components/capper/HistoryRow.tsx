@@ -153,6 +153,17 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
             )}
             {selectionNode}
           </span>
+          {pick.ladder_chain_id && (
+            <span
+              className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
+                         text-[9px] uppercase tracking-[0.12em] font-bold
+                         bg-[rgba(227,199,135,0.10)] border border-[rgba(227,199,135,0.45)]
+                         text-[#e3c787]"
+              title={`Bankroll challenge rung${pick.ladder_day ? ` (day ${pick.ladder_day})` : ""}: staked from the chain's rolling bank, not a flat unit.`}
+            >
+              Ladder{pick.ladder_day ? ` · D${pick.ladder_day}` : ""}
+            </span>
+          )}
           {pick.is_live && (
             <span
               className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
@@ -310,8 +321,19 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           )}
           {selectionNode}
         </div>
-        {(pick.is_live || pick.deleted_after_game_start || pick.was_deleted_on_x) && (
+        {(pick.is_live || pick.ladder_chain_id || pick.deleted_after_game_start || pick.was_deleted_on_x) && (
           <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+            {pick.ladder_chain_id && (
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded
+                           text-[9px] uppercase tracking-[0.12em] font-bold
+                           bg-[rgba(227,199,135,0.10)] border border-[rgba(227,199,135,0.45)]
+                           text-[#e3c787]"
+                title={`Bankroll challenge rung${pick.ladder_day ? ` (day ${pick.ladder_day})` : ""}: staked from the chain's rolling bank, not a flat unit.`}
+              >
+                Ladder{pick.ladder_day ? ` · D${pick.ladder_day}` : ""}
+              </span>
+            )}
             {pick.is_live && (
               <span
                 className="inline-flex items-center px-1.5 py-0.5 rounded
