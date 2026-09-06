@@ -1,4 +1,4 @@
-import type { SlateGame, GameState, InningHalf } from "@/lib/types";
+import type { SlateGame, GameState, InningHalf, Sport } from "@/lib/types";
 
 /** Height of the sticky TopNav in px. */
 export const NAV_H = 64;
@@ -16,6 +16,10 @@ export interface RailGame {
   game_time: string | null;
   inning: number | null;
   inning_half: InningHalf | null;
+  sport: Sport;
+  period: number | null;
+  clock: string | null;
+  status_name: string | null;
   sharp_count: number;
 }
 
@@ -52,6 +56,10 @@ export function buildRailGames(
     game_time: g.game_time,
     inning: g.inning,
     inning_half: g.inning_half,
+    sport: g.sport ?? "MLB",
+    period: g.period ?? null,
+    clock: g.clock ?? null,
+    status_name: g.status_name ?? null,
     sharp_count: new Set(g.picks.map((p) => p.capper_id)).size,
   }));
 }

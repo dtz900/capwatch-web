@@ -30,5 +30,6 @@ export async function GET(request: Request): Promise<Response> {
       ? (bt as BetTypeFilter)
       : DEFAULT_ROOT_OG_FILTERS.bet_type,
     active_only: url.searchParams.get("ao") !== "false",
+    sport: (["all", "mlb", "nfl"] as const).find((s) => s === url.searchParams.get("sp")),
   });
 }

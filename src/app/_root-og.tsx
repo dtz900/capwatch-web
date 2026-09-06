@@ -34,6 +34,7 @@ export interface RootOgFilters {
   sort: Sort;
   bet_type: BetTypeFilter;
   active_only: boolean;
+  sport?: "all" | "mlb" | "nfl";
 }
 
 export const DEFAULT_ROOT_OG_FILTERS: RootOgFilters = {
@@ -93,6 +94,7 @@ async function fetchTop5(filters: RootOgFilters): Promise<{ rows: TopRow[]; stat
       bet_type: filters.bet_type,
       min_picks: minPicksForWindow(filters.window),
       active_only: filters.active_only,
+      sport: filters.sport,
     });
     const rows: TopRow[] = data.leaderboard.slice(0, 5).map((r) => ({
       handle: r.handle ?? "?",
@@ -163,6 +165,7 @@ export async function buildRootOgFingerprint(filters: RootOgFilters = DEFAULT_RO
       bet_type: filters.bet_type,
       min_picks: minPicksForWindow(filters.window),
       active_only: filters.active_only,
+      sport: filters.sport,
     });
     picks = data.platform_stats?.graded_picks_total ?? 0;
     cappers = data.platform_stats?.cappers_tracked ?? 0;

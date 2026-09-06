@@ -4,15 +4,9 @@ import { TeamLogo } from "./TeamLogo";
 import { type ScoreStatusState } from "./ScoreStatus";
 import { BookieAction } from "./BookieAction";
 import { pickMlSide } from "@/lib/bet-format";
-import { teamColor } from "@/lib/mlb-teams";
-import type { InningHalf, SlateGame, SlatePick } from "@/lib/types";
-
-const HEADER_HALF_LABEL: Record<InningHalf, string> = {
-  top: "TOP",
-  bot: "BOT",
-  mid: "MID",
-  end: "END",
-};
+import { teamColor } from "@/lib/teams";
+import { liveLabel } from "@/lib/live-label";
+import type { SlateGame, SlatePick, Sport } from "@/lib/types";
 
 function formatGameTime(iso: string | null): string | null {
   if (!iso) return null;
@@ -30,13 +24,11 @@ function formatGameTime(iso: string | null): string | null {
 
 function StatusChip({
   lifecycle,
-  inningHalf,
-  inning,
+  game,
   gameTime,
 }: {
   lifecycle: ScoreStatusState;
-  inningHalf: InningHalf | null;
-  inning: number | null;
+  game: SlateGame;
   gameTime: string | null;
 }) {
   if (lifecycle === "pre") {
@@ -48,10 +40,7 @@ function StatusChip({
     );
   }
   if (lifecycle === "live") {
-    const label =
-      inningHalf && inning !== null
-        ? `${HEADER_HALF_LABEL[inningHalf]} ${inning}`
-        : "LIVE";
+    const label = liveLabel(game);
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--color-pos-soft)] text-[var(--color-pos)] ring-1 ring-inset ring-[rgba(25,245,124,0.25)] text-[10px] uppercase tracking-[0.18em] font-bold whitespace-nowrap">
         <span
@@ -149,18 +138,20 @@ function formatRiskedAndPnl(risked: number, pnl: number, showPnl: boolean): stri
 
 function Side({
   team,
+  sport,
   picks,
   awayTeam,
   homeTeam,
   showPnl,
 }: {
   team: string | null;
+  sport: Sport;
   picks: SlatePick[];
   awayTeam: string | null;
   homeTeam: string | null;
   showPnl: boolean;
 }) {
-  const color = teamColor(team);
+  const color = teamColor(team, sport);
   const risked = sumRisked(picks);
   const pnl = sumProfit(picks);
   const tally =
@@ -217,8 +208,9 @@ export function GameBlock({ game }: { game: SlateGame }) {
   const hasMlAction = buckets.awayMl.length + buckets.homeMl.length > 0;
   const hasOther = buckets.other.length > 0;
   const isSilent = game.picks.length === 0;
-  const awayColor = teamColor(game.away_team);
-  const homeColor = teamColor(game.home_team);
+  const sport: Sport = game.sport ?? "MLB";
+  const awayColor = teamColor(game.away_team, sport);
+  const homeColor = teamColor(game.home_team, sport);
 
   const lifecycle = deriveLifecycle(game);
   const showPnl = lifecycle === "final_graded";
@@ -257,6 +249,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
             <div className="flex items-center gap-2.5 sm:gap-3">
               <TeamLogo
                 abbr={game.away_team}
+                sport={sport}
                 size={88}
                 className="!w-10 !h-10 sm:!w-12 sm:!h-12"
               />
@@ -278,8 +271,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
             <div className="flex flex-col items-center gap-1 px-1 sm:px-2 shrink-0">
               <StatusChip
                 lifecycle={lifecycle}
-                inningHalf={game.inning_half}
-                inning={game.inning}
+                game={game}
                 gameTime={game.game_time}
               />
             </div>
@@ -300,6 +292,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
               </div>
               <TeamLogo
                 abbr={game.home_team}
+                sport={sport}
                 size={88}
                 className="!w-10 !h-10 sm:!w-12 sm:!h-12"
               />
@@ -323,6 +316,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
           <div className="grid grid-cols-2 gap-x-3 sm:gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
             <Side
               team={game.away_team}
+              sport={sport}
               picks={buckets.awayMl}
               awayTeam={game.away_team}
               homeTeam={game.home_team}
@@ -330,6 +324,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
             />
             <Side
               team={game.home_team}
+              sport={sport}
               picks={buckets.homeMl}
               awayTeam={game.away_team}
               homeTeam={game.home_team}

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const STORAGE_KEY = "tailslips_leaderboard_prefs_v1";
-const PREF_KEYS = ["window", "sort", "bet_type", "active_only"] as const;
+const PREF_KEYS = ["sport", "window", "sort", "bet_type", "active_only"] as const;
 
 /**
  * Persists the leaderboard filter state across navigation. When the user

@@ -6,7 +6,8 @@ import { ImageResponse } from "next/og";
 import satori from "satori";
 import { fetchLeaderboard, fetchSlate, withDeadline } from "@/lib/api";
 import { pickMlSide } from "@/lib/bet-format";
-import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
+import { teamColor, teamLogoUrl } from "@/lib/teams";
+import type { Sport } from "@/lib/types";
 import type { SlateGame, SlatePick } from "@/lib/types";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
@@ -356,6 +357,7 @@ function formatAmericanOdds(n: number): string {
 
 export interface RenderSlateOpts {
   dateParam?: "today" | "tomorrow";
+  sport?: "mlb" | "nfl";
   gameSlug?: string;
   // Supersampling factor for NATIVE-media posts (post_slate_card.py passes
   // ?scale=2). The OG-crawler path stays at 1x: a 2x canvas has timed out
@@ -382,9 +384,10 @@ async function renderScaledPng(node: ReactNode, fonts: OgFont[], scale: number):
 
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
+  const sportParam = opts.sport === "nfl" ? "nfl" : "mlb";
   const scale = opts.scale === 2 ? 2 : 1;
   const [slateResult, logoDataUri] = await Promise.allSettled([
-    fetchSlate(dateParam),
+    fetchSlate(dateParam, sportParam),
     readLogoDataUri(),
   ]);
 
@@ -462,6 +465,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
  */
 export async function buildSlateOgFingerprint(
   dateParam: "today" | "tomorrow",
+  sport: "mlb" | "nfl" = "mlb",
 ): Promise<{ etDay: string; picks: number; sharps: number; seasonPicks: number; contentHash: string }> {
   let picks = 0;
   let sharps = 0;
@@ -475,7 +479,7 @@ export async function buildSlateOgFingerprint(
   // the pair.
   const [slate, lb] = await Promise.all([
     withDeadline<Awaited<ReturnType<typeof fetchSlate>> | null>(
-      fetchSlate(dateParam).catch(() => null),
+      fetchSlate(dateParam, sport).catch(() => null),
       1500,
       null,
     ),

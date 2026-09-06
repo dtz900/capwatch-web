@@ -3,7 +3,8 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { TeamLogo } from "./TeamLogo";
-import { teamColor } from "@/lib/mlb-teams";
+import { teamColor } from "@/lib/teams";
+import { liveLabel } from "@/lib/live-label";
 import { NAV_H, railLifecycle, type RailGame } from "@/lib/rail";
 
 function timeET(iso: string | null): string {
@@ -140,11 +141,11 @@ export function SlateRailStrip({ games }: { games: RailGame[] }) {
                   quiet ? "opacity-60" : ""
                 }`}
               >
-                <TeamLogo abbr={g.away_team} size={20} flat />
+                <TeamLogo abbr={g.away_team} sport={g.sport} size={20} flat />
                 <span className="px-0.5 text-[10px] font-bold lowercase text-[var(--color-text-muted)]">
                   v
                 </span>
-                <TeamLogo abbr={g.home_team} size={20} flat />
+                <TeamLogo abbr={g.home_team} sport={g.sport} size={20} flat />
                 {live && (
                   <span
                     aria-hidden
@@ -192,8 +193,8 @@ export function SlateRailColumn({ games }: { games: RailGame[] }) {
           const quiet = g.sharp_count === 0;
           const life = railLifecycle(g.game_state);
           const showScore = life === "live" || life === "final";
-          const awayColor = teamColor(g.away_team);
-          const homeColor = teamColor(g.home_team);
+          const awayColor = teamColor(g.away_team, g.sport);
+          const homeColor = teamColor(g.home_team, g.sport);
           return (
             <a
               key={g.game_id}
@@ -216,7 +217,7 @@ export function SlateRailColumn({ games }: { games: RailGame[] }) {
               )}
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 leading-none">
                 <span className="flex items-center gap-1 min-w-0 text-[11px] font-bold tracking-tight">
-                  <TeamLogo abbr={g.away_team} size={14} flat />
+                  <TeamLogo abbr={g.away_team} sport={g.sport} size={14} flat />
                   <span className="truncate">{g.away_team}</span>
                 </span>
                 <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-50">
@@ -224,7 +225,7 @@ export function SlateRailColumn({ games }: { games: RailGame[] }) {
                 </span>
                 <span className="flex items-center justify-end gap-1 min-w-0 text-[11px] font-bold tracking-tight">
                   <span className="truncate">{g.home_team}</span>
-                  <TeamLogo abbr={g.home_team} size={14} flat />
+                  <TeamLogo abbr={g.home_team} sport={g.sport} size={14} flat />
                 </span>
               </div>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 leading-none">
@@ -247,9 +248,7 @@ export function SlateRailColumn({ games }: { games: RailGame[] }) {
                         aria-hidden
                         className="w-1 h-1 rounded-full bg-[var(--color-pos)] animate-pulse"
                       />
-                      {g.inning_half && g.inning != null
-                        ? `${g.inning_half.toUpperCase()} ${g.inning}`
-                        : "LIVE"}
+                      {liveLabel(g)}
                     </>
                   ) : life === "final" ? (
                     "FINAL"

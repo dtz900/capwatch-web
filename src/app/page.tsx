@@ -16,14 +16,20 @@ import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
 import { fetchLeaderboard, minPicksForWindow, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
-import type { Window, Sort, BetTypeFilter } from "@/lib/types";
+import type { Window, Sort, BetTypeFilter, SportFilter } from "@/lib/types";
 import { buildRootOgFingerprint, ROOT_OG_CARD_VERSION } from "./_root-og";
 
 interface PageProps {
-  searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string; v?: string }>;
+  searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string; sport?: string; v?: string }>;
 }
 
 const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
+const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl"];
+// The board defaults to the combined record; MLB / NFL are one click away.
+const DEFAULT_SPORT: SportFilter = "all";
+function parseSport(raw: string | undefined): SportFilter {
+  return VALID_SPORTS.includes(raw as SportFilter) ? (raw as SportFilter) : DEFAULT_SPORT;
+}
 const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 
@@ -52,6 +58,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
     min_picks: minPicksForWindow(win),
     active_only: sp.active_only !== "false",
+    sport: parseSport(sp.sport),
   };
   const fp = await buildRootOgFingerprint(filters);
   const q = new URLSearchParams();
@@ -59,6 +66,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   q.set("sort", filters.sort);
   q.set("bt", filters.bet_type);
   if (!filters.active_only) q.set("ao", "false");
+  if (filters.sport && filters.sport !== "mlb") q.set("sp", filters.sport);
   q.set("d", fp.ptDate);
   if (fp.picks > 0) q.set("p", String(fp.picks));
   if (fp.cappers > 0) q.set("c", String(fp.cappers));
@@ -66,7 +74,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   q.set("v", ROOT_OG_CARD_VERSION);
   if (sp.v && /^[0-9]{8,}$/.test(sp.v)) q.set("sv", sp.v);
   const ogUrl = `/og/home?${q.toString()}`;
-  const title = `${windowTitle(filters.window)} MLB Twitter Capper Rankings · ${SITE_NAME}`;
+  const title = `${windowTitle(filters.window)} ${sportTitle(filters.sport)} Twitter Capper Rankings · ${SITE_NAME}`;
   return {
     title,
     openGraph: {
@@ -79,6 +87,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       images: [{ url: ogUrl, alt: "TailSlips · MLB Capper Scoreboard" }],
     },
   };
+}
+
+function sportTitle(s: SportFilter | undefined): string {
+  if (s === "nfl") return "NFL";
+  if (s === "mlb") return "MLB";
+  return "MLB + NFL";
 }
 
 function windowTitle(w: Window): string {
@@ -97,6 +111,7 @@ export default async function Home({ searchParams }: PageProps) {
     bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
     min_picks: minPicksForWindow(win),
     active_only: sp.active_only !== "false",
+    sport: parseSport(sp.sport),
   };
 
   let rows: Awaited<ReturnType<typeof fetchLeaderboard>>["leaderboard"] = [];
@@ -163,7 +178,7 @@ export default async function Home({ searchParams }: PageProps) {
       <TopNav />
       <LivePicksProvider initial={liveInitial}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
-          <Hero stats={heroStats} />
+          <Hero stats={heroStats} sport={filters.sport} />
           <div className="mb-3">
             <FilterBar filters={filters} />
           </div>
@@ -171,6 +186,7 @@ export default async function Home({ searchParams }: PageProps) {
             <ShareLinkButton
               basePath="/"
               queryParams={{
+                sport: filters.sport !== DEFAULT_SPORT ? filters.sport : undefined,
                 window: filters.window !== "last_30" ? filters.window : undefined,
                 sort: filters.sort !== "units_profit" ? filters.sort : undefined,
                 bet_type: filters.bet_type !== "all" ? filters.bet_type : undefined,

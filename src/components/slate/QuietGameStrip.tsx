@@ -36,10 +36,10 @@ export function QuietGameStrip({ game }: { game: SlateGame }) {
       className="flex items-center justify-between gap-3 py-2 text-[12px] scroll-mt-[118px] xl:scroll-mt-[96px]"
     >
       <div className="flex items-center gap-2 min-w-0 text-[var(--color-text-muted)]">
-        <TeamLogo abbr={game.away_team} size={16} />
+        <TeamLogo abbr={game.away_team} sport={game.sport} size={16} />
         <span className="font-bold text-[13px] text-[var(--color-text-soft)]">{game.away_team}</span>
         <span className="opacity-50 mx-0.5">@</span>
-        <TeamLogo abbr={game.home_team} size={16} />
+        <TeamLogo abbr={game.home_team} sport={game.sport} size={16} />
         <span className="font-bold text-[13px] text-[var(--color-text-soft)]">{game.home_team}</span>
         {pitchers && <span className="ml-2 truncate font-medium">{pitchers}</span>}
       </div>

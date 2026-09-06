@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { teamLogoUrl, teamColor } from "@/lib/mlb-teams";
+import { teamLogoUrl, teamColor } from "@/lib/teams";
+import type { Sport } from "@/lib/types";
 
 interface Props {
   abbr: string | null;
+  sport?: Sport;
   size?: number;
   className?: string;
   /** Disables the team-color drop-shadow halo. Default: enabled. */
@@ -15,10 +17,10 @@ interface Props {
  * MLB team logo with a transparent background and a soft team-color halo.
  * Falls back to a colored text mark when the image can't load.
  */
-export function TeamLogo({ abbr, size = 28, className, flat = false }: Props) {
+export function TeamLogo({ abbr, sport = "MLB", size = 28, className, flat = false }: Props) {
   const [failed, setFailed] = useState(false);
-  const url = teamLogoUrl(abbr);
-  const color = teamColor(abbr);
+  const url = teamLogoUrl(abbr, sport);
+  const color = teamColor(abbr, sport);
 
   const haloRadius = Math.max(2, Math.round(size * 0.11));
   const halo = flat

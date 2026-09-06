@@ -27,6 +27,12 @@ const SHOW: SegmentItem<boolean>[] = [
   { value: false, label: "All" },
 ];
 
+const SPORTS: SegmentItem<NonNullable<LeaderboardFilters["sport"]>>[] = [
+  { value: "all", label: "All" },
+  { value: "mlb", label: "MLB" },
+  { value: "nfl", label: "NFL" },
+];
+
 const BET_TYPES: SegmentItem<LeaderboardFilters["bet_type"]>[] = [
   { value: "all",       label: "All" },
   { value: "straights", label: "Straights" },
@@ -57,11 +63,13 @@ export function FilterBar({ filters }: Props) {
     filters.bet_type,
     filters.active_only,
     filters.min_picks,
+    filters.sport,
   ]);
 
   const apply = (next: LeaderboardFilters) => {
     setOptimistic(next);
     const params = new URLSearchParams({
+      sport: next.sport ?? "all",
       window: next.window,
       sort: next.sort,
       bet_type: next.bet_type,
@@ -78,6 +86,11 @@ export function FilterBar({ filters }: Props) {
   const windowLabel = WINDOWS.find((o) => o.value === view.window)?.label ?? "30d";
   const sortLabel = SORTS.find((o) => o.value === view.sort)?.label ?? "Units";
   const betTypeLabel = BET_TYPES.find((o) => o.value === view.bet_type)?.label ?? "All";
+  const sportValue = view.sport ?? "all";
+  // Mobile row reads "All · Active · 30d · by Units · All" otherwise: two
+  // unlabeled "All"s (sport and bet type) side by side.
+  const sportLabel =
+    sportValue === "all" ? "All sports" : SPORTS.find((o) => o.value === sportValue)?.label ?? "All sports";
 
   return (
     <>
@@ -88,6 +101,14 @@ export function FilterBar({ filters }: Props) {
         aria-label="Filter leaderboard"
         aria-busy={isPending}
       >
+        <InlinePicker
+          ariaLabel="Sport"
+          value={sportValue}
+          label={sportLabel}
+          options={SPORTS}
+          onChange={(v) => apply({ ...view, sport: v })}
+        />
+        <Bullet />
         <InlinePicker
           ariaLabel="Show"
           value={view.active_only}
@@ -131,6 +152,14 @@ export function FilterBar({ filters }: Props) {
         aria-label="Filter leaderboard"
         aria-busy={isPending}
       >
+        <Group label="Sport">
+          <SegmentedControl
+            items={SPORTS}
+            value={sportValue}
+            onChange={(v) => apply({ ...view, sport: v })}
+          />
+        </Group>
+        <Divider />
         <Group label="Window">
           <SegmentedControl
             items={WINDOWS}
