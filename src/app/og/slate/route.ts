@@ -33,5 +33,7 @@ export async function GET(request: Request): Promise<Response> {
   // RenderSlateOpts.scale in _slate-og-renderer.tsx.
   const scale = url.searchParams.get("scale") === "2" ? 2 : (1 as const);
   const sport = url.searchParams.get("sport") === "nfl" ? "nfl" : "mlb";
-  return renderSlateOg({ dateParam, gameSlug, scale, sport });
+  const rawWeek = Number(url.searchParams.get("week"));
+  const week = sport === "nfl" && Number.isInteger(rawWeek) && rawWeek >= 1 && rawWeek <= 22 ? rawWeek : undefined;
+  return renderSlateOg({ dateParam, gameSlug, scale, sport, week });
 }

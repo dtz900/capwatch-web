@@ -26,9 +26,23 @@ export function LivePicksProvider({ initial, sport = "mlb", children }: Provider
   const [counts, setCounts] = useState<LivePicksMap>(initial);
   // Skip the first poll on mount; `initial` is fresh from the SSR render.
   const skipNext = useRef(true);
+  // Latest SSR counts, read when the league changes: the sport tabs are a
+  // client navigation that keeps this provider mounted, so `counts` would
+  // otherwise keep the previous league's map for up to a poll interval
+  // (Codex on #113).
+  const initialRef = useRef(initial);
+  useEffect(() => {
+    initialRef.current = initial;
+  }, [initial]);
+  const mounted = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+    if (mounted.current) {
+      setCounts(initialRef.current);
+      skipNext.current = false;
+    }
+    mounted.current = true;
     const tick = async () => {
       if (skipNext.current) {
         skipNext.current = false;
@@ -53,6 +67,8 @@ export function LivePicksProvider({ initial, sport = "mlb", children }: Provider
       }
     };
     const id = setInterval(tick, POLL_INTERVAL_MS);
+    // A league switch polls right away instead of waiting a full interval.
+    if (!skipNext.current) void tick();
     // Refresh immediately on tab focus so the pill catches up after the
     // user comes back from another tab.
     const onFocus = () => {

@@ -306,7 +306,7 @@ function buildMarqueeBlock(
   let awayCount = 0;
   let homeCount = 0;
   for (const p of game.picks) {
-    const side = pickMlSide(p, game.away_team, game.home_team);
+    const side = pickMlSide(p, game.away_team, game.home_team, game.sport ?? "MLB");
     const h = p.handle;
     if (!h) continue;
     const named = !X_SUPPRESSED_HANDLES.has(h.toLowerCase());
@@ -361,6 +361,8 @@ function formatAmericanOdds(n: number): string {
 export interface RenderSlateOpts {
   dateParam?: "today" | "tomorrow";
   sport?: "mlb" | "nfl";
+  /** NFL only: the week the share URL opens to, so the card matches it. */
+  week?: number;
   gameSlug?: string;
   // Supersampling factor for NATIVE-media posts (post_slate_card.py passes
   // ?scale=2). The OG-crawler path stays at 1x: a 2x canvas has timed out
@@ -388,10 +390,15 @@ async function renderScaledPng(node: ReactNode, fonts: OgFont[], scale: number):
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
   const sportParam = opts.sport === "nfl" ? "nfl" : "mlb";
-  const fallbackHeading = sportParam === "nfl" ? "This week's NFL slate." : "Tonight's MLB slate.";
+  const fallbackHeading =
+    sportParam === "nfl"
+      ? opts.week != null
+        ? `Week ${opts.week} NFL slate.`
+        : "This week's NFL slate."
+      : "Tonight's MLB slate.";
   const scale = opts.scale === 2 ? 2 : 1;
   const [slateResult, logoDataUri] = await Promise.allSettled([
-    fetchSlate(dateParam, sportParam),
+    fetchSlate(dateParam, sportParam, sportParam === "nfl" ? opts.week : undefined),
     readLogoDataUri(),
   ]);
 
@@ -415,8 +422,17 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
 
   const inputs: RenderInputs = {
     logoDataUri: logo,
-    // The NFL board is a week: "16 games this week", never "tonight".
-    dateLabel: sportParam === "nfl" ? "This week" : dateParam === "tomorrow" ? "Tomorrow" : "Tonight",
+    // The NFL board is a week: "16 games this week", never "tonight". A
+    // week named by the share URL (or by the API meta) is labelled as that
+    // week so an older or future slate never claims to be this week's.
+    dateLabel:
+      sportParam === "nfl"
+        ? (slate?.week?.week ?? opts.week) != null
+          ? `Week ${slate?.week?.week ?? opts.week}`
+          : "This week"
+        : dateParam === "tomorrow"
+          ? "Tomorrow"
+          : "Tonight",
     totalGames: games.length,
     sharpsPosted,
     picksTotal: betsTotal,
@@ -471,6 +487,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
 export async function buildSlateOgFingerprint(
   dateParam: "today" | "tomorrow",
   sport: "mlb" | "nfl" = "mlb",
+  week?: number,
 ): Promise<{ etDay: string; picks: number; sharps: number; seasonPicks: number; contentHash: string }> {
   let picks = 0;
   let sharps = 0;
@@ -484,7 +501,7 @@ export async function buildSlateOgFingerprint(
   // the pair.
   const [slate, lb] = await Promise.all([
     withDeadline<Awaited<ReturnType<typeof fetchSlate>> | null>(
-      fetchSlate(dateParam, sport).catch(() => null),
+      fetchSlate(dateParam, sport, sport === "nfl" ? week : undefined).catch(() => null),
       1500,
       null,
     ),

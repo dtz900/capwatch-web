@@ -1,3 +1,5 @@
+import { NFL_TEAM_NAMES } from "@/lib/nfl-teams";
+
 /**
  * Canonical bet-line formatter for the slate page.
  *
@@ -190,11 +192,46 @@ export function pickMlSide(
   pick: PickInput,
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
+  sport: "MLB" | "NFL" = "MLB",
 ): "away" | "home" | null {
   if (inferMarketBucket(pick.market, pick.selection) !== "Moneyline") return null;
-  const team = resolveTeam(pick.selection ?? "", awayTeam, homeTeam);
+  const team = resolveTeam(pick.selection ?? "", awayTeam, homeTeam, sport);
   if (team && awayTeam && team === awayTeam) return "away";
   if (team && homeTeam && team === homeTeam) return "home";
+  return null;
+}
+
+// NFL nicknames that are not the mascot in NFL_TEAM_NAMES. Only consulted
+// against the two teams of the game in hand, so the MLB/NFL collisions
+// (Giants, Cardinals) can never cross-resolve.
+const NFL_EXTRA_ALIASES: Record<string, string[]> = {
+  SF: ["niners"],
+  TB: ["bucs", "buccs"],
+  NE: ["pats"],
+  JAX: ["jags"],
+  GB: ["pack"],
+  WSH: ["washington"],
+  NYG: ["ny giants", "new york giants"],
+  NYJ: ["ny jets", "new york jets"],
+  LAC: ["la chargers"],
+  LAR: ["la rams"],
+};
+
+function resolveNflTeamInGame(
+  selection: string,
+  awayTeam: string | null | undefined,
+  homeTeam: string | null | undefined,
+): string | null {
+  const lower = ` ${selection.toLowerCase()} `;
+  for (const abbr of [awayTeam, homeTeam]) {
+    if (!abbr) continue;
+    const names = [NFL_TEAM_NAMES[abbr], ...(NFL_EXTRA_ALIASES[abbr] ?? [])]
+      .filter((n): n is string => !!n)
+      .map((n) => n.toLowerCase());
+    for (const n of names) {
+      if (lower.includes(` ${n} `) || lower.includes(` ${n}/`) || lower.includes(`/${n} `)) return abbr;
+    }
+  }
   return null;
 }
 
@@ -202,12 +239,20 @@ function resolveTeam(
   selection: string,
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
+  sport: "MLB" | "NFL" = "MLB",
 ): string | null {
   // Match the game's known abbrs first.
   for (const abbr of [awayTeam, homeTeam]) {
     if (!abbr) continue;
     const re = new RegExp(`\\b${abbr}\\b`, "i");
     if (re.test(selection)) return abbr;
+  }
+
+  // NFL: mascots and nicknames of the two teams in this game ("Chiefs ML",
+  // "Giants moneyline"). The MLB alias table below would send Giants to SF
+  // and Cardinals to STL (Codex on #113).
+  if (sport === "NFL") {
+    return resolveNflTeamInGame(selection, awayTeam, homeTeam);
   }
 
   // Then any standard MLB abbr.

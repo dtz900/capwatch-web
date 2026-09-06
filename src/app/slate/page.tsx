@@ -122,7 +122,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // real fetch keeps warming the cache for the next hit. The description
   // fetch and the fingerprint (which has its own internal deadlines) run
   // CONCURRENTLY so the worst case stays ~1.5s, not the sum of the races.
-  const fpPromise = buildSlateOgFingerprint(p.dateParam, p.sport);
+  const fpPromise = buildSlateOgFingerprint(p.dateParam, p.sport, p.week);
   try {
     const data = await withDeadline<SlateResponse | null>(
       fetchSlate(p.dateParam, p.sport, p.week),
@@ -159,6 +159,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const ogQs = new URLSearchParams();
   ogQs.set("date", p.dateParam);
   if (isNfl) ogQs.set("sport", "nfl");
+  // A shared /slate?sport=nfl&week=N must card the same week it opens to
+  // (Codex on #113).
+  if (isNfl && p.week != null) ogQs.set("week", String(p.week));
   // ?game=AWAY-HOME (or a game_id) features that matchup on the OG card;
   // omitted, the card falls back to the most-bet game. name/matchup are
   // accepted as aliases so a mistyped param still works.
