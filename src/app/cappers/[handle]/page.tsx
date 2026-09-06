@@ -197,6 +197,7 @@ export async function generateMetadata({
     const windowAgg = profile.aggregates[DEFAULT_WINDOW] ?? allTimeAgg;
 
     const baseInputs = {
+      sport: parseSport(sp.sport),
       handle,
       displayName: profile.capper.display_name,
       windowAgg,
@@ -408,6 +409,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
 
   const faqItems = buildCapperFaq({
     handle,
+    sport,
     displayName: profile.capper.display_name,
     allTimeAgg: allTimeAgg ?? undefined,
     trackedSince: allTimeAgg?.tracked_since ?? null,
@@ -436,6 +438,11 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <CapperFilterProvider
+          // Keyed by sport: the league tabs are a query-string navigation
+          // that keeps this client component mounted, so without a key the
+          // useState initializers keep the previous league's profile and
+          // history (Codex on #113).
+          key={sport}
           handle={handle}
           initialProfile={profile}
           initialWindow={window}

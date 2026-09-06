@@ -47,9 +47,17 @@ export function formatWinRateForTitle(rate: number): string {
   return `${Math.round(rate * 100)}% win rate`;
 }
 
+/** League word for copy: the profile's selected sport (Codex on #113). */
+export function leagueLabel(sport?: "all" | "mlb" | "nfl" | null): string {
+  if (sport === "nfl") return "NFL";
+  if (sport === "all") return "MLB and NFL";
+  return "MLB";
+}
+
 interface CapperMetaInputs {
   handle: string;
   displayName: string | null;
+  sport?: "all" | "mlb" | "nfl" | null;
   windowAgg: CapperProfile["aggregates"][Window];
   allTimeAgg: CapperProfile["aggregates"][Window];
   trackedSince?: string | null;
@@ -74,41 +82,44 @@ function pickDisplayAgg(
 
 export function buildCapperTitle(inputs: CapperMetaInputs): string {
   const { handle } = inputs;
+  const league = leagueLabel(inputs.sport);
   const agg = pickDisplayAgg(inputs);
   if (!agg) {
-    return `@${handle} · MLB capper record on ${SITE_NAME}`;
+    return `@${handle} · ${league} capper record on ${SITE_NAME}`;
   }
   const record = formatRecord(agg);
   const units = formatUnitsForTitle(agg.units_profit);
   const roi = formatRoiForTitle(agg.roi_pct);
-  return `@${handle} · ${record} ${units} (${roi}) · MLB capper record on ${SITE_NAME}`;
+  return `@${handle} · ${record} ${units} (${roi}) · ${league} capper record on ${SITE_NAME}`;
 }
 
 export function buildCapperDescription(inputs: CapperMetaInputs): string {
   const { handle, displayName } = inputs;
+  const league = leagueLabel(inputs.sport);
   const name = displayName && displayName !== handle ? `${displayName} (@${handle})` : `@${handle}`;
   const agg = pickDisplayAgg(inputs);
   if (!agg) {
-    return `${name} is tracked on ${SITE_NAME}. Every public MLB pick is parsed within seconds and graded against the final game outcome.`;
+    return `${name} is tracked on ${SITE_NAME}. Every public ${league} pick is parsed within seconds and graded against the final game outcome.`;
   }
   const record = formatRecord(agg);
   const units = formatUnitsForTitle(agg.units_profit);
   const roi = formatRoiForTitle(agg.roi_pct);
   const wr = formatWinRateForTitle(agg.win_rate);
   const sinceStr = inputs.trackedSince ? ` Tracked since ${formatTrackedSince(inputs.trackedSince)}.` : "";
-  return `${name} is ${record} (${units}, ${roi}, ${wr}) on the ${SITE_NAME} verified-capper leaderboard across ${agg.picks_count} graded MLB picks.${sinceStr} Every public pick is parsed within seconds and graded against final outcomes.`;
+  return `${name} is ${record} (${units}, ${roi}, ${wr}) on the ${SITE_NAME} verified-capper leaderboard across ${agg.picks_count} graded ${league} picks.${sinceStr} Every public pick is parsed within seconds and graded against final outcomes.`;
 }
 
 export function buildCapperOgDescription(inputs: CapperMetaInputs): string {
   const { handle } = inputs;
+  const league = leagueLabel(inputs.sport);
   const agg = pickDisplayAgg(inputs);
   if (!agg) {
-    return `Verified MLB pick history for @${handle} on ${SITE_NAME}.`;
+    return `Verified ${league} pick history for @${handle} on ${SITE_NAME}.`;
   }
   const record = formatRecord(agg);
   const units = formatUnitsForTitle(agg.units_profit);
   const roi = formatRoiForTitle(agg.roi_pct);
-  return `${record} ${units} (${roi}) across ${agg.picks_count} graded MLB picks. Verified on ${SITE_NAME}.`;
+  return `${record} ${units} (${roi}) across ${agg.picks_count} graded ${league} picks. Verified on ${SITE_NAME}.`;
 }
 
 function formatTrackedSince(iso: string): string {
@@ -123,6 +134,7 @@ function formatTrackedSince(iso: string): string {
 interface FaqInputs {
   handle: string;
   displayName: string | null;
+  sport?: "all" | "mlb" | "nfl" | null;
   allTimeAgg: import("./types").CapperAggregate | undefined;
   trackedSince: string | null;
 }
@@ -139,6 +151,7 @@ export interface FaqQA {
  */
 export function buildCapperFaq(inputs: FaqInputs): FaqQA[] {
   const { handle, displayName, allTimeAgg, trackedSince } = inputs;
+  const league = leagueLabel(inputs.sport);
   const name = displayName && displayName !== handle ? `${displayName} (@${handle})` : `@${handle}`;
   const trackedLabel = trackedSince ? formatTrackedSinceLong(trackedSince) : null;
 
@@ -148,11 +161,11 @@ export function buildCapperFaq(inputs: FaqInputs): FaqQA[] {
         question: `Is ${name} tracked on TailSlips?`,
         answer: `Yes. ${name} is on the TailSlips verified-capper leaderboard.${
           trackedLabel ? ` They have been tracked since ${trackedLabel}.` : ""
-        } Every public MLB pick they post on Twitter is captured at tweet time and graded against the final game outcome at the odds and stake they posted. The graded record will populate as picks resolve.`,
+        } Every public ${league} pick they post on Twitter is captured at tweet time and graded against the final game outcome at the odds and stake they posted. The graded record will populate as picks resolve.`,
       },
       {
         question: `How does TailSlips grade ${name}'s picks?`,
-        answer: `TailSlips captures every public MLB pick from ${name}'s Twitter timeline at the moment they tweet it, locks in the odds and unit stake they posted, and grades the pick against the actual final outcome of the game. Picks behind paywalls, edited or deleted before game start, or tied to postponed games are not graded as wins or losses.`,
+        answer: `TailSlips captures every public ${league} pick from ${name}'s Twitter timeline at the moment they tweet it, locks in the odds and unit stake they posted, and grades the pick against the actual final outcome of the game. Picks behind paywalls, edited or deleted before game start, or tied to postponed games are not graded as wins or losses.`,
       },
       {
         question: `Where can I see ${name}'s pick history?`,
@@ -175,27 +188,27 @@ export function buildCapperFaq(inputs: FaqInputs): FaqQA[] {
   const breakeven = Math.abs(safeUnits) < 0.5;
 
   const profitabilityAnswer = breakeven
-    ? `${name} is roughly breakeven on tracked MLB picks: ${record} across ${allTimeAgg.picks_count} graded picks for ${units} units (${roi} ROI, ${winRate} win rate). At this sample size their record is too close to flat to call profitable or unprofitable.`
+    ? `${name} is roughly breakeven on tracked ${league} picks: ${record} across ${allTimeAgg.picks_count} graded picks for ${units} units (${roi} ROI, ${winRate} win rate). At this sample size their record is too close to flat to call profitable or unprofitable.`
     : profitable
-      ? `Yes, on tracked picks. Across ${allTimeAgg.picks_count} graded MLB picks${trackedLabel ? ` since ${trackedLabel}` : ""}, ${name} is ${record} for ${units} units of profit (${roi} ROI, ${winRate} win rate) at the odds and stakes they posted. Past performance does not guarantee future results.`
-      : `On tracked picks, no. Across ${allTimeAgg.picks_count} graded MLB picks${trackedLabel ? ` since ${trackedLabel}` : ""}, ${name} is ${record} for ${units} units (${roi} ROI, ${winRate} win rate) at the odds and stakes they posted. The full pick history is on their profile page so you can see the wins and losses yourself.`;
+      ? `Yes, on tracked picks. Across ${allTimeAgg.picks_count} graded ${league} picks${trackedLabel ? ` since ${trackedLabel}` : ""}, ${name} is ${record} for ${units} units of profit (${roi} ROI, ${winRate} win rate) at the odds and stakes they posted. Past performance does not guarantee future results.`
+      : `On tracked picks, no. Across ${allTimeAgg.picks_count} graded ${league} picks${trackedLabel ? ` since ${trackedLabel}` : ""}, ${name} is ${record} for ${units} units (${roi} ROI, ${winRate} win rate) at the odds and stakes they posted. The full pick history is on their profile page so you can see the wins and losses yourself.`;
 
   return [
     {
-      question: `Is ${name} a profitable MLB capper?`,
+      question: `Is ${name} a profitable ${league} capper?`,
       answer: profitabilityAnswer,
     },
     {
       question: `What is ${name}'s record on TailSlips?`,
-      answer: `${name}'s lifetime record on TailSlips is ${record} (${winRate} win rate) across ${allTimeAgg.picks_count} graded MLB picks${trackedLabel ? `, tracked since ${trackedLabel}` : ""}. The record reflects every public pick they posted that met TailSlips's grading criteria, win or lose.`,
+      answer: `${name}'s lifetime record on TailSlips is ${record} (${winRate} win rate) across ${allTimeAgg.picks_count} graded ${league} picks${trackedLabel ? `, tracked since ${trackedLabel}` : ""}. The record reflects every public pick they posted that met TailSlips's grading criteria, win or lose.`,
     },
     {
-      question: `What is ${name}'s ROI on tracked MLB picks?`,
-      answer: `${name}'s lifetime ROI on tracked MLB picks is ${roi}, equivalent to ${units} units of profit on ${allTimeAgg.picks_count} graded picks. ROI is calculated against the units actually staked at the odds posted at tweet time, not against an idealized flat-stake model.`,
+      question: `What is ${name}'s ROI on tracked ${league} picks?`,
+      answer: `${name}'s lifetime ROI on tracked ${league} picks is ${roi}, equivalent to ${units} units of profit on ${allTimeAgg.picks_count} graded picks. ROI is calculated against the units actually staked at the odds posted at tweet time, not against an idealized flat-stake model.`,
     },
     {
       question: `How are ${name}'s picks graded?`,
-      answer: `Every public MLB pick ${name} posts on Twitter is captured at tweet time, locked at the odds and unit stake they posted, and graded against the actual final outcome of the game. Picks behind paywalls, edited or deleted before game start, or tied to postponed games are not graded as wins or losses. Every tracked account on TailSlips is graded by the same rules.`,
+      answer: `Every public ${league} pick ${name} posts on Twitter is captured at tweet time, locked at the odds and unit stake they posted, and graded against the actual final outcome of the game. Picks behind paywalls, edited or deleted before game start, or tied to postponed games are not graded as wins or losses. Every tracked account on TailSlips is graded by the same rules.`,
     },
     {
       question: `When did TailSlips start tracking ${name}?`,

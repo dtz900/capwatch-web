@@ -159,6 +159,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const ogQs = new URLSearchParams();
   ogQs.set("date", p.dateParam);
   if (isNfl) ogQs.set("sport", "nfl");
+  // A shared /slate?sport=nfl&week=N must card the same week it opens to
+  // (Codex on #113).
+  if (isNfl && p.week != null) ogQs.set("week", String(p.week));
   // ?game=AWAY-HOME (or a game_id) features that matchup on the OG card;
   // omitted, the card falls back to the most-bet game. name/matchup are
   // accepted as aliases so a mistyped param still works.

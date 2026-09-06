@@ -87,12 +87,13 @@ function bucketPicks(
   picks: SlatePick[],
   awayTeam: string | null,
   homeTeam: string | null,
+  sport: Sport = "MLB",
 ): BucketedPicks {
   const awayMl: SlatePick[] = [];
   const homeMl: SlatePick[] = [];
   const other: SlatePick[] = [];
   for (const p of picks) {
-    const side = pickMlSide(p, awayTeam, homeTeam);
+    const side = pickMlSide(p, awayTeam, homeTeam, sport);
     if (side === "away") awayMl.push(p);
     else if (side === "home") homeMl.push(p);
     else other.push(p);
@@ -204,11 +205,11 @@ export function GameBlock({ game }: { game: SlateGame }) {
     game.away_starter && game.home_starter
       ? `${shortPitcher(game.away_starter)} vs ${shortPitcher(game.home_starter)}`
       : null;
-  const buckets = bucketPicks(game.picks, game.away_team, game.home_team);
+  const sport: Sport = game.sport ?? "MLB";
+  const buckets = bucketPicks(game.picks, game.away_team, game.home_team, sport);
   const hasMlAction = buckets.awayMl.length + buckets.homeMl.length > 0;
   const hasOther = buckets.other.length > 0;
   const isSilent = game.picks.length === 0;
-  const sport: Sport = game.sport ?? "MLB";
   const awayColor = teamColor(game.away_team, sport);
   const homeColor = teamColor(game.home_team, sport);
 

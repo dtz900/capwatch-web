@@ -306,7 +306,7 @@ function buildMarqueeBlock(
   let awayCount = 0;
   let homeCount = 0;
   for (const p of game.picks) {
-    const side = pickMlSide(p, game.away_team, game.home_team);
+    const side = pickMlSide(p, game.away_team, game.home_team, game.sport ?? "MLB");
     const h = p.handle;
     if (!h) continue;
     const named = !X_SUPPRESSED_HANDLES.has(h.toLowerCase());
@@ -361,6 +361,8 @@ function formatAmericanOdds(n: number): string {
 export interface RenderSlateOpts {
   dateParam?: "today" | "tomorrow";
   sport?: "mlb" | "nfl";
+  /** NFL only: the week the share URL opens to, so the card matches it. */
+  week?: number;
   gameSlug?: string;
   // Supersampling factor for NATIVE-media posts (post_slate_card.py passes
   // ?scale=2). The OG-crawler path stays at 1x: a 2x canvas has timed out
@@ -391,7 +393,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   const fallbackHeading = sportParam === "nfl" ? "This week's NFL slate." : "Tonight's MLB slate.";
   const scale = opts.scale === 2 ? 2 : 1;
   const [slateResult, logoDataUri] = await Promise.allSettled([
-    fetchSlate(dateParam, sportParam),
+    fetchSlate(dateParam, sportParam, sportParam === "nfl" ? opts.week : undefined),
     readLogoDataUri(),
   ]);
 
