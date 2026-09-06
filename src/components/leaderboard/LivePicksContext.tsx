@@ -16,10 +16,13 @@ const LivePicksContext = createContext<LivePicksMap | null>(null);
 
 interface ProviderProps {
   initial: LivePicksMap;
+  /** Leaderboard selector; the poll must match the board or an MLB view
+   *  would overwrite its counts with MLB+NFL pending picks. */
+  sport?: "all" | "mlb" | "nfl";
   children: ReactNode;
 }
 
-export function LivePicksProvider({ initial, children }: ProviderProps) {
+export function LivePicksProvider({ initial, sport = "mlb", children }: ProviderProps) {
   const [counts, setCounts] = useState<LivePicksMap>(initial);
   // Skip the first poll on mount; `initial` is fresh from the SSR render.
   const skipNext = useRef(true);
@@ -32,9 +35,10 @@ export function LivePicksProvider({ initial, children }: ProviderProps) {
         return;
       }
       try {
-        const res = await fetch(`${API_BASE}/api/public/cappers/live-picks-counts`, {
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `${API_BASE}/api/public/cappers/live-picks-counts?sport=${encodeURIComponent(sport)}`,
+          { cache: "no-store" },
+        );
         if (!res.ok) return;
         const body = (await res.json()) as { counts: Record<string, number> };
         if (cancelled) return;
@@ -61,7 +65,7 @@ export function LivePicksProvider({ initial, children }: ProviderProps) {
       clearInterval(id);
       window.removeEventListener("focus", onFocus);
     };
-  }, []);
+  }, [sport]);
 
   return <LivePicksContext.Provider value={counts}>{children}</LivePicksContext.Provider>;
 }

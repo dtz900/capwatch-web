@@ -176,7 +176,7 @@ export default async function Home({ searchParams }: PageProps) {
         <LeaderboardPrefsRestorer />
       </Suspense>
       <TopNav />
-      <LivePicksProvider initial={liveInitial}>
+      <LivePicksProvider initial={liveInitial} sport={filters.sport}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
           <Hero stats={heroStats} sport={filters.sport} />
           <div className="mb-3">

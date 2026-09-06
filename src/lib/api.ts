@@ -164,8 +164,8 @@ export interface LivePicksCountsResponse {
   counts: Record<string, number>;
 }
 
-export async function fetchLivePicksCounts(): Promise<LivePicksCountsResponse> {
-  const res = await fetch(`${API_BASE}/api/public/cappers/live-picks-counts`, {
+export async function fetchLivePicksCounts(sport: SportFilter = "mlb"): Promise<LivePicksCountsResponse> {
+  const res = await fetch(`${API_BASE}/api/public/cappers/live-picks-counts?sport=${encodeURIComponent(sport)}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Live picks counts fetch failed: ${res.status}`);
