@@ -199,7 +199,7 @@ export default async function Home({ searchParams }: PageProps) {
               label="Share this view"
             />
           </div>
-          {top3.length === 3 && <Podium rows={top3} window={filters.window} />}
+          {top3.length === 3 && <Podium rows={top3} window={filters.window} sport={filters.sport} />}
           {rows.length > 0 && (
             <div className="my-8 flex justify-center">
               <SportsbookAd
@@ -208,7 +208,7 @@ export default async function Home({ searchParams }: PageProps) {
               />
             </div>
           )}
-          {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} />}
+          {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} sport={filters.sport} />}
           <SuggestCapperSection />
           <footer className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
             <div>Min {minPicksForWindow(filters.window)} graded picks · refreshed daily 6:00 AM PT.</div>

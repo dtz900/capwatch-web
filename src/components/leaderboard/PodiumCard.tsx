@@ -14,7 +14,7 @@ import { XProfileLink } from "@/components/analytics/XProfileLink";
 import { formatUnits, formatRoi, formatWinRate, formatHandle } from "@/lib/formatters";
 import { normalizeBreakdown } from "@/lib/markets";
 import { buildProfileHref } from "@/lib/profileHref";
-import type { CapperRow, Window } from "@/lib/types";
+import type { CapperRow, Window, SportFilter } from "@/lib/types";
 
 type Variant = "gold" | "silver" | "bronze";
 
@@ -23,6 +23,7 @@ interface Props {
   variant: Variant;
   capper: CapperRow;
   window?: Window;
+  sport?: SportFilter;
 }
 
 const RANK_LABEL: Record<1 | 2 | 3, string> = { 1: "Leader", 2: "2nd", 3: "3rd" };
@@ -62,11 +63,11 @@ const ACCENT: Record<Variant, Accent> = {
   },
 };
 
-export function PodiumCard({ rank, variant, capper, window }: Props) {
+export function PodiumCard({ rank, variant, capper, window, sport }: Props) {
   const isModel = capper.handle === "fadeai_";
   const isGold = variant === "gold";
   const accent = ACCENT[variant];
-  const profileHref = capper.handle ? buildProfileHref(capper.handle, { window }) : null;
+  const profileHref = capper.handle ? buildProfileHref(capper.handle, { window, sport }) : null;
 
   const heroPositive = capper.units_profit >= 0;
   const heroSize = isGold ? "text-[44px]" : "text-[32px]";
