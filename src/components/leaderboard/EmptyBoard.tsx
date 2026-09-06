@@ -27,7 +27,7 @@ export function EmptyBoard({ sport, window }: { sport: SportFilter; window: Wind
       </h2>
       <p className="mx-auto max-w-lg text-[13px] leading-relaxed text-[var(--color-text-muted)]">
         {nfl
-          ? "Week 1 picks are captured and graded as the games settle. Preseason picks are tracked but never count toward a record."
+          ? "Records post as the week's games settle."
           : `Nobody clears the minimum graded picks for ${WINDOW_LABEL[window] ?? "this window"}. Try a wider window.`}
       </p>
     </section>

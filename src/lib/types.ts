@@ -70,6 +70,21 @@ export interface CapperRow {
   trajectory_units?: number[];
 }
 
+/** A capper with pending bets on the live slate/week but no ranked row. */
+export interface PendingCapperRow {
+  capper_id: number;
+  handle: string | null;
+  display_name: string | null;
+  tier: number | null;
+  activity_status: ActivityStatus;
+  is_claimed: boolean;
+  follower_count: number | null;
+  profile_image_url: string | null;
+  has_paid_program: boolean;
+  account_deleted_at?: string | null;
+  live_picks_count: number;
+}
+
 export interface LeaderboardResponse {
   window: Window;
   sort: Sort;
@@ -77,6 +92,8 @@ export interface LeaderboardResponse {
   min_picks: number;
   active_only: boolean;
   leaderboard: CapperRow[];
+  /** Cappers with action in who are not ranked (older API payloads omit it). */
+  pending_only?: PendingCapperRow[];
   platform_stats?: PlatformStats;
 }
 
