@@ -5,6 +5,7 @@ import { TopNav } from "@/components/nav/TopNav";
 import { Hero } from "@/components/leaderboard/Hero";
 import { FilterBar } from "@/components/leaderboard/FilterBar";
 import { SportTabs } from "@/components/leaderboard/SportTabs";
+import { SportTint } from "@/components/ui/SportTint";
 import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
@@ -176,6 +177,7 @@ export default async function Home({ searchParams }: PageProps) {
       <Suspense fallback={null}>
         <LeaderboardPrefsRestorer />
       </Suspense>
+      <SportTint sport={filters.sport} />
       <TopNav />
       <LivePicksProvider initial={liveInitial} sport={filters.sport}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">

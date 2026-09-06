@@ -8,6 +8,7 @@ import { CapperHeroLive } from "@/components/capper/CapperHeroLive";
 import { StatBandLive } from "@/components/capper/StatBandLive";
 import { ProfileFilterBar } from "@/components/capper/ProfileFilterBar";
 import { SportTabs } from "@/components/leaderboard/SportTabs";
+import { SportTint } from "@/components/ui/SportTint";
 import { OutcomeFilter } from "@/components/capper/OutcomeFilter";
 import { StickyProfileStrip } from "@/components/capper/StickyProfileStrip";
 import { HistoryList } from "@/components/capper/HistoryList";
@@ -431,6 +432,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   return (
     <>
       <JsonLd data={jsonLdNodes} />
+      <SportTint sport={sport} />
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <CapperFilterProvider

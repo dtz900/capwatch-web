@@ -22,8 +22,15 @@
   --color-bronze-soft: rgba(200, 129, 74, 0.06);
 }
 
-html, body {
+/* The page ground lives on <html> only: a body background would paint over
+   the fixed, negative z-index league wash (components/ui/SportTint). */
+html {
   background: var(--color-bg);
+}
+body {
+  background: transparent;
+}
+html, body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;

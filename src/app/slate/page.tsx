@@ -5,6 +5,7 @@ import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
 import { DateToggle } from "@/components/slate/DateToggle";
 import { SportToggle } from "@/components/slate/SportToggle";
+import { SportTint } from "@/components/ui/SportTint";
 import { StandingsSection } from "@/components/slate/StandingsSection";
 import { SlateRailStrip, SlateRailColumn } from "@/components/slate/SlateRail";
 import { buildRailGames } from "@/lib/rail";
@@ -310,6 +311,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
           { name: "Slate", path: "/slate" },
         ])}
       />
+      <SportTint sport={sport} />
       <TopNav />
       {/* Mobile strip is a full-width sibling of <main> so it spans the
           viewport and stays aligned with the board. It self-hides at xl. */}
