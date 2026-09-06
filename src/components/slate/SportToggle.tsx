@@ -3,11 +3,11 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import type { SlateSport } from "@/lib/api";
-import { SportSlider, type SportStop } from "@/components/ui/SportSlider";
+import { LeagueChips, type LeagueChip } from "@/components/ui/LeagueChips";
 
 /**
- * The big league slider at the top of the slate. Drives `?sport=nfl` the same
- * way DateToggle drives `?date=`; switching leagues drops the date/week params
+ * The league chips at the top of the slate. Drive `?sport=nfl` the same way
+ * DateToggle drives `?date=`; switching leagues drops the date/week params
  * because MLB is a daily board and the NFL board is a week.
  */
 export function SportToggle({
@@ -23,9 +23,9 @@ export function SportToggle({
   const sp = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const stops: SportStop[] = [
-    { value: "mlb", label: "MLB", icon: "baseball" },
-    { value: "nfl", label: "NFL", icon: "football" },
+  const chips: LeagueChip[] = [
+    { value: "mlb", label: "MLB", league: "mlb", caption: mlbCaption },
+    { value: "nfl", label: "NFL", league: "nfl", caption: nflCaption },
   ];
 
   const onSelect = (value: string) => {
@@ -42,19 +42,6 @@ export function SportToggle({
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <SportSlider
-        stops={stops}
-        value={current}
-        onChange={onSelect}
-        size="lg"
-        ariaLabel="League"
-        busy={isPending}
-      />
-      <div className="grid grid-cols-2 text-center text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--color-text-muted)]">
-        <span>{mlbCaption}</span>
-        <span>{nflCaption}</span>
-      </div>
-    </div>
+    <LeagueChips chips={chips} value={current} onChange={onSelect} size="lg" ariaLabel="League" busy={isPending} />
   );
 }

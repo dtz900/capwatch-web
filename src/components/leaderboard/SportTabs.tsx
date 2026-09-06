@@ -3,19 +3,19 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import type { SportFilter } from "@/lib/types";
-import { SportSlider, type SportStop } from "@/components/ui/SportSlider";
+import { LeagueChips, type LeagueChip } from "@/components/ui/LeagueChips";
 
-const STOPS: SportStop[] = [
-  { value: "mlb", label: "MLB", icon: "baseball" },
-  { value: "all", label: "All", icon: "both" },
-  { value: "nfl", label: "NFL", icon: "football" },
+const CHIPS: LeagueChip[] = [
+  { value: "all", label: "All", league: "all" },
+  { value: "mlb", label: "MLB", league: "mlb" },
+  { value: "nfl", label: "NFL", league: "nfl" },
 ];
 
 /**
- * The league slider for the leaderboard and capper profiles: its own row
- * above the filter bar (the filters are per-view knobs; the sport is which
- * board you are on). Same URL mechanics as FilterBar: the sport rides on
- * ?sport= and every other filter is preserved.
+ * League chips for the leaderboard and capper profiles: their own row above
+ * the filter bar (the filters are per-view knobs; the league is which board
+ * you are on). Same URL mechanics as FilterBar: the sport rides on ?sport=
+ * and every other filter is preserved.
  */
 export function SportTabs({ current, basePath = "/" }: { current: SportFilter; basePath?: string }) {
   const router = useRouter();
@@ -31,9 +31,5 @@ export function SportTabs({ current, basePath = "/" }: { current: SportFilter; b
     });
   };
 
-  return (
-    <div className="max-w-[440px]">
-      <SportSlider stops={STOPS} value={current} onChange={onSelect} busy={isPending} />
-    </div>
-  );
+  return <LeagueChips chips={CHIPS} value={current} onChange={onSelect} busy={isPending} />;
 }
