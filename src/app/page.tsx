@@ -4,6 +4,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { Hero } from "@/components/leaderboard/Hero";
 import { FilterBar } from "@/components/leaderboard/FilterBar";
+import { SportTabs } from "@/components/leaderboard/SportTabs";
 import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
@@ -179,6 +180,9 @@ export default async function Home({ searchParams }: PageProps) {
       <LivePicksProvider initial={liveInitial} sport={filters.sport}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
           <Hero stats={heroStats} sport={filters.sport} />
+          <div className="mb-4">
+            <SportTabs current={filters.sport ?? "all"} />
+          </div>
           <div className="mb-3">
             <FilterBar filters={filters} />
           </div>

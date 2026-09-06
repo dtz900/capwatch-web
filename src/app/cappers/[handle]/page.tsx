@@ -7,6 +7,7 @@ import { CapperFilterProvider } from "@/components/capper/CapperFilterProvider";
 import { CapperHeroLive } from "@/components/capper/CapperHeroLive";
 import { StatBandLive } from "@/components/capper/StatBandLive";
 import { ProfileFilterBar } from "@/components/capper/ProfileFilterBar";
+import { SportTabs } from "@/components/leaderboard/SportTabs";
 import { OutcomeFilter } from "@/components/capper/OutcomeFilter";
 import { StickyProfileStrip } from "@/components/capper/StickyProfileStrip";
 import { HistoryList } from "@/components/capper/HistoryList";
@@ -33,7 +34,7 @@ import {
   SITE_NAME,
   SITE_URL,
 } from "@/lib/seo";
-import type { BetTypeFilter, CapperRow, Window } from "@/lib/types";
+import type { BetTypeFilter, CapperRow, Window, SportFilter } from "@/lib/types";
 import { vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
 
@@ -45,10 +46,16 @@ interface PageProps {
     market?: string;
     outcome?: string;
     bet_type?: string;
+    sport?: string;
     v?: string;
     start?: string;
     end?: string;
   }>;
+}
+
+const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl"];
+function parseSport(raw: string | undefined): SportFilter {
+  return VALID_SPORTS.includes(raw as SportFilter) ? (raw as SportFilter) : "all";
 }
 
 const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
@@ -106,6 +113,7 @@ export async function generateMetadata({
   // URL so social click-throughs land on the filtered view they were sold.
   const canonical = `/cappers/${handle}`;
   const sharedQs = new URLSearchParams();
+  if (parseSport(sp.sport) !== "all") sharedQs.set("sport", parseSport(sp.sport));
   if (sp.window) sharedQs.set("window", sp.window);
   if (sp.bet_type) sharedQs.set("bet_type", sp.bet_type);
   if (market) sharedQs.set("market", market);
@@ -171,6 +179,7 @@ export async function generateMetadata({
     // the image route fetches its own data.
     const profile = await withDeadline<Awaited<ReturnType<typeof fetchCapperProfile>> | null>(
       fetchCapperProfile(handle, {
+        sport: parseSport(sp.sport),
         history_limit: 1,
         history_offset: 0,
         bet_type: betType !== "all" ? betType : undefined,
@@ -347,6 +356,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   // effective bet type for the initial history slice is "straights".
   if (betType === "parlays") market = "";
   const effBetType: BetTypeFilter = market ? "straights" : betType;
+  const sport = parseSport(sp.sport);
 
   let profile;
   let sportsbooks;
@@ -354,6 +364,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   try {
     const [profileResult, sportsbooksResult, leaderboardResult] = await Promise.all([
       fetchCapperProfile(handle, {
+        sport,
         history_limit: PAGE_SIZE,
         history_offset: 0,
         market: market || undefined,
@@ -430,9 +441,16 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           initialMarket={market}
           initialOutcome={outcome}
           initialRange={initialRange}
+          initialSport={sport}
         >
           <StickyProfileStrip />
           <CapperHeroLive />
+
+          {/* League switch: its own row above the per-view filters, the same
+              control as the leaderboard so MLB and NFL records read apart. */}
+          <div className="mb-4">
+            <SportTabs current={sport} basePath={`/cappers/${encodeURIComponent(handle)}`} />
+          </div>
 
           {/* Tail control lives in the stat band's top-right (StatBandLive),
               not up here next to Share. */}
