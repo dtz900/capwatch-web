@@ -51,7 +51,7 @@ export function LeagueChips({
   busy?: boolean;
 }) {
   const lg = size === "lg";
-  const markH = lg ? 26 : 18;
+  const markH = lg ? 32 : 24;
   return (
     <div
       role="radiogroup"
