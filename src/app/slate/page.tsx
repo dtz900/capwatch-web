@@ -122,7 +122,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // real fetch keeps warming the cache for the next hit. The description
   // fetch and the fingerprint (which has its own internal deadlines) run
   // CONCURRENTLY so the worst case stays ~1.5s, not the sum of the races.
-  const fpPromise = buildSlateOgFingerprint(p.dateParam, p.sport);
+  const fpPromise = buildSlateOgFingerprint(p.dateParam, p.sport, p.week);
   try {
     const data = await withDeadline<SlateResponse | null>(
       fetchSlate(p.dateParam, p.sport, p.week),
