@@ -10,6 +10,7 @@ import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
 import { EmptyBoard } from "@/components/leaderboard/EmptyBoard";
+import { PendingBoard } from "@/components/leaderboard/PendingBoard";
 import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPrefsRestorer";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -118,11 +119,13 @@ export default async function Home({ searchParams }: PageProps) {
   };
 
   let rows: Awaited<ReturnType<typeof fetchLeaderboard>>["leaderboard"] = [];
+  let pendingOnly: NonNullable<Awaited<ReturnType<typeof fetchLeaderboard>>["pending_only"]> = [];
   let platformStats: Awaited<ReturnType<typeof fetchLeaderboard>>["platform_stats"];
   let fetchError: string | null = null;
   try {
     const data = await fetchLeaderboard(filters);
     rows = data.leaderboard;
+    pendingOnly = data.pending_only ?? [];
     platformStats = data.platform_stats;
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
@@ -162,6 +165,9 @@ export default async function Home({ searchParams }: PageProps) {
   // mount to keep the indicator fresh as cappers tweet new picks.
   const liveInitial: Record<number, number> = {};
   for (const r of rows) {
+    if (r.live_picks_count > 0) liveInitial[Number(r.capper_id)] = r.live_picks_count;
+  }
+  for (const r of pendingOnly) {
     if (r.live_picks_count > 0) liveInitial[Number(r.capper_id)] = r.live_picks_count;
   }
 
@@ -212,7 +218,15 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
           )}
           {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} sport={filters.sport} />}
-          {rows.length === 0 && <EmptyBoard sport={filters.sport ?? "all"} window={filters.window} />}
+          <PendingBoard
+            rows={pendingOnly}
+            sport={filters.sport ?? "all"}
+            window={filters.window}
+            standalone={rows.length === 0}
+          />
+          {rows.length === 0 && pendingOnly.length === 0 && (
+            <EmptyBoard sport={filters.sport ?? "all"} window={filters.window} />
+          )}
           <SuggestCapperSection />
           <footer className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
             <div>Min {minPicksForWindow(filters.window)} graded picks · refreshed daily 6:00 AM PT.</div>
