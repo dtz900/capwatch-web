@@ -44,7 +44,7 @@ export function SuggestCapperSection() {
             Know a capper we should track?
           </h3>
           <p className="text-[13px] text-[var(--color-text-muted)] leading-relaxed">
-            Suggest any public X account that posts MLB picks. Submissions are reviewed
+            Suggest any public X account that posts MLB or NFL picks. Submissions are reviewed
             and added if they meet the catalog standard.
           </p>
         </div>
