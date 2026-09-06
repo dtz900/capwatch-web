@@ -57,11 +57,13 @@ export function FilterBar({ filters }: Props) {
     filters.bet_type,
     filters.active_only,
     filters.min_picks,
+    filters.sport,
   ]);
 
   const apply = (next: LeaderboardFilters) => {
     setOptimistic(next);
     const params = new URLSearchParams({
+      sport: next.sport ?? "all",
       window: next.window,
       sort: next.sort,
       bet_type: next.bet_type,

@@ -1,4 +1,5 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
+import type { SportFilter } from "./types";
 import { withKvCache } from "./kv-cache";
 import {
   currentSlateDay,
@@ -99,6 +100,9 @@ export interface LeaderboardFilters {
   bet_type: BetTypeFilter;
   min_picks: number;
   active_only: boolean;
+  /** all | mlb | nfl. Omitted = the API default (mlb), which keeps every
+   *  pre-toggle caller (My Tails, nav search, OG cards) unchanged. */
+  sport?: SportFilter;
   /** Rows to return. The backend caps at 500 and defaults to 100; pass 500
    *  for roster-style surfaces (My Tails, nav search) that need every
    *  capper rather than a top-N slice. */
@@ -143,6 +147,7 @@ export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<Lea
     active_only: String(filters.active_only),
   });
   if (filters.limit != null) params.set("limit", String(filters.limit));
+  if (filters.sport) params.set("sport", filters.sport);
   const cacheKey = `lb:v1:${params.toString()}`;
   return withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, async () => {
     const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {
@@ -159,18 +164,33 @@ export interface LivePicksCountsResponse {
   counts: Record<string, number>;
 }
 
-export async function fetchLivePicksCounts(): Promise<LivePicksCountsResponse> {
-  const res = await fetch(`${API_BASE}/api/public/cappers/live-picks-counts`, {
+export async function fetchLivePicksCounts(sport: SportFilter = "mlb"): Promise<LivePicksCountsResponse> {
+  const res = await fetch(`${API_BASE}/api/public/cappers/live-picks-counts?sport=${encodeURIComponent(sport)}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Live picks counts fetch failed: ${res.status}`);
   return res.json() as Promise<LivePicksCountsResponse>;
 }
 
-export async function fetchSlate(date: string = "today"): Promise<SlateResponse> {
-  const cacheKey = `slate:v1:${date}`;
+export type SlateSport = "mlb" | "nfl";
+
+/**
+ * MLB: a day ("today" | "tomorrow" | YYYY-MM-DD). NFL: the current week, or
+ * an explicit regular-season week. The MLB cache key is unchanged so the
+ * `slate:` purge prefix and the weekly rollup keys keep working.
+ */
+export async function fetchSlate(
+  date: string = "today",
+  sport: SlateSport = "mlb",
+  week?: number,
+): Promise<SlateResponse> {
+  const cacheKey =
+    sport === "nfl" ? `slate:v1:nfl:${week ?? "current"}` : `slate:v1:${date}`;
+  const qs = new URLSearchParams({ date });
+  if (sport !== "mlb") qs.set("sport", sport);
+  if (sport === "nfl" && week != null) qs.set("week", String(week));
   return withKvCache<SlateResponse>(cacheKey, SLATE_TTL_SEC, async () => {
-    const res = await fetchWithRetry(`${API_BASE}/api/public/slate?date=${encodeURIComponent(date)}`, {
+    const res = await fetchWithRetry(`${API_BASE}/api/public/slate?${qs.toString()}`, {
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
@@ -234,6 +254,9 @@ export async function fetchEnabledSportsbooks(): Promise<SportsbookSummary[]> {
 }
 
 export interface CapperProfileFilters {
+  /** all | mlb | nfl; the profile shows the combined record by default so it
+   *  agrees with the leaderboard's ALL view. */
+  sport?: SportFilter;
   history_limit?: number;
   history_offset?: number;
   market?: string;
@@ -416,6 +439,7 @@ export async function fetchCapperProfile(
   filters: CapperProfileFilters = {},
 ): Promise<CapperProfile> {
   const params = new URLSearchParams();
+  params.set("sport", filters.sport ?? "all");
   if (filters.history_limit != null) params.set("history_limit", String(filters.history_limit));
   if (filters.history_offset != null) params.set("history_offset", String(filters.history_offset));
   if (filters.market) params.set("market", filters.market);

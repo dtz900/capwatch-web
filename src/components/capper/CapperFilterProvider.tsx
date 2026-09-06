@@ -23,6 +23,7 @@ import type {
   CapperProfile,
   HistoryPick,
   Window,
+  SportFilter,
 } from "@/lib/types";
 
 const DEFAULT_WINDOW: Window = "season";
@@ -86,10 +87,14 @@ export function CapperFilterProvider({
   initialMarket,
   initialOutcome,
   initialRange = null,
+  initialSport = "all",
   children,
 }: {
   handle: string;
   initialProfile: CapperProfile;
+  /** all | mlb | nfl. Page-level: switching sport is a navigation (the
+   *  profile re-renders server-side), so this never changes in place. */
+  initialSport?: SportFilter;
   initialWindow: Window;
   initialBetType: BetTypeFilter;
   initialMarket: string;
@@ -98,6 +103,7 @@ export function CapperFilterProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const sport = initialSport;
   const heroRef = useRef<HTMLDivElement | null>(null);
   // Monotonic request id: a newer filter change invalidates an in-flight
   // response so out-of-order fetches cannot clobber fresher state.
@@ -143,6 +149,7 @@ export function CapperFilterProvider({
   const syncUrl = useCallback(
     (w: Window, bt: BetTypeFilter, mk: string, oc: string, rg: { start: string; end: string } | null) => {
       const params = new URLSearchParams();
+      if (sport !== "all") params.set("sport", sport);
       if (rg) {
         params.set("start", rg.start);
         params.set("end", rg.end);
@@ -156,7 +163,7 @@ export function CapperFilterProvider({
       const path = `/cappers/${encodeURIComponent(handle)}`;
       router.replace(qs ? `${path}?${qs}` : path, { scroll: false });
     },
-    [handle, router],
+    [handle, router, sport],
   );
 
   const applyFilters = useCallback(
@@ -199,6 +206,7 @@ export function CapperFilterProvider({
       setLoadingHistory(true);
       try {
         const fetched = await fetchCapperSlice(handle, {
+          sport,
           window: w,
           betType: histBetType,
           market: mk || undefined,
@@ -224,7 +232,7 @@ export function CapperFilterProvider({
         }
       }
     },
-    [handle, window, betType, market, outcome, loadedBetType, syncUrl],
+    [handle, window, betType, market, outcome, loadedBetType, syncUrl, sport],
   );
 
   const setRange = useCallback(
@@ -240,6 +248,7 @@ export function CapperFilterProvider({
       setLoadingHistory(true);
       try {
         const fetched = await fetchCapperSlice(handle, {
+          sport,
           window,
           betType: histBetType,
           market: mk || undefined,
@@ -264,7 +273,7 @@ export function CapperFilterProvider({
         }
       }
     },
-    [handle, window, betType, market, outcome, syncUrl],
+    [handle, window, betType, market, outcome, syncUrl, sport],
   );
 
   const clearRange = useCallback(() => {
@@ -279,6 +288,7 @@ export function CapperFilterProvider({
     setLoadingHistory(true);
     try {
       const fetched = await fetchCapperSlice(handle, {
+        sport,
         window,
         betType: histBetType,
         market: market || undefined,
@@ -298,7 +308,7 @@ export function CapperFilterProvider({
     } finally {
       if (seq === reqSeq.current) setLoadingHistory(false);
     }
-  }, [handle, window, betType, market, outcome, range, offset, history.length, historyTotal, loadingHistory]);
+  }, [handle, window, betType, market, outcome, range, offset, history.length, historyTotal, loadingHistory, sport]);
 
   const value: FilterContextValue = {
     handle,

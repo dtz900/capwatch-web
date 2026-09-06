@@ -1,9 +1,9 @@
 import { StandingsRow } from "./StandingsRow";
-import type { CapperRow, Window } from "@/lib/types";
+import type { CapperRow, Window, SportFilter } from "@/lib/types";
 
-interface Props { rows: CapperRow[]; startRank: number; window?: Window }
+interface Props { rows: CapperRow[]; startRank: number; window?: Window; sport?: SportFilter }
 
-export function StandingsTable({ rows, startRank, window }: Props) {
+export function StandingsTable({ rows, startRank, window, sport }: Props) {
   return (
     <section className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl mb-9">
       <div className="hidden sm:grid grid-cols-[40px_minmax(180px,1fr)_minmax(220px,1.4fr)_64px_64px_70px_80px_92px_44px] items-center gap-3
@@ -20,7 +20,7 @@ export function StandingsTable({ rows, startRank, window }: Props) {
         <div></div>
       </div>
       {rows.map((r, i) => (
-        <StandingsRow key={r.capper_id} rank={startRank + i} capper={r} window={window} />
+        <StandingsRow key={r.capper_id} rank={startRank + i} capper={r} window={window} sport={sport} />
       ))}
     </section>
   );

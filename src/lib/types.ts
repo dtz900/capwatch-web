@@ -124,6 +124,21 @@ export interface DaySummary {
 export type GameState = "scheduled" | "in_progress" | "final";
 export type InningHalf = "top" | "bot" | "mid" | "end";
 
+/** League code as stored on picks / games. */
+export type Sport = "MLB" | "NFL";
+/** Leaderboard + profile selector; "all" is the combined record. */
+export type SportFilter = "all" | "mlb" | "nfl";
+
+/** The NFL slate is a week, not a day; the API describes which one. */
+export interface NflWeekMeta {
+  season: number | null;
+  season_type: "pre" | "reg" | "post" | null;
+  week: number | null;
+  /** First and last ET kickoff dates of the week (YYYY-MM-DD). */
+  start: string | null;
+  end: string | null;
+}
+
 export interface SlateGame {
   game_id: number;
   away_team: string | null;
@@ -139,6 +154,13 @@ export interface SlateGame {
   inning: number | null;
   inning_half: InningHalf | null;
   outs: number | null;
+
+  /** Stamped by the API since the NFL launch; older cached payloads omit it. */
+  sport?: Sport;
+  /** Football clock (NFL rows only). */
+  period?: number | null;
+  clock?: string | null;
+  status_name?: string | null;
 
   picks: SlatePick[];
 }
@@ -171,6 +193,8 @@ export interface SlateCapperSummary {
 
 export interface SlateResponse {
   date: string;
+  sport?: Sport;
+  week?: NflWeekMeta | null;
   games: SlateGame[];
   most_picked: SlateMostPicked[];
   day_summary: DaySummary;

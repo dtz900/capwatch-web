@@ -1,6 +1,7 @@
-import type { BetTypeFilter, CapperProfile, Window } from "./types";
+import type { BetTypeFilter, CapperProfile, SportFilter, Window } from "./types";
 
 export interface CapperSliceQuery {
+  sport?: SportFilter;
   window: Window;
   betType: BetTypeFilter;
   market?: string;
@@ -20,6 +21,7 @@ export async function fetchCapperSlice(
   q: CapperSliceQuery,
 ): Promise<CapperProfile> {
   const params = new URLSearchParams();
+  params.set("sport", q.sport ?? "all");
   params.set("window", q.window);
   params.set("bet_type", q.betType);
   if (q.market) params.set("market", q.market);

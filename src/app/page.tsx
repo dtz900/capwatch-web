@@ -4,9 +4,12 @@ import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { Hero } from "@/components/leaderboard/Hero";
 import { FilterBar } from "@/components/leaderboard/FilterBar";
+import { SportTabs } from "@/components/leaderboard/SportTabs";
+import { SportTint } from "@/components/ui/SportTint";
 import { Podium } from "@/components/leaderboard/Podium";
 import { StandingsTable } from "@/components/leaderboard/StandingsTable";
 import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
+import { EmptyBoard } from "@/components/leaderboard/EmptyBoard";
 import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPrefsRestorer";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -16,14 +19,20 @@ import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
 import { fetchLeaderboard, minPicksForWindow, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
-import type { Window, Sort, BetTypeFilter } from "@/lib/types";
+import type { Window, Sort, BetTypeFilter, SportFilter } from "@/lib/types";
 import { buildRootOgFingerprint, ROOT_OG_CARD_VERSION } from "./_root-og";
 
 interface PageProps {
-  searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string; v?: string }>;
+  searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string; sport?: string; v?: string }>;
 }
 
 const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
+const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl"];
+// The board defaults to the combined record; MLB / NFL are one click away.
+const DEFAULT_SPORT: SportFilter = "all";
+function parseSport(raw: string | undefined): SportFilter {
+  return VALID_SPORTS.includes(raw as SportFilter) ? (raw as SportFilter) : DEFAULT_SPORT;
+}
 const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 
@@ -52,6 +61,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
     min_picks: minPicksForWindow(win),
     active_only: sp.active_only !== "false",
+    sport: parseSport(sp.sport),
   };
   const fp = await buildRootOgFingerprint(filters);
   const q = new URLSearchParams();
@@ -59,6 +69,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   q.set("sort", filters.sort);
   q.set("bt", filters.bet_type);
   if (!filters.active_only) q.set("ao", "false");
+  if (filters.sport && filters.sport !== "mlb") q.set("sp", filters.sport);
   q.set("d", fp.ptDate);
   if (fp.picks > 0) q.set("p", String(fp.picks));
   if (fp.cappers > 0) q.set("c", String(fp.cappers));
@@ -66,7 +77,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   q.set("v", ROOT_OG_CARD_VERSION);
   if (sp.v && /^[0-9]{8,}$/.test(sp.v)) q.set("sv", sp.v);
   const ogUrl = `/og/home?${q.toString()}`;
-  const title = `${windowTitle(filters.window)} MLB Twitter Capper Rankings · ${SITE_NAME}`;
+  const title = `${windowTitle(filters.window)} ${sportTitle(filters.sport)} Twitter Capper Rankings · ${SITE_NAME}`;
   return {
     title,
     openGraph: {
@@ -79,6 +90,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       images: [{ url: ogUrl, alt: "TailSlips · MLB Capper Scoreboard" }],
     },
   };
+}
+
+function sportTitle(s: SportFilter | undefined): string {
+  if (s === "nfl") return "NFL";
+  if (s === "mlb") return "MLB";
+  return "MLB + NFL";
 }
 
 function windowTitle(w: Window): string {
@@ -97,6 +114,7 @@ export default async function Home({ searchParams }: PageProps) {
     bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
     min_picks: minPicksForWindow(win),
     active_only: sp.active_only !== "false",
+    sport: parseSport(sp.sport),
   };
 
   let rows: Awaited<ReturnType<typeof fetchLeaderboard>>["leaderboard"] = [];
@@ -160,10 +178,14 @@ export default async function Home({ searchParams }: PageProps) {
       <Suspense fallback={null}>
         <LeaderboardPrefsRestorer />
       </Suspense>
+      <SportTint sport={filters.sport} />
       <TopNav />
-      <LivePicksProvider initial={liveInitial}>
+      <LivePicksProvider initial={liveInitial} sport={filters.sport}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
-          <Hero stats={heroStats} />
+          <Hero stats={heroStats} sport={filters.sport} />
+          <div className="mb-4">
+            <SportTabs current={filters.sport ?? "all"} />
+          </div>
           <div className="mb-3">
             <FilterBar filters={filters} />
           </div>
@@ -171,6 +193,7 @@ export default async function Home({ searchParams }: PageProps) {
             <ShareLinkButton
               basePath="/"
               queryParams={{
+                sport: filters.sport !== DEFAULT_SPORT ? filters.sport : undefined,
                 window: filters.window !== "last_30" ? filters.window : undefined,
                 sort: filters.sort !== "units_profit" ? filters.sort : undefined,
                 bet_type: filters.bet_type !== "all" ? filters.bet_type : undefined,
@@ -179,7 +202,7 @@ export default async function Home({ searchParams }: PageProps) {
               label="Share this view"
             />
           </div>
-          {top3.length === 3 && <Podium rows={top3} window={filters.window} />}
+          {top3.length === 3 && <Podium rows={top3} window={filters.window} sport={filters.sport} />}
           {rows.length > 0 && (
             <div className="my-8 flex justify-center">
               <SportsbookAd
@@ -188,7 +211,8 @@ export default async function Home({ searchParams }: PageProps) {
               />
             </div>
           )}
-          {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} />}
+          {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} sport={filters.sport} />}
+          {rows.length === 0 && <EmptyBoard sport={filters.sport ?? "all"} window={filters.window} />}
           <SuggestCapperSection />
           <footer className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
             <div>Min {minPicksForWindow(filters.window)} graded picks · refreshed daily 6:00 AM PT.</div>

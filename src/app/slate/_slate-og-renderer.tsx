@@ -6,7 +6,8 @@ import { ImageResponse } from "next/og";
 import satori from "satori";
 import { fetchLeaderboard, fetchSlate, withDeadline } from "@/lib/api";
 import { pickMlSide } from "@/lib/bet-format";
-import { teamColor, teamLogoUrl } from "@/lib/mlb-teams";
+import { teamColor, teamLogoUrl } from "@/lib/teams";
+import type { Sport } from "@/lib/types";
 import type { SlateGame, SlatePick } from "@/lib/types";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
@@ -52,6 +53,7 @@ interface MarqueeSide {
 }
 
 interface MarqueeBlock {
+  sport: Sport;
   awayTeam: string | null;
   homeTeam: string | null;
   awayLogoDataUri: string | null;
@@ -167,10 +169,11 @@ async function fetchRemoteImageAsDataUri(url: string | null): Promise<string | n
 async function fetchTeamLogosForGame(
   awayTeam: string | null,
   homeTeam: string | null,
+  sport: Sport,
 ): Promise<{ away: string | null; home: string | null }> {
   const [away, home] = await Promise.all([
-    fetchRemoteImageAsDataUri(teamLogoUrl(awayTeam)),
-    fetchRemoteImageAsDataUri(teamLogoUrl(homeTeam)),
+    fetchRemoteImageAsDataUri(teamLogoUrl(awayTeam, sport)),
+    fetchRemoteImageAsDataUri(teamLogoUrl(homeTeam, sport)),
   ]);
   return { away, home };
 }
@@ -318,6 +321,7 @@ function buildMarqueeBlock(
     }
   }
   return {
+    sport: game.sport ?? "MLB",
     awayTeam: game.away_team,
     homeTeam: game.home_team,
     awayLogoDataUri,
@@ -356,6 +360,7 @@ function formatAmericanOdds(n: number): string {
 
 export interface RenderSlateOpts {
   dateParam?: "today" | "tomorrow";
+  sport?: "mlb" | "nfl";
   gameSlug?: string;
   // Supersampling factor for NATIVE-media posts (post_slate_card.py passes
   // ?scale=2). The OG-crawler path stays at 1x: a 2x canvas has timed out
@@ -382,9 +387,11 @@ async function renderScaledPng(node: ReactNode, fonts: OgFont[], scale: number):
 
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
+  const sportParam = opts.sport === "nfl" ? "nfl" : "mlb";
+  const fallbackHeading = sportParam === "nfl" ? "This week's NFL slate." : "Tonight's MLB slate.";
   const scale = opts.scale === 2 ? 2 : 1;
   const [slateResult, logoDataUri] = await Promise.allSettled([
-    fetchSlate(dateParam),
+    fetchSlate(dateParam, sportParam),
     readLogoDataUri(),
   ]);
 
@@ -400,7 +407,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   const featuredGame = requestedGame ?? pickMarqueeGame(games);
   const featuredLabel = requestedGame ? "Featured game" : "Most-bet game";
   const teamLogos = featuredGame
-    ? await fetchTeamLogosForGame(featuredGame.away_team, featuredGame.home_team)
+    ? await fetchTeamLogosForGame(featuredGame.away_team, featuredGame.home_team, featuredGame.sport ?? "MLB")
     : { away: null, home: null };
   const marquee = featuredGame
     ? buildMarqueeBlock(featuredGame, teamLogos.away, teamLogos.home, featuredLabel)
@@ -408,7 +415,8 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
 
   const inputs: RenderInputs = {
     logoDataUri: logo,
-    dateLabel: dateParam === "tomorrow" ? "Tomorrow" : "Tonight",
+    // The NFL board is a week: "16 games this week", never "tonight".
+    dateLabel: sportParam === "nfl" ? "This week" : dateParam === "tomorrow" ? "Tomorrow" : "Tonight",
     totalGames: games.length,
     sharpsPosted,
     picksTotal: betsTotal,
@@ -441,8 +449,8 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
     try {
       const buf =
         scale === 2
-          ? await renderScaledPng(buildFallbackJsx(logo), fonts, scale)
-          : await new ImageResponse(buildFallbackJsx(logo), { ...size, fonts }).arrayBuffer();
+          ? await renderScaledPng(buildFallbackJsx(logo, fallbackHeading), fonts, scale)
+          : await new ImageResponse(buildFallbackJsx(logo, fallbackHeading), { ...size, fonts }).arrayBuffer();
       return new Response(buf, {
         headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
       });
@@ -462,6 +470,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
  */
 export async function buildSlateOgFingerprint(
   dateParam: "today" | "tomorrow",
+  sport: "mlb" | "nfl" = "mlb",
 ): Promise<{ etDay: string; picks: number; sharps: number; seasonPicks: number; contentHash: string }> {
   let picks = 0;
   let sharps = 0;
@@ -475,7 +484,7 @@ export async function buildSlateOgFingerprint(
   // the pair.
   const [slate, lb] = await Promise.all([
     withDeadline<Awaited<ReturnType<typeof fetchSlate>> | null>(
-      fetchSlate(dateParam).catch(() => null),
+      fetchSlate(dateParam, sport).catch(() => null),
       1500,
       null,
     ),
@@ -607,8 +616,8 @@ function buildJsx(inputs: RenderInputs) {
   const { logoDataUri, marquee, hasAnyPicks, totalGames, picksTotal, dateLabel } = inputs;
   const dayWord = dateLabel.toLowerCase();
 
-  const awayC = marquee ? displayTeamColor(teamColor(marquee.awayTeam)) : OFF;
-  const homeC = marquee ? displayTeamColor(teamColor(marquee.homeTeam)) : OFF;
+  const awayC = marquee ? displayTeamColor(teamColor(marquee.awayTeam, marquee.sport)) : OFF;
+  const homeC = marquee ? displayTeamColor(teamColor(marquee.homeTeam, marquee.sport)) : OFF;
   const timeLabel = marquee ? formatGameTime(marquee.gameTime) : null;
 
   return (
@@ -1161,7 +1170,7 @@ function TeamPanel({
   );
 }
 
-function buildFallbackJsx(logo: string | null) {
+function buildFallbackJsx(logo: string | null, heading = "Tonight's MLB slate.") {
   return (
     <div
       style={{
@@ -1192,7 +1201,7 @@ function buildFallbackJsx(logo: string | null) {
       <Wordmark logo={logo} height={50} />
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ fontSize: px(84), fontWeight: 800, lineHeight: 1.0, letterSpacing: -3, display: "flex" }}>
-          Tonight's MLB slate.
+          {heading}
         </div>
         <div style={{ fontSize: px(28), color: OFF_DIM, marginTop: px(24), fontWeight: 600, display: "flex" }}>
           Every tracked sharp's pick, grouped by game, ranked by leaderboard.

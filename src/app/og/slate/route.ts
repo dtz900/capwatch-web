@@ -32,5 +32,6 @@ export async function GET(request: Request): Promise<Response> {
   // (post_slate_card.py). The OG-crawler path must stay 1x; see
   // RenderSlateOpts.scale in _slate-og-renderer.tsx.
   const scale = url.searchParams.get("scale") === "2" ? 2 : (1 as const);
-  return renderSlateOg({ dateParam, gameSlug, scale });
+  const sport = url.searchParams.get("sport") === "nfl" ? "nfl" : "mlb";
+  return renderSlateOg({ dateParam, gameSlug, scale, sport });
 }
