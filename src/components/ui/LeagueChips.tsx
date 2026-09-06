@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * League chip row (the sportsbook "NBA | NFL | MLB" pattern): official league
- * marks in a compact chip strip, the active chip filled, the rest muted and
- * greyscale. Pure presentation; the caller owns the URL.
+ * League row (the sportsbook "NBA | NFL | MLB" pattern): official league
+ * marks with labels in a bare row. Only the selected item gets the filled
+ * pill; the rest are plain muted text with a greyscale mark and no chrome.
+ * Pure presentation; the caller owns the URL.
  */
 export type LeagueChip = {
   value: string;
   label: string;
-  /** "mlb" | "nfl" draw that league's mark; "all" draws both, small. */
+  /** "mlb" | "nfl" draw that league's mark; "all" is text only. */
   league: "mlb" | "nfl" | "all";
   caption?: string;
 };
@@ -56,7 +57,7 @@ export function LeagueChips({
       role="radiogroup"
       aria-label={ariaLabel}
       aria-busy={busy}
-      className={`flex items-stretch gap-2 transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
+      className={`flex items-stretch ${lg ? "gap-3" : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
     >
       {chips.map((c) => {
         const active = c.value === value;
@@ -67,23 +68,16 @@ export function LeagueChips({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(c.value)}
-            className={`group flex flex-col items-center justify-center rounded-lg border select-none
-                        ${lg ? "px-5 py-3 min-w-[128px] sm:min-w-[150px]" : "px-3.5 py-2"}
+            className={`group flex flex-col items-center justify-center rounded-lg select-none
+                        ${lg ? "px-5 py-3 min-w-[120px] sm:min-w-[140px]" : "px-3.5 py-2"}
                         transition-colors duration-150 ${
               active
-                ? "bg-[#f7f3e9] border-[#f7f3e9] text-black shadow-[0_6px_18px_-8px_rgba(247,243,233,0.55)]"
-                : "bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.08)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-[rgba(255,255,255,0.16)]"
+                ? "bg-[#f7f3e9] text-black shadow-[0_6px_18px_-8px_rgba(247,243,233,0.55)]"
+                : "bg-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
             <span className={`flex items-center ${lg ? "gap-3" : "gap-2"}`}>
-              {c.league === "all" ? (
-                <span className="flex items-center gap-1">
-                  <Mark league="mlb" h={Math.round(markH * 0.8)} muted={!active} />
-                  <Mark league="nfl" h={Math.round(markH * 0.8)} muted={!active} />
-                </span>
-              ) : (
-                <Mark league={c.league} h={markH} muted={!active} />
-              )}
+              {c.league !== "all" && <Mark league={c.league} h={markH} muted={!active} />}
               <span
                 className={`font-extrabold tracking-[-0.01em] leading-none ${
                   lg ? "text-[20px] sm:text-[22px]" : "text-[13px] sm:text-[14px]"
