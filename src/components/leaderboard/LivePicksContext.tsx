@@ -92,6 +92,8 @@ export function useLivePicksCount(capperId: number | string, fallback = 0): numb
   const map = useContext(LivePicksContext);
   if (map === null) return fallback;
   const cid = typeof capperId === "string" ? Number(capperId) : capperId;
-  const live = map[cid];
-  return live ?? fallback;
+  // A mounted provider's map is authoritative: a capper absent from the
+  // refreshed map has zero pending bets (their last one settled), so the
+  // SSR fallback must not keep an old "N live" alive (Codex on #115).
+  return map[cid] ?? 0;
 }
