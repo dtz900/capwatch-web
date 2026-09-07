@@ -26,6 +26,10 @@ interface Props {
    * the side-selector matchup lookup. */
   gameDate: string | null;
   postedAt: string | null;
+  /** MLB or NFL. Drives the game search: nfl_games for NFL picks (ESPN ids),
+   * mlb_predictions otherwise. Without it every NFL "Game not resolved" row
+   * listed baseball games only. */
+  sport?: string | null;
 }
 
 const MARKET_OPTIONS = [
@@ -128,7 +132,7 @@ export function FixPanel(props: Props) {
       (d): d is string => !!d,
     );
     for (const d of dates) {
-      const games = await searchGamesAction(d);
+      const games = await searchGamesAction(d, undefined, props.sport ?? undefined);
       const hit = games.find((g) => String(g.game_pk) === props.gameId);
       if (hit) {
         setMatchup(hit);
@@ -325,7 +329,7 @@ export function FixPanel(props: Props) {
           )}
 
           {lane === "game" && (
-            <GameFinder
+            <GameFinder sport={props.sport ?? undefined}
               initialDate={defaultGameDate}
               onSelect={onPickGame}
               disabled={pending}
@@ -446,7 +450,7 @@ export function FixPanel(props: Props) {
                 <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold mb-1.5">
                   Find game by date
                 </div>
-                <GameFinder
+                <GameFinder sport={props.sport ?? undefined}
                   initialDate={baseDate}
                   onSelect={(g) => setGameIdEdit(String(g.game_pk))}
                   disabled={pending}
@@ -529,12 +533,14 @@ function GameFinder({
   disabled,
   selectedGamePk,
   note,
+  sport,
 }: {
   initialDate: string;
   onSelect: (g: GameSearchResult) => void;
   disabled: boolean;
   selectedGamePk?: string;
   note?: ReactNode;
+  sport?: string;
 }) {
   const [date, setDate] = useState(initialDate);
   const [results, setResults] = useState<GameSearchResult[]>([]);
@@ -545,7 +551,7 @@ function GameFinder({
     if (!ymd) return;
     if (overrideDate) setDate(overrideDate);
     startTransition(async () => {
-      const r = await searchGamesAction(ymd);
+      const r = await searchGamesAction(ymd, undefined, sport);
       setResults(r);
     });
   };
