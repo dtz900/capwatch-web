@@ -403,6 +403,7 @@ function ProblemRow({
         gameId={p.game_id}
         gameDate={p.game_date}
         postedAt={p.posted_at}
+        sport={p.sport}
       />
     </div>
   );
