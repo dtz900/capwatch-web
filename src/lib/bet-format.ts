@@ -172,10 +172,12 @@ export function inferMarketBucket(
   if (/\/\s*\S+/.test(sel) && /\b(over|under|[oOuU]\d)/i.test(sel)) return "Total";
   if (/\b[oOuU]\d/.test(sel) && !hasStat) return "Total";
 
-  // 5. Spread / Run line: contains a signed half-point line.
+  // 5. Spread / Run line: contains a signed half-point line, or names the
+  //    market outright ("New England Patriots SPREAD" from a slip image).
   if (/[+-]\d+(\.\d+)?\b/.test(sel) && !/\bml\b/i.test(lower) && !/\bmoneyline\b/i.test(lower)) {
     return "Spread";
   }
+  if (/\b(spread|run\s*line)\b/i.test(sel)) return "Spread";
 
   // 6. ML: "TEAM ML" or "TEAM Moneyline".
   if (/\b(ml|moneyline)\b/i.test(sel)) return "Moneyline";
@@ -250,10 +252,13 @@ function resolveTeam(
 
   // NFL: mascots and nicknames of the two teams in this game ("Chiefs ML",
   // "Giants moneyline"). The MLB alias table below would send Giants to SF
-  // and Cardinals to STL (Codex on #113).
-  if (sport === "NFL") {
-    return resolveNflTeamInGame(selection, awayTeam, homeTeam);
-  }
+  // and Cardinals to STL (Codex on #113). Tried for every sport because the
+  // slate rows never pass one: the match is scoped to the two abbrs of the
+  // game in hand, so an MLB game can only hit if its tweet literally names
+  // an NFL mascot sharing that abbr (it never does).
+  const nflTeam = resolveNflTeamInGame(selection, awayTeam, homeTeam);
+  if (nflTeam) return nflTeam;
+  if (sport === "NFL") return null;
 
   // Then any standard MLB abbr.
   for (const abbr of ALL_ABBRS) {
@@ -384,6 +389,17 @@ export function formatPickText(ctx: FormatContext): string {
     const m = selection.match(/([+-]\d+(\.\d+)?)/);
     if (team && m) {
       return [`${prefix}${team}`, m[1], odds].filter(Boolean).join(" ");
+    }
+    // Team unresolved: keep the capper's wording but never drop the sign.
+    // The generic fallback below re-appends the line unsigned, which turned
+    // "Patriots +3.5" into "Patriots 3.5" on the NFL slate.
+    if (pick.line != null) {
+      const lineStr = pick.line > 0 ? `+${pick.line}` : `${pick.line}`;
+      const label = stripEmbeddedLine(
+        stripEmbeddedOdds(selection, pick.odds_taken).replace(/\bspread\b/gi, ""),
+        pick.line,
+      );
+      return [`${prefix}${label}`.trim(), lineStr, odds].filter(Boolean).join(" ");
     }
   }
 
