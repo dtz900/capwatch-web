@@ -106,6 +106,10 @@ const ALL_ABBRS = new Set([
   "PHI", "PIT", "SD", "SEA", "SF", "STL", "TB", "TEX", "TOR", "WSH",
 ]);
 
+// A signed spread line: 1-2 digits with an optional decimal, not followed by
+// more digits. American odds are always three digits or more.
+const SPREAD_NUMBER_RE = /(?<![\d.])[+-]\d{1,2}(\.\d+)?(?![\d.])/;
+
 // Player-prop stat words — used to disambiguate over/under in totals vs props.
 const STAT_KEYWORDS = /\b(hit|hits|run|runs|rbi|rbis|strikeout|strikeouts|so|ks?|home\s*run|hrs?|tb|total\s*bases|walk|walks|bb|er|earned\s*runs?|outs?|po|pitches|pitch|stolen|sb)\b/i;
 
@@ -172,9 +176,11 @@ export function inferMarketBucket(
   if (/\/\s*\S+/.test(sel) && /\b(over|under|[oOuU]\d)/i.test(sel)) return "Total";
   if (/\b[oOuU]\d/.test(sel) && !hasStat) return "Total";
 
-  // 5. Spread / Run line: contains a signed half-point line, or names the
-  //    market outright ("New England Patriots SPREAD" from a slip image).
-  if (/[+-]\d+(\.\d+)?\b/.test(sel) && !/\bml\b/i.test(lower) && !/\bmoneyline\b/i.test(lower)) {
+  // 5. Spread / Run line: contains a signed spread-shaped number (one or two
+  //    digits, optional half: "+3.5", "-1.5", "+7"), or names the market
+  //    outright ("New England Patriots SPREAD" from a slip image). Three
+  //    digits is a price ("Patriots -120", "Patriots +158"), never a line.
+  if (SPREAD_NUMBER_RE.test(sel) && !/\bml\b/i.test(lower) && !/\bmoneyline\b/i.test(lower)) {
     return "Spread";
   }
   if (/\b(spread|run\s*line)\b/i.test(sel)) return "Spread";
@@ -386,9 +392,10 @@ export function formatPickText(ctx: FormatContext): string {
       return [`${prefix}${team}`, lineStr, odds].filter(Boolean).join(" ");
     }
     // Selection might already have the line baked in; try extracting it.
-    const m = selection.match(/([+-]\d+(\.\d+)?)/);
+    // Spread-shaped only: "Patriots -120" carries a price, not a line.
+    const m = selection.match(SPREAD_NUMBER_RE);
     if (team && m) {
-      return [`${prefix}${team}`, m[1], odds].filter(Boolean).join(" ");
+      return [`${prefix}${team}`, m[0], odds].filter(Boolean).join(" ");
     }
     // Team unresolved: keep the capper's wording but never drop the sign.
     // The generic fallback below re-appends the line unsigned, which turned

@@ -38,6 +38,16 @@ describe("formatPickText: NFL spreads keep their sign", () => {
     expect(text).toBe("Mystery Squad +3.5 -115");
   });
 
+  it("does not read a bare price as a spread line (Codex on #118)", () => {
+    expect(inferMarketBucket(null, "Patriots -120")).not.toBe("Spread");
+    expect(inferMarketBucket(null, "Patriots +158")).not.toBe("Spread");
+    expect(formatPickText({ pick: { selection: "Patriots -120", odds_taken: -120 }, ...NE_SEA })).toBe("Patriots -120");
+    expect(formatPickText({ pick: { selection: "Patriots +158", odds_taken: 158 }, ...NE_SEA })).toBe("Patriots +158");
+    // A real line next to a price still renders the line.
+    expect(formatPickText({ pick: { selection: "Patriots +3.5 -120", odds_taken: -120 }, ...NE_SEA })).toBe("NE +3.5 -120");
+    expect(formatPickText({ pick: { selection: "Seahawks -7", line: -7, odds_taken: -110 }, ...NE_SEA })).toBe("SEA -7 -110");
+  });
+
   it("resolves an NFL mascot moneyline to the abbr", () => {
     const text = formatPickText({
       pick: { selection: "Patriots ML", odds_taken: 158 },
