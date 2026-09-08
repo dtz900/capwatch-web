@@ -143,6 +143,15 @@ export function SportsbookAd({
             Terms
           </a>
           {" "}· 1-800-GAMBLER
+          {/* Offer pulled in specific states (BetMGM turned off its MA
+              welcome offer 2026-09-08 on regulator guidance). Stated in
+              text so the page says it even where the art is scaled down
+              too small to read. */}
+          {creative.excludedStates && creative.excludedStates.length > 0 && (
+            <>
+              {" "}· Not available in {creative.excludedStates.join(", ")}
+            </>
+          )}
         </div>
       )}
     </div>

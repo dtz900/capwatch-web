@@ -51,6 +51,14 @@ export interface SportsbookCreative {
    */
   legalStates: "all" | string[];
   /**
+   * States where the operator has pulled THIS offer even though it still
+   * takes bets there (a regulator turning off a welcome-offer campaign).
+   * Rendered as "Not available in XX" in the disclosure strip so the
+   * on-page copy matches the art. Distinct from legalStates: this is a
+   * compliance statement, not an impression-waste hint.
+   */
+  excludedStates?: string[];
+  /**
    * Publisher-specific bonus code, when the network has issued one.
    * Rendered next to the ad: CJ's guidance (Andy Yu, 2026-08-12) is to
    * promote the code alongside the publisher-specific tracking link so a
@@ -133,8 +141,15 @@ export const BETMGM_1080x356: SportsbookCreative = {
  * Ratio is 3.88:1 against the old creative's 3.03:1, so it renders about
  * 22% shorter at the same width. Legal copy is baked into the art: 21+,
  * 1-800-GAMBLER plus state helplines, 7-day bonus-bet expiry, and the
- * NY/NV/Ontario/Puerto Rico exclusion. Do not crop this image; that block
- * sits along the bottom edge.
+ * MA/NY/NV/Ontario/Puerto Rico exclusion. Do not crop this image; that
+ * block sits along the bottom edge.
+ *
+ * v2 (2026-09-08): Massachusetts added to the exclusion line. CJ (Andy Yu)
+ * relayed that BetMGM turned off every First Bet Offer campaign in MA on
+ * regulator guidance and asked publishers to say so across digital
+ * properties. The last two legal lines were re-rendered locally over the
+ * original art (Arial Narrow Bold, color-matched); the rest of the file is
+ * untouched. New filename so no browser or CDN serves the stale copy.
  *
  * Commissions $0 in IN, WV, NJ, MI like every other BetMGM creative.
  */
@@ -143,11 +158,14 @@ export const BETMGM_1940x500_FOOTBALL: SportsbookCreative = {
   size: "1940x500",
   clickUrlMobile: "https://www.anrdoezrs.net/click-101754995-17324564",
   clickUrlDesktop: "https://www.anrdoezrs.net/click-101754995-17324564",
-  imageUrl: "/betmgm-1940x500-football.jpg",
+  imageUrl: "/betmgm-1940x500-football-v2.jpg",
   width: 1940,
   height: 500,
-  alt: "BetMGM Sportsbook. Get up to $1,500 paid back in bonus bets if your first bet does not win",
+  alt: "BetMGM Sportsbook. Get up to $1,500 paid back in bonus bets if your first bet does not win. Offer not available in Massachusetts",
   legalStates: "all",
+  // Massachusetts turned off (2026-09-08). Surfaced in the disclosure
+  // strip under the banner as well as in the art itself.
+  excludedStates: ["MA"],
   bonusCode: "TAILSLIPS",
   // From link 17324564's Get Code panel. Required because the banner art
   // is self-hosted: CJ counted impressions by serving the old creative
