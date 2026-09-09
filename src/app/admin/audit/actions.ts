@@ -305,13 +305,18 @@ export interface PlayerSearchResult {
   full_name: string;
   team_abbreviation: string | null;
   active: boolean | null;
+  /** NFL rows only (nfl_rosters position); MLB rows omit it. */
+  position?: string | null;
 }
 
-export async function searchPlayersAction(q: string): Promise<PlayerSearchResult[]> {
+/** sport=NFL searches nfl_rosters (ESPN athlete ids); anything else, mlb_players. */
+export async function searchPlayersAction(q: string, sport?: string): Promise<PlayerSearchResult[]> {
   if (!q.trim()) return [];
   try {
+    const params = new URLSearchParams({ q: q.trim() });
+    if (sport) params.set("sport", sport);
     const res = await fetch(
-      `${API_BASE}/api/admin/players/search?q=${encodeURIComponent(q.trim())}`,
+      `${API_BASE}/api/admin/players/search?${params.toString()}`,
       { headers: adminHeaders(), cache: "no-store" },
     );
     if (!res.ok) return [];

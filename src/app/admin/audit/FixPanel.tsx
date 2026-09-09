@@ -51,24 +51,20 @@ export function FixPanel(props: Props) {
   // player_did_not_play almost always means the capper tweeted late on
   // day N about day N+1's slate and we bound to a day-N game. Land in
   // the game lane so the user sees the date picker and prev/next.
-  type EditLane = "none" | "player" | "game" | "market" | "line" | "more";
+  // The player finder is a standing section (below), so missing_player_id
+  // needs no lane of its own.
+  type EditLane = "none" | "game" | "market" | "line" | "more";
   const defaultLane: EditLane =
-    props.reason === "missing_player_id"
-      ? "player"
-      : props.reason === "missing_game_id"
+    props.reason === "missing_game_id"
+      ? "game"
+      : props.reason === "player_did_not_play"
         ? "game"
-        : props.reason === "player_did_not_play"
-          ? "game"
-          : props.reason === "market_unhandled"
-            ? "market"
-            : props.reason === "missing_line"
-              ? "line"
-              : "none";
+        : props.reason === "market_unhandled"
+          ? "market"
+          : props.reason === "missing_line"
+            ? "line"
+            : "none";
   const [lane, setLane] = useState<EditLane>(defaultLane);
-
-  // Player search state
-  const [playerQuery, setPlayerQuery] = useState(props.selection ?? "");
-  const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([]);
 
   // Field overrides (only used by the "more options" lane)
   const [marketEdit, setMarketEdit] = useState(props.market ?? "");
@@ -187,14 +183,6 @@ export function FixPanel(props: Props) {
     runAction(() => patchPickAction(props.pickId, patch), "Saved");
   };
 
-  const doSearchPlayer = () => {
-    if (!playerQuery.trim()) return;
-    startTransition(async () => {
-      const r = await searchPlayersAction(playerQuery);
-      setPlayerResults(r);
-    });
-  };
-
   // For player_did_not_play, default to posted_at + 1 day. The capper
   // almost always tweeted late at night about the next day's slate, so
   // tomorrow's schedule is the right starting point.
@@ -277,56 +265,40 @@ export function FixPanel(props: Props) {
         </div>
       )}
 
+      {/* Section 1.7: Player. Always available: a nickname ("JSN", "Monty")
+          or a shared surname leaves player_id empty on picks whose audit
+          reason is something else (game not resolved), and the old
+          reason-gated lane hid the finder exactly then (David 2026-09-08). */}
+      <div className="border-t border-[rgba(255,255,255,0.06)] pt-3">
+        <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold mb-2 flex items-center gap-2">
+          <span>Player</span>
+          <span className="normal-case tracking-normal font-semibold text-[var(--color-text-soft)]">
+            {props.playerId != null ? `id ${props.playerId}` : "none attached"}
+          </span>
+          {props.sport && (
+            <span className="ml-auto normal-case tracking-normal font-bold text-[9px] text-[var(--color-text-muted)]">
+              {props.sport} roster
+            </span>
+          )}
+        </div>
+        <PlayerFinder
+          initialQuery={props.selection ?? ""}
+          sport={props.sport ?? undefined}
+          disabled={pending}
+          onSelect={onPickPlayer}
+          selectedPlayerId={props.playerId ?? undefined}
+        />
+      </div>
+
       {/* Section 2: Reason-specific edit (if any) */}
       {lane !== "none" && (
         <div className="border-t border-[rgba(255,255,255,0.06)] pt-3">
           <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold mb-2">
-            {lane === "player" && "Resolve player"}
             {lane === "game" && "Resolve game"}
             {lane === "market" && "Pick the right market"}
             {lane === "line" && "Set the line"}
             {lane === "more" && "All fields"}
           </div>
-
-          {lane === "player" && (
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={playerQuery}
-                  onChange={(e) => setPlayerQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && doSearchPlayer()}
-                  placeholder="Type a player name..."
-                  className="flex-1 px-2.5 py-1.5 text-[12px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
-                />
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={doSearchPlayer}
-                  className="px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
-                >
-                  Search
-                </button>
-              </div>
-              {playerResults.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  {playerResults.map((p) => (
-                    <button
-                      key={p.player_id}
-                      type="button"
-                      disabled={pending}
-                      onClick={() => onPickPlayer(p)}
-                      className="text-left px-2.5 py-1.5 rounded text-[11px] bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)] flex items-center gap-2"
-                    >
-                      <span className="font-semibold text-[var(--color-text)]">{p.full_name}</span>
-                      <span className="text-[var(--color-text-muted)]">{p.team_abbreviation ?? "?"}</span>
-                      <span className="text-[var(--color-text-muted)] ml-auto">id {p.player_id}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {lane === "game" && (
             <GameFinder sport={props.sport ?? undefined}
@@ -401,46 +373,13 @@ export function FixPanel(props: Props) {
                 <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold mb-1.5">
                   Find player by name
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={playerQuery}
-                    onChange={(e) => setPlayerQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && doSearchPlayer()}
-                    placeholder="e.g. Framber Valdez"
-                    className="flex-1 px-2.5 py-1.5 text-[12px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
-                  />
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={doSearchPlayer}
-                    className="px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
-                  >
-                    Search
-                  </button>
-                </div>
-                {playerResults.length > 0 && (
-                  <div className="flex flex-col gap-1 mt-2">
-                    {playerResults.map((p) => (
-                      <button
-                        key={p.player_id}
-                        type="button"
-                        onClick={() => setPlayerIdEdit(String(p.player_id))}
-                        className="text-left px-2.5 py-1 rounded text-[11px] bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)] flex items-center gap-2"
-                      >
-                        <span className="font-semibold text-[var(--color-text)]">
-                          {p.full_name}
-                        </span>
-                        <span className="text-[var(--color-text-muted)]">
-                          {p.team_abbreviation ?? "?"}
-                        </span>
-                        <span className="text-[var(--color-text-muted)] ml-auto">
-                          id {p.player_id}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <PlayerFinder
+                  initialQuery={props.selection ?? ""}
+                  sport={props.sport ?? undefined}
+                  disabled={pending}
+                  onSelect={(p) => setPlayerIdEdit(String(p.player_id))}
+                  selectedPlayerId={playerIdEdit ? Number(playerIdEdit) : undefined}
+                />
                 <div className="text-[9px] text-[var(--color-text-muted)] mt-1.5">
                   Click a result to populate player_id, then Save changes.
                 </div>
@@ -516,6 +455,99 @@ export function FixPanel(props: Props) {
 
       {error && <div className="text-[11px] text-[var(--color-neg)]">Error: {error}</div>}
       {success && <div className="text-[11px] text-[var(--color-pos)]">{success}</div>}
+    </div>
+  );
+}
+
+/**
+ * Name-driven player picker against the pick's sport roster (nfl_rosters for
+ * NFL, mlb_players otherwise). Nicknames the parser knows ("JSN", "Monty")
+ * resolve through the same registry. Owns its query + results so it can sit
+ * in the standing Player section and in the All-fields lane.
+ */
+function PlayerFinder({
+  initialQuery,
+  sport,
+  disabled,
+  onSelect,
+  selectedPlayerId,
+}: {
+  initialQuery: string;
+  sport?: string;
+  disabled: boolean;
+  onSelect: (p: PlayerSearchResult) => void;
+  selectedPlayerId?: number;
+}) {
+  const [query, setQuery] = useState(initialQuery);
+  const [results, setResults] = useState<PlayerSearchResult[]>([]);
+  const [searched, setSearched] = useState(false);
+  const [busy, startTransition] = useTransition();
+
+  const search = () => {
+    if (!query.trim()) return;
+    startTransition(async () => {
+      const r = await searchPlayersAction(query, sport);
+      setResults(r);
+      setSearched(true);
+    });
+  };
+
+  const isBusy = disabled || busy;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && search()}
+          placeholder={sport === "NFL" ? "e.g. Smith-Njigba, JSN, Monty" : "e.g. Framber Valdez"}
+          className="flex-1 px-2.5 py-1.5 text-[12px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
+        />
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={search}
+          className="px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]"
+        >
+          Search
+        </button>
+      </div>
+      {searched && results.length === 0 && (
+        <div className="text-[10px] text-[var(--color-text-muted)]">
+          No {sport ?? "MLB"} player matches. Try the surname only.
+        </div>
+      )}
+      {results.length > 0 && (
+        <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
+          {results.map((p) => {
+            const isSelected = selectedPlayerId != null && p.player_id === selectedPlayerId;
+            return (
+              <button
+                key={p.player_id}
+                type="button"
+                disabled={isBusy}
+                onClick={() => onSelect(p)}
+                className={`text-left px-2.5 py-1.5 rounded text-[11px] flex items-center gap-2 ${
+                  isSelected
+                    ? "bg-[rgba(192,132,252,0.16)] ring-1 ring-[rgba(192,132,252,0.40)]"
+                    : "bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)]"
+                }`}
+              >
+                <span className="font-semibold text-[var(--color-text)]">{p.full_name}</span>
+                <span className="text-[var(--color-text-muted)]">{p.team_abbreviation ?? "?"}</span>
+                {p.position && <span className="text-[var(--color-text-muted)]">{p.position}</span>}
+                {p.active === false && (
+                  <span className="text-[9px] uppercase tracking-[0.10em] font-extrabold px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.06)] text-[var(--color-text-muted)]">
+                    inactive
+                  </span>
+                )}
+                <span className="text-[var(--color-text-muted)] ml-auto">id {p.player_id}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
