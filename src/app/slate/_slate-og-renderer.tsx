@@ -9,6 +9,7 @@ import { pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/teams";
 import type { Sport } from "@/lib/types";
 import type { SlateGame, SlatePick } from "@/lib/types";
+import { feedsConsensusOdds, medianInt } from "@/lib/slate-consensus";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
 // a 2x canvas made the cold render heavier (Twitterbot timed out and cached a
@@ -310,14 +311,15 @@ function buildMarqueeBlock(
     const h = p.handle;
     if (!h) continue;
     const named = !X_SUPPRESSED_HANDLES.has(h.toLowerCase());
+    const priced = feedsConsensusOdds(p);
     if (side === "away") {
       awayCount += 1;
       if (named) awayHandles.push(h);
-      if (isAmericanOdds(p.odds_taken)) awayOdds.push(p.odds_taken as number);
+      if (priced) awayOdds.push(p.odds_taken as number);
     } else if (side === "home") {
       homeCount += 1;
       if (named) homeHandles.push(h);
-      if (isAmericanOdds(p.odds_taken)) homeOdds.push(p.odds_taken as number);
+      if (priced) homeOdds.push(p.odds_taken as number);
     }
   }
   return {
@@ -335,23 +337,6 @@ function buildMarqueeBlock(
     away: { team: game.away_team, count: awayCount, handles: awayHandles, medianOdds: medianInt(awayOdds) },
     home: { team: game.home_team, count: homeCount, handles: homeHandles, medianOdds: medianInt(homeOdds) },
   };
-}
-
-// Valid American prices live outside (-100, 100). Anything inside that band is
-// a mis-stored value (decimal odds, a stray line number) and would poison the
-// consensus figure.
-function isAmericanOdds(v: number | null | undefined): boolean {
-  return typeof v === "number" && Number.isFinite(v) && Math.abs(v) >= 100 && Math.abs(v) <= 10000;
-}
-
-function medianInt(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const med = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-  const rounded = Math.round(med);
-  // An even count straddling the +/-100 gap can average into the invalid band.
-  return Math.abs(rounded) >= 100 ? rounded : null;
 }
 
 function formatAmericanOdds(n: number): string {
