@@ -88,6 +88,10 @@ const btnCls =
   "px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]";
 const labelCls =
   "text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold";
+// Native <option> rows ignore the select's translucent background and paint
+// the OS white, which with inherited white text is unreadable (David
+// 2026-09-08). Same fix the audit panel's MarketSelect uses.
+const optionCls = "bg-[#0e0e12] text-[var(--color-text)]";
 
 function todayEt(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -124,9 +128,14 @@ export function AddBetPanel() {
       if (sportRef.current === requested) setGames(results);
     });
 
+  // Search the roster of the sport toggle; without it every NFL name
+  // ("Hampton") searched mlb_players and returned nothing (David
+  // 2026-09-08). Same race guard as loadGames.
   const loadPlayers = () =>
     startTransition(async () => {
-      setPlayers(await searchPlayersAction(playerQuery));
+      const requested = sport;
+      const results = await searchPlayersAction(playerQuery, requested);
+      if (sportRef.current === requested) setPlayers(results);
     });
 
   const isParlay = legs.length > 1;
@@ -283,7 +292,7 @@ export function AddBetPanel() {
               onChange={(e) => setLeg(idx, { type: e.target.value as LegType })}
             >
               {Object.entries(LEG_TYPE_LABEL).map(([v, label]) => (
-                <option key={v} value={v}>
+                <option key={v} value={v} className={optionCls}>
                   {label}
                 </option>
               ))}
@@ -337,9 +346,9 @@ export function AddBetPanel() {
                     setLeg(idx, { direction: e.target.value as LegDraft["direction"] })
                   }
                 >
-                  <option value="">direction</option>
-                  <option value="over">over</option>
-                  <option value="under">under</option>
+                  <option value="" className={optionCls}>direction</option>
+                  <option value="over" className={optionCls}>over</option>
+                  <option value="under" className={optionCls}>under</option>
                 </select>
               )}
               <input
