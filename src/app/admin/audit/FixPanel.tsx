@@ -102,7 +102,12 @@ export function FixPanel(props: Props) {
     runAction(() => manualGradeAction(props.pickId, outcome), `Marked ${outcome.toUpperCase()}`);
   };
 
+  // The standing pickers patch immediately; the All-fields drafts were
+  // initialized from props and would otherwise keep the pre-pick value and
+  // patch it back on the next "Save changes" (Codex on #119). Keep them in
+  // step with what was just assigned.
   const onPickPlayer = (p: PlayerSearchResult) => {
+    setPlayerIdEdit(String(p.player_id));
     runAction(
       () => patchPickAction(props.pickId, { player_id: p.player_id }),
       `Set player ${p.full_name}`,
@@ -110,6 +115,7 @@ export function FixPanel(props: Props) {
   };
 
   const onPickGame = (g: GameSearchResult) => {
+    setGameIdEdit(String(g.game_pk));
     runAction(
       () => patchPickAction(props.pickId, { game_id: String(g.game_pk) }),
       `Set game ${g.away_team}@${g.home_team}`,
