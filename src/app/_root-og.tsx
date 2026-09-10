@@ -92,7 +92,7 @@ async function fetchTop5(filters: RootOgFilters): Promise<{ rows: TopRow[]; stat
       window: filters.window,
       sort: filters.sort,
       bet_type: filters.bet_type,
-      min_picks: minPicksForWindow(filters.window),
+      min_picks: minPicksForWindow(filters.window, filters.sport),
       active_only: filters.active_only,
       sport: filters.sport,
     });
@@ -163,7 +163,7 @@ export async function buildRootOgFingerprint(filters: RootOgFilters = DEFAULT_RO
       window: filters.window,
       sort: filters.sort,
       bet_type: filters.bet_type,
-      min_picks: minPicksForWindow(filters.window),
+      min_picks: minPicksForWindow(filters.window, filters.sport),
       active_only: filters.active_only,
       sport: filters.sport,
     });

@@ -60,7 +60,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     window: win,
     sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
     bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
-    min_picks: minPicksForWindow(win),
+    min_picks: minPicksForWindow(win, parseSport(sp.sport)),
     active_only: sp.active_only !== "false",
     sport: parseSport(sp.sport),
   };
@@ -113,7 +113,7 @@ export default async function Home({ searchParams }: PageProps) {
     window: win,
     sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
     bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
-    min_picks: minPicksForWindow(win),
+    min_picks: minPicksForWindow(win, parseSport(sp.sport)),
     active_only: sp.active_only !== "false",
     sport: parseSport(sp.sport),
   };
@@ -229,7 +229,7 @@ export default async function Home({ searchParams }: PageProps) {
           )}
           <SuggestCapperSection />
           <footer className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
-            <div>Min {minPicksForWindow(filters.window)} graded picks · refreshed daily 6:00 AM PT.</div>
+            <div>Min {minPicksForWindow(filters.window, filters.sport)} graded picks · refreshed daily 6:00 AM PT.</div>
             <div>Operated by FADE AI · The model entry is graded identically</div>
           </footer>
         </main>
