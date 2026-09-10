@@ -119,7 +119,15 @@ export interface LeaderboardFilters {
  */
 export const WINDOW_MIN_PICKS: Partial<Record<Window, number>> = { last_7: 5 };
 export const DEFAULT_MIN_PICKS = 10;
-export function minPicksForWindow(window: Window): number {
+// NFL runs one slate a week and a capper posts 3-8 picks on it, so the MLB
+// floor ranked a single capper after Week 1 (433 graded picks, 2026-09-10).
+// Every capper with a graded NFL pick ranks, in every window ("I want to see
+// all of them"). Mirrors api/public_cappers.resolve_min_picks; the mixed
+// "all" view keeps the MLB floor.
+export const NFL_WINDOW_MIN_PICKS: Partial<Record<Window, number>> = {};
+export const NFL_DEFAULT_MIN_PICKS = 1;
+export function minPicksForWindow(window: Window, sport?: SportFilter): number {
+  if (sport === "nfl") return NFL_WINDOW_MIN_PICKS[window] ?? NFL_DEFAULT_MIN_PICKS;
   return WINDOW_MIN_PICKS[window] ?? DEFAULT_MIN_PICKS;
 }
 
