@@ -161,10 +161,12 @@ export interface GameSearchResult {
 export async function searchGamesForReviewAction(
   date: string,
   team?: string,
+  sport?: string | null,
 ): Promise<GameSearchResult[]> {
   try {
     const params = new URLSearchParams({ date });
     if (team) params.set("team", team.trim());
+    if (sport) params.set("sport", sport);
     const res = await fetch(`${API_BASE}/api/admin/games/search?${params}`, {
       headers: adminHeaders(),
       cache: "no-store",
@@ -184,14 +186,19 @@ export interface PlayerSearchResult {
   active: boolean | null;
 }
 
-/** Player search for binding player-prop legs. */
+/** Player search for binding player-prop legs. `sport` picks the roster:
+ * NFL reads nfl_rosters, anything else mlb_players. Omitting it made the
+ * review queue MLB-only, so no NFL prop could be bound by hand. */
 export async function searchPlayersForReviewAction(
   q: string,
+  sport?: string | null,
 ): Promise<PlayerSearchResult[]> {
   if (!q.trim()) return [];
   try {
+    const params = new URLSearchParams({ q: q.trim() });
+    if (sport) params.set("sport", sport);
     const res = await fetch(
-      `${API_BASE}/api/admin/players/search?q=${encodeURIComponent(q.trim())}`,
+      `${API_BASE}/api/admin/players/search?${params.toString()}`,
       { headers: adminHeaders(), cache: "no-store" },
     );
     if (!res.ok) return [];

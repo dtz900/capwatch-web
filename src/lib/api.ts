@@ -409,6 +409,11 @@ export interface ReviewQueueItem {
   player_name: string | null;
   was_image_parsed: boolean | null;
   parlay_id: number | null;
+  /** "MLB" | "NFL". Drives which roster/schedule the bind panel searches;
+   * without it the panel was hardwired to MLB and an NFL player prop
+   * could not be bound by hand at all (David 2026-09-10: searching
+   * "hunter" for Hunter Henry returned six MLB pitchers). */
+  sport: string | null;
   /** ISO start time of the bound game, null when unbound. */
   game_commence_time: string | null;
   /** "AWY @ HOM" for the bound game, null when unbound. */

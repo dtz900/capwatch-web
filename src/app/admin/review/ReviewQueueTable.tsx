@@ -407,10 +407,21 @@ function BindPicker({ item, onDone, onError }: BindPickerProps) {
   const [players, setPlayers] = useState<PlayerSearchResult[] | null>(null);
   const [chosenPlayerId, setChosenPlayerId] = useState<number | null>(item.player_name ? null : null);
 
+  // The pick's sport picks the roster and the schedule the panel searches.
+  // Without it both were hardwired to MLB, so an NFL player prop could not
+  // be bound by hand at all (searching "hunter" for Hunter Henry returned
+  // six MLB pitchers, David 2026-09-10).
+  const sport = item.sport ?? "MLB";
+  const isNfl = sport.toUpperCase() === "NFL";
+
   function onSearchGames() {
     onError(""); // clear
     startTransition(async () => {
-      const results = await searchGamesForReviewAction(date, team || undefined);
+      const results = await searchGamesForReviewAction(
+        date,
+        team || undefined,
+        sport,
+      );
       setGames(results);
       setSearched(true);
     });
@@ -418,7 +429,7 @@ function BindPicker({ item, onDone, onError }: BindPickerProps) {
 
   function onSearchPlayers() {
     startTransition(async () => {
-      const results = await searchPlayersForReviewAction(playerQuery);
+      const results = await searchPlayersForReviewAction(playerQuery, sport);
       setPlayers(results);
     });
   }
@@ -442,6 +453,7 @@ function BindPicker({ item, onDone, onError }: BindPickerProps) {
     <div className="bg-[rgba(255,255,255,0.025)] border-t border-[var(--color-border)] px-5 py-4">
       <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold mb-3">
         Bind game {isPlayerProp && "+ player"}
+        <span className="ml-2 text-[var(--color-text-muted)]">· {sport}</span>
       </div>
 
       {isPlayerProp && (
@@ -454,7 +466,11 @@ function BindPicker({ item, onDone, onError }: BindPickerProps) {
               type="text"
               value={playerQuery}
               onChange={(e) => setPlayerQuery(e.target.value)}
-              placeholder="search by name (Chase Petty, ...)"
+              placeholder={
+                isNfl
+                  ? "search by name (Hunter Henry, ...)"
+                  : "search by name (Chase Petty, ...)"
+              }
               className="rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none w-72"
             />
             <button
@@ -525,7 +541,7 @@ function BindPicker({ item, onDone, onError }: BindPickerProps) {
             type="text"
             value={team}
             onChange={(e) => setTeam(e.target.value.toUpperCase())}
-            placeholder="NYY, LAD, ..."
+            placeholder={isNfl ? "SF, LAR, ..." : "NYY, LAD, ..."}
             className="rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none w-32"
           />
         </label>
