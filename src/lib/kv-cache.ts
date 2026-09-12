@@ -56,11 +56,21 @@ function getClient(): Redis | null {
  *
  * Stored values must be JSON-serializable. The Upstash SDK handles encoding
  * automatically for objects and arrays.
+ *
+ * `opts.lkgKey` overrides where the last-known-good copy is stored, instead
+ * of the default `${key}:lkg`. Use this when `key` itself is built from a
+ * relative selector whose meaning changes over time (e.g. "today", or
+ * NFL's "current" week): the primary key's literal name has to stay put so
+ * short-TTL purges still find it, but the long-TTL LKG copy must be keyed
+ * by the concrete resolved period, or a value written before a rollover
+ * (a new slate day, a new NFL week) could be replayed after it under the
+ * same literal key. Every other caller omits this and gets the default.
  */
 export async function withKvCache<T>(
   key: string,
   ttlSec: number,
   fetcher: () => Promise<T>,
+  opts: { lkgKey?: string } = {},
 ): Promise<T> {
   const client = getClient();
   if (!client) return fetcher();
@@ -81,7 +91,50 @@ export async function withKvCache<T>(
     /* swallow */
   });
 
+  // Also seed the last-known-good copy under a long TTL. This is the
+  // fallback callers reach for with readLastKnownGood() when a live
+  // upstream fetch throws (Railway stall, connection reset, etc) and the
+  // short-TTL primary key has already expired. Same fire-and-forget
+  // reasoning as the primary write above.
+  void client.set(opts.lkgKey ?? lkgKey(key), fresh, { ex: LKG_TTL_SEC }).catch(() => {
+    /* swallow */
+  });
+
   return fresh;
+}
+
+// How long a last-known-good copy stays servable once its primary entry
+// has expired. Six hours is long enough to ride out a Railway incident or
+// a Supabase pooler outage without serving data so old it misleads a
+// visitor, and short enough that a genuinely dead capper page eventually
+// falls through to the real error state instead of serving forever.
+export const LKG_TTL_SEC = 6 * 60 * 60;
+
+function lkgKey(key: string): string {
+  return `${key}:lkg`;
+}
+
+/**
+ * Read the last-known-good copy for `key`, written by a previous successful
+ * `withKvCache` call. Returns null on a miss, a Redis error, or when Redis
+ * isn't configured, so callers can treat it as "no stale copy available"
+ * without a try/catch of their own.
+ *
+ * Pass the same `opts.lkgKey` used on the matching `withKvCache` write, or
+ * omit it on both ends to use the default `${key}:lkg`.
+ */
+export async function readLastKnownGood<T>(
+  key: string,
+  opts: { lkgKey?: string } = {},
+): Promise<T | null> {
+  const client = getClient();
+  if (!client) return null;
+  try {
+    const stale = await client.get<T>(opts.lkgKey ?? lkgKey(key));
+    return stale ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
