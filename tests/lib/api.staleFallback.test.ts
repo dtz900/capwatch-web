@@ -8,8 +8,8 @@ const readLastKnownGoodMock = vi.fn();
 
 vi.mock("@/lib/kv-cache", () => ({
   // Pass through to the fetcher, the same shape withKvCache has when Redis
-  // is unreachable or a key has expired -- which is exactly the condition
-  // this test wants to force.
+  // is unreachable or a key has expired (exactly the condition this test
+  // wants to force).
   withKvCache: async (_key: string, _ttl: number, fetcher: () => unknown) => fetcher(),
   readLastKnownGood: readLastKnownGoodMock,
 }));
