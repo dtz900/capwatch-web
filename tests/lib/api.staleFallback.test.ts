@@ -43,7 +43,9 @@ describe("fetchLeaderboard stale fallback", () => {
     });
 
     expect(out).toEqual(sample);
-    expect(readLastKnownGoodMock).toHaveBeenCalledWith(expect.stringContaining("lb:v1:"));
+    // fetchLeaderboard's cache key is already concrete (no relative
+    // selector like fetchSlate's "today"), so it passes no lkgKey override.
+    expect(readLastKnownGoodMock).toHaveBeenCalledWith(expect.stringContaining("lb:v1:"), undefined);
   });
 
   it("rethrows when the upstream fetch throws and no stale copy exists", async () => {

@@ -56,11 +56,21 @@ function getClient(): Redis | null {
  *
  * Stored values must be JSON-serializable. The Upstash SDK handles encoding
  * automatically for objects and arrays.
+ *
+ * `opts.lkgKey` overrides where the last-known-good copy is stored, instead
+ * of the default `${key}:lkg`. Use this when `key` itself is built from a
+ * relative selector whose meaning changes over time (e.g. "today", or
+ * NFL's "current" week): the primary key's literal name has to stay put so
+ * short-TTL purges still find it, but the long-TTL LKG copy must be keyed
+ * by the concrete resolved period, or a value written before a rollover
+ * (a new slate day, a new NFL week) could be replayed after it under the
+ * same literal key. Every other caller omits this and gets the default.
  */
 export async function withKvCache<T>(
   key: string,
   ttlSec: number,
   fetcher: () => Promise<T>,
+  opts: { lkgKey?: string } = {},
 ): Promise<T> {
   const client = getClient();
   if (!client) return fetcher();
@@ -86,7 +96,7 @@ export async function withKvCache<T>(
   // upstream fetch throws (Railway stall, connection reset, etc) and the
   // short-TTL primary key has already expired. Same fire-and-forget
   // reasoning as the primary write above.
-  void client.set(lkgKey(key), fresh, { ex: LKG_TTL_SEC }).catch(() => {
+  void client.set(opts.lkgKey ?? lkgKey(key), fresh, { ex: LKG_TTL_SEC }).catch(() => {
     /* swallow */
   });
 
@@ -109,12 +119,18 @@ function lkgKey(key: string): string {
  * `withKvCache` call. Returns null on a miss, a Redis error, or when Redis
  * isn't configured, so callers can treat it as "no stale copy available"
  * without a try/catch of their own.
+ *
+ * Pass the same `opts.lkgKey` used on the matching `withKvCache` write, or
+ * omit it on both ends to use the default `${key}:lkg`.
  */
-export async function readLastKnownGood<T>(key: string): Promise<T | null> {
+export async function readLastKnownGood<T>(
+  key: string,
+  opts: { lkgKey?: string } = {},
+): Promise<T | null> {
   const client = getClient();
   if (!client) return null;
   try {
-    const stale = await client.get<T>(lkgKey(key));
+    const stale = await client.get<T>(opts.lkgKey ?? lkgKey(key));
     return stale ?? null;
   } catch {
     return null;

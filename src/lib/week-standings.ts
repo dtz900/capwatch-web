@@ -37,6 +37,40 @@ export function currentSlateDay(now: Date = new Date()): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
+/** currentSlateDay(), plus one calendar day. Used to resolve the "tomorrow"
+ * relative selector to a concrete date for cache-key purposes. */
+export function nextSlateDay(now: Date = new Date()): string {
+  const today = new Date(`${currentSlateDay(now)}T00:00:00Z`);
+  return new Date(today.getTime() + DAY_MS).toISOString().slice(0, 10);
+}
+
+// NFL weeks are settled by early Tuesday ET: Monday Night Football is the
+// last game of the week, so the backend's "current week" has already
+// rolled over by the time Tuesday starts. Sun=0 .. Sat=6.
+const NFL_WEEK_ANCHOR_WEEKDAY_ET = 2;
+
+/**
+ * A cache-bucket label standing in for "the current NFL week", for last-
+ * known-good cache keys only (see readLastKnownGood in kv-cache.ts and its
+ * use in api.ts's fetchSlate). The frontend has no season schedule to
+ * reconstruct the backend's real "<season>-w<week>" label, so this anchors
+ * to the most recent Tuesday (ET) instead.
+ *
+ * That's a deliberately conservative proxy: it can only flip EARLIER than
+ * the real week boundary, never later. Flipping early just costs a cache
+ * miss on the LKG lookup (safe, falls through to the real error); flipping
+ * late is the actual bug this exists to prevent, letting last week's slate
+ * answer this week's "current" request during an outage that spans the
+ * rollover.
+ */
+export function currentNflWeekAnchor(now: Date = new Date()): string {
+  const todayIso = currentSlateDay(now);
+  const d = new Date(`${todayIso}T00:00:00Z`);
+  const daysSinceAnchor = (d.getUTCDay() - NFL_WEEK_ANCHOR_WEEKDAY_ET + 7) % 7;
+  const anchor = new Date(d.getTime() - daysSinceAnchor * DAY_MS);
+  return `nfl:wk:${anchor.toISOString().slice(0, 10)}`;
+}
+
 /** Mon-Sun bounds of the week containing dateIso (a plain calendar date). */
 export function weekBoundsFor(dateIso: string): { monday: string; sunday: string } {
   const d = new Date(`${dateIso}T00:00:00Z`);

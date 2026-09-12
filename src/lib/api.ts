@@ -3,6 +3,8 @@ import type { SportFilter } from "./types";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
   currentSlateDay,
+  nextSlateDay,
+  currentNflWeekAnchor,
   weekBoundsFor,
   weekDaysToFetch,
   sumWeekStandings,
@@ -120,15 +122,20 @@ async function withStaleFallback<T>(
   // caller as-is instead of resurrecting a stale copy, otherwise a capper
   // who is genuinely gone would keep showing their old profile forever.
   isStaleWorthy: (err: unknown) => boolean = () => true,
+  // Overrides where the stale copy is read from. Required whenever
+  // `cacheKey` is built from a relative selector (fetchSlate's "today" /
+  // NFL "current" week): see the matching withKvCache() call and the
+  // lkgKey doc in kv-cache.ts for why. Omit for every other caller.
+  lkgKey?: string,
 ): Promise<T> {
   try {
     return await run();
   } catch (err) {
     if (!isStaleWorthy(err)) throw err;
-    const stale = await readLastKnownGood<T>(cacheKey);
+    const stale = await readLastKnownGood<T>(cacheKey, lkgKey ? { lkgKey } : undefined);
     if (stale !== null) {
       console.warn(
-        `[kv-cache] serving last-known-good copy for key=${cacheKey} after live fetch failed: ${
+        `[kv-cache] serving last-known-good copy for key=${lkgKey ?? cacheKey} after live fetch failed: ${
           err instanceof Error ? err.message : String(err)
         }`,
       );
@@ -246,6 +253,34 @@ export type SlateSport = "mlb" | "nfl";
  * an explicit regular-season week. The MLB cache key is unchanged so the
  * `slate:` purge prefix and the weekly rollup keys keep working.
  */
+/**
+ * The literal cache key for a slate fetch is stable ("slate:v1:today",
+ * "slate:v1:nfl:current"), but "today" and NFL's "current" week are
+ * relative selectors whose real-world meaning changes at the 6am ET slate
+ * rollover and at the NFL week boundary. A 6-hour last-known-good copy
+ * stored under that literal key could then answer "today" with yesterday's
+ * slate, or "current" week with last week's, if an outage spans the
+ * rollover. Resolving to the concrete period here, for the LKG key only,
+ * closes that: a stale copy from a different period simply misses instead
+ * of getting served. Returns undefined when the selector is already
+ * concrete (an explicit date, or an explicit NFL week number), in which
+ * case the default `${cacheKey}:lkg` key is safe as-is.
+ */
+function resolveSlateLkgKey(
+  cacheKey: string,
+  date: string,
+  sport: SlateSport,
+  week: number | undefined,
+): string | undefined {
+  if (sport === "nfl") {
+    if (week != null) return undefined;
+    return `${cacheKey}:${currentNflWeekAnchor()}`;
+  }
+  if (date === "today") return `${cacheKey}:${currentSlateDay()}`;
+  if (date === "tomorrow") return `${cacheKey}:${nextSlateDay()}`;
+  return undefined;
+}
+
 export async function fetchSlate(
   date: string = "today",
   sport: SlateSport = "mlb",
@@ -253,17 +288,27 @@ export async function fetchSlate(
 ): Promise<SlateResponse> {
   const cacheKey =
     sport === "nfl" ? `slate:v1:nfl:${week ?? "current"}` : `slate:v1:${date}`;
+  const lkgKey = resolveSlateLkgKey(cacheKey, date, sport, week);
   const qs = new URLSearchParams({ date });
   if (sport !== "mlb") qs.set("sport", sport);
   if (sport === "nfl" && week != null) qs.set("week", String(week));
-  return withStaleFallback(cacheKey, () =>
-    withKvCache<SlateResponse>(cacheKey, SLATE_TTL_SEC, async () => {
-      const res = await fetchWithRetry(`${API_BASE}/api/public/slate?${qs.toString()}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
-      return (await res.json()) as SlateResponse;
-    }),
+  return withStaleFallback(
+    cacheKey,
+    () =>
+      withKvCache<SlateResponse>(
+        cacheKey,
+        SLATE_TTL_SEC,
+        async () => {
+          const res = await fetchWithRetry(`${API_BASE}/api/public/slate?${qs.toString()}`, {
+            cache: "no-store",
+          });
+          if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
+          return (await res.json()) as SlateResponse;
+        },
+        lkgKey ? { lkgKey } : undefined,
+      ),
+    undefined,
+    lkgKey,
   );
 }
 
