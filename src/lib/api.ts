@@ -1,6 +1,6 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
 import type { SportFilter } from "./types";
-import { withKvCache } from "./kv-cache";
+import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
   currentSlateDay,
   weekBoundsFor,
@@ -81,6 +81,63 @@ async function fetchWithRetry(
   throw lastErr;
 }
 
+// Plain fetch(), bounded. A handful of reads below skip fetchWithRetry (they
+// are single-attempt, best-effort reads that already have their own
+// try/catch-and-degrade behavior) but were still riding a bare fetch() with
+// no timeout at all, so a stalled Railway request could ride all the way to
+// the Vercel function ceiling instead of failing fast. Same AbortController
+// pattern as fetchWithRetry, just without the retry loop.
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit & { next?: { revalidate: number } } = {},
+  timeoutMs: number = 10_000,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const timeoutId = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Wrap a withKvCache() call so that when the live fetcher throws (upstream
+ * down, timed out, non-OK), we reach for the long-TTL last-known-good copy
+ * under the same key before giving up. Returns the stale copy if one
+ * exists; rethrows the original error otherwise so callers keep their
+ * existing catch/fallback behavior unchanged.
+ *
+ * This is what turns a Railway stall into "the board looks a few minutes
+ * old" instead of "Leaderboard is temporarily unavailable" for every
+ * visitor hitting a cold render during the stall.
+ */
+async function withStaleFallback<T>(
+  cacheKey: string,
+  run: () => Promise<T>,
+  // Some callers throw a sentinel error for a legitimate non-stall outcome
+  // (fetchCapperProfile's "not_found" for a real 404). Those must reach the
+  // caller as-is instead of resurrecting a stale copy, otherwise a capper
+  // who is genuinely gone would keep showing their old profile forever.
+  isStaleWorthy: (err: unknown) => boolean = () => true,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    if (!isStaleWorthy(err)) throw err;
+    const stale = await readLastKnownGood<T>(cacheKey);
+    if (stale !== null) {
+      console.warn(
+        `[kv-cache] serving last-known-good copy for key=${cacheKey} after live fetch failed: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      return stale;
+    }
+    throw err;
+  }
+}
+
 // Social scrapers (Twitterbot most of all) give a page roughly 4-5 seconds
 // TOTAL to return HTML before they give up and cache "no card" for that URL.
 // generateMetadata paths therefore must never ride out fetchWithRetry's full
@@ -157,15 +214,17 @@ export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<Lea
   if (filters.limit != null) params.set("limit", String(filters.limit));
   if (filters.sport) params.set("sport", filters.sport);
   const cacheKey = `lb:v1:${params.toString()}`;
-  return withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, async () => {
-    const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      throw new Error(`Leaderboard fetch failed: ${res.status}`);
-    }
-    return (await res.json()) as LeaderboardResponse;
-  });
+  return withStaleFallback(cacheKey, () =>
+    withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, async () => {
+      const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        throw new Error(`Leaderboard fetch failed: ${res.status}`);
+      }
+      return (await res.json()) as LeaderboardResponse;
+    }),
+  );
 }
 
 export interface LivePicksCountsResponse {
@@ -173,7 +232,7 @@ export interface LivePicksCountsResponse {
 }
 
 export async function fetchLivePicksCounts(sport: SportFilter = "mlb"): Promise<LivePicksCountsResponse> {
-  const res = await fetch(`${API_BASE}/api/public/cappers/live-picks-counts?sport=${encodeURIComponent(sport)}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/public/cappers/live-picks-counts?sport=${encodeURIComponent(sport)}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Live picks counts fetch failed: ${res.status}`);
@@ -197,13 +256,15 @@ export async function fetchSlate(
   const qs = new URLSearchParams({ date });
   if (sport !== "mlb") qs.set("sport", sport);
   if (sport === "nfl" && week != null) qs.set("week", String(week));
-  return withKvCache<SlateResponse>(cacheKey, SLATE_TTL_SEC, async () => {
-    const res = await fetchWithRetry(`${API_BASE}/api/public/slate?${qs.toString()}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
-    return (await res.json()) as SlateResponse;
-  });
+  return withStaleFallback(cacheKey, () =>
+    withKvCache<SlateResponse>(cacheKey, SLATE_TTL_SEC, async () => {
+      const res = await fetchWithRetry(`${API_BASE}/api/public/slate?${qs.toString()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`Slate fetch failed: ${res.status}`);
+      return (await res.json()) as SlateResponse;
+    }),
+  );
 }
 
 // Weekly rollup gets its own KV entry so a cold render does not fan out
@@ -463,12 +524,17 @@ export async function fetchCapperProfile(
   const qs = params.toString();
   const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}${qs ? `?${qs}` : ""}`;
   const cacheKey = `profile:v1:${handle.toLowerCase()}:${qs}`;
-  return withKvCache<CapperProfile>(cacheKey, PROFILE_TTL_SEC, async () => {
-    const res = await fetchWithRetry(url, { cache: "no-store" });
-    if (res.status === 404) throw new Error("not_found");
-    if (!res.ok) throw new Error(`Capper profile fetch failed: ${res.status}`);
-    return (await res.json()) as CapperProfile;
-  });
+  return withStaleFallback(
+    cacheKey,
+    () =>
+      withKvCache<CapperProfile>(cacheKey, PROFILE_TTL_SEC, async () => {
+        const res = await fetchWithRetry(url, { cache: "no-store" });
+        if (res.status === 404) throw new Error("not_found");
+        if (!res.ok) throw new Error(`Capper profile fetch failed: ${res.status}`);
+        return (await res.json()) as CapperProfile;
+      }),
+    (err) => !(err instanceof Error && err.message === "not_found"),
+  );
 }
 
 /** Server-only, admin surfaces. Same profile endpoint but with the cron
@@ -556,7 +622,7 @@ export interface PipelineStatusResponse {
 
 export async function fetchPipelineStatus(): Promise<PipelineStatusResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/public/pipeline-status`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/public/pipeline-status`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
@@ -583,14 +649,16 @@ export async function fetchPalaceList(
   if (opts.year) p.set("year", String(opts.year));
   if (opts.sort) p.set("sort", opts.sort);
   const cacheKey = `pp:list:v1:${p.toString()}`;
-  return withKvCache<PalaceEntry[]>(cacheKey, PALACE_TTL_SEC, async () => {
-    const res = await fetchWithRetry(
-      `${API_BASE}/api/public/parlay-palace?${p}`,
-      { cache: "no-store" });
-    if (!res.ok) throw new Error(`Palace list failed: ${res.status}`);
-    const body = (await res.json()) as { entries: PalaceEntry[] };
-    return body.entries ?? [];
-  });
+  return withStaleFallback(cacheKey, () =>
+    withKvCache<PalaceEntry[]>(cacheKey, PALACE_TTL_SEC, async () => {
+      const res = await fetchWithRetry(
+        `${API_BASE}/api/public/parlay-palace?${p}`,
+        { cache: "no-store" });
+      if (!res.ok) throw new Error(`Palace list failed: ${res.status}`);
+      const body = (await res.json()) as { entries: PalaceEntry[] };
+      return body.entries ?? [];
+    }),
+  );
 }
 
 async function fetchPalaceEntryFresh(slug: string): Promise<PalaceEntry | null> {
@@ -610,15 +678,17 @@ export async function fetchPalaceEntry(
   if (opts.fresh) return fetchPalaceEntryFresh(slug);
 
   const cacheKey = `pp:entry:v1:${slug}`;
-  return withKvCache<PalaceEntry | null>(cacheKey, PALACE_TTL_SEC, async () => {
-    const res = await fetchWithRetry(
-      `${API_BASE}/api/public/parlay-palace/${encodeURIComponent(slug)}`,
-      { cache: "no-store" });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`Palace entry failed: ${res.status}`);
-    const body = (await res.json()) as { entry: PalaceEntry };
-    return body.entry ?? null;
-  });
+  return withStaleFallback(cacheKey, () =>
+    withKvCache<PalaceEntry | null>(cacheKey, PALACE_TTL_SEC, async () => {
+      const res = await fetchWithRetry(
+        `${API_BASE}/api/public/parlay-palace/${encodeURIComponent(slug)}`,
+        { cache: "no-store" });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`Palace entry failed: ${res.status}`);
+      const body = (await res.json()) as { entry: PalaceEntry };
+      return body.entry ?? null;
+    }),
+  );
 }
 
 async function adminPalaceHeaders(): Promise<HeadersInit> {
@@ -771,7 +841,7 @@ export async function fetchTodayPicks(capperIds: number[]): Promise<TodayPicksRe
   // No data cache: my-tails is force-dynamic and this strip is exactly where
   // a just-posted pick must not lag behind a refresh (same staleness class
   // as the profile fix above; the API itself is the freshness bound here).
-  const res = await fetch(`${API_BASE}/api/public/picks/today?${qs}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/public/picks/today?${qs}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`today picks fetch failed: ${res.status}`);
@@ -803,7 +873,7 @@ export async function fetchPickOutcomes(
   }
   for (const params of requests) {
     const qs = new URLSearchParams(params as Record<string, string>);
-    const res = await fetch(`${API_BASE}/api/public/picks/outcomes?${qs}`, { cache: "no-store" });
+    const res = await fetchWithTimeout(`${API_BASE}/api/public/picks/outcomes?${qs}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`pick outcomes fetch failed: ${res.status}`);
     const body = (await res.json()) as {
       outcomes: { pick_id: number; outcome: "W" | "L" | "P" | "V"; graded_at: string | null; market_odds?: number | null }[];
