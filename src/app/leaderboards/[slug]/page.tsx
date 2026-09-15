@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = `${a.title} capper leaderboard, final`;
   const description = `Final ${a.title} standings on ${SITE_NAME}: ${a.rows.length} sharps, ${a.totals.graded.toLocaleString()} graded picks across ${a.games} games.${
     leader ? ` @${leader.handle} led at ${formatUnits2(leader.netUnits)}u (${record(leader)}).` : ""
-  } Frozen ${fmtDate(a.frozenAt)}, every pick graded from the original tweet.`;
+  } Final as of ${fmtDate(a.frozenAt)}, every pick graded from the original tweet.`;
   return {
     title: `${title} | ${SITE_NAME}`,
     description,
@@ -232,7 +232,7 @@ export default async function LeaderboardArchivePage({ params }: PageProps) {
           {a.title} <span className="text-[var(--color-text-muted)]">leaderboard</span>
         </h1>
         <p className="mt-2 text-[13px] sm:text-[14px] text-[var(--color-text-soft)]">
-          {a.rangeLabel} · every {sportLabel} game final · board frozen {fmtDate(a.frozenAt)}
+          {a.rangeLabel} · every {sportLabel} game final · standings as of {fmtDate(a.frozenAt)}
         </p>
 
         <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
@@ -291,7 +291,7 @@ export default async function LeaderboardArchivePage({ params }: PageProps) {
         <p className="mt-6 text-[12px] leading-relaxed text-[var(--color-text-muted)]">
           Each sharp&apos;s line is their {a.title} record by game date, every pick graded from the original tweet.
           Stakeless picks grade at Pinnacle market prices; picks with no recoverable price count in the record at 0
-          units (see the note above). This page does not change with later regrades; the live slate does.
+          units (see the note above). This is the final board; any later regrades show on the live slate.
         </p>
       </main>
     </div>
