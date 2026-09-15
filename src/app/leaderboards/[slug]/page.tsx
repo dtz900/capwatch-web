@@ -137,24 +137,28 @@ function Row({ r, maxAbs, zebra }: { r: ArchiveRow; maxAbs: number; zebra: boole
   return (
     <Link
       href={`/cappers/${r.handle}`}
-      className={`flex items-center gap-2 sm:gap-3 py-2 px-3 transition-colors hover:bg-[rgba(255,255,255,0.05)] ${
+      className={`flex items-center gap-1.5 sm:gap-3 py-2 px-2 sm:px-3 transition-colors hover:bg-[rgba(255,255,255,0.05)] ${
         zebra ? "bg-[rgba(255,255,255,0.015)]" : ""
       }`}
     >
-      <div className="w-8 shrink-0 text-[var(--color-text-muted)] font-bold tabular-nums text-[12px] sm:text-[13px]">
+      <div className="w-7 sm:w-8 shrink-0 text-[var(--color-text-muted)] font-bold tabular-nums text-[12px] sm:text-[13px]">
         {r.rank <= 3 ? MEDALS[r.rank - 1] : String(r.rank).padStart(2, "0")}
       </div>
-      <ArchiveAvatar url={r.avatarUrl} handle={r.handle} size={26} />
+      {/* Avatar is desktop-only: on a 375px phone the fixed columns leave
+          too little room for the handle once it is in the row. */}
+      <span className="hidden sm:inline-flex shrink-0">
+        <ArchiveAvatar url={r.avatarUrl} handle={r.handle} size={26} />
+      </span>
       <div className="min-w-0 flex-1 flex items-center gap-2">
         <span className="truncate text-[13px] font-semibold text-[var(--color-text)]">@{r.handle}</span>
         {r.displayName ? (
           <span className="hidden md:inline truncate text-[12px] text-[var(--color-text-muted)]">{r.displayName}</span>
         ) : null}
       </div>
-      <div className="shrink-0 w-[68px] sm:w-20 text-right text-[12px] sm:text-[13px] font-bold tabular-nums">
+      <div className="shrink-0 w-[60px] sm:w-20 text-right text-[11px] sm:text-[13px] font-bold tabular-nums">
         {r.wins}-{r.losses}-{r.pushes}-{r.voids}
       </div>
-      <div className="relative shrink-0 w-[92px] sm:w-[120px] h-6 flex items-center justify-end">
+      <div className="relative shrink-0 w-[72px] sm:w-[120px] h-6 flex items-center justify-end">
         <div
           aria-hidden
           className={`absolute inset-y-1 right-0 rounded-sm ${pos ? "bg-[var(--color-pos-soft)]" : "bg-[var(--color-neg-soft)]"}`}
@@ -164,7 +168,7 @@ function Row({ r, maxAbs, zebra }: { r: ArchiveRow; maxAbs: number; zebra: boole
           {formatUnits2(r.netUnits)}u
         </span>
       </div>
-      <div className="shrink-0 w-12 sm:w-14 text-right text-[11px] tabular-nums text-[var(--color-text-muted)] font-medium">
+      <div className="shrink-0 w-14 text-right text-[11px] tabular-nums text-[var(--color-text-muted)] font-medium hidden sm:block">
         {r.unpriced > 0 ? r.unpriced : "·"}
       </div>
       <div className="shrink-0 w-10 text-right text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums hidden sm:block">
@@ -246,14 +250,17 @@ export default async function LeaderboardArchivePage({ params }: PageProps) {
           <UnitsNote a={a} />
         </div>
 
-        <div className="mt-6 rounded-lg border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] overflow-hidden">
-          <div className="sticky top-0 z-10 flex items-center gap-2 sm:gap-3 px-3 py-2 border-b border-[var(--color-border)] bg-[#101014] text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
-            <div className="w-8 shrink-0">#</div>
-            <div className="w-[26px] shrink-0" />
+        {/* overflow-clip, not overflow-hidden: hidden would make this box the
+            sticky header's scroll container and the header would scroll away
+            with the table instead of pinning to the page. */}
+        <div className="mt-6 rounded-lg border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] overflow-clip">
+          <div className="sticky top-0 z-10 flex items-center gap-1.5 sm:gap-3 px-2 sm:px-3 py-2 border-b border-[var(--color-border)] bg-[#101014] text-[10px] uppercase tracking-[0.12em] sm:tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
+            <div className="w-7 sm:w-8 shrink-0">#</div>
+            <div className="hidden sm:block w-[26px] shrink-0" />
             <div className="min-w-0 flex-1">Sharp</div>
-            <div className="shrink-0 w-[68px] sm:w-20 text-right">W-L-P-V</div>
-            <div className="shrink-0 w-[92px] sm:w-[120px] text-right">Units</div>
-            <div className="shrink-0 w-12 sm:w-14 text-right whitespace-nowrap">No odds</div>
+            <div className="shrink-0 w-[60px] sm:w-20 text-right">W-L-P-V</div>
+            <div className="shrink-0 w-[72px] sm:w-[120px] text-right">Units</div>
+            <div className="shrink-0 w-14 text-right whitespace-nowrap hidden sm:block">No odds</div>
             <div className="shrink-0 w-10 text-right hidden sm:block">Picks</div>
           </div>
           <div className="flex flex-col">
