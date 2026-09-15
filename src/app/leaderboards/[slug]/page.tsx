@@ -164,7 +164,7 @@ function Row({ r, maxAbs, zebra }: { r: ArchiveRow; maxAbs: number; zebra: boole
           {formatUnits2(r.netUnits)}u
         </span>
       </div>
-      <div className="shrink-0 w-9 text-right text-[11px] tabular-nums text-[var(--color-text-muted)] font-medium">
+      <div className="shrink-0 w-12 sm:w-14 text-right text-[11px] tabular-nums text-[var(--color-text-muted)] font-medium">
         {r.unpriced > 0 ? r.unpriced : "·"}
       </div>
       <div className="shrink-0 w-10 text-right text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums hidden sm:block">
@@ -188,8 +188,8 @@ function UnitsNote({ a }: { a: LeaderboardArchive }) {
         </span>{" "}
         could not be graded for units because no odds were available: the sharp posted no price and Pinnacle listed no
         matching line. Those picks still count in the win-loss record and carry 0 units, so a sharp&apos;s units can
-        understate a good week. The <span className="font-bold text-[var(--color-text)]">0u</span> column shows how many
-        each sharp had; {affected} of {a.rows.length} sharps are affected. Everything else is graded at the posted price
+        understate a good week. The <span className="font-bold text-[var(--color-text)]">No odds</span> column shows how
+        many each sharp had; {affected} of {a.rows.length} sharps are affected. Everything else is graded at the posted price
         or at Pinnacle market prices.
       </p>
     </div>
@@ -253,7 +253,7 @@ export default async function LeaderboardArchivePage({ params }: PageProps) {
             <div className="min-w-0 flex-1">Sharp</div>
             <div className="shrink-0 w-[68px] sm:w-20 text-right">W-L-P-V</div>
             <div className="shrink-0 w-[92px] sm:w-[120px] text-right">Units</div>
-            <div className="shrink-0 w-9 text-right">0u</div>
+            <div className="shrink-0 w-12 sm:w-14 text-right whitespace-nowrap">No odds</div>
             <div className="shrink-0 w-10 text-right hidden sm:block">Picks</div>
           </div>
           <div className="flex flex-col">
