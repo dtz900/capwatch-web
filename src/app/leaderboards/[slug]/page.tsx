@@ -62,10 +62,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  const long = value.length > 8;
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
       <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">{label}</div>
-      <div className="mt-1 text-[22px] sm:text-[26px] font-black tabular-nums leading-none text-[var(--color-text)]">
+      <div
+        className={`mt-1 font-black tabular-nums leading-none text-[var(--color-text)] whitespace-nowrap ${
+          long ? "text-[18px] sm:text-[20px]" : "text-[22px] sm:text-[26px]"
+        }`}
+      >
         {value}
       </div>
       {sub ? <div className="mt-1 text-[11px] text-[var(--color-text-soft)]">{sub}</div> : null}
@@ -146,9 +151,8 @@ function Row({ r, maxAbs, zebra }: { r: ArchiveRow; maxAbs: number; zebra: boole
           <span className="hidden md:inline truncate text-[12px] text-[var(--color-text-muted)]">{r.displayName}</span>
         ) : null}
       </div>
-      <div className="shrink-0 w-14 sm:w-16 text-right text-[12px] sm:text-[13px] font-bold tabular-nums">
-        {record(r)}
-        {r.voids > 0 ? <span className="text-[var(--color-text-muted)] font-medium"> ({r.voids}v)</span> : null}
+      <div className="shrink-0 w-[68px] sm:w-20 text-right text-[12px] sm:text-[13px] font-bold tabular-nums">
+        {r.wins}-{r.losses}-{r.pushes}-{r.voids}
       </div>
       <div className="relative shrink-0 w-[92px] sm:w-[120px] h-6 flex items-center justify-end">
         <div
@@ -233,8 +237,8 @@ export default async function LeaderboardArchivePage({ params }: PageProps) {
           <StatTile label="Picks graded" value={a.totals.graded.toLocaleString()} />
           <StatTile
             label="Field record"
-            value={record(a.totals)}
-            sub={`${a.totals.voids} void${a.totals.voids === 1 ? "" : "s"}`}
+            value={`${a.totals.wins}-${a.totals.losses}-${a.totals.pushes}-${a.totals.voids}`}
+            sub="W-L-P-V"
           />
         </div>
 
@@ -247,7 +251,7 @@ export default async function LeaderboardArchivePage({ params }: PageProps) {
             <div className="w-8 shrink-0">#</div>
             <div className="w-[26px] shrink-0" />
             <div className="min-w-0 flex-1">Sharp</div>
-            <div className="shrink-0 w-14 sm:w-16 text-right">W-L</div>
+            <div className="shrink-0 w-[68px] sm:w-20 text-right">W-L-P-V</div>
             <div className="shrink-0 w-[92px] sm:w-[120px] text-right">Units</div>
             <div className="shrink-0 w-9 text-right">0u</div>
             <div className="shrink-0 w-10 text-right hidden sm:block">Picks</div>
