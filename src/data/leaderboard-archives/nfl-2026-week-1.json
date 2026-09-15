@@ -9,12 +9,12 @@
  "frozenAt": "2026-09-14",
  "games": 16,
  "totals": {
-  "graded": 1367,
+  "graded": 1366,
   "wins": 595,
-  "losses": 754,
+  "losses": 753,
   "pushes": 11,
   "voids": 7,
-  "netUnits": 6.75,
+  "netUnits": 11.41,
   "unpriced": 205
  },
  "liveHref": "/slate?sport=nfl&week=1",
@@ -47,6 +47,19 @@
   },
   {
    "rank": 3,
+   "handle": "robdfb",
+   "displayName": "Rob Donaldson",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1624902227880992768/yq8lewSU.jpg",
+   "wins": 6,
+   "losses": 3,
+   "pushes": 0,
+   "voids": 0,
+   "graded": 9,
+   "netUnits": 14.0,
+   "unpriced": 1
+  },
+  {
+   "rank": 4,
    "handle": "blizzybets",
    "displayName": "BlizzyBets🥶",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1817218503750942721/v9hzl8Fs.jpg",
@@ -59,7 +72,7 @@
    "unpriced": 1
   },
   {
-   "rank": 4,
+   "rank": 5,
    "handle": "moneyline_mav",
    "displayName": "MoneylineMav",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1979079235122737154/t6x-ggFL.jpg",
@@ -70,19 +83,6 @@
    "graded": 22,
    "netUnits": 9.96,
    "unpriced": 0
-  },
-  {
-   "rank": 5,
-   "handle": "robdfb",
-   "displayName": "Rob Donaldson",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1624902227880992768/yq8lewSU.jpg",
-   "wins": 6,
-   "losses": 4,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 10,
-   "netUnits": 9.0,
-   "unpriced": 1
   },
   {
    "rank": 6,
@@ -320,19 +320,6 @@
   },
   {
    "rank": 24,
-   "handle": "sexualslips",
-   "displayName": "sexualslips",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2097023047962144768/9X8NByXQ.jpg",
-   "wins": 5,
-   "losses": 2,
-   "pushes": 1,
-   "voids": 0,
-   "graded": 8,
-   "netUnits": 3.37,
-   "unpriced": 0
-  },
-  {
-   "rank": 25,
    "handle": "lucksociety",
    "displayName": "Luck Society",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1924158981875867648/EVDOBECM.jpg",
@@ -342,6 +329,19 @@
    "voids": 0,
    "graded": 3,
    "netUnits": 3.15,
+   "unpriced": 0
+  },
+  {
+   "rank": 25,
+   "handle": "sexualslips",
+   "displayName": "sexualslips",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2097023047962144768/9X8NByXQ.jpg",
+   "wins": 5,
+   "losses": 2,
+   "pushes": 1,
+   "voids": 0,
+   "graded": 8,
+   "netUnits": 3.03,
    "unpriced": 0
   },
   {
