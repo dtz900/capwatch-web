@@ -37,6 +37,10 @@ function fmtDate(iso: string): string {
   });
 }
 
+function shortDate(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
 function pct(n: number, d: number): string {
   return d > 0 ? `${Math.round((n / d) * 100)}%` : "0%";
 }
@@ -94,6 +98,10 @@ function ScoreBug({ a }: { a: LeaderboardArchive }) {
         <span className="flex items-center border-l border-[var(--color-border)] px-3 py-1.5 text-[var(--color-text)]">
           Week {a.week}
         </span>
+      ) : a.dateIso ? (
+        <span className="flex items-center border-l border-[var(--color-border)] px-3 py-1.5 text-[var(--color-text)]">
+          {shortDate(a.dateIso)}
+        </span>
       ) : null}
       <span className="flex items-center border-l border-[var(--color-border)] px-3 py-1.5 text-[var(--color-pos)]">
         Final
@@ -102,12 +110,15 @@ function ScoreBug({ a }: { a: LeaderboardArchive }) {
   );
 }
 
-/** Prev / next links across archived weeks of the same league and season. */
+/** Prev / next links across archived boards of the same league and season:
+ * weeks for NFL, slate days for MLB. */
 function WeekNav({ a }: { a: LeaderboardArchive }) {
-  if (a.week == null) return null;
+  const isWeek = a.week != null;
+  const sortKey = (x: LeaderboardArchive) => (isWeek ? String(x.week ?? 0).padStart(3, "0") : x.dateIso ?? "");
+  const label = (x: LeaderboardArchive) => (isWeek ? `Week ${x.week}` : shortDate(x.dateIso ?? x.frozenAt));
   const siblings = LEADERBOARD_ARCHIVES.filter(
-    (x) => x.sport === a.sport && x.season === a.season && x.week != null,
-  ).sort((x, y) => (x.week ?? 0) - (y.week ?? 0));
+    (x) => x.sport === a.sport && x.season === a.season && (isWeek ? x.week != null : x.dateIso != null),
+  ).sort((x, y) => sortKey(x).localeCompare(sortKey(y)));
   const i = siblings.findIndex((x) => x.slug === a.slug);
   const prev = i > 0 ? siblings[i - 1] : null;
   const next = i >= 0 && i < siblings.length - 1 ? siblings[i + 1] : null;
@@ -118,12 +129,12 @@ function WeekNav({ a }: { a: LeaderboardArchive }) {
     <div className="flex items-center gap-2">
       {prev ? (
         <Link href={`/leaderboards/${prev.slug}`} className={cls}>
-          ← Week {prev.week}
+          ← {label(prev)}
         </Link>
       ) : null}
       {next ? (
         <Link href={`/leaderboards/${next.slug}`} className={cls}>
-          Week {next.week} →
+          {label(next)} →
         </Link>
       ) : null}
     </div>
