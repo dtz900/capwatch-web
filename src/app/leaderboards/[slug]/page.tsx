@@ -192,8 +192,8 @@ function UnitsNote({ a }: { a: LeaderboardArchive }) {
         </span>{" "}
         could not be graded for units because no odds were available: the sharp posted no price and Pinnacle listed no
         matching line. Those picks still count in the win-loss record and carry 0 units, so a sharp&apos;s units can
-        understate a good week. The <span className="font-bold text-[var(--color-text)]">No odds</span> column shows how
-        many each sharp had; {affected} of {a.rows.length} sharps are affected. Everything else is graded at the posted price
+        understate a good week. The <span className="font-bold text-[var(--color-text)]">No odds</span> column (on
+        larger screens) shows how many each sharp had; {affected} of {a.rows.length} sharps are affected. Everything else is graded at the posted price
         or at Pinnacle market prices.
       </p>
     </div>
