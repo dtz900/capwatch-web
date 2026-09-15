@@ -97,7 +97,12 @@ function unitColor(v: number): string {
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || "today";
-  const week = url.searchParams.get("week") === "1";
+  const sport = url.searchParams.get("sport") === "nfl" ? "nfl" : "mlb";
+  // MLB: `week=1` is a flag for the Mon-Sun rollup around `date`.
+  // NFL: `week=N` is the league week number; the API serves the whole week
+  // as one slate, so no per-day summing is needed.
+  const nflWeek = sport === "nfl" ? Number(url.searchParams.get("week")) : NaN;
+  const week = sport === "nfl" ? Number.isInteger(nflWeek) && nflWeek >= 1 : url.searchParams.get("week") === "1";
 
   const fmt = (iso: string) =>
     new Date(`${iso}T12:00:00Z`)
@@ -110,7 +115,13 @@ export async function GET(request: Request): Promise<Response> {
   let sharps = 0;
   try {
     let summary: SlateCapperSummary[] = [];
-    if (week) {
+    if (sport === "nfl") {
+      const slate = await fetchSlate("today", "nfl", week ? nflWeek : undefined);
+      summary = slate.capper_summary ?? [];
+      graded = slate.day_summary?.graded_count ?? 0;
+      const n = slate.week?.week ?? (week ? nflWeek : undefined);
+      dateLabel = n != null ? `NFL WEEK ${n}` : "NFL";
+    } else if (week) {
       // The week needs a concrete slate date to anchor Mon-Sun; "today"
       // resolves through the daily fetch first.
       const anchor = date === "today" ? (await fetchSlate("today")).date : date;
@@ -199,7 +210,7 @@ export async function GET(request: Request): Promise<Response> {
         {/* Marquee */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
           <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: 5, color: OFF }}>
-            {week ? "WEEK FINAL" : "FINAL STANDINGS"} · {dateLabel}
+            {sport === "nfl" ? `${dateLabel} · FINAL` : week ? `WEEK FINAL · ${dateLabel}` : `FINAL STANDINGS · ${dateLabel}`}
           </span>
           <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: 3, color: OFF_FAINT }}>
             {graded} PICKS · {sharps} SHARPS

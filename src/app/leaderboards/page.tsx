@@ -9,7 +9,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: `Final leaderboards | ${SITE_NAME}`,
-  description: `Frozen final standings for every archived ${SITE_NAME} board. Numbers never change after the archive date.`,
+  description: `Final standings for every completed ${SITE_NAME} board, by week and by day.`,
   alternates: { canonical: "/leaderboards" },
 };
 
@@ -21,7 +21,7 @@ export default function LeaderboardsIndexPage() {
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#e3c787]">{SITE_NAME}</p>
         <h1 className="mt-2 text-2xl font-black sm:text-3xl">Final leaderboards</h1>
         <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-          Boards archived once every game in the window was final. They do not move with later regrades.
+          Final standings for every completed board. Each one links back to the live slate for that week or day.
         </p>
         <div className="mt-6 flex flex-col gap-3">
           {LEADERBOARD_ARCHIVES.map((a) => {
