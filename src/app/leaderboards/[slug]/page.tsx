@@ -16,6 +16,8 @@ import {
 
 export const dynamic = "force-static";
 
+const ARCHIVE_OG_VERSION = "1";
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -54,12 +56,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description = `Final ${a.title} standings on ${SITE_NAME}: ${a.rows.length} sharps, ${a.totals.graded.toLocaleString()} graded picks across ${a.games} games.${
     leader ? ` @${leader.handle} led at ${formatUnits2(leader.netUnits)}u (${record(leader)}).` : ""
   } Final as of ${fmtDate(a.frozenAt)}, every pick graded from the original tweet.`;
+  // Rendered from the same frozen JSON as this page (./og/route.tsx). X
+  // caches the card per page URL; bump the version on a card redesign so a
+  // re-shared link picks up the new image.
+  const ogImage = `${SITE_URL}/leaderboards/${slug}/og?v=${ARCHIVE_OG_VERSION}`;
   return {
     title: `${title} | ${SITE_NAME}`,
     description,
     alternates: { canonical: `/leaderboards/${slug}` },
-    openGraph: { title, description, url: `/leaderboards/${slug}`, type: "article", siteName: SITE_NAME },
-    twitter: { card: "summary", title, description },
+    openGraph: {
+      title,
+      description,
+      url: `/leaderboards/${slug}`,
+      type: "article",
+      siteName: SITE_NAME,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: `${a.title} final standings` }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: [ogImage] },
   };
 }
 
