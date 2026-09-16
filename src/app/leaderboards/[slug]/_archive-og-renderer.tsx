@@ -162,6 +162,9 @@ export async function renderArchiveOg(a: LeaderboardArchive): Promise<Response> 
   };
 
   const title = a.title.toUpperCase();
+  // "NFL WEEK 1" sits at 76px; an MLB span ("MLB SEP 8 TO 14") needs to
+  // shrink so the mono strip on the right keeps its room.
+  const titleSize = title.length > 12 ? 60 : 76;
   const strip = `${rows.length} SHARPS  ·  ${a.totals.graded.toLocaleString("en-US")} PICKS  ·  ${a.games} GAMES`;
 
   return new ImageResponse(
@@ -188,7 +191,7 @@ export async function renderArchiveOg(a: LeaderboardArchive): Promise<Response> 
 
         {/* Title + strip */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 6 }}>
-          <span style={{ fontSize: 76, fontWeight: 800, lineHeight: 1, letterSpacing: -3, color: OFF }}>{title}</span>
+          <span style={{ fontSize: titleSize, fontWeight: 800, lineHeight: 1, letterSpacing: -3, color: OFF }}>{title}</span>
           <span
             style={{
               fontSize: 15,
