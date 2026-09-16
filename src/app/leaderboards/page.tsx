@@ -3,13 +3,13 @@ import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import { SITE_NAME } from "@/lib/seo";
 import { formatUnits2 } from "@/lib/formatters";
-import { LEADERBOARD_ARCHIVES } from "@/lib/leaderboard-archives";
+import { LISTED_ARCHIVES } from "@/lib/leaderboard-archives";
 
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: `Final leaderboards | ${SITE_NAME}`,
-  description: `Final standings for every completed ${SITE_NAME} board, by week and by day.`,
+  description: `Final standings for every completed ${SITE_NAME} board, week by week.`,
   alternates: { canonical: "/leaderboards" },
 };
 
@@ -21,10 +21,10 @@ export default function LeaderboardsIndexPage() {
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#e3c787]">{SITE_NAME}</p>
         <h1 className="mt-2 text-2xl font-black sm:text-3xl">Final leaderboards</h1>
         <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-          Final standings for every completed board. Each one links back to the live slate for that week or day.
+          Final standings for every completed board. Each one links back to the live slate for that week.
         </p>
         <div className="mt-6 flex flex-col gap-3">
-          {LEADERBOARD_ARCHIVES.map((a) => {
+          {LISTED_ARCHIVES.map((a) => {
             const leader = a.rows[0];
             return (
               <Link

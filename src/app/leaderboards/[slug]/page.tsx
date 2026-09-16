@@ -9,6 +9,8 @@ import { SITE_NAME, SITE_URL } from "@/lib/seo";
 import { formatUnits2 } from "@/lib/formatters";
 import {
   LEADERBOARD_ARCHIVES,
+  LISTED_ARCHIVES,
+  archiveSpanLabel,
   getArchive,
   type ArchiveRow,
   type LeaderboardArchive,
@@ -107,15 +109,9 @@ function ScoreBug({ a }: { a: LeaderboardArchive }) {
     <div className="inline-flex items-stretch overflow-hidden rounded-lg border border-[var(--color-border-h)] bg-[rgba(0,0,0,0.35)] text-[11px] font-bold uppercase tracking-[0.18em]">
       <span className={`flex items-center border-r px-3 py-1.5 text-[var(--color-text)] ${chip}`}>{league}</span>
       <span className="flex items-center px-3 py-1.5 text-[var(--color-text-soft)]">{a.season} season</span>
-      {a.week != null ? (
-        <span className="flex items-center border-l border-[var(--color-border)] px-3 py-1.5 text-[var(--color-text)]">
-          Week {a.week}
-        </span>
-      ) : a.dateIso ? (
-        <span className="flex items-center border-l border-[var(--color-border)] px-3 py-1.5 text-[var(--color-text)]">
-          {shortDate(a.dateIso)}
-        </span>
-      ) : null}
+      <span className="flex items-center border-l border-[var(--color-border)] px-3 py-1.5 text-[var(--color-text)]">
+        {archiveSpanLabel(a, shortDate)}
+      </span>
       <span className="flex items-center border-l border-[var(--color-border)] px-3 py-1.5 text-[var(--color-pos)]">
         Final
       </span>
@@ -123,15 +119,16 @@ function ScoreBug({ a }: { a: LeaderboardArchive }) {
   );
 }
 
-/** Prev / next links across archived boards of the same league and season:
- * weeks for NFL, slate days for MLB. */
+/** Prev / next links across listed boards of the same league and season:
+ * league weeks for NFL, Mon-Sun weeks for MLB. The unlisted legacy day
+ * board is never a neighbour. */
 function WeekNav({ a }: { a: LeaderboardArchive }) {
-  const isWeek = a.week != null;
-  const sortKey = (x: LeaderboardArchive) => (isWeek ? String(x.week ?? 0).padStart(3, "0") : x.dateIso ?? "");
-  const label = (x: LeaderboardArchive) => (isWeek ? `Week ${x.week}` : shortDate(x.dateIso ?? x.frozenAt));
-  const siblings = LEADERBOARD_ARCHIVES.filter(
-    (x) => x.sport === a.sport && x.season === a.season && (isWeek ? x.week != null : x.dateIso != null),
-  ).sort((x, y) => sortKey(x).localeCompare(sortKey(y)));
+  const sortKey = (x: LeaderboardArchive) =>
+    x.week != null ? String(x.week).padStart(3, "0") : x.dateIso ?? "";
+  const label = (x: LeaderboardArchive) => archiveSpanLabel(x, shortDate);
+  const siblings = LISTED_ARCHIVES.filter((x) => x.sport === a.sport && x.season === a.season).sort((x, y) =>
+    sortKey(x).localeCompare(sortKey(y)),
+  );
   const i = siblings.findIndex((x) => x.slug === a.slug);
   const prev = i > 0 ? siblings[i - 1] : null;
   const next = i >= 0 && i < siblings.length - 1 ? siblings[i + 1] : null;
