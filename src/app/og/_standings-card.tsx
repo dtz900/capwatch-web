@@ -56,7 +56,7 @@ export interface StandingsCardOptions {
   cacheControl?: string;
 }
 
-async function fontData(name: string): Promise<Buffer | null> {
+export async function fontData(name: string): Promise<Buffer | null> {
   try {
     return await readFile(join(process.cwd(), "public", "fonts", name));
   } catch {
@@ -64,7 +64,7 @@ async function fontData(name: string): Promise<Buffer | null> {
   }
 }
 
-async function fileDataUri(name: string): Promise<string | null> {
+export async function fileDataUri(name: string): Promise<string | null> {
   try {
     const buf = await readFile(join(process.cwd(), "public", name));
     return `data:image/png;base64,${buf.toString("base64")}`;
@@ -73,7 +73,7 @@ async function fileDataUri(name: string): Promise<string | null> {
   }
 }
 
-async function avatarDataUri(url: string | null): Promise<string | null> {
+export async function avatarDataUri(url: string | null): Promise<string | null> {
   if (!url) return null;
   try {
     const ctrl = new AbortController();
@@ -91,7 +91,7 @@ async function avatarDataUri(url: string | null): Promise<string | null> {
   }
 }
 
-function bigAvatarUrl(url: string | null): string | null {
+export function bigAvatarUrl(url: string | null): string | null {
   if (!url) return null;
   return url.replace("_normal.", "_400x400.");
 }

@@ -16,7 +16,7 @@ import {
 
 export const dynamic = "force-static";
 
-const ARCHIVE_OG_VERSION = "1";
+const ARCHIVE_OG_VERSION = "2"; // 2: podium record with the league wash (was the standings poster)
 
 interface PageProps {
   params: Promise<{ slug: string }>;
