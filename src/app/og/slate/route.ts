@@ -35,5 +35,8 @@ export async function GET(request: Request): Promise<Response> {
   const sport = url.searchParams.get("sport") === "nfl" ? "nfl" : "mlb";
   const rawWeek = Number(url.searchParams.get("week"));
   const week = sport === "nfl" && Number.isInteger(rawWeek) && rawWeek >= 1 && rawWeek <= 22 ? rawWeek : undefined;
-  return renderSlateOg({ dateParam, gameSlug, scale, sport, week });
+  // photos=headshot swaps the NFL player tiles from editorial action photos
+  // to ESPN cutouts (poster escape hatch when the editorial pick misses).
+  const photos = url.searchParams.get("photos") === "headshot" ? "headshot" : "action";
+  return renderSlateOg({ dateParam, gameSlug, scale, sport, week, photos });
 }

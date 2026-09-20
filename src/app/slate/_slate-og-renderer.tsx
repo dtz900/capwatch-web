@@ -10,6 +10,8 @@ import { teamColor, teamLogoUrl } from "@/lib/teams";
 import type { Sport } from "@/lib/types";
 import type { SlateGame, SlatePick } from "@/lib/types";
 import { feedsConsensusOdds, medianInt } from "@/lib/slate-consensus";
+import { topBackedPlayers, type BackedPlayer } from "@/lib/slate-players";
+import { espnHeadshotUrl, espnResizedUrl, fetchActionPhotoUrl } from "@/lib/espn-player-photo";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
 // a 2x canvas made the cold render heavier (Twitterbot timed out and cached a
@@ -53,6 +55,14 @@ interface MarqueeSide {
   medianOdds: number | null;
 }
 
+// A most-backed player with his photo resolved to a data URI. "action" is an
+// ESPN editorial photo tightly tagged to him, "headshot" the transparent
+// cutout every athlete id has, "none" when both fetches failed.
+interface PlayerTile extends BackedPlayer {
+  photoDataUri: string | null;
+  photoKind: "action" | "headshot" | "none";
+}
+
 interface MarqueeBlock {
   sport: Sport;
   awayTeam: string | null;
@@ -67,6 +77,10 @@ interface MarqueeBlock {
   featuredLabel: string;
   away: MarqueeSide;
   home: MarqueeSide;
+  /** NFL only: the props hero. Empty => the moneyline scoreboard renders. */
+  players: PlayerTile[];
+  /** Rows carrying a player (props), for the stage's tally line. */
+  propCount: number;
 }
 
 interface RenderInputs {
@@ -177,6 +191,41 @@ async function fetchTeamLogosForGame(
     fetchRemoteImageAsDataUri(teamLogoUrl(homeTeam, sport)),
   ]);
   return { away, home };
+}
+
+// Action photos come through ESPN's combiner at 16:9 card size (~20KB) so the
+// crawler-path render stays light; the tile crops with object-fit: cover.
+const TILE_PHOTO_W = 704;
+const TILE_PHOTO_H = 396;
+
+function lastNameOf(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts.length > 1 ? parts[parts.length - 1] : (parts[0] ?? "");
+}
+
+export type PhotoMode = "action" | "headshot";
+
+async function fetchPlayerTile(player: BackedPlayer, mode: PhotoMode): Promise<PlayerTile> {
+  if (mode === "action") {
+    const action = await fetchActionPhotoUrl(player.playerId, lastNameOf(player.name));
+    const actionUri = action
+      ? await fetchRemoteImageAsDataUri(espnResizedUrl(action, TILE_PHOTO_W, TILE_PHOTO_H))
+      : null;
+    if (actionUri) return { ...player, photoDataUri: actionUri, photoKind: "action" };
+  }
+  const headshotUri = await fetchRemoteImageAsDataUri(espnHeadshotUrl(player.playerId));
+  return { ...player, photoDataUri: headshotUri, photoKind: headshotUri ? "headshot" : "none" };
+}
+
+// NFL games lead with their most-backed players (props are 50-80% of an NFL
+// game's picks). MLB keeps the moneyline scoreboard. The three tiles fetch in
+// parallel; each is overview JSON + one image, ~0.6s cold. mode=headshot
+// skips the editorial lookup: an article tightly tagged to a player is
+// usually game action but not always (Kelce's top hit on 2026-09-19 was a
+// story about his dog), so the poster can flip a game to cutouts.
+async function fetchPlayerTiles(game: SlateGame, mode: PhotoMode): Promise<PlayerTile[]> {
+  if ((game.sport ?? "MLB") !== "NFL") return [];
+  return Promise.all(topBackedPlayers(game.picks, 3).map((p) => fetchPlayerTile(p, mode)));
 }
 
 function shortPitcher(name: string | null): string | null {
@@ -299,6 +348,7 @@ function buildMarqueeBlock(
   awayLogoDataUri: string | null,
   homeLogoDataUri: string | null,
   featuredLabel: string,
+  players: PlayerTile[] = [],
 ): MarqueeBlock {
   const awayHandles: string[] = [];
   const homeHandles: string[] = [];
@@ -336,6 +386,8 @@ function buildMarqueeBlock(
     featuredLabel,
     away: { team: game.away_team, count: awayCount, handles: awayHandles, medianOdds: medianInt(awayOdds) },
     home: { team: game.home_team, count: homeCount, handles: homeHandles, medianOdds: medianInt(homeOdds) },
+    players,
+    propCount: game.picks.filter((p) => p.player_id != null).length,
   };
 }
 
@@ -356,6 +408,8 @@ export interface RenderSlateOpts {
   // dimension declaration, so 2x there is safe, and X's in-feed recompression
   // is what made the 1200px upload look fuzzy.
   scale?: 1 | 2;
+  /** NFL only: editorial action photos (default) or ESPN headshot cutouts. */
+  photos?: PhotoMode;
 }
 
 // Supersample by rendering satori's SVG at the 1x logical layout and letting
@@ -398,11 +452,14 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   const requestedGame = resolveRequestedGame(games, opts.gameSlug);
   const featuredGame = requestedGame ?? pickMarqueeGame(games);
   const featuredLabel = requestedGame ? "Featured game" : "Most-bet game";
-  const teamLogos = featuredGame
-    ? await fetchTeamLogosForGame(featuredGame.away_team, featuredGame.home_team, featuredGame.sport ?? "MLB")
-    : { away: null, home: null };
+  const [teamLogos, playerTiles] = featuredGame
+    ? await Promise.all([
+        fetchTeamLogosForGame(featuredGame.away_team, featuredGame.home_team, featuredGame.sport ?? "MLB"),
+        fetchPlayerTiles(featuredGame, opts.photos === "headshot" ? "headshot" : "action"),
+      ])
+    : [{ away: null, home: null }, [] as PlayerTile[]];
   const marquee = featuredGame
-    ? buildMarqueeBlock(featuredGame, teamLogos.away, teamLogos.home, featuredLabel)
+    ? buildMarqueeBlock(featuredGame, teamLogos.away, teamLogos.home, featuredLabel, playerTiles)
     : null;
 
   const inputs: RenderInputs = {
@@ -434,7 +491,8 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   // and heal on the next request.
   const degraded =
     slateResult.status !== "fulfilled" ||
-    (featuredGame != null && (teamLogos.away == null || teamLogos.home == null));
+    (featuredGame != null && (teamLogos.away == null || teamLogos.home == null)) ||
+    playerTiles.some((t) => t.photoKind === "none");
   const cacheControl = degraded ? FALLBACK_CACHE : PRIMARY_CACHE;
 
   try {
@@ -745,7 +803,9 @@ function buildJsx(inputs: RenderInputs) {
           </div>
         </div>
 
-        {marquee ? (
+        {marquee && marquee.players.length > 0 ? (
+          <PlayersStage marquee={marquee} awayC={awayC} homeC={homeC} />
+        ) : marquee ? (
           <Scoreboard marquee={marquee} awayC={awayC} homeC={homeC} />
         ) : (
           <div
@@ -972,6 +1032,254 @@ function Scoreboard({
 
       {/* Slack lands below the bar, inside X's caption scrim band. */}
       <div style={{ display: "flex", flex: 1 }} />
+    </div>
+  );
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s;
+}
+
+function handlesLine(p: PlayerTile): string {
+  const visible = p.handles.slice(0, 2).map((h) => `@${h}`);
+  const extra = Math.max(0, p.sharps - visible.length);
+  if (visible.length === 0) return extra > 0 ? `${extra} ${extra === 1 ? "sharp" : "sharps"}` : "";
+  return extra > 0 ? `${visible.join(", ")} +${extra}` : visible.join(", ");
+}
+
+// NFL stage: compact matchup strip, then three photo tiles for the
+// most-backed players. Everything sits in the top ~470px; the flex spacer
+// below keeps the tiles clear of X's in-feed caption scrim.
+function PlayersStage({
+  marquee,
+  awayC,
+  homeC,
+}: {
+  marquee: MarqueeBlock;
+  awayC: string;
+  homeC: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: px(18),
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: px(12) }}>
+          <TeamLogo src={marquee.awayLogoDataUri} size={44} />
+          <div style={{ fontSize: px(34), fontWeight: 800, letterSpacing: px(2), color: awayC, display: "flex" }}>
+            {marquee.awayTeam ?? "?"}
+          </div>
+          <div
+            style={{
+              fontSize: px(22),
+              fontWeight: 700,
+              color: OFF_FAINT,
+              display: "flex",
+              margin: `0 ${px(6)}px`,
+            }}
+          >
+            @
+          </div>
+          <TeamLogo src={marquee.homeLogoDataUri} size={44} />
+          <div style={{ fontSize: px(34), fontWeight: 800, letterSpacing: px(2), color: homeC, display: "flex" }}>
+            {marquee.homeTeam ?? "?"}
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: px(4),
+            fontFamily: MONO,
+            textTransform: "uppercase",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontWeight: 700,
+              fontSize: px(11),
+              letterSpacing: px(3),
+              color: "rgba(247, 243, 233, 0.50)",
+            }}
+          >
+            {marquee.featuredLabel}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontWeight: 500,
+              fontSize: px(12),
+              letterSpacing: px(2),
+              color: OFF_DIM,
+            }}
+          >
+            {marquee.propCount} player {marquee.propCount === 1 ? "prop" : "props"} · {marquee.sharpCount}{" "}
+            {marquee.sharpCount === 1 ? "sharp" : "sharps"}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: px(12), marginTop: px(16) }}>
+        <div
+          style={{
+            display: "flex",
+            fontFamily: MONO,
+            fontWeight: 700,
+            fontSize: px(12),
+            letterSpacing: px(3.2),
+            textTransform: "uppercase",
+            color: "rgba(247, 243, 233, 0.55)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Most-backed players
+        </div>
+        <div style={{ flex: 1, height: px(1), background: HAIR, display: "flex" }} />
+      </div>
+
+      <div style={{ display: "flex", gap: px(16), marginTop: px(12) }}>
+        {marquee.players.map((p) => (
+          <PlayerCard key={p.playerId} player={p} />
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flex: 1 }} />
+    </div>
+  );
+}
+
+function PlayerCard({ player }: { player: PlayerTile }) {
+  const isAction = player.photoKind === "action";
+  return (
+    <div
+      style={{
+        flex: 1,
+        height: px(300),
+        borderRadius: px(18),
+        overflow: "hidden",
+        position: "relative",
+        display: "flex",
+        border: `${px(1)}px solid ${HAIR}`,
+        background: PANEL_BG,
+      }}
+    >
+      {player.photoDataUri ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={player.photoDataUri}
+          alt=""
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: isAction ? "cover" : "contain",
+          }}
+        />
+      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          backgroundImage:
+            "linear-gradient(180deg, rgba(10,10,12,0) 28%, rgba(10,10,12,0.72) 60%, rgba(10,10,12,0.96) 100%)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: px(18),
+          right: px(18),
+          bottom: px(16),
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", gap: px(8) }}>
+          <div
+            style={{
+              fontSize: px(64),
+              fontWeight: 800,
+              lineHeight: 1,
+              letterSpacing: px(-2),
+              color: OFF,
+              display: "flex",
+            }}
+          >
+            {player.sharps}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontFamily: MONO,
+              fontWeight: 700,
+              fontSize: px(12),
+              letterSpacing: px(2.6),
+              textTransform: "uppercase",
+              color: "rgba(247, 243, 233, 0.72)",
+            }}
+          >
+            {player.sharps === 1 ? "sharp" : "sharps"}
+          </div>
+        </div>
+        <div
+          style={{
+            fontSize: px(24),
+            fontWeight: 800,
+            letterSpacing: px(-0.5),
+            color: OFF,
+            marginTop: px(6),
+            display: "flex",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        >
+          {truncate(player.name, 22)}
+        </div>
+        {player.lean ? (
+          <div
+            style={{
+              display: "flex",
+              fontFamily: MONO,
+              fontWeight: 500,
+              fontSize: px(13),
+              color: "rgba(247, 243, 233, 0.72)",
+              marginTop: px(6),
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+            }}
+          >
+            {truncate(player.lean, 34)}
+          </div>
+        ) : null}
+        <div
+          style={{
+            display: "flex",
+            fontFamily: MONO,
+            fontWeight: 500,
+            fontSize: px(11),
+            letterSpacing: px(0.5),
+            color: "rgba(247, 243, 233, 0.45)",
+            marginTop: px(6),
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        >
+          {handlesLine(player)}
+        </div>
+      </div>
     </div>
   );
 }

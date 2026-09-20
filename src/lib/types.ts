@@ -119,6 +119,10 @@ export interface SlatePick {
   market: string | null;
   selection: string | null;
   line: number | null;
+  /** Parse-time roster identity (ESPN athlete id for NFL, MLBAM for MLB);
+   * null for team and game bets. Optional: payloads before 2026-09-19 omit it. */
+  player_id?: number | null;
+  player_name?: string | null;
   odds_taken: number | null;
   stake_units: number;
   posted_at: string | null;
