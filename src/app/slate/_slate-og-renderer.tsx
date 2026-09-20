@@ -249,11 +249,18 @@ function formatGameTime(iso: string | null): string | null {
   }
 }
 
-function pickMarqueeGame(games: SlateGame[]): SlateGame | null {
+// Most-bet game, preferring games that have not started. The NFL slate is a
+// whole week, so by Saturday the most-bet game was Thursday's (DET@BUF, 428
+// picks, final) and the un-parameterized card X cached for
+// tailslips.com/slate?sport=nfl showed a finished game all weekend
+// (2026-09-20). Live games rank behind scheduled ones, final games last.
+export function pickMarqueeGame(games: SlateGame[]): SlateGame | null {
+  const rank = (g: SlateGame): number =>
+    g.game_state === "scheduled" ? 0 : g.game_state === "in_progress" ? 1 : 2;
   let best: SlateGame | null = null;
   for (const g of games) {
     if (g.picks.length === 0) continue;
-    if (!best || g.picks.length > best.picks.length) best = g;
+    if (!best || rank(g) < rank(best) || (rank(g) === rank(best) && g.picks.length > best.picks.length)) best = g;
   }
   return best;
 }
