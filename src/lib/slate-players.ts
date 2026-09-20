@@ -20,7 +20,8 @@ export interface BackedPlayer {
   legs: number;
   /** Named handles, first-seen order; suppressed handles counted, not listed. */
   handles: string[];
-  /** Most common bet label, "x2" when repeated; null when no row parses. */
+  /** Most common bet, e.g. "2 of 3 on Anytime TD"; the label alone when one
+   * capper holds it; null when no row parses. */
   lean: string | null;
 }
 
@@ -34,7 +35,7 @@ interface Bucket {
   cappers: Set<number>;
   legs: number;
   handles: string[];
-  labels: Map<string, { label: string; n: number }>;
+  labels: Map<string, { label: string; cappers: Set<number> }>;
 }
 
 export function topBackedPlayers(picks: readonly PlayerRow[], n = 3): BackedPlayer[] {
@@ -57,26 +58,37 @@ export function topBackedPlayers(picks: readonly PlayerRow[], n = 3): BackedPlay
     if (label) {
       const key = label.toLowerCase();
       const cur = e.labels.get(key);
-      if (cur) cur.n += 1;
-      else e.labels.set(key, { label, n: 1 });
+      if (cur) cur.cappers.add(p.capper_id);
+      else e.labels.set(key, { label, cappers: new Set([p.capper_id]) });
     }
   }
   return [...byPlayer.entries()]
     .map(([playerId, e]) => {
-      let top: { label: string; n: number } | null = null;
-      for (const l of e.labels.values()) if (!top || l.n > top.n) top = l;
+      let top: { label: string; cappers: Set<number> } | null = null;
+      for (const l of e.labels.values()) if (!top || l.cappers.size > top.cappers.size) top = l;
+      const sharps = e.cappers.size;
       return {
         playerId,
         name: e.name,
-        sharps: e.cappers.size,
+        sharps,
         legs: e.legs,
         handles: e.handles,
-        lean: top ? (top.n > 1 ? `${top.label} x${top.n}` : top.label) : null,
+        lean: top ? leanLabel(top.label, top.cappers.size, sharps) : null,
       };
     })
     // Ties break on name so the card is stable between renders.
     .sort((a, b) => b.sharps - a.sharps || b.legs - a.legs || a.name.localeCompare(b.name))
     .slice(0, n);
+}
+
+// Counted by distinct cappers, and stated against the tile's sharp count so
+// it cannot be misread: "Anytime TD x2" read as two touchdowns, and the "x2"
+// next to three listed handles raised "why 2 when 3 are on him" (David,
+// 2026-09-19). The other sharps hold different props on the same player.
+function leanLabel(label: string, on: number, sharps: number): string {
+  if (on <= 1) return label;
+  if (on === sharps) return `all ${on} on ${label}`;
+  return `${on} of ${sharps} on ${label}`;
 }
 
 const POSITION_TAGS = /^(QB|RB|WR|TE|K|DST|D\/ST)\b\s*/i;

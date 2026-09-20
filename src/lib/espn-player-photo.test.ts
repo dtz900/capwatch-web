@@ -3,6 +3,7 @@ import { espnHeadshotUrl, espnResizedUrl, pickActionPhoto, type EspnOverview } f
 
 const img = (url: string, width = 1296) => ({ url, width, height: Math.round((width * 9) / 16) });
 const ath = (...ids: number[]) => ids.map((athleteId) => ({ type: "athlete", athleteId }));
+const league = (...names: string[]) => names.map((description) => ({ type: "league", description }));
 
 // Shape of site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/{id}/overview
 const MAHOMES = 3139477;
@@ -42,11 +43,49 @@ describe("pickActionPhoto", () => {
     );
   });
 
-  it("falls to a 2-3 tag article with the name, newest first, ESPN CDN only", () => {
+  it("falls to a 2-3 tag article with the name, ESPN CDN only", () => {
     const solo = { ...OVERVIEW, news: OVERVIEW.news!.filter((a) => a.categories!.length !== 1) };
     // The two-tag Maye/Mahomes article is on a non-ESPN host, so it is skipped;
     // nothing else qualifies (the rest tag 4+ athletes).
     expect(pickActionPhoto(solo, MAHOMES, "Mahomes")).toBeNull();
+  });
+
+  it("ranks a named 3-tag beat story above an unnamed solo tag", () => {
+    const daniels = 4426348;
+    const o: EspnOverview = {
+      news: [
+        {
+          headline: "2026 Washington Commanders: Projecting final 53-man roster",
+          published: "2026-08-24T12:00Z",
+          categories: [...league("NFL"), ...ath(daniels)],
+          images: [img("https://a.espncdn.com/photo/2026/0819/r1704062_608x342_16-9.jpg", 608)],
+        },
+        {
+          headline: "Why Commanders are believing in a Jayden Daniels rebound",
+          published: "2026-09-12T12:00Z",
+          categories: [...league("NFL"), ...ath(daniels, 1, 2)],
+          images: [img("https://a.espncdn.com/photo/2026/0804/r1697569_608x342_16-9.jpg", 608)],
+        },
+      ],
+    };
+    expect(pickActionPhoto(o, daniels, "Daniels")).toBe(
+      "https://a.espncdn.com/photo/2026/0804/r1697569_608x342_16-9.jpg",
+    );
+  });
+
+  it("skips an article tagged to another league even when it is solo and named", () => {
+    const daniels = 4426348;
+    const o: EspnOverview = {
+      news: [
+        {
+          headline: "Mets troll Jayden Daniels over LSU NIL dispute",
+          published: "2026-08-16T12:00Z",
+          categories: [...league("MLB", "NFL", "NCAA Football"), ...ath(daniels)],
+          images: [img("https://a.espncdn.com/photo/2026/0815/r1702259_1296x729_16-9.jpg")],
+        },
+      ],
+    };
+    expect(pickActionPhoto(o, daniels, "Daniels")).toBeNull();
   });
 
   it("never returns a crowd article even when the player is tagged", () => {
