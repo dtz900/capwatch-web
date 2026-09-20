@@ -582,6 +582,9 @@ export async function buildSlateOgFingerprint(
         time: g.game_time,
         awaySp: g.away_starter,
         homeSp: g.home_starter,
+        // The marquee fallback ranks by game_state, so a scheduled -> live
+        // flip with unchanged picks must mint a new URL too (Codex, #134).
+        state: g.game_state,
         picks: g.picks.map((p) => [
           p.capper_id,
           p.handle,
