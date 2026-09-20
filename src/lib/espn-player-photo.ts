@@ -14,7 +14,7 @@
 export interface EspnArticle {
   headline?: string;
   published?: string;
-  categories?: Array<{ type?: string; athleteId?: number }>;
+  categories?: Array<{ type?: string; athleteId?: number; description?: string }>;
   images?: Array<{ url?: string; width?: number; height?: number }>;
 }
 
@@ -23,7 +23,9 @@ export interface EspnOverview {
 }
 
 const ESPN_CDN = "https://a.espncdn.com";
-const MIN_WIDTH = 1000;
+// Team beat stories mostly ship a 608x342 hero; the tile is 354px wide at
+// 1x and the combiner upsamples cleanly enough for 2x.
+const MIN_WIDTH = 600;
 
 export function espnOverviewUrl(playerId: number): string {
   return `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${playerId}/overview`;
@@ -42,19 +44,30 @@ export function espnResizedUrl(url: string, w: number, h: number): string | null
 
 /**
  * Tier 0: the player is the only tagged athlete and the headline names him.
- * Tier 1: only tagged athlete. Tier 2: one of at most three, headline names
- * him. Anything looser is a crowd piece and is skipped. Newest wins a tier.
+ * Tier 1: one of at most three tagged athletes, headline names him. Tier 2:
+ * only tagged athlete, headline does not name him. Anything looser is a
+ * crowd piece and is skipped. A headline naming the player is the stronger
+ * signal that the hero image shows him; a bare solo tag on a roster
+ * projection can be anyone. Newest wins a tier.
+ *
+ * Articles carrying a non-NFL league tag are skipped outright: "Mets troll
+ * Jayden Daniels over LSU NIL dispute" was solo-tagged, named him, and ran
+ * a photo of two Mets (2026-09-19 WSH@DAL card).
  */
 export function pickActionPhoto(overview: EspnOverview, playerId: number, lastName: string): string | null {
   const last = lastName.trim().toLowerCase();
   const ranked: Array<{ tier: number; published: string; url: string }> = [];
   for (const a of overview.news ?? []) {
-    const tags = (a.categories ?? []).filter((c) => c?.type === "athlete").map((c) => c.athleteId);
+    const cats = a.categories ?? [];
+    const tags = cats.filter((c) => c?.type === "athlete").map((c) => c.athleteId);
     if (!tags.includes(playerId)) continue;
+    const leagues = cats.filter((c) => c?.type === "league").map((c) => (c.description ?? "").toLowerCase());
+    if (leagues.some((l) => !l.includes("nfl"))) continue;
     const named = last.length > 0 && (a.headline ?? "").toLowerCase().includes(last);
     let tier: number;
-    if (tags.length === 1) tier = named ? 0 : 1;
-    else if (tags.length <= 3 && named) tier = 2;
+    if (tags.length === 1 && named) tier = 0;
+    else if (tags.length <= 3 && named) tier = 1;
+    else if (tags.length === 1) tier = 2;
     else continue;
     const image = (a.images ?? []).find(
       (i) => typeof i?.url === "string" && i.url.startsWith(`${ESPN_CDN}/`) && (i.width ?? 0) >= MIN_WIDTH,

@@ -53,10 +53,20 @@ describe("topBackedPlayers", () => {
     expect(mahomes.sharps).toBe(3);
   });
 
-  it("leans on the most common bet label with a repeat count", () => {
+  it("states the lean as distinct cappers against the tile's sharp count", () => {
     const [mahomes, taylor] = topBackedPlayers(PICKS, 2);
-    expect(mahomes.lean).toBe("Under 224.5 Passing Yards x2");
-    expect(taylor.lean).toBe("Anytime TD x2");
+    expect(mahomes.lean).toBe("2 of 3 on Under 224.5 Passing Yards");
+    // Taylor's two Anytime TD rows are one capper (straight + parlay leg), so
+    // no count is claimed.
+    expect(taylor.lean).toBe("Anytime TD");
+  });
+
+  it("says 'all N' when every sharp on the player holds the same bet", () => {
+    const rows = [
+      row({ capper_id: 1, handle: "a", player_id: 9, player_name: "CeeDee Lamb", selection: "CeeDee Lamb Anytime TD" }),
+      row({ capper_id: 2, handle: "b", player_id: 9, player_name: "CeeDee Lamb", selection: "CeeDee Lamb Any Time Touchdown Scorer" }),
+    ];
+    expect(topBackedPlayers(rows, 1)[0].lean).toBe("all 2 on Anytime TD");
   });
 
   it("ignores rows without a player and returns [] for an all-sides game", () => {

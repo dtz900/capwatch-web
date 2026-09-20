@@ -1261,7 +1261,7 @@ function PlayerCard({ player }: { player: PlayerTile }) {
               overflow: "hidden",
             }}
           >
-            {truncate(player.lean, 34)}
+            {truncate(player.lean, 42)}
           </div>
         ) : null}
         <div
