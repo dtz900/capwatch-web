@@ -58,6 +58,11 @@ export default async function CappersIndexPage() {
       bet_type: "all",
       min_picks: 0,
       active_only: false,
+      // sport=all: the directory is the roster, not an MLB board. Without it
+      // the backend defaults to mlb and any capper with no MLB record
+      // (NFL-only onboarding: milesparkerbets, thejoeholkashow, lappylocks
+      // on 2026-09-20) is missing from the directory entirely.
+      sport: "all",
       // limit=500: the directory lists every tracked capper, not the top 100.
       limit: 500,
     });
