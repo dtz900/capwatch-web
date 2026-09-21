@@ -12,6 +12,7 @@
 import nfl_2026_week_1 from "@/data/leaderboard-archives/nfl-2026-week-1.json";
 import mlb_2026_09_14 from "@/data/leaderboard-archives/mlb-2026-09-14.json";
 import mlb_2026_week_of_sep_7 from "@/data/leaderboard-archives/mlb-2026-week-of-sep-7.json";
+import mlb_2026_week_of_sep_14 from "@/data/leaderboard-archives/mlb-2026-week-of-sep-14.json";
 
 export interface ArchiveRow {
   rank: number;
@@ -67,6 +68,7 @@ export interface LeaderboardArchive {
 export const LEADERBOARD_ARCHIVES: LeaderboardArchive[] = [
   nfl_2026_week_1 as LeaderboardArchive,
   mlb_2026_week_of_sep_7 as LeaderboardArchive,
+  mlb_2026_week_of_sep_14 as LeaderboardArchive,
   mlb_2026_09_14 as LeaderboardArchive,
 ];
 
