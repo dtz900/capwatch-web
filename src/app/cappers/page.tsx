@@ -21,21 +21,21 @@ import {
 import type { CapperRow } from "@/lib/types";
 
 export const metadata = {
-  title: "MLB Cappers · Verified Records & Leaderboard",
+  title: "Cappers · Verified Records & Leaderboard",
   description:
-    "Track every MLB Twitter capper's verified record, units profit, ROI, and full graded pick history. A daily-updated ledger of public picks, win or lose.",
+    "Track every MLB and NFL Twitter capper's verified record, units profit, ROI, and full graded pick history. A daily-updated ledger of public picks, win or lose.",
   alternates: { canonical: "/cappers" },
   openGraph: {
-    title: "MLB Cappers · Verified Records & Leaderboard · TailSlips",
+    title: "Cappers · Verified Records & Leaderboard · TailSlips",
     description:
-      "Track every MLB Twitter capper's verified record, units, ROI, and full graded pick history on TailSlips. A daily-updated ledger of public picks.",
+      "Track every MLB and NFL Twitter capper's verified record, units, ROI, and full graded pick history on TailSlips. A daily-updated ledger of public picks.",
     url: "/cappers",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MLB Cappers · Verified Records & Leaderboard · TailSlips",
-    description: "Every tracked MLB Twitter capper, with verified records and full graded pick history.",
+    title: "Cappers · Verified Records & Leaderboard · TailSlips",
+    description: "Every tracked MLB and NFL Twitter capper, with verified records and full graded pick history.",
   },
 };
 
@@ -58,6 +58,11 @@ export default async function CappersIndexPage() {
       bet_type: "all",
       min_picks: 0,
       active_only: false,
+      // sport=all: the directory is the roster, not an MLB board. Without it
+      // the backend defaults to mlb and any capper with no MLB record
+      // (NFL-only onboarding: milesparkerbets, thejoeholkashow, lappylocks
+      // on 2026-09-20) is missing from the directory entirely.
+      sport: "all",
       // limit=500: the directory lists every tracked capper, not the top 100.
       limit: 500,
     });
@@ -104,7 +109,7 @@ export default async function CappersIndexPage() {
       <TopNav />
       {/* Provider gives directory rows the same 30s live-pick polling as the
           homepage; without it the indicator froze at the SSR value (Codex #68). */}
-      <LivePicksProvider initial={liveInitial}>
+      <LivePicksProvider initial={liveInitial} sport="all">
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
         <header className="pt-12 pb-8">
           <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2.5">
