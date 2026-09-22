@@ -59,4 +59,18 @@ describe("AvatarMenu", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("shows the username instead of the email once claimed", () => {
+    mockAuth.current = {
+      session: { user: { id: "u1", email: "d@x.com" } },
+      profile: { tier: "free", username: "dt_fades", username_changed_at: null },
+      entitlements: { isLoggedIn: true, isVip: false },
+      signOut: vi.fn(),
+    };
+    render(<AvatarMenu />);
+    expect(screen.getByRole("button", { name: /account menu/i })).toHaveTextContent("D");
+    fireEvent.click(screen.getByRole("button", { name: /account menu/i }));
+    expect(screen.getByText("@dt_fades")).toBeInTheDocument();
+    expect(screen.queryByText("d@x.com")).not.toBeInTheDocument();
+  });
 });
