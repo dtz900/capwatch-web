@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
+import { tofEnabled } from "@/lib/flags";
 
 describe("vipEnabled", () => {
   beforeEach(() => vi.resetModules());
@@ -14,5 +15,18 @@ describe("vipEnabled", () => {
     vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true");
     const { vipEnabled } = await import("@/lib/flags");
     expect(vipEnabled()).toBe(true);
+  });
+});
+
+describe("tofEnabled", () => {
+  it("is off by default and requires the accounts flag too", () => {
+    vi.stubEnv("NEXT_PUBLIC_TOF_ENABLED", "true");
+    vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "false");
+    expect(tofEnabled()).toBe(false);
+    vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true");
+    expect(tofEnabled()).toBe(true);
+    vi.stubEnv("NEXT_PUBLIC_TOF_ENABLED", "false");
+    expect(tofEnabled()).toBe(false);
+    vi.unstubAllEnvs();
   });
 });
