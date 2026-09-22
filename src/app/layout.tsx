@@ -3,6 +3,7 @@ import { Manrope, Cinzel } from "next/font/google";
 import { Suspense } from "react";
 import { AnalyticsWithExclusion } from "@/components/analytics/AnalyticsWithExclusion";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { UsernameClaimProvider } from "@/components/auth/UsernameClaim";
 import { BrandFooter } from "@/components/nav/BrandFooter";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { PipelineStaleBanner } from "@/components/nav/PipelineStaleBanner";
@@ -81,13 +82,15 @@ export default function RootLayout({
     <html lang="en" className={`${manrope.variable} ${cinzel.variable}`}>
       <body>
         <AuthProvider>
-          <Suspense fallback={null}>
-            <PipelineStaleBanner />
-          </Suspense>
-          {children}
-          <BrandFooter />
-          <MobileTabBar />
-          <AnalyticsWithExclusion />
+          <UsernameClaimProvider>
+            <Suspense fallback={null}>
+              <PipelineStaleBanner />
+            </Suspense>
+            {children}
+            <BrandFooter />
+            <MobileTabBar />
+            <AnalyticsWithExclusion />
+          </UsernameClaimProvider>
         </AuthProvider>
       </body>
     </html>

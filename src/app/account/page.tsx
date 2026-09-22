@@ -4,8 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { EmailAlertsToggle } from "@/components/account/EmailAlertsToggle";
-import { vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { tofEnabled, vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchPickOutcomes } from "@/lib/api";
 import { slipProfit } from "@/lib/betslip";
@@ -62,7 +63,8 @@ function Stat({
 }
 
 export default function AccountPage() {
-  const { entitlements, session, signOut } = useAuth();
+  const { entitlements, session, profile, signOut } = useAuth();
+  const { requireUsername, openChange } = useUsernameClaim();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tails, setTails] = useState<TailSummary | null>(null);
@@ -200,11 +202,25 @@ export default function AccountPage() {
               {email.slice(0, 1) || "?"}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-[15px] font-bold text-[var(--color-text)]">{email}</div>
+              <div className="truncate text-[15px] font-bold text-[var(--color-text)]">
+                {profile?.username ? `@${profile.username}` : email}
+              </div>
+              {profile?.username && (
+                <div className="truncate text-xs text-[var(--color-text-muted)]">{email}</div>
+              )}
               {since && (
                 <div className="mt-0.5 text-xs text-[var(--color-text-muted)]">
                   Member since {since}
                 </div>
+              )}
+              {tofEnabled() && (
+                <button
+                  type="button"
+                  onClick={() => (profile?.username ? openChange() : void requireUsername())}
+                  className="mt-2 text-xs font-semibold text-[#2fd9c0] hover:underline"
+                >
+                  {profile?.username ? "Change username" : "Pick a username"}
+                </button>
               )}
             </div>
           </div>
