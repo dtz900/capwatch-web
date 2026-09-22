@@ -105,6 +105,15 @@ export default function Methodology() {
           math any sportsbook uses to settle a bet. There is no ranking adjustment, no
           handicapping, no hindsight grading.
         </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Injuries follow the same rule the major books apply. If a player leaves in the first
+          half hurt and does not return, every full-game prop on him that was still live at that
+          moment is voided: overs, anytime touchdown, first touchdown if nobody had scored yet.
+          A number he had already cleared counts as a win, unders and pregame decisions grade on
+          the final line, and quarter or half props are not covered. A voided parlay leg drops
+          out and the ticket is repriced on the legs that remain. The rule is the same no matter
+          which book the capper used.
+        </p>
 
         <h2 className="text-[20px] font-bold mt-9 mb-3">When a capper doesn&apos;t post the odds</h2>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">

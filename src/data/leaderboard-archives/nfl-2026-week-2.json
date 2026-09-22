@@ -10,11 +10,11 @@
  "games": 16,
  "totals": {
   "graded": 1151,
-  "wins": 497,
-  "losses": 641,
+  "wins": 513,
+  "losses": 592,
   "pushes": 6,
-  "voids": 7,
-  "netUnits": -84.45,
+  "voids": 40,
+  "netUnits": -41.22,
   "unpriced": 176
  },
  "liveHref": "/slate?sport=nfl&week=2",
@@ -38,11 +38,11 @@
    "displayName": "JackOnTheBooks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2026665305305501696/iuXdfGD8.jpg",
    "wins": 8,
-   "losses": 9,
+   "losses": 8,
    "pushes": 0,
-   "voids": 0,
+   "voids": 1,
    "graded": 17,
-   "netUnits": 13.31,
+   "netUnits": 13.81,
    "unpriced": 0
   },
   {
@@ -73,6 +73,19 @@
   },
   {
    "rank": 5,
+   "handle": "moneyline_mav",
+   "displayName": "MoneylineMav",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1979079235122737154/t6x-ggFL.jpg",
+   "wins": 13,
+   "losses": 14,
+   "pushes": 0,
+   "voids": 0,
+   "graded": 27,
+   "netUnits": 9.4,
+   "unpriced": 6
+  },
+  {
+   "rank": 6,
    "handle": "dai_bets",
    "displayName": "DaiBets",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1590577028348014593/Ae_GXYUL.jpg",
@@ -85,7 +98,7 @@
    "unpriced": 0
   },
   {
-   "rank": 6,
+   "rank": 7,
    "handle": "bigbetsbrand123",
    "displayName": "Mr Big Bets",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1458085422517657616/-aeMphq3.jpg",
@@ -98,7 +111,20 @@
    "unpriced": 0
   },
   {
-   "rank": 7,
+   "rank": 8,
+   "handle": "bigbuckbets",
+   "displayName": "Moneyline Model Man",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2057503158209802240/KQcDo_5O.jpg",
+   "wins": 7,
+   "losses": 3,
+   "pushes": 0,
+   "voids": 1,
+   "graded": 11,
+   "netUnits": 4.61,
+   "unpriced": 0
+  },
+  {
+   "rank": 9,
    "handle": "Clutch_Betss",
    "displayName": "Clutch Bets",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2082136269182898176/kpQ9FM-x.jpg",
@@ -111,7 +137,7 @@
    "unpriced": 0
   },
   {
-   "rank": 8,
+   "rank": 10,
    "handle": "max_picks",
    "displayName": "MAXPicks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1980376897902014464/iCKSrg3R.jpg",
@@ -124,7 +150,7 @@
    "unpriced": 0
   },
   {
-   "rank": 9,
+   "rank": 11,
    "handle": "gametimewinner",
    "displayName": "GAMETIMEWINNER",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2089083951843508224/AU1UuY87.jpg",
@@ -137,20 +163,20 @@
    "unpriced": 0
   },
   {
-   "rank": 10,
-   "handle": "bigbuckbets",
-   "displayName": "Moneyline Model Man",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2057503158209802240/KQcDo_5O.jpg",
-   "wins": 7,
-   "losses": 4,
+   "rank": 12,
+   "handle": "tonestakes",
+   "displayName": "TonesTakes",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1381440333335175169/WtNUFAKq.jpg",
+   "wins": 15,
+   "losses": 14,
    "pushes": 0,
-   "voids": 0,
-   "graded": 11,
-   "netUnits": 3.61,
+   "voids": 2,
+   "graded": 31,
+   "netUnits": 3.52,
    "unpriced": 0
   },
   {
-   "rank": 11,
+   "rank": 13,
    "handle": "istrobey",
    "displayName": "Strobey😈",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2064855094957342720/8DIdnk8N.jpg",
@@ -163,7 +189,7 @@
    "unpriced": 0
   },
   {
-   "rank": 12,
+   "rank": 14,
    "handle": "clvprophets",
    "displayName": "CLVProphets",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1927580464836939776/G2H0eBMP.jpg",
@@ -176,7 +202,7 @@
    "unpriced": 0
   },
   {
-   "rank": 13,
+   "rank": 15,
    "handle": "tahoebettor",
    "displayName": "Johnny Tahoe",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2097815648525324288/v6ER0q-x.jpg",
@@ -189,7 +215,7 @@
    "unpriced": 0
   },
   {
-   "rank": 14,
+   "rank": 16,
    "handle": "cdlocklounge",
    "displayName": "CDLockLounge",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2093382307251957760/PG0BWf_T.jpg",
@@ -202,7 +228,7 @@
    "unpriced": 0
   },
   {
-   "rank": 15,
+   "rank": 17,
    "handle": "itsparlaypete",
    "displayName": "Parlay Pete",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2075265627552432129/lGXQ46jk.jpg",
@@ -215,7 +241,20 @@
    "unpriced": 1
   },
   {
-   "rank": 16,
+   "rank": 18,
+   "handle": "b1gredbets",
+   "displayName": "#Red🚨",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2078154253533663232/sHEnZDA-.jpg",
+   "wins": 10,
+   "losses": 16,
+   "pushes": 0,
+   "voids": 0,
+   "graded": 26,
+   "netUnits": 2.62,
+   "unpriced": 0
+  },
+  {
+   "rank": 19,
    "handle": "franklincovers",
    "displayName": "franklin",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1925713688125685760/lBJHd3Eb.jpg",
@@ -228,7 +267,7 @@
    "unpriced": 0
   },
   {
-   "rank": 17,
+   "rank": 20,
    "handle": "sharkybets_",
    "displayName": "Sharky🦈",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2080354093864787968/2Nt1Gq52.jpg",
@@ -241,7 +280,7 @@
    "unpriced": 0
   },
   {
-   "rank": 18,
+   "rank": 21,
    "handle": "scottfosterlock",
    "displayName": "Scott Foster’s Sports Picks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1679159508919001089/65_KnshD.jpg",
@@ -254,7 +293,20 @@
    "unpriced": 0
   },
   {
-   "rank": 19,
+   "rank": 22,
+   "handle": "oddsdonny",
+   "displayName": "Odds Don",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2045906034649092096/ItZ5QTya.jpg",
+   "wins": 2,
+   "losses": 0,
+   "pushes": 0,
+   "voids": 0,
+   "graded": 2,
+   "netUnits": 2.37,
+   "unpriced": 0
+  },
+  {
+   "rank": 23,
    "handle": "joes_picks",
    "displayName": "Joe’s Picks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1833664941468876800/hA6lCzgR.jpg",
@@ -267,20 +319,20 @@
    "unpriced": 0
   },
   {
-   "rank": 20,
-   "handle": "b1gredbets",
-   "displayName": "#Red🚨",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2078154253533663232/sHEnZDA-.jpg",
-   "wins": 9,
-   "losses": 17,
+   "rank": 24,
+   "handle": "bambino_bets",
+   "displayName": "George Kent",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1123259995523411968/H-G_sWD-.jpg",
+   "wins": 4,
+   "losses": 5,
    "pushes": 0,
-   "voids": 0,
-   "graded": 26,
-   "netUnits": 2.12,
-   "unpriced": 0
+   "voids": 1,
+   "graded": 10,
+   "netUnits": 1.91,
+   "unpriced": 1
   },
   {
-   "rank": 21,
+   "rank": 25,
    "handle": "picksoffice",
    "displayName": "Picks Office",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2029304916892651520/pV7gdtDp.jpg",
@@ -293,33 +345,20 @@
    "unpriced": 0
   },
   {
-   "rank": 22,
-   "handle": "tonestakes",
-   "displayName": "TonesTakes",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1381440333335175169/WtNUFAKq.jpg",
-   "wins": 15,
-   "losses": 16,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 31,
-   "netUnits": 1.37,
-   "unpriced": 0
-  },
-  {
-   "rank": 23,
-   "handle": "oddsdonny",
-   "displayName": "Odds Don",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2045906034649092096/ItZ5QTya.jpg",
+   "rank": 26,
+   "handle": "berts__bets",
+   "displayName": "BertsBets",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2057525414260621312/pyymeu1y.jpg",
    "wins": 1,
-   "losses": 1,
+   "losses": 0,
    "pushes": 0,
-   "voids": 0,
+   "voids": 1,
    "graded": 2,
-   "netUnits": 1.37,
+   "netUnits": 1.6,
    "unpriced": 0
   },
   {
-   "rank": 24,
+   "rank": 27,
    "handle": "better___bett0r",
    "displayName": "Better Bettor",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1730628983933284352/eZgmUtBX.jpg",
@@ -332,7 +371,7 @@
    "unpriced": 0
   },
   {
-   "rank": 25,
+   "rank": 28,
    "handle": "moneyplayzz",
    "displayName": "Moneyplayzz",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2025804170817609728/cOn3RAcX.jpg",
@@ -345,20 +384,7 @@
    "unpriced": 1
   },
   {
-   "rank": 26,
-   "handle": "moneyline_mav",
-   "displayName": "MoneylineMav",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1979079235122737154/t6x-ggFL.jpg",
-   "wins": 11,
-   "losses": 16,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 27,
-   "netUnits": 1.25,
-   "unpriced": 6
-  },
-  {
-   "rank": 27,
+   "rank": 29,
    "handle": "blizzybets",
    "displayName": "BlizzyBets🥶",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1817218503750942721/v9hzl8Fs.jpg",
@@ -371,7 +397,7 @@
    "unpriced": 0
   },
   {
-   "rank": 28,
+   "rank": 30,
    "handle": "sorryforthedank",
    "displayName": "Dreams66",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2083820047705731072/g-5fJEoI.jpg",
@@ -384,7 +410,20 @@
    "unpriced": 0
   },
   {
-   "rank": 29,
+   "rank": 31,
+   "handle": "codybrownbets",
+   "displayName": "Cody Brown Bets",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2079159141814145024/DEZuc44a.jpg",
+   "wins": 7,
+   "losses": 5,
+   "pushes": 0,
+   "voids": 3,
+   "graded": 15,
+   "netUnits": 1.1,
+   "unpriced": 6
+  },
+  {
+   "rank": 32,
    "handle": "betsbybhag",
    "displayName": "Bets By B-Hag",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2039455139891744768/gsVa-ffW.jpg",
@@ -397,7 +436,7 @@
    "unpriced": 0
   },
   {
-   "rank": 30,
+   "rank": 33,
    "handle": "spideybets",
    "displayName": "$pider Bets 🕸 🕷",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2101053954284998656/Ab6hKKAi.jpg",
@@ -410,20 +449,20 @@
    "unpriced": 0
   },
   {
-   "rank": 31,
-   "handle": "bambino_bets",
-   "displayName": "George Kent",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1123259995523411968/H-G_sWD-.jpg",
-   "wins": 4,
-   "losses": 6,
+   "rank": 34,
+   "handle": "lineupswinning",
+   "displayName": "Winning Lineups",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2073578909900431360/Jq7J56Ug.jpg",
+   "wins": 2,
+   "losses": 1,
    "pushes": 0,
-   "voids": 0,
-   "graded": 10,
-   "netUnits": 0.91,
-   "unpriced": 1
+   "voids": 1,
+   "graded": 4,
+   "netUnits": 0.95,
+   "unpriced": 2
   },
   {
-   "rank": 32,
+   "rank": 35,
    "handle": "dollacode",
    "displayName": "Code Locks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2072923271054462976/jE04kMJ8.jpg",
@@ -436,7 +475,7 @@
    "unpriced": 0
   },
   {
-   "rank": 33,
+   "rank": 36,
    "handle": "sexualslips",
    "displayName": "sexualslips",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2097023047962144768/9X8NByXQ.jpg",
@@ -449,7 +488,7 @@
    "unpriced": 0
   },
   {
-   "rank": 34,
+   "rank": 37,
    "handle": "asvpxhampicks",
    "displayName": "Abe",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1890865613087580160/NijZURhR.jpg",
@@ -462,7 +501,7 @@
    "unpriced": 0
   },
   {
-   "rank": 35,
+   "rank": 38,
    "handle": "sbapicks",
    "displayName": "SBAPicks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2082921219121102848/6xiGQPdd.jpg",
@@ -475,7 +514,7 @@
    "unpriced": 3
   },
   {
-   "rank": 36,
+   "rank": 39,
    "handle": "yennysports",
    "displayName": "Yenny Sports",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1582467935146237959/Wo-OKeEm.jpg",
@@ -488,33 +527,33 @@
    "unpriced": 0
   },
   {
-   "rank": 37,
+   "rank": 40,
    "handle": "invisiblestats",
    "displayName": "Invisible Insider",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2097127260604018688/TwPPV_8V.jpg",
    "wins": 13,
-   "losses": 16,
+   "losses": 15,
    "pushes": 0,
-   "voids": 0,
+   "voids": 1,
    "graded": 29,
    "netUnits": 0.19,
    "unpriced": 9
   },
   {
-   "rank": 38,
-   "handle": "codybrownbets",
-   "displayName": "Cody Brown Bets",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2079159141814145024/DEZuc44a.jpg",
-   "wins": 7,
-   "losses": 8,
+   "rank": 41,
+   "handle": "lincolng05bets",
+   "displayName": "Lincoln.",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2085583093834874880/aAXUw_Kj.jpg",
+   "wins": 17,
+   "losses": 27,
    "pushes": 0,
-   "voids": 0,
-   "graded": 15,
-   "netUnits": 0.1,
-   "unpriced": 6
+   "voids": 1,
+   "graded": 45,
+   "netUnits": 0.11,
+   "unpriced": 0
   },
   {
-   "rank": 39,
+   "rank": 42,
    "handle": "renzomoneyline",
    "displayName": "R$",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1644108169520779264/k0Wlutpu.jpg",
@@ -527,20 +566,7 @@
    "unpriced": 1
   },
   {
-   "rank": 40,
-   "handle": "lineupswinning",
-   "displayName": "Winning Lineups",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2073578909900431360/Jq7J56Ug.jpg",
-   "wins": 2,
-   "losses": 2,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 4,
-   "netUnits": -0.05,
-   "unpriced": 2
-  },
-  {
-   "rank": 41,
+   "rank": 43,
    "handle": "thewageranalyst",
    "displayName": "Wager Analyst",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1960471196371148800/bobAxoip.jpg",
@@ -553,7 +579,20 @@
    "unpriced": 0
   },
   {
-   "rank": 42,
+   "rank": 44,
+   "handle": "luckyluke_hits",
+   "displayName": "Lucky Luke",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2091532667326001152/zBydkX7s.jpg",
+   "wins": 18,
+   "losses": 15,
+   "pushes": 0,
+   "voids": 2,
+   "graded": 35,
+   "netUnits": -0.2,
+   "unpriced": 0
+  },
+  {
+   "rank": 45,
    "handle": "spreadwizard",
    "displayName": "SpreadWizard",
    "avatarUrl": "https://pbs.twimg.com/profile_images/566810650152685570/2jewUzVS.jpeg",
@@ -566,7 +605,7 @@
    "unpriced": 0
   },
   {
-   "rank": 43,
+   "rank": 46,
    "handle": "dommylocked",
    "displayName": "Dommy",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2083996323657760768/2F24nMvb.jpg",
@@ -579,7 +618,7 @@
    "unpriced": 0
   },
   {
-   "rank": 44,
+   "rank": 47,
    "handle": "bluefirepicks",
    "displayName": "BFP",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2090747830000373760/2QQ1UaDt.jpg",
@@ -592,7 +631,7 @@
    "unpriced": 0
   },
   {
-   "rank": 45,
+   "rank": 48,
    "handle": "a11bets",
    "displayName": "A11 Bets",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2101950949069582336/xqRZ6JZZ.jpg",
@@ -605,20 +644,7 @@
    "unpriced": 0
   },
   {
-   "rank": 46,
-   "handle": "berts__bets",
-   "displayName": "BertsBets",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2057525414260621312/pyymeu1y.jpg",
-   "wins": 1,
-   "losses": 1,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 2,
-   "netUnits": -0.4,
-   "unpriced": 0
-  },
-  {
-   "rank": 47,
+   "rank": 49,
    "handle": "bayouboysbets",
    "displayName": "BayouBoysBets",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2084659678634532864/-Y1PnZxV.jpg",
@@ -631,7 +657,7 @@
    "unpriced": 0
   },
   {
-   "rank": 48,
+   "rank": 50,
    "handle": "prosportshq1",
    "displayName": "Prosports Wager",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2045770119859822592/F_7S6Pmp.jpg",
@@ -644,7 +670,7 @@
    "unpriced": 0
   },
   {
-   "rank": 49,
+   "rank": 51,
    "handle": "cinematicc",
    "displayName": "Alex",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2085465637535821824/C3xP0Hwi.jpg",
@@ -657,7 +683,7 @@
    "unpriced": 0
   },
   {
-   "rank": 50,
+   "rank": 52,
    "handle": "jasmine_parker",
    "displayName": "JP",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2099514497853513730/gsbI9Gid.jpg",
@@ -670,7 +696,7 @@
    "unpriced": 0
   },
   {
-   "rank": 51,
+   "rank": 53,
    "handle": "lucksociety",
    "displayName": "Luck Society",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1924158981875867648/EVDOBECM.jpg",
@@ -683,7 +709,7 @@
    "unpriced": 0
   },
   {
-   "rank": 52,
+   "rank": 54,
    "handle": "plyrix_picks",
    "displayName": "Plyrix Picks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2042408810921230338/SFoIry8v.jpg",
@@ -696,7 +722,7 @@
    "unpriced": 0
   },
   {
-   "rank": 53,
+   "rank": 55,
    "handle": "skymoneysports",
    "displayName": "Sky Money 💰",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2042829877997637632/xkzGcpHi.jpg",
@@ -709,7 +735,7 @@
    "unpriced": 0
   },
   {
-   "rank": 54,
+   "rank": 56,
    "handle": "leventis72_",
    "displayName": null,
    "avatarUrl": "https://pbs.twimg.com/profile_images/2040806349714452480/SrrmKsML.jpg",
@@ -722,7 +748,20 @@
    "unpriced": 0
   },
   {
-   "rank": 55,
+   "rank": 57,
+   "handle": "prop_k_parlays",
+   "displayName": "Prodigy Prop King",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2087841971528175616/ICs1RP4_.jpg",
+   "wins": 17,
+   "losses": 18,
+   "pushes": 0,
+   "voids": 3,
+   "graded": 38,
+   "netUnits": -1.13,
+   "unpriced": 8
+  },
+  {
+   "rank": 58,
    "handle": "thelinewizard_",
    "displayName": "🧙‍♂️",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2078156008208109568/tyhd48gB.jpg",
@@ -735,7 +774,7 @@
    "unpriced": 0
   },
   {
-   "rank": 56,
+   "rank": 59,
    "handle": "showtimepicks2",
    "displayName": "Showtime Picks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2076162653899112449/FnlsYEnR.jpg",
@@ -748,20 +787,7 @@
    "unpriced": 0
   },
   {
-   "rank": 57,
-   "handle": "lincolng05bets",
-   "displayName": "Lincoln.",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2085583093834874880/aAXUw_Kj.jpg",
-   "wins": 16,
-   "losses": 29,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 45,
-   "netUnits": -1.39,
-   "unpriced": 0
-  },
-  {
-   "rank": 58,
+   "rank": 60,
    "handle": "sacstim",
    "displayName": "tim",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1915428364015357952/bphQCFph.jpg",
@@ -774,7 +800,7 @@
    "unpriced": 0
   },
   {
-   "rank": 59,
+   "rank": 61,
    "handle": "bigbetco",
    "displayName": "Big Bet Co",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1811587188171395072/Th2c4xvE.jpg",
@@ -787,20 +813,33 @@
    "unpriced": 0
   },
   {
-   "rank": 60,
+   "rank": 62,
+   "handle": "wizbetz",
+   "displayName": "Wiz Betz",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2006974717291360256/ubut38oF.jpg",
+   "wins": 6,
+   "losses": 7,
+   "pushes": 1,
+   "voids": 1,
+   "graded": 15,
+   "netUnits": -1.79,
+   "unpriced": 0
+  },
+  {
+   "rank": 63,
    "handle": "thelineaudit",
    "displayName": "TheLineAudit",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2098144077208571904/qK34aQB6.jpg",
    "wins": 5,
-   "losses": 6,
+   "losses": 5,
    "pushes": 0,
-   "voids": 0,
+   "voids": 1,
    "graded": 11,
    "netUnits": -2.01,
    "unpriced": 2
   },
   {
-   "rank": 61,
+   "rank": 64,
    "handle": "splendosports",
    "displayName": "Splendo",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1964707464256929792/gBGyWStF.jpg",
@@ -813,7 +852,7 @@
    "unpriced": 0
   },
   {
-   "rank": 62,
+   "rank": 65,
    "handle": "phillysharp1",
    "displayName": "Philly Sharp",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2097751967921483779/HynO5Rrs.jpg",
@@ -826,7 +865,7 @@
    "unpriced": 0
   },
   {
-   "rank": 63,
+   "rank": 66,
    "handle": "trupalocks",
    "displayName": "TRUPA LOCKS",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2051393193841774592/MmiRN31b.jpg",
@@ -839,20 +878,20 @@
    "unpriced": 1
   },
   {
-   "rank": 64,
+   "rank": 67,
    "handle": "goatcapital_",
    "displayName": "GOAT Capital Sports",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1105173385393463296/ws9Vef9j.jpg",
    "wins": 8,
-   "losses": 8,
+   "losses": 7,
    "pushes": 0,
-   "voids": 0,
+   "voids": 1,
    "graded": 16,
    "netUnits": -2.44,
    "unpriced": 6
   },
   {
-   "rank": 65,
+   "rank": 68,
    "handle": "bookitwithtrent",
    "displayName": "Trent Attyah",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1423478203100717059/epqKNm6g.jpg",
@@ -865,7 +904,7 @@
    "unpriced": 2
   },
   {
-   "rank": 66,
+   "rank": 69,
    "handle": "smsports34",
    "displayName": "Smart Money Sports",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1194298978294218752/cCkk2CFU.jpg",
@@ -878,46 +917,20 @@
    "unpriced": 0
   },
   {
-   "rank": 67,
+   "rank": 70,
    "handle": "bookie___bandit",
    "displayName": "Bookie Bandit",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1936439050598019072/xjQXUMEo.jpg",
    "wins": 44,
-   "losses": 25,
+   "losses": 23,
    "pushes": 0,
-   "voids": 1,
+   "voids": 3,
    "graded": 70,
    "netUnits": -3.03,
    "unpriced": 42
   },
   {
-   "rank": 68,
-   "handle": "wizbetz",
-   "displayName": "Wiz Betz",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2006974717291360256/ubut38oF.jpg",
-   "wins": 6,
-   "losses": 8,
-   "pushes": 1,
-   "voids": 0,
-   "graded": 15,
-   "netUnits": -3.04,
-   "unpriced": 0
-  },
-  {
-   "rank": 69,
-   "handle": "prop_k_parlays",
-   "displayName": "Prodigy Prop King",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2087841971528175616/ICs1RP4_.jpg",
-   "wins": 15,
-   "losses": 21,
-   "pushes": 0,
-   "voids": 2,
-   "graded": 38,
-   "netUnits": -3.13,
-   "unpriced": 8
-  },
-  {
-   "rank": 70,
+   "rank": 71,
    "handle": "outoflinebets",
    "displayName": "Out of Line Bets",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1798808867263926272/PIuEm69s.jpg",
@@ -930,7 +943,7 @@
    "unpriced": 0
   },
   {
-   "rank": 71,
+   "rank": 72,
    "handle": "sharpsportsllc",
    "displayName": "Sharp🍻",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2099960819526057984/PWU2TB1N.jpg",
@@ -943,7 +956,7 @@
    "unpriced": 0
   },
   {
-   "rank": 72,
+   "rank": 73,
    "handle": "razorsinsight",
    "displayName": "Razore",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1996351526907076608/soLDNCov.jpg",
@@ -956,20 +969,33 @@
    "unpriced": 2
   },
   {
-   "rank": 73,
+   "rank": 74,
+   "handle": "riostaystrue",
+   "displayName": "Rio",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1838739411112189952/3HfyM1x8.jpg",
+   "wins": 1,
+   "losses": 6,
+   "pushes": 0,
+   "voids": 0,
+   "graded": 7,
+   "netUnits": -3.81,
+   "unpriced": 0
+  },
+  {
+   "rank": 75,
    "handle": "lappylocks",
    "displayName": "Lappy Locks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2088346074813698048/cR8gfl6G.jpg",
    "wins": 13,
-   "losses": 9,
+   "losses": 6,
    "pushes": 0,
-   "voids": 0,
+   "voids": 3,
    "graded": 22,
    "netUnits": -4.0,
    "unpriced": 18
   },
   {
-   "rank": 74,
+   "rank": 76,
    "handle": "parlaysprodigy",
    "displayName": "Parlay Prodigy",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2024391704124530688/YXvphykd.jpg",
@@ -982,7 +1008,7 @@
    "unpriced": 0
   },
   {
-   "rank": 75,
+   "rank": 77,
    "handle": "picksagainst",
    "displayName": "Rhino Bets",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2021012630878466048/cjY47kzT.jpg",
@@ -995,7 +1021,7 @@
    "unpriced": 0
   },
   {
-   "rank": 76,
+   "rank": 78,
    "handle": "strongleans",
    "displayName": "Strong Leans",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2059560893936005123/s0MEAtlw.jpg",
@@ -1008,7 +1034,20 @@
    "unpriced": 0
   },
   {
-   "rank": 77,
+   "rank": 79,
+   "handle": "cotechaos",
+   "displayName": "CoteChaos",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1995628612331208706/S2LEejIj.jpg",
+   "wins": 1,
+   "losses": 5,
+   "pushes": 0,
+   "voids": 1,
+   "graded": 7,
+   "netUnits": -4.02,
+   "unpriced": 0
+  },
+  {
+   "rank": 80,
    "handle": "degen__inc",
    "displayName": "Crich ♦️",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1697390380541497344/DM3Yfzoe.jpg",
@@ -1021,20 +1060,20 @@
    "unpriced": 1
   },
   {
-   "rank": 78,
-   "handle": "luckyluke_hits",
-   "displayName": "Lucky Luke",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2091532667326001152/zBydkX7s.jpg",
-   "wins": 18,
-   "losses": 17,
+   "rank": 81,
+   "handle": "swampy_swami",
+   "displayName": "SWAMPTHING",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/378800000465143752/59deee4074051f6168c2c3b4c28d6cbd.jpeg",
+   "wins": 11,
+   "losses": 23,
    "pushes": 0,
-   "voids": 0,
+   "voids": 1,
    "graded": 35,
-   "netUnits": -4.2,
+   "netUnits": -4.45,
    "unpriced": 0
   },
   {
-   "rank": 79,
+   "rank": 82,
    "handle": "joshuadasilva",
    "displayName": "Josh",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2070283857853607936/lvR8lEFP.jpg",
@@ -1047,33 +1086,20 @@
    "unpriced": 1
   },
   {
-   "rank": 80,
-   "handle": "cotechaos",
-   "displayName": "CoteChaos",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1995628612331208706/S2LEejIj.jpg",
-   "wins": 1,
-   "losses": 6,
+   "rank": 83,
+   "handle": "4kl0cks",
+   "displayName": "4klocks 🎰",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2026708918651469824/q4bpjucH.jpg",
+   "wins": 6,
+   "losses": 7,
    "pushes": 0,
-   "voids": 0,
-   "graded": 7,
-   "netUnits": -5.02,
-   "unpriced": 0
+   "voids": 1,
+   "graded": 14,
+   "netUnits": -5.65,
+   "unpriced": 3
   },
   {
-   "rank": 81,
-   "handle": "swampy_swami",
-   "displayName": "SWAMPTHING",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/378800000465143752/59deee4074051f6168c2c3b4c28d6cbd.jpeg",
-   "wins": 11,
-   "losses": 24,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 35,
-   "netUnits": -5.45,
-   "unpriced": 0
-  },
-  {
-   "rank": 82,
+   "rank": 84,
    "handle": "pocketparlay",
    "displayName": "Pocket Parlay",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1751984705803554816/0a26HQzX.jpg",
@@ -1086,20 +1112,33 @@
    "unpriced": 0
   },
   {
-   "rank": 83,
-   "handle": "4kl0cks",
-   "displayName": "4klocks 🎰",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2026708918651469824/q4bpjucH.jpg",
-   "wins": 6,
-   "losses": 8,
+   "rank": 85,
+   "handle": "tadpolebe2021",
+   "displayName": "Tadpole Sports Betting",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1915480736787812353/axXE6uXR.jpg",
+   "wins": 0,
+   "losses": 9,
    "pushes": 0,
-   "voids": 0,
-   "graded": 14,
-   "netUnits": -6.65,
-   "unpriced": 3
+   "voids": 1,
+   "graded": 10,
+   "netUnits": -6.1,
+   "unpriced": 1
   },
   {
-   "rank": 84,
+   "rank": 86,
+   "handle": "eliteewagers",
+   "displayName": "EliteWagers",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1940022699054505985/p26xCozj.jpg",
+   "wins": 6,
+   "losses": 12,
+   "pushes": 0,
+   "voids": 2,
+   "graded": 20,
+   "netUnits": -6.98,
+   "unpriced": 0
+  },
+  {
+   "rank": 87,
    "handle": "brentburrisbet",
    "displayName": "Brent Burris | Sports Betting",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2093997208890728448/MC8SulOQ.jpg",
@@ -1112,33 +1151,20 @@
    "unpriced": 0
   },
   {
-   "rank": 85,
-   "handle": "riostaystrue",
-   "displayName": "Rio",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1838739411112189952/3HfyM1x8.jpg",
-   "wins": 0,
-   "losses": 7,
+   "rank": 88,
+   "handle": "thejoeholkashow",
+   "displayName": "Joe Holka",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2038704972481617920/FVMNn9Gp.jpg",
+   "wins": 4,
+   "losses": 13,
    "pushes": 0,
    "voids": 0,
-   "graded": 7,
-   "netUnits": -7.0,
-   "unpriced": 0
+   "graded": 17,
+   "netUnits": -7.49,
+   "unpriced": 2
   },
   {
-   "rank": 86,
-   "handle": "tadpolebe2021",
-   "displayName": "Tadpole Sports Betting",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1915480736787812353/axXE6uXR.jpg",
-   "wins": 0,
-   "losses": 10,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 10,
-   "netUnits": -7.1,
-   "unpriced": 1
-  },
-  {
-   "rank": 87,
+   "rank": 89,
    "handle": "thebettingqueen",
    "displayName": "thebettingqueen",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1940216004241395712/9kaxbMjk.jpg",
@@ -1151,12 +1177,12 @@
    "unpriced": 0
   },
   {
-   "rank": 88,
+   "rank": 90,
    "handle": "dbunk_picks",
    "displayName": "Demetrius",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2094503481797115904/qqWS5nE5.jpg",
-   "wins": 16,
-   "losses": 29,
+   "wins": 17,
+   "losses": 28,
    "pushes": 0,
    "voids": 0,
    "graded": 45,
@@ -1164,46 +1190,33 @@
    "unpriced": 13
   },
   {
-   "rank": 89,
-   "handle": "eliteewagers",
-   "displayName": "EliteWagers",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1940022699054505985/p26xCozj.jpg",
-   "wins": 6,
-   "losses": 13,
-   "pushes": 0,
-   "voids": 1,
-   "graded": 20,
-   "netUnits": -7.98,
-   "unpriced": 0
-  },
-  {
-   "rank": 90,
-   "handle": "thejoeholkashow",
-   "displayName": "Joe Holka",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2038704972481617920/FVMNn9Gp.jpg",
-   "wins": 3,
-   "losses": 14,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 17,
-   "netUnits": -8.49,
-   "unpriced": 2
-  },
-  {
    "rank": 91,
    "handle": "g5jake",
    "displayName": "G5 Jake",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2085076749558202368/_S7giA01.jpg",
    "wins": 1,
-   "losses": 12,
+   "losses": 11,
    "pushes": 0,
-   "voids": 0,
+   "voids": 1,
    "graded": 13,
-   "netUnits": -9.86,
+   "netUnits": -8.86,
    "unpriced": 0
   },
   {
    "rank": 92,
+   "handle": "milesparkerbets",
+   "displayName": "Miles Parker NFL Picks",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1986002743253696512/lkjxoeaV.jpg",
+   "wins": 37,
+   "losses": 30,
+   "pushes": 0,
+   "voids": 6,
+   "graded": 73,
+   "netUnits": -9.26,
+   "unpriced": 41
+  },
+  {
+   "rank": 93,
    "handle": "sbr_bets",
    "displayName": "SBR",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2096434021693620225/ueXxqg_n.jpg",
@@ -1216,20 +1229,20 @@
    "unpriced": 0
   },
   {
-   "rank": 93,
-   "handle": "milesparkerbets",
-   "displayName": "Miles Parker NFL Picks",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1986002743253696512/lkjxoeaV.jpg",
-   "wins": 34,
-   "losses": 37,
+   "rank": 94,
+   "handle": "lottolocks",
+   "displayName": "Lotto Locks",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2077514955293671425/puF8IH6x.jpg",
+   "wins": 5,
+   "losses": 20,
    "pushes": 0,
-   "voids": 2,
-   "graded": 73,
-   "netUnits": -12.26,
-   "unpriced": 41
+   "voids": 0,
+   "graded": 25,
+   "netUnits": -12.87,
+   "unpriced": 3
   },
   {
-   "rank": 94,
+   "rank": 95,
    "handle": "robdfb",
    "displayName": "Rob Donaldson",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1624902227880992768/yq8lewSU.jpg",
@@ -1240,19 +1253,6 @@
    "graded": 11,
    "netUnits": -14.85,
    "unpriced": 0
-  },
-  {
-   "rank": 95,
-   "handle": "lottolocks",
-   "displayName": "Lotto Locks",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2077514955293671425/puF8IH6x.jpg",
-   "wins": 2,
-   "losses": 23,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 25,
-   "netUnits": -15.87,
-   "unpriced": 3
   }
  ]
 }
