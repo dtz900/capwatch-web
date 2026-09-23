@@ -196,36 +196,34 @@ export function TofDeck({
       </div>
 
       {top && (
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-4 flex items-center gap-6">
           <button
             type="button"
             aria-label="Fade"
             disabled={disabled || top.kind === "stable"}
             title={top.kind === "stable" ? "Fading your own tail is not a thing." : undefined}
             onClick={() => void commit("left")}
-            className="flex h-14 min-w-[124px] items-center justify-center gap-2 rounded-full bg-[var(--color-neg)] px-6 font-[var(--font-lilita)] text-[22px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#9f1f1f] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-30 disabled:shadow-none"
+            className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[var(--color-neg)] text-white shadow-[0_8px_20px_rgba(239,68,68,0.28),0_2px_6px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:shadow-none disabled:hover:scale-100"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-            FADE
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
           <button
             type="button"
             aria-label="Pass"
             disabled={disabled}
             onClick={() => void commit("up")}
-            className="flex h-11 items-center justify-center rounded-full border-2 border-[rgba(255,255,255,0.18)] bg-white/[0.03] px-5 font-[var(--font-lilita)] text-[16px] tracking-[0.08em] text-[#a1a1aa] transition-transform active:translate-y-[2px] disabled:opacity-30"
+            className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[rgba(255,255,255,0.16)] bg-[#15151a] text-[#a1a1aa] shadow-[0_2px_6px_rgba(0,0,0,0.45)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
           >
-            PASS
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M5 12h14" /></svg>
           </button>
           <button
             type="button"
             aria-label="Tail"
             disabled={disabled}
             onClick={() => void commit("right")}
-            className="flex h-14 min-w-[124px] items-center justify-center gap-2 rounded-full bg-[var(--color-pos)] px-6 font-[var(--font-lilita)] text-[22px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-30 disabled:shadow-none"
+            className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[var(--color-pos)] text-[#06120b] shadow-[0_8px_20px_rgba(25,245,124,0.28),0_2px_6px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:shadow-none disabled:hover:scale-100"
           >
-            TAIL
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6" /></svg>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6" /></svg>
           </button>
         </div>
       )}
