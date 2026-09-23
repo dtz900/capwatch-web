@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 interface MockAuthState {
@@ -34,6 +34,32 @@ function Trigger({ onDone }: { onDone: (ok: boolean) => void }) {
   return <button onClick={() => void requireUsername().then(onDone)}>play</button>;
 }
 
+function ChangeTrigger() {
+  const { openChange } = useUsernameClaim();
+  return <button onClick={openChange}>change</button>;
+}
+
+function signedInNoName(refreshProfile = vi.fn()): MockAuthState {
+  return {
+    session: { user: { id: "u1", email: "d@x.com" } },
+    profile: { tier: "free", username: null, username_changed_at: null },
+    entitlements: { isLoggedIn: true, isVip: false },
+    refreshProfile,
+  };
+}
+
+function stubSupabaseEnv() {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "x");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "y");
+}
+
+// Both spies are module-level, so call history from one test would otherwise
+// satisfy the next test's waitFor before its own debounce had even fired.
+beforeEach(() => {
+  rpc.mockReset();
+  update.mockReset();
+});
+
 describe("UsernameClaim", () => {
   it("resolves true without opening when a username exists", async () => {
     mockAuth.current = {
@@ -65,7 +91,7 @@ describe("UsernameClaim", () => {
     render(<UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>);
     fireEvent.click(screen.getByText("play"));
     expect(await screen.findByText(/pick a username/i)).toBeInTheDocument();
-    const input = screen.getByLabelText(/username/i);
+    const input = screen.getByLabelText("Username");
     await act(async () => {
       fireEvent.change(input, { target: { value: "dt_fades" } });
     });
@@ -90,11 +116,109 @@ describe("UsernameClaim", () => {
     };
     render(<UsernameClaimProvider><Trigger onDone={() => {}} /></UsernameClaimProvider>);
     fireEvent.click(screen.getByText("play"));
-    const input = await screen.findByLabelText(/username/i);
+    const input = await screen.findByLabelText("Username");
     fireEvent.change(input, { target: { value: "admin" } });
     expect(await screen.findByText(/reserved/i)).toBeInTheDocument();
     expect(rpc).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: /claim/i })).toBeDisabled();
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps the button claimable after a save that failed for an unrelated reason", async () => {
+    stubSupabaseEnv();
+    rpc.mockResolvedValue({ data: true, error: null });
+    update.mockResolvedValue({ error: { message: "could not connect to server" } });
+    mockAuth.current = signedInNoName();
+    render(<UsernameClaimProvider><Trigger onDone={() => {}} /></UsernameClaimProvider>);
+    fireEvent.click(screen.getByText("play"));
+    const input = await screen.findByLabelText("Username");
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "dt_fades" } });
+    });
+    expect(await screen.findByText("AVAILABLE")).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /claim/i });
+    await act(async () => { fireEvent.click(button); });
+    expect(await screen.findByText("Could not save that name. Try again.")).toBeInTheDocument();
+    expect(button).toBeEnabled();
+    vi.unstubAllEnvs();
+  });
+
+  it("marks a name the server already holds as taken and blocks the button", async () => {
+    stubSupabaseEnv();
+    rpc.mockResolvedValue({ data: false, error: null });
+    mockAuth.current = signedInNoName();
+    render(<UsernameClaimProvider><Trigger onDone={() => {}} /></UsernameClaimProvider>);
+    fireEvent.click(screen.getByText("play"));
+    const input = await screen.findByLabelText("Username");
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "dt_fades" } });
+    });
+    expect(await screen.findByText("TAKEN")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /claim/i })).toBeDisabled();
+    vi.unstubAllEnvs();
+  });
+
+  it("blocks a change inside the 30-day window and says when the next one lands", async () => {
+    stubSupabaseEnv();
+    rpc.mockResolvedValue({ data: true, error: null });
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
+    mockAuth.current = {
+      session: { user: { id: "u1", email: "d@x.com" } },
+      profile: { tier: "free", username: "dt_fades", username_changed_at: tenDaysAgo },
+      entitlements: { isLoggedIn: true, isVip: false },
+      refreshProfile: vi.fn(),
+    };
+    render(<UsernameClaimProvider><ChangeTrigger /></UsernameClaimProvider>);
+    fireEvent.click(screen.getByText("change"));
+    const input = await screen.findByLabelText("Username");
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "dt_tails" } });
+    });
+    expect(await screen.findByText("AVAILABLE")).toBeInTheDocument();
+    expect(screen.getByText(/next change allowed/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save username/i })).toBeDisabled();
+    vi.unstubAllEnvs();
+  });
+
+  it("settles false and closes when the session drops while the modal is open", async () => {
+    stubSupabaseEnv();
+    const done = vi.fn();
+    mockAuth.current = signedInNoName();
+    const tree = () => <UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>;
+    const { rerender } = render(tree());
+    fireEvent.click(screen.getByText("play"));
+    expect(await screen.findByText(/pick a username/i)).toBeInTheDocument();
+
+    mockAuth.current = { ...mockAuth.current, session: null };
+    await act(async () => { rerender(tree()); });
+
+    await waitFor(() => expect(done).toHaveBeenCalledWith(false));
+    expect(screen.queryByText(/pick a username/i)).not.toBeInTheDocument();
+    vi.unstubAllEnvs();
+  });
+
+  it("names the dialog by its heading, focuses the input, and settles false on Escape", async () => {
+    stubSupabaseEnv();
+    const done = vi.fn();
+    mockAuth.current = signedInNoName();
+    const opener = document.createElement("button");
+    document.body.appendChild(opener);
+    opener.focus();
+
+    render(<UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>);
+    fireEvent.click(screen.getByText("play"));
+
+    const dialog = await screen.findByRole("dialog", { name: "Pick a username" });
+    const input = screen.getByLabelText("Username");
+    await waitFor(() => expect(input).toHaveFocus());
+    // The availability badge has to sit in a live region to be announced.
+    expect(input.closest("div")?.querySelector('[aria-live="polite"]')).toBeTruthy();
+
+    await act(async () => { fireEvent.keyDown(dialog, { key: "Escape" }); });
+    await waitFor(() => expect(done).toHaveBeenCalledWith(false));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(opener).toHaveFocus());
+    opener.remove();
     vi.unstubAllEnvs();
   });
 
@@ -125,7 +249,7 @@ describe("UsernameClaim", () => {
     // orphan the first caller's promise.
     fireEvent.click(buttonB);
 
-    const input = screen.getByLabelText(/username/i);
+    const input = screen.getByLabelText("Username");
     await act(async () => {
       fireEvent.change(input, { target: { value: "dt_fades" } });
     });

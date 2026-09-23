@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createBrowserSupabase } from "@/lib/supabase/client";
@@ -60,6 +60,19 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
     setOpen(true);
   }, []);
 
+  // A sign-out (or an expired session) while the modal is up unmounts it
+  // below, which would leave requireUsername()'s promise pending forever and
+  // wedge every later call behind `pending`. Settle it false and close.
+  const userId = session?.user?.id ?? null;
+  useEffect(() => {
+    // Settling an outstanding promise is a side effect on a caller outside
+    // React, not derived state, and there is no render-time place to do it.
+    // Same pattern (and same pre-existing lint debt) as AuthProvider's
+    // loadProfile() effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open && !userId) settle(false);
+  }, [open, userId, settle]);
+
   const value = useMemo(() => ({ requireUsername, openChange }), [requireUsername, openChange]);
 
   return (
@@ -115,6 +128,16 @@ function UsernameModal({
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const nextChange = mode === "change" ? nextUsernameChange(changedAt) : null;
+  const headingId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // The modal takes focus when it opens and hands it back to whatever had it
+  // when it closes, so a keyboard user is not dropped at the top of the page.
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    inputRef.current?.focus();
+    return () => previous?.focus?.();
+  }, []);
 
   useEffect(() => {
     if (!eligible || !supabase) return;
@@ -152,13 +175,23 @@ function UsernameModal({
     const { error } = await supabase.from("ts_profiles").update({ username: value }).eq("user_id", userId);
     if (error) {
       setBusy(false);
-      setServerError(
-        /reserved/i.test(error.message) ? "That name is reserved."
-          : /30 days/i.test(error.message) ? "You can change your username once every 30 days."
-          : /duplicate|unique/i.test(error.message) ? "Someone just took that name."
-          : "Could not save that name. Try again.",
-      );
-      setAvailability("idle");
+      // Only a verdict about the name itself invalidates the availability
+      // check. A save that failed for any other reason (network, 500) says
+      // nothing about it, and clearing availability there would disable the
+      // button for good: the debounce effect never re-runs on an unchanged
+      // field, so there would be no way back to "available".
+      if (/reserved/i.test(error.message)) {
+        setServerError("That name is reserved.");
+        setAvailability("idle");
+      } else if (/30 days/i.test(error.message)) {
+        setServerError("You can change your username once every 30 days.");
+        setAvailability("idle");
+      } else if (/duplicate|unique/i.test(error.message)) {
+        setServerError("Someone just took that name.");
+        setAvailability("idle");
+      } else {
+        setServerError("Could not save that name. Try again.");
+      }
       return;
     }
     await onDone();
@@ -169,13 +202,19 @@ function UsernameModal({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(10,10,12,0.85)] px-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Board profile setup"
+      aria-labelledby={headingId}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          onDismiss();
+        }
+      }}
     >
       <div className="w-full max-w-[440px] rounded-xl border border-[var(--color-border-h)] bg-gradient-to-b from-[#17171d] to-[#101015] p-7 shadow-2xl">
         <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-pos)]">
           {mode === "change" ? "Account" : "Before your first swipe"}
         </div>
-        <h2 className="mt-1.5 text-[26px] font-extrabold tracking-[-0.03em] leading-none">
+        <h2 id={headingId} className="mt-1.5 text-[26px] font-extrabold tracking-[-0.03em] leading-none">
           {mode === "change" ? "Change your username" : "Pick a username"}
         </h2>
         <p className="mt-2 text-[13px] leading-relaxed text-[#a1a1aa]">
@@ -189,6 +228,7 @@ function UsernameModal({
           <span className="text-[15px] font-bold text-[#52525b]">@</span>
           <input
             id="tof-username"
+            ref={inputRef}
             type="text"
             autoComplete="off"
             maxLength={20}
@@ -197,15 +237,17 @@ function UsernameModal({
             onChange={(e) => setValue(e.target.value.trim())}
             className="min-w-0 flex-grow bg-transparent text-[15px] font-bold text-[var(--color-text)] outline-none placeholder:text-[#52525b]"
           />
-          {displayAvailability === "available" && (
-            <span className="text-[11px] font-extrabold text-[var(--color-pos)]">AVAILABLE</span>
-          )}
-          {displayAvailability === "taken" && (
-            <span className="text-[11px] font-extrabold text-[var(--color-neg)]">TAKEN</span>
-          )}
-          {displayAvailability === "checking" && (
-            <span className="text-[11px] font-extrabold text-[var(--color-text-muted)]">CHECKING</span>
-          )}
+          <span aria-live="polite" className="shrink-0">
+            {displayAvailability === "available" && (
+              <span className="text-[11px] font-extrabold text-[var(--color-pos)]">AVAILABLE</span>
+            )}
+            {displayAvailability === "taken" && (
+              <span className="text-[11px] font-extrabold text-[var(--color-neg)]">TAKEN</span>
+            )}
+            {displayAvailability === "checking" && (
+              <span className="text-[11px] font-extrabold text-[var(--color-text-muted)]">CHECKING</span>
+            )}
+          </span>
         </div>
         <div className="mt-2 min-h-[16px] text-[11px] text-[var(--color-text-muted)]">
           {localError ?? serverError ?? "3 to 20 characters. Letters, numbers, underscores. One change every 30 days."}
