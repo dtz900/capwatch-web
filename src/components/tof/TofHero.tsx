@@ -328,7 +328,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-[rgba(25,245,124,0.25)] bg-[rgba(25,245,124,0.05)] px-4 py-4">
+            <div className="rounded-xl border border-[rgba(25,245,124,0.35)] bg-[rgba(9,11,12,0.72)] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
               <div className="font-[family-name:var(--font-display)] text-[20px] leading-tight">Keep score.</div>
               <button type="button" onClick={signIn} className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-[var(--color-pos)] font-[family-name:var(--font-display)] text-[17px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none">
                 SIGN IN
