@@ -295,11 +295,20 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       <div className="tof-fold-inner mx-auto grid max-w-[1240px] grid-cols-1 gap-8 pt-6 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start" inert={!unfolded}>
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
           <div className="rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-4">
-            <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">The game</div>
+            <div className="mt-2 font-[family-name:var(--font-display)] text-[19px] leading-tight text-[var(--color-text)]">Think you can out-pick the cappers?</div>
+            <p className="mt-2 text-[12.5px] leading-snug text-[var(--color-text-soft)]">
+              Every day we deal a hand of real picks from cappers we track. Tail the ones you trust, fade the ones you don&apos;t.
+              Your calls get graded the same way theirs do, and you land on the tailer board right next to them.
+            </p>
+            <p className="mt-2 text-[11.5px] leading-snug text-[var(--color-text-muted)]">
+              Free to play. Nothing is wagered and nothing pays out. Units are just how we keep score.
+            </p>
+            <div className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
             <ol className="mt-3 flex flex-col gap-3">
               {[
                 ["Swipe", "Right to tail, left to fade, up to pass."],
-                ["Price", "Tails pay the capper's odds. Fades pay the Pinnacle close."],
+                ["Price", "Tails are scored at the capper's odds, fades at the Pinnacle close."],
                 ["Grade", "1u a card. Results land overnight."],
               ].map(([head, body], i) => (
                 <li key={head} className="flex gap-3">
