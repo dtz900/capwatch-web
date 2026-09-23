@@ -113,13 +113,15 @@ describe("TofHero", () => {
     expect(screen.getByText(/2026-09-23|Sep 23/)).toBeInTheDocument();
   });
 
-  it("sends an anonymous tail to login and stashes the pending play", async () => {
+  it("lets a guest tail without signing in, stashes the play, and moves the deck", async () => {
     mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
     render(<TofHero initial={HAND} />);
     fireEvent.click(await screen.findByRole("button", { name: /^tail$/i }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+    await screen.findByText(/guest mode/i);
+    expect(push).not.toHaveBeenCalled();
     expect(JSON.parse(localStorage.getItem("ts:tof:pending") ?? "{}")).toEqual({ cardId: 1, choice: "tail", slateDate: "2026-09-22" });
     expect(insert).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText(/you played every card/i)).toBeInTheDocument(), { timeout: 2000 });
   });
 
   it("writes a play for a signed-in user with a username", async () => {

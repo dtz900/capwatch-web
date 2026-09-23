@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { TofCard, TofChoice } from "@/lib/types";
-import { TofCardFace } from "@/components/tof/TofCardFace";
+import { CATEGORY, TofCardFace } from "@/components/tof/TofCardFace";
 
 export interface StableDeckCard {
   kind: "stable";
@@ -164,7 +164,7 @@ export function TofDeck({
           const isTop = k === 0;
           const style = isTop
             ? { transform: topTransform, transition: topTransition, zIndex: 10, touchAction: "none" as const, cursor: "grab" }
-            : { transform: `translateY(${14 * k}px) scale(${1 - 0.045 * k})`, transition: reduced ? "none" : "transform .3s ease-out", zIndex: 10 - k, opacity: k === 2 ? 0.75 : 1 };
+            : { transform: `translateY(${-16 * k}px) scale(${1 - 0.04 * k})`, transition: reduced ? "none" : "transform .3s ease-out", zIndex: 10 - k, opacity: k === 2 ? 0.8 : 1 };
           return (
             <div
               key={card.id}
@@ -178,11 +178,13 @@ export function TofDeck({
               {isTop ? (
                 <TofCardFace card={card} stampTail={stampTail} stampFade={stampFade} />
               ) : (
-                // A card underneath the top of the deck: only its shape peeks
-                // out, so it never duplicates the top card's visible text.
+                // A card underneath the top of the deck: its colored category
+                // tab peeks out above the top card, and nothing else, so it
+                // never duplicates the top card's visible text.
                 <div
                   aria-hidden="true"
                   className="h-full rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e]"
+                  style={{ borderTop: `4px solid ${(CATEGORY[card.kind === "stable" ? "stable" : card.category] ?? CATEGORY.wildcard).color}` }}
                 />
               )}
             </div>
@@ -196,34 +198,36 @@ export function TofDeck({
       </div>
 
       {top && (
-        <div className="mt-2 flex items-center gap-5">
+        <div className="mt-3 flex items-center gap-3">
           <button
             type="button"
             aria-label="Fade"
             disabled={disabled || top.kind === "stable"}
             title={top.kind === "stable" ? "Fading your own tail is not a thing." : undefined}
             onClick={() => void commit("left")}
-            className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[var(--color-neg)] bg-[rgba(239,68,68,0.10)] text-[var(--color-neg)] disabled:opacity-30"
+            className="flex h-14 min-w-[124px] items-center justify-center gap-2 rounded-full bg-[var(--color-neg)] px-6 font-[var(--font-lilita)] text-[22px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#9f1f1f] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-30 disabled:shadow-none"
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            FADE
           </button>
           <button
             type="button"
             aria-label="Pass"
             disabled={disabled}
             onClick={() => void commit("up")}
-            className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[rgba(255,255,255,0.18)] bg-white/[0.03] text-[#a1a1aa] disabled:opacity-30"
+            className="flex h-11 items-center justify-center rounded-full border-2 border-[rgba(255,255,255,0.18)] bg-white/[0.03] px-5 font-[var(--font-lilita)] text-[16px] tracking-[0.08em] text-[#a1a1aa] transition-transform active:translate-y-[2px] disabled:opacity-30"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M5 12h14" /></svg>
+            PASS
           </button>
           <button
             type="button"
             aria-label="Tail"
             disabled={disabled}
             onClick={() => void commit("right")}
-            className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[var(--color-pos)] bg-[rgba(25,245,124,0.10)] text-[var(--color-pos)] disabled:opacity-30"
+            className="flex h-14 min-w-[124px] items-center justify-center gap-2 rounded-full bg-[var(--color-pos)] px-6 font-[var(--font-lilita)] text-[22px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-30 disabled:shadow-none"
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6" /></svg>
+            TAIL
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6" /></svg>
           </button>
         </div>
       )}

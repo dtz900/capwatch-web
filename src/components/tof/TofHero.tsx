@@ -67,6 +67,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   // write. Without this the deck would re-deal the same top card forever.
   const [dismissed, setDismissed] = useState<ReadonlySet<number>>(() => new Set());
   const pendingHandled = useRef(false);
+  const guestNudged = useRef(false);
 
   const hand = data?.hand ?? null;
   const handId = hand?.hand_id ?? null;
@@ -203,23 +204,32 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   const onPlay = useCallback(async (card: DeckCard, choice: TofChoice): Promise<boolean> => {
     if (!entitlements.isLoggedIn) {
-      if (choice === "pass") {
-        // Anonymous browsing: nothing to write, so remember the dismissal
-        // locally or the deck hands the same card back forever.
-        setDismissed((prev) => { const next = new Set(prev); next.add(card.id); return next; });
-        return true;
+      // Guest mode: every swipe moves the deck, nothing is written. The
+      // dismissal lives in local state or the deck hands the same card back
+      // forever. A tail or fade is stashed so the latest one lands after
+      // sign-in if that card is still open, and the first one nudges once.
+      setDismissed((prev) => { const next = new Set(prev); next.add(card.id); return next; });
+      if (choice !== "pass") {
+        if (card.kind === "shared" && hand) writePendingPlay({ cardId: card.id, choice, slateDate: hand.slate_date });
+        if (!guestNudged.current) {
+          guestNudged.current = true;
+          setToast("Guest mode: swipes are not tracked. Sign in to keep your record.");
+          setTimeout(() => setToast(null), 4000);
+        }
       }
-      if (card.kind === "shared" && hand) writePendingPlay({ cardId: card.id, choice, slateDate: hand.slate_date });
-      document.cookie = `${RETURN_COOKIE}=${encodeURIComponent("/")}; path=/; max-age=1800; samesite=lax`;
-      router.push("/login");
-      return false;
+      return true;
     }
     if (choice !== "pass") {
       const ok = await requireUsername();
       if (!ok) return false;
     }
     return writePlay(card, choice);
-  }, [entitlements.isLoggedIn, hand, router, requireUsername, writePlay]);
+  }, [entitlements.isLoggedIn, hand, requireUsername, writePlay]);
+
+  const signIn = useCallback(() => {
+    document.cookie = `${RETURN_COOKIE}=${encodeURIComponent("/")}; path=/; max-age=1800; samesite=lax`;
+    router.push("/login");
+  }, [router]);
 
   // After login: replay the stashed choice if that card is still open.
   useEffect(() => {
@@ -241,31 +251,47 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "no-hand" | "playable" | "spectator" = !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="border-b border-[var(--color-border)] py-8 sm:py-10" style={{ background: "radial-gradient(ellipse 620px 420px at 50% 42%, rgba(25,245,124,0.07) 0%, rgba(25,245,124,0) 70%)" }}>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[300px_minmax(0,1fr)_300px] lg:items-center">
-        <div className="order-2 flex flex-col gap-3.5 lg:order-1">
-          <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
-            Daily game{hand ? ` · ${hand.slate_date}` : ""}
+    <section className="border-b border-[var(--color-border)] pb-10 pt-7 sm:pb-12 sm:pt-8" style={{ background: "radial-gradient(ellipse 720px 380px at 50% 18%, rgba(25,245,124,0.09) 0%, rgba(25,245,124,0) 70%)" }}>
+      <div className="flex flex-col items-center gap-3 text-center">
+        <TofTitle />
+        <p className="max-w-[560px] text-[15px] leading-relaxed text-[#a1a1aa]">
+          Tonight&apos;s board, one hand for everyone. Swipe right to tail the capper, left to fade them. Graded overnight against the real result, in units at the price.
+        </p>
+        {hand && (
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em]">
+            <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5"><span className="text-[var(--color-pos)]">{hand.cards.length}</span> cards</span>
+            <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5">First lock <span className="text-[var(--color-text)]">{hand.first_lock_at ? new Date(hand.first_lock_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }) : ""} PT</span></span>
+            <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[var(--color-text-muted)]">{hand.slate_date}</span>
           </div>
-          <h2 className="text-[40px] font-extrabold leading-none tracking-[-0.03em] sm:text-[46px]">Tail or Fade</h2>
-          <p className="text-[15px] leading-relaxed text-[#a1a1aa]">
-            Picks from tonight&apos;s board, same hand for everyone. Swipe right to tail, left to fade. Graded overnight against the real result, in units at the price.
-          </p>
-          {hand && (
-            <div className="mt-1 flex gap-7">
-              <div>
-                <div className="text-[28px] font-extrabold leading-none tracking-[-0.025em]">{hand.cards.length}</div>
-                <div className="mt-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">Cards today</div>
-              </div>
-              <div>
-                <div className="text-[28px] font-extrabold leading-none tracking-[-0.025em]">
-                  {hand.first_lock_at ? new Date(hand.first_lock_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }) : ""}
-                </div>
-                <div className="mt-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">First lock · PT</div>
-              </div>
+        )}
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
+        <aside className="order-3 flex flex-col gap-3 lg:order-1">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
+            <ol className="mt-3 flex flex-col gap-3">
+              {[
+                ["Swipe", "Right to tail the capper, left to fade them, up to pass. Same cards for everyone."],
+                ["Price", "A tail pays the capper's odds. A fade pays the Pinnacle close on the other side."],
+                ["Grade", "Every card is 1 unit. Results land overnight, streaks and the board update with them."],
+              ].map(([head, body], i) => (
+                <li key={head} className="flex gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(25,245,124,0.12)] font-[var(--font-lilita)] text-[15px] text-[var(--color-pos)]">{i + 1}</span>
+                  <div>
+                    <div className="text-[13px] font-extrabold">{head}</div>
+                    <div className="text-[12px] leading-snug text-[var(--color-text-soft)]">{body}</div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+          {!entitlements.isLoggedIn && (
+            <div className="rounded-xl border border-dashed border-[var(--color-border-h)] px-4 py-3 text-[12px] leading-snug text-[var(--color-text-muted)]">
+              Playing as a guest. Swipe all you want; nothing counts until you sign in.
             </div>
           )}
-        </div>
+        </aside>
 
         <div className="order-1 flex flex-col items-center lg:order-2">
           {state === "no-hand" ? (
@@ -282,30 +308,40 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
           </div>
         </div>
 
-        <div className="order-3 flex flex-col gap-3">
-          <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-3.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-[#2a2a33] text-[12px] font-extrabold text-[var(--color-text-soft)]">
-              {(profile?.username ?? session?.user?.email ?? "?").charAt(0).toUpperCase()}
+        <aside className="order-2 flex flex-col gap-3 lg:order-3">
+          {entitlements.isLoggedIn ? (
+            <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-3.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-[#2a2a33] font-[var(--font-lilita)] text-[16px] text-[var(--color-pos)]">
+                {(profile?.username ?? session?.user?.email ?? "?").charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Playing as</div>
+                <div className="truncate text-[15px] font-extrabold">{profile?.username ?? "pick a username"}</div>
+              </div>
             </div>
-            <div className="min-w-0">
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">{entitlements.isLoggedIn ? "Playing as" : "Sign in to play"}</div>
-              <div className="truncate text-[15px] font-extrabold">{profile?.username ?? (entitlements.isLoggedIn ? "pick a username" : "your record, your streak")}</div>
+          ) : (
+            <div className="rounded-xl border border-[rgba(25,245,124,0.25)] bg-[rgba(25,245,124,0.05)] px-4 py-4">
+              <div className="font-[var(--font-lilita)] text-[20px] leading-tight">Keep score.</div>
+              <div className="mt-1 text-[12px] leading-snug text-[var(--color-text-soft)]">Sign in to track your record, your streak, and your spot on the board.</div>
+              <button type="button" onClick={signIn} className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-[var(--color-pos)] font-[var(--font-lilita)] text-[17px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none">
+                SIGN IN TO PLAY
+              </button>
             </div>
-          </div>
+          )}
           {stats && (
             <div className="grid grid-cols-3 gap-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-3.5">
               <div>
                 <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Month</div>
-                <div className="mt-1 text-[18px] font-extrabold leading-none tabular-nums">{stats.wins}-{stats.losses}</div>
+                <div className="mt-1 text-[22px] font-extrabold leading-none tabular-nums">{stats.wins}-{stats.losses}</div>
                 <div className={`mt-1 text-[11px] font-bold ${stats.units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}>{unitsLabel(stats.units)}</div>
               </div>
               <div>
                 <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Plays</div>
-                <div className="mt-1 text-[18px] font-extrabold leading-none tabular-nums">{stats.plays}</div>
+                <div className="mt-1 text-[22px] font-extrabold leading-none tabular-nums">{stats.plays}</div>
               </div>
               <div>
                 <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Streak</div>
-                <div className={`mt-1 text-[18px] font-extrabold leading-none ${stats.day_streak > 0 ? "text-[var(--color-gold)]" : stats.day_streak < 0 ? "text-[#7dd3fc]" : ""}`}>
+                <div className={`mt-1 font-[var(--font-lilita)] text-[24px] leading-none ${stats.day_streak > 0 ? "text-[var(--color-gold)]" : stats.day_streak < 0 ? "text-[#7dd3fc]" : ""}`}>
                   {stats.day_streak > 0 ? `W${stats.day_streak}` : stats.day_streak < 0 ? `L${-stats.day_streak}` : "even"}
                 </div>
                 <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">best W{stats.best_day_streak}</div>
@@ -313,8 +349,30 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
             </div>
           )}
           <TofBoard rows={board.rows} me={me} minPlays={board.minPlays} />
-        </div>
+        </aside>
       </div>
     </section>
+  );
+}
+
+/** The game's title: chunky rounded type on an arch with a solid offset shadow. A logo, not a headline. */
+function TofTitle() {
+  return (
+    <div className="flex flex-col items-center">
+      <h2 className="sr-only">Tail or Fade</h2>
+      <svg viewBox="0 0 640 150" className="h-auto w-[min(92vw,560px)]" aria-hidden="true" style={{ filter: "drop-shadow(0 5px 0 #0f9a4c) drop-shadow(0 12px 18px rgba(0,0,0,0.55))" }}>
+        <defs>
+          <path id="tof-title-arc" d="M 30 132 Q 320 -10 610 132" fill="none" />
+          <linearGradient id="tof-title-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#ffffff" />
+            <stop offset="0.55" stopColor="#f7f3e9" />
+            <stop offset="1" stopColor="#19f57c" />
+          </linearGradient>
+        </defs>
+        <text fontFamily="var(--font-lilita), 'Arial Black', sans-serif" fontSize="80" letterSpacing="3" fill="url(#tof-title-fill)" stroke="#0a0a0c" strokeWidth="2" paintOrder="stroke">
+          <textPath href="#tof-title-arc" startOffset="50%" textAnchor="middle">TAIL OR FADE</textPath>
+        </text>
+      </svg>
+    </div>
   );
 }
