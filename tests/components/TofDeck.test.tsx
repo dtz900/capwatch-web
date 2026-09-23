@@ -15,7 +15,8 @@ describe("TofDeck", () => {
   it("renders the top card and calls onPlay with the button choice", async () => {
     const onPlay = vi.fn().mockResolvedValue(true);
     render(<TofDeck open={[card(1), card(2)]} locked={[]} onPlay={onPlay} />);
-    expect(screen.getByText("NYY -1.5")).toBeInTheDocument();
+    // Both fixture cards carry this label and the next card renders under the top one.
+    expect(screen.getAllByText("NYY -1.5").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: /^tail$/i }));
     await waitFor(() => expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), "tail"));
   });
