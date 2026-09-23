@@ -238,9 +238,11 @@ export function TofDeck({
   const cueFade = leave === "left" ? 1 : Math.max(0, Math.min(1, -dx / STAMP_FULL));
   const cueTail = leave === "right" ? 1 : Math.max(0, Math.min(1, dx / STAMP_FULL));
   const fadeAllowed = !!top && top.kind !== "stable";
-  const stack = open.slice(0, 3);
+  // Locked cards ride at the back of the stack so the whole remaining hand is visible;
+  // only open cards ever reach the top.
+  const stack = [...open, ...locked].slice(0, 3);
 
-  const allDone = stack.length === 0;
+  const allDone = open.length === 0;
   return (
     <div className="flex flex-col items-center gap-3">
       {progress && progress.length > 0 && <ProgressDots items={progress} currentId={top?.id ?? null} done={allDone} />}
@@ -274,7 +276,7 @@ export function TofDeck({
             <div className="text-[13px] text-[var(--color-text-soft)]">Results land after the games finish.</div>
           </div>
         )}
-        {[...stack].reverse().map((card, i) => {
+        {!allDone && [...stack].reverse().map((card, i) => {
           const k = stack.length - 1 - i; // 0 = top
           const isTop = k === 0;
           const style = isTop
