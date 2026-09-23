@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchTofBoard, fetchTofHand, fetchTodayPicks } from "@/lib/api";
-import { clearPendingPlay, isLocked, orderDeck, readPendingPlay, unitsLabel, writePendingPlay } from "@/lib/tof/deck";
+import { clearPendingPlay, isLocked, orderDeck, readFoldOpen, readGuestChoices, readHandCache, readPendingPlay, unitsLabel, writeFoldOpen, writeGuestChoices, writeHandCache, writePendingPlay } from "@/lib/tof/deck";
 import type { TofBoardRow, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
@@ -70,10 +70,28 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   // write. Without this the deck would re-deal the same top card forever.
   // Guest choices never reach the database; they still drive the deck and the dots.
   const [guestChoices, setGuestChoices] = useState<ReadonlyMap<number, TofChoice>>(() => new Map());
+  const slateDate = data?.hand?.slate_date ?? null;
+  const guestHydrated = useRef<string | null>(null);
+  useEffect(() => {
+    if (!slateDate || guestHydrated.current === slateDate) return;
+    guestHydrated.current = slateDate;
+    setGuestChoices(readGuestChoices(slateDate));
+  }, [slateDate]);
+  useEffect(() => {
+    if (!slateDate || guestHydrated.current !== slateDate) return;
+    writeGuestChoices(slateDate, guestChoices);
+  }, [slateDate, guestChoices]);
   const pendingHandled = useRef(false);
   const guestNudged = useRef(false);
   // The hero lands folded to its title; the table slides open on a tap.
   const [unfolded, setUnfolded] = useState(false);
+  // Session memory: the fold stays how the visitor left it as they move
+  // between pages. Read after mount so the server and first client render
+  // agree (same reset-in-effect pattern as loadProfile; lint debt noted).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (readFoldOpen()) setUnfolded(true);
+  }, []);
   // The fold clips overflow while it slides. Once open and settled the clip
   // comes off so the button glows and card shadows are not cut at the edge.
   const [settled, setSettled] = useState(false);
@@ -84,7 +102,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   }, [unfolded]);
   const toggleFold = useCallback(() => {
     setSettled(false);
-    setUnfolded((u) => !u);
+    setUnfolded((u) => { writeFoldOpen(!u); return !u; });
   }, []);
 
   const hand = data?.hand ?? null;
@@ -101,6 +119,16 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     const clock = setInterval(() => setNow(new Date()), 15_000);
     return () => clearInterval(clock);
   }, []);
+  // Pages other than the leaderboard mount the hero with no server hand:
+  // paint the session-cached hand at once, then fetch a fresh one.
+  useEffect(() => {
+    if (initial !== null) return;
+    const cached = readHandCache<TofHandResponse>();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (cached) setData(cached);
+    fetchTofHand().then(setData).catch(() => { /* keep cached or empty */ });
+  }, [initial]);
+  useEffect(() => { if (data?.hand) writeHandCache(data); }, [data]);
   useEffect(() => {
     // No hand yet is exactly when polling matters most: a visitor who loaded
     // the page before the daily deal (or during an API blip) should get the
@@ -284,7 +312,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   }, [entitlements.isLoggedIn, hand, profile, playedIds, onPlay]);
 
   const me = profile?.username && stats ? { username: profile.username, stats } : null;
-  const state: "no-hand" | "playable" | "spectator" = !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
+  const state: "loading" | "no-hand" | "playable" | "spectator" = data === null ? "loading" : !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
     <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-6 pt-6 transition-[padding] duration-500 sm:pt-7 data-[open=true]:pb-10 data-[open=true]:sm:pb-12" style={{ background: FELT }} data-open={unfolded}>
@@ -324,7 +352,11 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         </aside>
 
         <div className="order-1 flex flex-col items-center lg:order-2">
-          {state === "no-hand" ? (
+          {state === "loading" ? (
+            <div className="flex h-[300px] w-[360px] max-w-full items-center justify-center rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+              Dealing the hand
+            </div>
+          ) : state === "no-hand" ? (
             <div className="flex h-[300px] w-[360px] max-w-full flex-col items-center justify-center gap-2 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] text-center">
               <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">No hand today</div>
               <div className="text-[13px] text-[var(--color-text-soft)]">{data?.no_hand_reason ?? "Not enough picks yet."}</div>

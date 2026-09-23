@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { TofCard, TofChoice } from "@/lib/types";
 import { TofCardFace } from "@/components/tof/TofCardFace";
+import { markNudgeSeen, nudgeSeen } from "@/lib/tof/deck";
 
 export interface StableDeckCard {
   kind: "stable";
@@ -170,8 +171,9 @@ export function TofDeck({
   }, []);
   const fresh = !progress || progress.every((p) => p.choice == null);
   useEffect(() => {
-    if (!nudge || nudged.current || !top || disabled || !fresh || prefersReducedMotion()) return;
+    if (!nudge || nudged.current || !top || disabled || !fresh || prefersReducedMotion() || nudgeSeen()) return;
     nudged.current = true;
+    markNudgeSeen();
     const start = performance.now() + NUDGE_DELAY;
     const tick = (t: number) => {
       const e = t - start;

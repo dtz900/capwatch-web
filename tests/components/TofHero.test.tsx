@@ -90,6 +90,7 @@ beforeEach(() => {
   push.mockReset();
   claim.requireUsername.mockClear();
   localStorage.clear();
+  sessionStorage.clear();
   selectResult.current = {};
   vi.mocked(fetchTodayPicks).mockResolvedValue({ date: "2026-09-22", picks: [] });
   vi.mocked(fetchTofHand).mockReset();
@@ -269,5 +270,47 @@ describe("TofHero", () => {
     render(<TofHero initial={handOf([mkCard(1, "NYY -1.5", "2000-01-01T00:00:00Z")])} />);
     await waitFor(() => expect(localStorage.getItem("ts:tof:pending")).toBeNull());
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("remembers a guest's plays across a remount on the same slate", async () => {
+    mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false } };
+    const first = render(<TofHero initial={TWO_CARDS} />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^tail$/i })); });
+    await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
+    first.unmount();
+    render(<TofHero initial={TWO_CARDS} />);
+    await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
+  });
+
+  it("forgets guest plays from a different slate date", async () => {
+    mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false } };
+    const first = render(<TofHero initial={TWO_CARDS} />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^tail$/i })); });
+    await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
+    first.unmount();
+    const other = { ...TWO_CARDS, hand: { ...TWO_CARDS.hand!, slate_date: "2026-09-23" } };
+    render(<TofHero initial={other} />);
+    await waitFor(() => expect(screen.getByText("Card 1 of 2")).toBeInTheDocument());
+  });
+
+  it("keeps the fold open across a remount within the session", async () => {
+    mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false } };
+    const first = render(<TofHero initial={HAND} />);
+    const title = screen.getByRole("button", { name: /tail\s*or\s*fade/i });
+    expect(title).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(title);
+    expect(title).toHaveAttribute("aria-expanded", "true");
+    first.unmount();
+    render(<TofHero initial={HAND} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /tail\s*or\s*fade/i })).toHaveAttribute("aria-expanded", "true"));
+  });
+
+  it("with no server hand, paints the cached hand and then refetches", async () => {
+    mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false } };
+    sessionStorage.setItem("ts:tof:hand", JSON.stringify({ at: Date.now(), data: HAND }));
+    vi.mocked(fetchTofHand).mockResolvedValue(TWO_CARDS);
+    render(<TofHero initial={null} />);
+    await waitFor(() => expect(screen.getByText("Card 1 of 2")).toBeInTheDocument());
+    expect(fetchTofHand).toHaveBeenCalledTimes(1);
   });
 });

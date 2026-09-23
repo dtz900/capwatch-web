@@ -22,7 +22,6 @@ import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode 
 import { tofEnabled } from "@/lib/flags";
 import { SITE_NAME } from "@/lib/seo";
 import type { Window, Sort, BetTypeFilter, SportFilter, TofHandResponse } from "@/lib/types";
-import { TofHero } from "@/components/tof/TofHero";
 import { buildRootOgFingerprint, ROOT_OG_CARD_VERSION } from "./_root-og";
 
 interface PageProps {
@@ -201,10 +200,9 @@ export default async function Home({ searchParams }: PageProps) {
         <LeaderboardPrefsRestorer />
       </Suspense>
       <SportTint sport={filters.sport} />
-      <TopNav />
+      <TopNav tofHand={tofHand} />
       <LivePicksProvider initial={liveInitial} sport={filters.sport}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
-          {tofEnabled() && <TofHero initial={tofHand} />}
           <Hero stats={heroStats} sport={filters.sport} />
           <div className="mb-4">
             <SportTabs current={filters.sport ?? "all"} />

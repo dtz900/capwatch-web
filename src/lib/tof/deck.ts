@@ -90,3 +90,73 @@ export function unitsLabel(n: number | null | undefined): string {
   const sign = v > 0 ? "+" : v < 0 ? "-" : "";
   return `${sign}${Math.abs(v).toFixed(2)}u`;
 }
+
+/* Guest plays live only in the browser (no tof_plays row to write). They are
+   kept per slate date so a guest who leaves and comes back, or enters from
+   another page, does not get the same cards dealt again. */
+const GUEST_KEY = "ts:tof:guest";
+
+export function readGuestChoices(slateDate: string): Map<number, "tail" | "fade" | "pass"> {
+  try {
+    const raw = localStorage.getItem(GUEST_KEY);
+    if (!raw) return new Map();
+    const v = JSON.parse(raw) as { slateDate?: string; choices?: unknown };
+    if (v.slateDate !== slateDate || !Array.isArray(v.choices)) return new Map();
+    const out = new Map<number, "tail" | "fade" | "pass">();
+    for (const pair of v.choices) {
+      if (!Array.isArray(pair) || typeof pair[0] !== "number") continue;
+      if (pair[1] !== "tail" && pair[1] !== "fade" && pair[1] !== "pass") continue;
+      out.set(pair[0], pair[1]);
+    }
+    return out;
+  } catch {
+    return new Map();
+  }
+}
+
+export function writeGuestChoices(slateDate: string, choices: ReadonlyMap<number, "tail" | "fade" | "pass">): void {
+  try {
+    localStorage.setItem(GUEST_KEY, JSON.stringify({ slateDate, choices: [...choices.entries()] }));
+  } catch {
+    /* storage unavailable: the deck still works for this visit */
+  }
+}
+
+/* The fold and the first-card nudge are per browser session: a fresh tab
+   lands folded and gets the nudge once; moving between pages keeps whatever
+   the visitor last had. */
+const FOLD_KEY = "ts:tof:open";
+const NUDGE_KEY = "ts:tof:nudged";
+
+export function readFoldOpen(): boolean {
+  try { return sessionStorage.getItem(FOLD_KEY) === "1"; } catch { return false; }
+}
+export function writeFoldOpen(open: boolean): void {
+  try { sessionStorage.setItem(FOLD_KEY, open ? "1" : "0"); } catch { /* fine */ }
+}
+export function nudgeSeen(): boolean {
+  try { return sessionStorage.getItem(NUDGE_KEY) === "1"; } catch { return false; }
+}
+export function markNudgeSeen(): void {
+  try { sessionStorage.setItem(NUDGE_KEY, "1"); } catch { /* fine */ }
+}
+
+/* Short hand cache so the hero on a second page paints with the same deck
+   instantly instead of flashing the no-hand box while it refetches. */
+const HAND_KEY = "ts:tof:hand";
+const HAND_TTL_MS = 60_000;
+
+export function readHandCache<T>(): T | null {
+  try {
+    const raw = sessionStorage.getItem(HAND_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as { at?: number; data?: T };
+    if (typeof v.at !== "number" || Date.now() - v.at > HAND_TTL_MS || v.data == null) return null;
+    return v.data;
+  } catch {
+    return null;
+  }
+}
+export function writeHandCache<T>(data: T): void {
+  try { sessionStorage.setItem(HAND_KEY, JSON.stringify({ at: Date.now(), data })); } catch { /* fine */ }
+}
