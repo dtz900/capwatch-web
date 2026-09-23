@@ -38,13 +38,15 @@ function LoginInner() {
     e.preventDefault();
     setError(null);
     if (!supabase) return;
-    // No emailRedirectTo on purpose. Verified 2026-08-17 against prod: the
-    // redirect-bearing request rendered the link-only email even with
-    // {{ .Token }} in the template; the plain OTP request rendered link +
-    // code. The link still resolves through the project Site URL to
-    // /auth/callback, and the code path is what removes the browser-affinity
-    // failure entirely.
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    // Explicit emailRedirectTo is required. The Supabase project is shared
+    // with FADE AI and its Site URL points at fadeai.bet, so a plain OTP
+    // request emails a link that lands on FADE AI, not here (David hit this
+    // 2026-09-22). tailslips.com/** is on the project's redirect allow-list.
+    // The emailed code path below stays as the browser-affinity escape hatch.
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
     if (error) setError(error.message);
     else setSent(true);
   }
