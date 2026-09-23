@@ -280,8 +280,10 @@ export function TofDeck({
           const k = stack.length - 1 - i; // 0 = top
           const isTop = k === 0;
           const style = isTop
-            ? { transform: topTransform, transition: topTransition, zIndex: 10, touchAction: "none" as const, cursor: "grab" }
-            : { transform: `translateY(${-30 * k}px) scale(${1 - 0.04 * k})`, transition: reduced ? "none" : "transform .3s ease-out", zIndex: 10 - k, opacity: 1 };
+            ? { transform: topTransform, transition: topTransition, zIndex: 10, touchAction: "none" as const, cursor: "grab",
+                boxShadow: "0 30px 56px rgba(0,0,0,0.62), 0 12px 22px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06)", borderRadius: 12 }
+            : { transform: `translateY(${-30 * k}px) scale(${1 - 0.04 * k})`, transition: reduced ? "none" : "transform .3s ease-out, filter .3s ease-out", zIndex: 10 - k,
+                filter: `brightness(${1 - 0.28 * k})`, boxShadow: "0 10px 24px rgba(0,0,0,0.45)", borderRadius: 12 };
           return (
             <div
               key={card.id}
