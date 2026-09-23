@@ -21,6 +21,18 @@ describe("TofDeck", () => {
     await waitFor(() => expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), "tail"));
   });
 
+  it("commits a pass when the card is dragged up past the threshold", async () => {
+    const onPlay = vi.fn().mockResolvedValue(true);
+    render(<TofDeck open={[card(1), card(2)]} locked={[]} onPlay={onPlay} />);
+    const deck = screen.getByTestId("tof-deck");
+    const topCard = deck.firstElementChild as HTMLElement;
+    const face = Array.from(deck.children).find((el) => (el as HTMLElement).style.zIndex === "10") as HTMLElement ?? topCard;
+    fireEvent.pointerDown(face, { clientX: 200, clientY: 400, pointerId: 1 });
+    fireEvent.pointerMove(face, { clientX: 205, clientY: 200, pointerId: 1 });
+    fireEvent.pointerUp(face, { clientX: 205, clientY: 200, pointerId: 1 });
+    await waitFor(() => expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), "pass"));
+  });
+
   it("supports arrow keys on the focused deck", async () => {
     const onPlay = vi.fn().mockResolvedValue(true);
     render(<TofDeck open={[card(1)]} locked={[]} onPlay={onPlay} />);
@@ -75,7 +87,7 @@ describe("TofDeck", () => {
     fireEvent.pointerMove(cardDiv, { clientX: 0, pointerId: 1 });
     fireEvent.pointerUp(cardDiv, { clientX: 0, pointerId: 1 });
 
-    await waitFor(() => expect(cardDiv.style.transform).toBe("translateX(0px) rotate(0deg)"));
+    await waitFor(() => expect(cardDiv.style.transform).toBe("translate(0px, 0px) rotate(0deg)"));
     expect(onPlay).not.toHaveBeenCalled();
   });
 });

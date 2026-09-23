@@ -41,9 +41,11 @@ export function TofDeck({
   disabled?: boolean;
 }) {
   const [dx, setDx] = useState(0);
+  const [dy, setDy] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [leave, setLeave] = useState<Leave>(null);
   const startX = useRef(0);
+  const startY = useRef(0);
   const hintId = useId();
   // The fly-off reset is a bare timer, so an unmount mid-animation would fire
   // setState on a gone component. Held here and cleared on unmount.
@@ -58,6 +60,7 @@ export function TofDeck({
   if ((top?.id ?? null) !== prevTopId) {
     setPrevTopId(top?.id ?? null);
     setDx(0);
+    setDy(0);
     setLeave(null);
   }
 
@@ -74,6 +77,7 @@ export function TofDeck({
         // of leaving it stranded until the next pointer down.
         setDragging(false);
         setDx(0);
+        setDy(0);
         return;
       }
       setLeave(dir);
@@ -82,6 +86,7 @@ export function TofDeck({
       if (!ok) {
         setLeave(null);
         setDx(0);
+        setDy(0);
         return;
       }
       const wait = prefersReducedMotion() ? 0 : 380;
@@ -90,6 +95,7 @@ export function TofDeck({
         resetTimer.current = null;
         setLeave(null);
         setDx(0);
+        setDy(0);
       }, wait);
     },
     [top, onPlay, disabled, leave],
@@ -99,23 +105,29 @@ export function TofDeck({
     if (leave || disabled) return;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* jsdom */ }
     startX.current = e.clientX;
+    startY.current = e.clientY;
     setDragging(true);
     setDx(0);
+    setDy(0);
   }
   function onMove(e: ReactPointerEvent<HTMLDivElement>) {
     if (!dragging) return;
     setDx(e.clientX - startX.current);
+    setDy(e.clientY - startY.current);
   }
   function onUp() {
     if (!dragging) return;
-    if (dx > DRAG_THRESHOLD) void commit("right");
+    // Up wins only when the drag is clearly vertical, so a diagonal fling
+    // toward a side still reads as tail or fade.
+    if (dy < -DRAG_THRESHOLD && -dy > Math.abs(dx)) void commit("up");
+    else if (dx > DRAG_THRESHOLD) void commit("right");
     else if (dx < -DRAG_THRESHOLD) void commit("left");
-    else { setDragging(false); setDx(0); }
+    else { setDragging(false); setDx(0); setDy(0); }
   }
   function onKey(e: ReactKeyboardEvent<HTMLDivElement>) {
     if (e.key === "ArrowRight") { e.preventDefault(); void commit("right"); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); void commit("left"); }
-    else if (e.key === "ArrowDown") { e.preventDefault(); void commit("up"); }
+    else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); void commit("up"); }
   }
 
   const reduced = prefersReducedMotion();
@@ -123,7 +135,7 @@ export function TofDeck({
     leave === "right" ? "translateX(760px) rotate(30deg)"
       : leave === "left" ? "translateX(-760px) rotate(-30deg)"
         : leave === "up" ? "translateY(-900px)"
-          : `translateX(${dx}px) rotate(${dx / 18}deg)`;
+          : `translate(${dx}px, ${Math.min(0, dy)}px) rotate(${dx / 18}deg)`;
   const topTransition = reduced ? "none" : leave ? "transform .38s ease-in" : dragging ? "none" : "transform .25s ease-out";
   const stampTail = leave === "right" ? 1 : Math.max(0, Math.min(1, dx / STAMP_FULL));
   const stampFade = leave === "left" ? 1 : Math.max(0, Math.min(1, -dx / STAMP_FULL));
