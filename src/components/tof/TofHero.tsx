@@ -13,6 +13,7 @@ import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } fr
 import { TofBoard } from "@/components/tof/TofBoard";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
+import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
 
 const RETURN_COOKIE = "ts_return_to";
 
@@ -355,6 +356,12 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       // same card back, and every one of them becomes a real play after
       // sign-in. The first tail or fade nudges once.
       setGuestChoices((prev) => { const next = new Map(prev); next.set(card.id, choice); return next; });
+      // Telemetry only, fire-and-forget: without it a guest who swipes the
+      // whole deck and never signs in leaves no trace anywhere, and an empty
+      // tof_plays reads the same as an empty site.
+      if (hand && card.kind === "shared") {
+        logGuestSwipe({ handId: hand.hand_id, cardId: card.id, choice });
+      }
       if (choice !== "pass") {
         if (!guestNudged.current) {
           guestNudged.current = true;
@@ -369,12 +376,24 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       if (!ok) return false;
     }
     return writePlay(card, choice);
-  }, [entitlements.isLoggedIn, requireUsername, writePlay]);
+  }, [entitlements.isLoggedIn, hand, requireUsername, writePlay]);
 
   const signIn = useCallback(() => {
     document.cookie = `${RETURN_COOKIE}=${encodeURIComponent("/")}; path=/; max-age=1800; samesite=lax`;
     router.push("/login");
   }, [router]);
+
+  // The conversion half of the guest funnel: this browser swiped as a guest
+  // at some point and now has an account. Once per signed-in user, and a
+  // no-op when this browser has no stored guest id. Kept separate from the
+  // replay below because a guest can swipe on one day and sign in on another,
+  // when there is no stash left to replay but the conversion still happened.
+  const convertedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!userId || convertedFor.current === userId) return;
+    convertedFor.current = userId;
+    markGuestConverted();
+  }, [userId]);
 
   // After login: every swipe made as a guest on this slate becomes a real
   // play, in deal order, once this user's plays have loaded (so nothing is
