@@ -49,42 +49,6 @@ export function orderDeck(
   return { open: seed ? seededShuffle(openCards, seed) : openCards, locked: lockedCards };
 }
 
-export interface PendingPlay {
-  cardId: number;
-  choice: "tail" | "fade";
-  slateDate: string;
-}
-
-const PENDING_KEY = "ts:tof:pending";
-
-export function readPendingPlay(): PendingPlay | null {
-  try {
-    const raw = localStorage.getItem(PENDING_KEY);
-    if (!raw) return null;
-    const p = JSON.parse(raw) as PendingPlay;
-    if (typeof p.cardId !== "number" || (p.choice !== "tail" && p.choice !== "fade")) return null;
-    return p;
-  } catch {
-    return null;
-  }
-}
-
-export function writePendingPlay(p: PendingPlay): void {
-  try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify(p));
-  } catch {
-    /* storage unavailable: the user just replays the card after login */
-  }
-}
-
-export function clearPendingPlay(): void {
-  try {
-    localStorage.removeItem(PENDING_KEY);
-  } catch {
-    /* nothing to clear */
-  }
-}
-
 export function unitsLabel(n: number | null | undefined): string {
   const v = Number(n ?? 0);
   const sign = v > 0 ? "+" : v < 0 ? "-" : "";
@@ -120,6 +84,10 @@ export function writeGuestChoices(slateDate: string, choices: ReadonlyMap<number
   } catch {
     /* storage unavailable: the deck still works for this visit */
   }
+}
+
+export function clearGuestChoices(): void {
+  try { localStorage.removeItem(GUEST_KEY); } catch { /* nothing to clear */ }
 }
 
 /* Short hand cache so the hero on a second page paints with the same deck

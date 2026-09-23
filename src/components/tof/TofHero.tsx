@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchTofBoard, fetchTofHand, fetchTodayPicks } from "@/lib/api";
-import { clearPendingPlay, isLocked, orderDeck, readGuestChoices, readHandCache, readPendingPlay, unitsLabel, writeGuestChoices, writeHandCache, writePendingPlay } from "@/lib/tof/deck";
+import { clearGuestChoices, isLocked, orderDeck, readGuestChoices, readHandCache, unitsLabel, writeGuestChoices, writeHandCache } from "@/lib/tof/deck";
 import type { TofBoardRow, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
@@ -72,16 +72,31 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [guestChoices, setGuestChoices] = useState<ReadonlyMap<number, TofChoice>>(() => new Map());
   const slateDate = data?.hand?.slate_date ?? null;
   const guestHydrated = useRef<string | null>(null);
+  // Guest choices only ever describe a signed-out visit. Once signed in the
+  // database is the record: the in-memory map is dropped so it cannot hide
+  // cards that were never written, and the stored stash is consumed by the
+  // replay below, which turns every swipe into a real play.
+  const isLoggedIn = entitlements.isLoggedIn;
   useEffect(() => {
+    if (isLoggedIn) {
+      guestHydrated.current = null;
+      // Derived-state reset when auth flips (same pattern as loadProfile).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGuestChoices((prev) => (prev.size === 0 ? prev : new Map()));
+      return;
+    }
     if (!slateDate || guestHydrated.current === slateDate) return;
     guestHydrated.current = slateDate;
     setGuestChoices(readGuestChoices(slateDate));
-  }, [slateDate]);
+  }, [slateDate, isLoggedIn]);
   useEffect(() => {
-    if (!slateDate || guestHydrated.current !== slateDate) return;
+    if (isLoggedIn || !slateDate || guestHydrated.current !== slateDate) return;
     writeGuestChoices(slateDate, guestChoices);
-  }, [slateDate, guestChoices]);
-  const pendingHandled = useRef(false);
+  }, [slateDate, guestChoices, isLoggedIn]);
+  // "<user>:<hand>" once that user's plays for that hand have loaded. The
+  // guest-swipe replay waits for it so it never re-inserts a written play.
+  const [playsLoadedFor, setPlaysLoadedFor] = useState<string | null>(null);
+  const replayedFor = useRef<string | null>(null);
   const guestNudged = useRef(false);
   // The hero lands folded to its title on every page; the table slides open on a tap.
   const [unfolded, setUnfolded] = useState(false);
@@ -156,6 +171,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         }
       } else if (!cancelled) {
         setPlays((rows ?? []) as TofPlay[]);
+        setPlaysLoadedFor(`${userId}:${handId}`);
       }
       const { data: st, error: statsError } = await supabase.from("tof_tailer_stats").select("window, plays, wins, losses, pushes, units, day_streak, best_day_streak")
         .eq("user_id", userId).eq("window", "month").maybeSingle();
@@ -261,13 +277,12 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   const onPlay = useCallback(async (card: DeckCard, choice: TofChoice): Promise<boolean> => {
     if (!entitlements.isLoggedIn) {
-      // Guest mode: every swipe moves the deck, nothing is written. The
-      // dismissal lives in local state or the deck hands the same card back
-      // forever. A tail or fade is stashed so the latest one lands after
-      // sign-in if that card is still open, and the first one nudges once.
+      // Guest mode: every swipe moves the deck, nothing is written. Choices
+      // live in local state (persisted per slate) so the deck never hands the
+      // same card back, and every one of them becomes a real play after
+      // sign-in. The first tail or fade nudges once.
       setGuestChoices((prev) => { const next = new Map(prev); next.set(card.id, choice); return next; });
       if (choice !== "pass") {
-        if (card.kind === "shared" && hand) writePendingPlay({ cardId: card.id, choice, slateDate: hand.slate_date });
         if (!guestNudged.current) {
           guestNudged.current = true;
           setToast("Sign in to keep score.");
@@ -281,28 +296,35 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       if (!ok) return false;
     }
     return writePlay(card, choice);
-  }, [entitlements.isLoggedIn, hand, requireUsername, writePlay]);
+  }, [entitlements.isLoggedIn, requireUsername, writePlay]);
 
   const signIn = useCallback(() => {
     document.cookie = `${RETURN_COOKIE}=${encodeURIComponent("/")}; path=/; max-age=1800; samesite=lax`;
     router.push("/login");
   }, [router]);
 
-  // After login: replay the stashed choice if that card is still open.
+  // After login: every swipe made as a guest on this slate becomes a real
+  // play, in deal order, once this user's plays have loaded (so nothing is
+  // written twice). Cards that locked or were already played are skipped.
+  // A dismissed username prompt stops the run and keeps the stash for the
+  // next attempt; a completed run clears it.
   useEffect(() => {
-    if (pendingHandled.current || !entitlements.isLoggedIn || !hand || !profile) return;
-    const pending = readPendingPlay();
-    if (!pending) return;
-    pendingHandled.current = true;
-    clearPendingPlay();
-    const card = hand.cards.find((c) => c.id === pending.cardId);
-    if (!card || pending.slateDate !== hand.slate_date || isLocked(card, new Date()) || playedIds.has(card.id)) return;
-    // onPlay is the same play-writing path a user click drives; replaying a
-    // stashed pending play after login has to run once when auth/hand become
-    // ready, which is an effect by nature.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void onPlay({ ...card, kind: "shared" }, pending.choice);
-  }, [entitlements.isLoggedIn, hand, profile, playedIds, onPlay]);
+    const key = userId && handId != null ? `${userId}:${handId}` : null;
+    if (!key || !hand || playsLoadedFor !== key || replayedFor.current === key) return;
+    replayedFor.current = key;
+    const stash = readGuestChoices(hand.slate_date);
+    if (stash.size === 0) { clearGuestChoices(); return; }
+    (async () => {
+      const at = new Date();
+      for (const card of hand.cards) {
+        const choice = stash.get(card.id);
+        if (!choice || isLocked(card, at) || playedIds.has(card.id)) continue;
+        const ok = await onPlay({ ...card, kind: "shared" }, choice);
+        if (!ok) { replayedFor.current = null; return; }
+      }
+      clearGuestChoices();
+    })();
+  }, [userId, handId, hand, playsLoadedFor, playedIds, onPlay]);
 
   const me = profile?.username && stats ? { username: profile.username, stats } : null;
   const state: "loading" | "no-hand" | "playable" | "spectator" = data === null ? "loading" : !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";

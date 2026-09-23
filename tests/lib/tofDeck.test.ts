@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { isLocked, seededShuffle, orderDeck, readPendingPlay, writePendingPlay, clearPendingPlay, unitsLabel } from "@/lib/tof/deck";
+import { isLocked, seededShuffle, orderDeck, readGuestChoices, writeGuestChoices, clearGuestChoices, unitsLabel } from "@/lib/tof/deck";
 import type { TofCard } from "@/lib/types";
 
 const NOW = new Date("2026-09-22T20:00:00Z");
@@ -46,14 +46,21 @@ describe("orderDeck", () => {
   });
 });
 
-describe("pending play storage", () => {
+describe("guest choice storage", () => {
   beforeEach(() => localStorage.clear());
-  it("round trips and clears", () => {
-    expect(readPendingPlay()).toBeNull();
-    writePendingPlay({ cardId: 5, choice: "fade", slateDate: "2026-09-22" });
-    expect(readPendingPlay()).toEqual({ cardId: 5, choice: "fade", slateDate: "2026-09-22" });
-    clearPendingPlay();
-    expect(readPendingPlay()).toBeNull();
+  it("round trips per slate date and clears", () => {
+    expect(readGuestChoices("2026-09-22").size).toBe(0);
+    writeGuestChoices("2026-09-22", new Map([[5, "fade"], [6, "pass"]]));
+    expect([...readGuestChoices("2026-09-22").entries()]).toEqual([[5, "fade"], [6, "pass"]]);
+    expect(readGuestChoices("2026-09-23").size).toBe(0);
+    clearGuestChoices();
+    expect(readGuestChoices("2026-09-22").size).toBe(0);
+  });
+  it("drops malformed entries instead of throwing", () => {
+    localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-22", choices: [["x", "tail"], [7, "nope"], [8, "tail"]] }));
+    expect([...readGuestChoices("2026-09-22").entries()]).toEqual([[8, "tail"]]);
+    localStorage.setItem("ts:tof:guest", "not json");
+    expect(readGuestChoices("2026-09-22").size).toBe(0);
   });
 });
 

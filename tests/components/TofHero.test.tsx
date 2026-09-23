@@ -120,7 +120,7 @@ describe("TofHero", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^tail$/i }));
     await screen.findByText(/sign in to keep score/i);
     expect(push).not.toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem("ts:tof:pending") ?? "{}")).toEqual({ cardId: 1, choice: "tail", slateDate: "2026-09-22" });
+    expect(JSON.parse(localStorage.getItem("ts:tof:guest") ?? "{}")).toEqual({ slateDate: "2026-09-22", choices: [[1, "tail"]] });
     expect(insert).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.getByText(/you played every card/i)).toBeInTheDocument(), { timeout: 2000 });
   });
@@ -190,25 +190,48 @@ describe("TofHero", () => {
     expect(await screen.findByText("Could not save that play. Try again.")).toBeInTheDocument();
   });
 
-  it("replays a stashed pending play once after login", async () => {
+  it("turns every guest swipe into a real play after login, in deal order, then clears the stash", async () => {
     insert.mockResolvedValue({ error: null });
-    localStorage.setItem("ts:tof:pending", JSON.stringify({ cardId: 1, choice: "tail", slateDate: "2026-09-22" }));
+    localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-22", choices: [[2, "fade"], [1, "tail"]] }));
     mockAuth.current = SIGNED_IN;
-    render(<TofHero initial={HAND} />);
-    await waitFor(() => expect(insert).toHaveBeenCalledWith("tof_plays",
-      { user_id: "u1", hand_id: 7, card_id: 1, stable_pick_id: null, choice: "tail" }));
-    expect(insert).toHaveBeenCalledTimes(1);
-    expect(localStorage.getItem("ts:tof:pending")).toBeNull();
+    render(<TofHero initial={TWO_CARDS} />);
+    await waitFor(() => expect(insert).toHaveBeenCalledTimes(2));
+    expect(insert.mock.calls[0]).toEqual(["tof_plays", { user_id: "u1", hand_id: 7, card_id: 1, stable_pick_id: null, choice: "tail" }]);
+    expect(insert.mock.calls[1]).toEqual(["tof_plays", { user_id: "u1", hand_id: 7, card_id: 2, stable_pick_id: null, choice: "fade" }]);
+    await waitFor(() => expect(localStorage.getItem("ts:tof:guest")).toBeNull());
+    await waitFor(() => expect(screen.getByText(/you played every card/i)).toBeInTheDocument());
   });
 
-  it("ignores a pending play stashed on a different slate date", async () => {
+  it("replays a guest pass too, and never re-inserts a play the user already has", async () => {
     insert.mockResolvedValue({ error: null });
-    localStorage.setItem("ts:tof:pending", JSON.stringify({ cardId: 1, choice: "tail", slateDate: "2026-09-21" }));
+    selectResult.current["tof_plays"] = { data: [{ id: 9, hand_id: 7, card_id: 1, stable_pick_id: null, choice: "tail", outcome: null, units: null }], error: null };
+    localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-22", choices: [[1, "fade"], [2, "pass"]] }));
+    mockAuth.current = SIGNED_IN;
+    render(<TofHero initial={TWO_CARDS} />);
+    await waitFor(() => expect(insert).toHaveBeenCalledTimes(1));
+    expect(insert.mock.calls[0]).toEqual(["tof_plays", { user_id: "u1", hand_id: 7, card_id: 2, stable_pick_id: null, choice: "pass" }]);
+    await waitFor(() => expect(localStorage.getItem("ts:tof:guest")).toBeNull());
+  });
+
+  it("ignores guest swipes stashed on a different slate date", async () => {
+    insert.mockResolvedValue({ error: null });
+    localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-21", choices: [[1, "tail"]] }));
     mockAuth.current = SIGNED_IN;
     render(<TofHero initial={HAND} />);
     expect(await screen.findByText("NYY -1.5")).toBeInTheDocument();
-    await waitFor(() => expect(localStorage.getItem("ts:tof:pending")).toBeNull());
+    await waitFor(() => expect(localStorage.getItem("ts:tof:guest")).toBeNull());
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("keeps the stash when the username prompt is dismissed, so the swipes are not lost", async () => {
+    insert.mockResolvedValue({ error: null });
+    claim.requireUsername.mockResolvedValueOnce(false);
+    localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-22", choices: [[1, "tail"]] }));
+    mockAuth.current = SIGNED_IN;
+    render(<TofHero initial={HAND} />);
+    await waitFor(() => expect(claim.requireUsername).toHaveBeenCalled());
+    expect(insert).not.toHaveBeenCalled();
+    expect(localStorage.getItem("ts:tof:guest")).not.toBeNull();
   });
 
   it("offers a stable card at its grading odds and skips graded, unpriced, and started picks", async () => {
@@ -263,12 +286,12 @@ describe("TofHero", () => {
     }
   });
 
-  it("ignores a pending play on a card that locked while the user was logging in", async () => {
+  it("skips a guest swipe on a card that locked while the user was logging in", async () => {
     insert.mockResolvedValue({ error: null });
-    localStorage.setItem("ts:tof:pending", JSON.stringify({ cardId: 1, choice: "tail", slateDate: "2026-09-22" }));
+    localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-22", choices: [[1, "tail"]] }));
     mockAuth.current = SIGNED_IN;
     render(<TofHero initial={handOf([mkCard(1, "NYY -1.5", "2000-01-01T00:00:00Z")])} />);
-    await waitFor(() => expect(localStorage.getItem("ts:tof:pending")).toBeNull());
+    await waitFor(() => expect(localStorage.getItem("ts:tof:guest")).toBeNull());
     expect(insert).not.toHaveBeenCalled();
   });
 
@@ -279,6 +302,19 @@ describe("TofHero", () => {
     await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
     first.unmount();
     render(<TofHero initial={TWO_CARDS} />);
+    await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
+  });
+
+  it("carries a guest pass over as a written play on sign-in instead of just hiding the card", async () => {
+    mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false } };
+    const guest = render(<TofHero initial={TWO_CARDS} />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^pass$/i })); });
+    await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
+    guest.unmount();
+    insert.mockResolvedValue({ error: null });
+    mockAuth.current = SIGNED_IN;
+    render(<TofHero initial={TWO_CARDS} />);
+    await waitFor(() => expect(insert).toHaveBeenCalledWith("tof_plays", { user_id: "u1", hand_id: 7, card_id: 1, stable_pick_id: null, choice: "pass" }));
     await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
   });
 
