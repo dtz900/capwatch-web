@@ -17,7 +17,7 @@ const BG_OPTIONS: { name: string; style: CSSProperties }[] = [
   { name: "page", style: { background: "#0a0a0c" } },
   { name: "charcoal", style: { background: "#16171c" } },
   { name: "slate", style: { background: "#121a24" } },
-  { name: "felt", style: { background: "radial-gradient(ellipse at 50% 30%, #12432f 0%, #0b2d20 60%, #071c15 100%)" } },
+  { name: "felt", style: { background: "radial-gradient(ellipse 62% 120% at 50% 40%, #12432f 0%, #0c2f22 45%, #071c15 72%, #0a0a0c 100%)" } },
   { name: "navy", style: { background: "#0d1430" } },
   { name: "dots", style: { backgroundColor: "#141519", backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)", backgroundSize: "18px 18px" } },
   { name: "teal", style: { background: "#0a2422" } },
@@ -73,7 +73,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [stats, setStats] = useState<TofStats | null>(null);
   const [board, setBoard] = useState<{ rows: TofBoardRow[]; minPlays: number }>({ rows: [], minPlays: 10 });
   const [toast, setToast] = useState<string | null>(null);
-  const [bg, setBg] = useState(0);
+  const [bg, setBg] = useState(3);
   const [now, setNow] = useState(() => new Date());
   // Signed-out passes have nowhere to persist: there is no tof_plays row to
   // write. Without this the deck would re-deal the same top card forever.
