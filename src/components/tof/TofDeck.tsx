@@ -80,12 +80,22 @@ function ProgressDots({ items, currentId, done }: { items: DeckProgressItem[]; c
   );
 }
 
+function LockIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
 function HandSummary({ items }: { items: DeckProgressItem[] }) {
   const count = (c: TofChoice) => items.filter((it) => it.choice === c).length;
+  const played = items.filter((it) => it.choice).length;
+  const lockedOut = items.length - played;
   return (
     <div className="absolute inset-0 flex flex-col gap-3 overflow-hidden rounded-xl border border-[rgba(25,245,124,0.3)] bg-[linear-gradient(180deg,rgba(25,245,124,0.10)_0%,#101015_45%,#0b0b0e_100%)] p-5">
-      <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-pos)]">Hand complete</div>
-      <div className="text-[26px] font-extrabold leading-none tracking-[-0.03em]">You played every card.</div>
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-pos)]">{lockedOut > 0 ? "Hand locked" : "Hand complete"}</div>
+      <div className="text-[26px] font-extrabold leading-none tracking-[-0.03em]">{lockedOut > 0 ? `You played ${played} of ${items.length}.` : "You played every card."}</div>
       <div className="grid grid-cols-3 gap-2">
         {(["tail", "fade", "pass"] as TofChoice[]).map((c) => (
           <div key={c} className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-3 py-2.5">
@@ -102,7 +112,7 @@ function HandSummary({ items }: { items: DeckProgressItem[] }) {
           const odds = c === "fade" ? it.fade_odds : it.tail_odds;
           return (
             <div key={it.id} className="flex items-center gap-2.5 rounded-lg border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] px-2.5 py-2">
-              <span className="w-[52px] rounded-md py-1 text-center text-[9px] font-extrabold tracking-[0.1em]" style={{ background: `${color}1f`, color }}>{(c ?? "locked").toUpperCase()}</span>
+              <span className="flex w-[52px] items-center justify-center rounded-md py-1 text-[9px] font-extrabold tracking-[0.1em]" style={{ background: `${color}1f`, color }} aria-label={c ?? "locked"}>{c ? c.toUpperCase() : <LockIcon />}</span>
               <span className="min-w-0 flex-grow truncate text-[12px] font-bold">@{it.handle} · {label}</span>
               <span className="text-[12px] font-bold tabular-nums text-[var(--color-text-muted)]">{odds == null ? "" : odds > 0 ? `+${odds}` : odds}</span>
             </div>
@@ -230,7 +240,7 @@ export function TofDeck({
   const fadeAllowed = !!top && top.kind !== "stable";
   const stack = open.slice(0, 3);
 
-  const allDone = stack.length === 0 && locked.length === 0;
+  const allDone = stack.length === 0;
   return (
     <div className="flex flex-col items-center gap-3">
       {progress && progress.length > 0 && <ProgressDots items={progress} currentId={top?.id ?? null} done={allDone} />}
@@ -264,16 +274,6 @@ export function TofDeck({
             <div className="text-[13px] text-[var(--color-text-soft)]">Results land after the games finish.</div>
           </div>
         )}
-        {stack.length === 0 && locked.length > 0 && (
-          <div className="absolute inset-0">
-            <TofCardFace card={locked[0]} locked />
-            {locked.length > 1 && (
-              <div className="absolute inset-x-0 -bottom-6 text-center text-[11px] font-bold text-[var(--color-text-muted)]">
-                {locked.length} cards locked
-              </div>
-            )}
-          </div>
-        )}
         {[...stack].reverse().map((card, i) => {
           const k = stack.length - 1 - i; // 0 = top
           const isTop = k === 0;
@@ -303,11 +303,6 @@ export function TofDeck({
             </div>
           );
         })}
-        {stack.length > 0 && locked.length > 0 && (
-          <div className="absolute inset-x-0 -bottom-6 text-center text-[11px] font-bold text-[var(--color-text-muted)]">
-            {locked.length} locked at the back
-          </div>
-        )}
       </div>
       </div>
 
