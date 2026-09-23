@@ -38,14 +38,32 @@ function sideTeam(label: string | null, teams: (string | null)[]): string | null
   return teams.find((t) => t && t.toUpperCase() === first) ?? null;
 }
 
-function SideMark({ team, label, sport, color }: { team: string | null; label: string; sport: Sport; color: string }) {
-  if (team) return <TeamLogo abbr={team} sport={sport} size={66} />;
+function SideMark({ team, label, sport }: { team: string | null; label: string; sport: Sport }) {
+  if (team) {
+    // A dark disc behind the logo keeps a red logo readable on a red panel.
+    return (
+      <div className="flex h-[96px] w-[96px] items-center justify-center rounded-full bg-[rgba(10,10,12,0.42)] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.10)]">
+        <TeamLogo abbr={team} sport={sport} size={74} flat />
+      </div>
+    );
+  }
   const word = label.split(" ")[0]?.toUpperCase() ?? "";
   return (
-    <div className="flex h-[66px] w-[66px] items-center justify-center rounded-full border-2 text-[13px] font-extrabold tracking-[0.06em]" style={{ borderColor: color, color }}>
+    <div className="flex h-[96px] w-[96px] items-center justify-center rounded-full bg-[rgba(10,10,12,0.42)] font-[var(--font-lilita)] text-[26px] text-white shadow-[inset_0_0_0_2px_rgba(255,255,255,0.10)]">
       {word === "OVER" ? "OVR" : word === "UNDER" ? "UND" : word.slice(0, 3)}
     </div>
   );
+}
+
+/** A team color deep enough to hold white type: darken pale primaries. */
+function panelColor(hex: string): string {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return hex;
+  const [r, g, b] = [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const k = lum > 150 ? 0.55 : lum > 110 ? 0.72 : 0.88;
+  const f = (v: number) => Math.round(v * k).toString(16).padStart(2, "0");
+  return `#${f(r)}${f(g)}${f(b)}`;
 }
 
 export function TofCardFace({
@@ -67,8 +85,8 @@ export function TofCardFace({
   const fadeTeam = sideTeam(fadeLabel, [away, home]) ?? (tailTeam ? (tailTeam === away ? home : away) : null);
   const unpriced = shared?.fade_odds_source === "no_close_available";
   const fadeOdds = shared ? shared.fade_odds_at_deal : null;
-  const tailColor = tailTeam ? teamColor(tailTeam, sport) : "#19f57c";
-  const fadeColor = fadeTeam ? teamColor(fadeTeam, sport) : "#ef4444";
+  const tailColor = panelColor(tailTeam ? teamColor(tailTeam, sport) : "#0f7a3e");
+  const fadeColor = panelColor(fadeTeam ? teamColor(fadeTeam, sport) : "#8a1f1f");
   const live = shared && shared.game_state !== "scheduled" && shared.home_score != null && shared.away_score != null;
   const final = shared?.game_state === "final";
 
@@ -76,13 +94,6 @@ export function TofCardFace({
     <div
       className="relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e] p-4 select-none"
     >
-      {/* Team-tinted corners: the two sides of the card carry their team colors at low alpha. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{ background: `radial-gradient(circle at 12% 62%, ${fadeColor}2e 0%, transparent 42%), radial-gradient(circle at 88% 62%, ${tailColor}2e 0%, transparent 42%)` }}
-      />
-
       <div className="pointer-events-none absolute left-5 top-8 z-20 rotate-[-14deg] rounded-lg border-[3px] border-[var(--color-pos)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[var(--color-pos)]" style={{ opacity: stampTail }}>TAIL</div>
       <div className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 rotate-[-6deg] rounded-lg border-[3px] border-[#a1a1aa] bg-[rgba(10,10,12,0.75)] px-4 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[#d4d4d8]" style={{ opacity: stampPass }}>PASS</div>
       <div className="pointer-events-none absolute right-5 top-8 z-20 rotate-[14deg] rounded-lg border-[3px] border-[var(--color-neg)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[var(--color-neg)]" style={{ opacity: stampFade }}>FADE</div>
@@ -123,27 +134,31 @@ export function TofCardFace({
         </div>
       </div>
 
-      {/* The two sides. Left is the fade, right is the tail: same directions as the swipe. */}
-      <div className="relative grid flex-grow grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] px-2 py-3">
-        <div className="flex flex-col items-center gap-1.5 text-center">
-          <SideMark team={fadeTeam} label={fadeLabel ?? "PASS"} sport={sport} color={fadeColor} />
-          <div className="text-[9px] font-extrabold tracking-[0.16em] text-[var(--color-neg)]">FADE</div>
-          <div className="text-[19px] font-extrabold leading-none tracking-[-0.02em]">{fadeLabel ?? "n/a"}</div>
-          <div className="text-[13px] font-extrabold tabular-nums text-[var(--color-text-soft)]">{fadeLabel ? (unpriced ? "unpriced" : fmtOdds(fadeOdds) || "close") : ""}</div>
+      {/* The two sides as a split poster: left half is the fade in its team color, right half the tail. */}
+      <div
+        className="relative flex flex-grow overflow-hidden rounded-lg border border-[rgba(255,255,255,0.08)]"
+        style={{ background: `linear-gradient(104deg, ${fadeColor} 0%, ${fadeColor} 47.5%, #0a0a0c 47.5%, #0a0a0c 52.5%, ${tailColor} 52.5%, ${tailColor} 100%)` }}
+      >
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.42) 100%)" }} />
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-1 px-2 py-4 text-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.55)]">
+          <SideMark team={fadeTeam} label={fadeLabel ?? "PASS"} sport={sport} />
+          <div className="mt-1 text-[9px] font-extrabold tracking-[0.2em] text-white/80">FADE</div>
+          <div className="font-[var(--font-lilita)] text-[24px] leading-none tracking-[0.02em]">{fadeLabel ?? "n/a"}</div>
+          <div className="text-[15px] font-extrabold tabular-nums text-white/90">{fadeLabel ? (unpriced ? "unpriced" : fmtOdds(fadeOdds) || "close") : ""}</div>
           {shared?.rival && (
-            <div className="mt-0.5 max-w-full truncate rounded-full border border-[rgba(245,197,74,0.35)] bg-[rgba(245,197,74,0.08)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--color-gold)]">@{shared.rival.handle} {fmtOdds(shared.rival.odds)}</div>
+            <div className="mt-1 max-w-full truncate rounded-full bg-[rgba(0,0,0,0.45)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--color-gold)]">@{shared.rival.handle} {fmtOdds(shared.rival.odds)}</div>
           )}
         </div>
-        <div className="flex flex-col items-center gap-1">
-          <div className="font-[var(--font-lilita)] text-[26px] leading-none text-[var(--color-text-muted)]">VS</div>
-          <div className="text-[9px] font-bold tracking-[0.08em] text-[#52525b]">{card.market_group.toUpperCase()}</div>
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-1 px-2 py-4 text-center text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.55)]">
+          <SideMark team={tailTeam} label={card.tail_label} sport={sport} />
+          <div className="mt-1 text-[9px] font-extrabold tracking-[0.2em] text-white/80">TAIL</div>
+          <div className="font-[var(--font-lilita)] text-[24px] leading-none tracking-[0.02em]">{card.tail_label}</div>
+          <div className="text-[15px] font-extrabold tabular-nums text-white/90">{fmtOdds(card.tail_odds)}</div>
+          <div className="mt-1 max-w-full truncate rounded-full bg-[rgba(0,0,0,0.45)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--color-pos)]">@{card.handle}</div>
         </div>
-        <div className="flex flex-col items-center gap-1.5 text-center">
-          <SideMark team={tailTeam} label={card.tail_label} sport={sport} color={tailColor} />
-          <div className="text-[9px] font-extrabold tracking-[0.16em] text-[var(--color-pos)]">TAIL</div>
-          <div className="text-[19px] font-extrabold leading-none tracking-[-0.02em]">{card.tail_label}</div>
-          <div className="text-[13px] font-extrabold tabular-nums text-[var(--color-text-soft)]">{fmtOdds(card.tail_odds)}</div>
-          <div className="mt-0.5 max-w-full truncate rounded-full border border-[rgba(25,245,124,0.3)] bg-[rgba(25,245,124,0.08)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--color-pos)]">@{card.handle}</div>
+        <div className="pointer-events-none absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-[3px] border-[#0a0a0c] bg-[#f7f3e9] font-[var(--font-lilita)] text-[18px] leading-none text-[#0a0a0c] shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+          VS
+          <span className="mt-0.5 font-sans text-[7px] font-extrabold tracking-[0.12em]">{card.market_group.toUpperCase()}</span>
         </div>
       </div>
 
