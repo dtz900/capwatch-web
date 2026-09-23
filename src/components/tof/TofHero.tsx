@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
@@ -9,6 +10,8 @@ import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, re
 import type { TofBoardRow, TofCard, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
+import { BoardAvatar } from "@/components/tof/BoardAvatar";
+import { displayAvatar } from "@/lib/x-claim";
 
 const RETURN_COOKIE = "ts_return_to";
 
@@ -82,7 +85,7 @@ const NO_HAND_COPY: Record<string, string> = {
 
 export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const router = useRouter();
-  const { session, profile, entitlements } = useAuth();
+  const { session, profile, entitlements, capper } = useAuth();
   const { requireUsername } = useUsernameClaim();
   const userId = session?.user?.id ?? null;
   const supabase = useMemo(
@@ -403,7 +406,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     })();
   }, [userId, handId, hand, playsLoadedFor, playedIds, requireUsername, writePlay]);
 
-  const me = profile?.username && stats ? { username: profile.username, stats } : null;
+  const me = profile?.username && stats
+    ? { username: profile.username, stats, avatar_url: displayAvatar(profile, capper), capper_handle: capper?.handle ?? null }
+    : null;
   const state: "loading" | "no-hand" | "playable" | "spectator" = data === null ? "loading" : !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
@@ -468,9 +473,13 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         <aside className="order-2 flex flex-col gap-3 lg:order-3">
           {entitlements.isLoggedIn ? (
             <div className="flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-3.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-[#2a2a33] font-[family-name:var(--font-display)] text-[16px] text-[var(--color-pos)]">
-                {(profile?.username ?? session?.user?.email ?? "?").charAt(0).toUpperCase()}
-              </div>
+              {displayAvatar(profile, capper) ? (
+                <BoardAvatar url={displayAvatar(profile, capper)} name={profile?.username ?? session?.user?.email ?? "?"} size={40} />
+              ) : (
+                <Link href="/account" aria-label="Add a photo" title="Add a photo" className="shrink-0">
+                  <BoardAvatar url={null} name={profile?.username ?? session?.user?.email ?? "?"} size={40} />
+                </Link>
+              )}
               <div className="min-w-0">
                 <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Playing as</div>
                 <div className="truncate text-[15px] font-extrabold">{profile?.username ?? "pick a username"}</div>
