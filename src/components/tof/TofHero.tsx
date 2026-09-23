@@ -362,9 +362,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 function TofTitle() {
   return (
     <h2 className="mb-6 flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)]" style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
-      <span className="text-[52px] tracking-[0.02em] sm:text-[64px]">TAIL</span>
-      <span className="text-[26px] tracking-[0.08em] text-[var(--color-pos)] sm:text-[32px]">OR</span>
-      <span className="text-[52px] tracking-[0.02em] sm:text-[64px]">FADE</span>
+      <span className="text-[52px] tracking-[0.02em] text-[var(--color-pos)] sm:text-[64px]">TAIL</span>
+      <span className="text-[26px] tracking-[0.08em] text-white sm:text-[32px]">OR</span>
+      <span className="text-[52px] tracking-[0.02em] text-[var(--color-neg)] sm:text-[64px]">FADE</span>
     </h2>
   );
 }
