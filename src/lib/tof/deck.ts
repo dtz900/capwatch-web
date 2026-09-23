@@ -122,16 +122,6 @@ export function writeGuestChoices(slateDate: string, choices: ReadonlyMap<number
   }
 }
 
-/* The first-card nudge is once per browser session, not once per page. */
-const NUDGE_KEY = "ts:tof:nudged";
-
-export function nudgeSeen(): boolean {
-  try { return sessionStorage.getItem(NUDGE_KEY) === "1"; } catch { return false; }
-}
-export function markNudgeSeen(): void {
-  try { sessionStorage.setItem(NUDGE_KEY, "1"); } catch { /* fine */ }
-}
-
 /* Short hand cache so the hero on a second page paints with the same deck
    instantly instead of flashing the no-hand box while it refetches. */
 const HAND_KEY = "ts:tof:hand";

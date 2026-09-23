@@ -3,7 +3,6 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { TofCard, TofChoice } from "@/lib/types";
 import { TofCardFace } from "@/components/tof/TofCardFace";
-import { markNudgeSeen, nudgeSeen } from "@/lib/tof/deck";
 
 export interface StableDeckCard {
   kind: "stable";
@@ -158,9 +157,8 @@ export function TofDeck({
   useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
   const top = open[0] ?? null;
 
-  // The "swipe right" demo on a fresh deck: plays once per mount, only after
-  // the deck is on screen, only when nothing in the hand has been played, and
-  // never for reduced-motion users. A grab on the card cancels it.
+  // The "swipe right" demo: plays once per mount, after the deck is on
+  // screen, never for reduced-motion users. A grab on the card cancels it.
   const [nudging, setNudging] = useState(false);
   const nudged = useRef(false);
   const nudgeRaf = useRef<number | null>(null);
@@ -169,11 +167,9 @@ export function TofDeck({
     nudgeRaf.current = null;
     setNudging(false);
   }, []);
-  const fresh = !progress || progress.every((p) => p.choice == null);
   useEffect(() => {
-    if (!nudge || nudged.current || !top || disabled || !fresh || prefersReducedMotion() || nudgeSeen()) return;
+    if (!nudge || nudged.current || !top || disabled || prefersReducedMotion()) return;
     nudged.current = true;
-    markNudgeSeen();
     const start = performance.now() + NUDGE_DELAY;
     const tick = (t: number) => {
       const e = t - start;
@@ -186,7 +182,7 @@ export function TofDeck({
     };
     nudgeRaf.current = requestAnimationFrame((t) => { setNudging(true); tick(t); });
     return cancelNudge;
-  }, [nudge, top, disabled, fresh, cancelNudge]);
+  }, [nudge, top, disabled, cancelNudge]);
 
   // A new top card means the previous one left; reset any stale transform.
   // Adjusted during render (React's documented alternative to an effect for
