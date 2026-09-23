@@ -30,6 +30,15 @@ const DRAG_THRESHOLD = 90;
 const UP_THRESHOLD = 190;
 const UP_DOMINANCE = 1.6;
 const STAMP_FULL = 80;
+// First-card nudge: the top card slides toward TAIL far enough for the stamp
+// to read, holds, and settles back. Short of DRAG_THRESHOLD so it never commits.
+const NUDGE_DELAY = 800;
+const NUDGE_OUT = 620;
+const NUDGE_HOLD = 480;
+const NUDGE_BACK = 440;
+const NUDGE_PEAK = 78;
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 type Leave = "left" | "right" | "up" | null;
 
 function prefersReducedMotion(): boolean {
@@ -125,13 +134,15 @@ function HandSummary({ items }: { items: DeckProgressItem[] }) {
 }
 
 export function TofDeck({
-  open, locked, onPlay, disabled = false, progress,
+  open, locked, onPlay, disabled = false, progress, nudge = false,
 }: {
   open: DeckCard[];
   locked: DeckCard[];
   onPlay: (card: DeckCard, choice: TofChoice) => Promise<boolean>;
   disabled?: boolean;
   progress?: DeckProgressItem[];
+  /** True once the deck is actually on screen; the first-card nudge waits for it. */
+  nudge?: boolean;
 }) {
   const [dx, setDx] = useState(0);
   const [dy, setDy] = useState(0);
@@ -145,6 +156,35 @@ export function TofDeck({
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
   const top = open[0] ?? null;
+
+  // The "swipe right" demo on a fresh deck: plays once per mount, only after
+  // the deck is on screen, only when nothing in the hand has been played, and
+  // never for reduced-motion users. A grab on the card cancels it.
+  const [nudging, setNudging] = useState(false);
+  const nudged = useRef(false);
+  const nudgeRaf = useRef<number | null>(null);
+  const cancelNudge = useCallback(() => {
+    if (nudgeRaf.current != null) cancelAnimationFrame(nudgeRaf.current);
+    nudgeRaf.current = null;
+    setNudging(false);
+  }, []);
+  const fresh = !progress || progress.every((p) => p.choice == null);
+  useEffect(() => {
+    if (!nudge || nudged.current || !top || disabled || !fresh || prefersReducedMotion()) return;
+    nudged.current = true;
+    const start = performance.now() + NUDGE_DELAY;
+    const tick = (t: number) => {
+      const e = t - start;
+      if (e < 0) { nudgeRaf.current = requestAnimationFrame(tick); return; }
+      if (e < NUDGE_OUT) setDx(NUDGE_PEAK * easeOut(e / NUDGE_OUT));
+      else if (e < NUDGE_OUT + NUDGE_HOLD) setDx(NUDGE_PEAK);
+      else if (e < NUDGE_OUT + NUDGE_HOLD + NUDGE_BACK) setDx(NUDGE_PEAK * (1 - easeInOut((e - NUDGE_OUT - NUDGE_HOLD) / NUDGE_BACK)));
+      else { setDx(0); nudgeRaf.current = null; setNudging(false); return; }
+      nudgeRaf.current = requestAnimationFrame(tick);
+    };
+    nudgeRaf.current = requestAnimationFrame((t) => { setNudging(true); tick(t); });
+    return cancelNudge;
+  }, [nudge, top, disabled, fresh, cancelNudge]);
 
   // A new top card means the previous one left; reset any stale transform.
   // Adjusted during render (React's documented alternative to an effect for
@@ -197,6 +237,7 @@ export function TofDeck({
   function onDown(e: ReactPointerEvent<HTMLDivElement>) {
     if (leave || disabled) return;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* jsdom */ }
+    if (nudging) cancelNudge();
     startX.current = e.clientX;
     startY.current = e.clientY;
     setDragging(true);
@@ -229,7 +270,7 @@ export function TofDeck({
       : leave === "left" ? "translateX(-760px) rotate(-30deg)"
         : leave === "up" ? "translateY(-900px)"
           : `translate(${dx}px, ${Math.min(0, dy)}px) rotate(${dx / 18}deg)`;
-  const topTransition = reduced ? "none" : leave ? "transform .38s ease-in" : dragging ? "none" : "transform .25s ease-out";
+  const topTransition = reduced ? "none" : leave ? "transform .38s ease-in" : dragging || nudging ? "none" : "transform .25s ease-out";
   const stampTail = leave === "right" ? 1 : Math.max(0, Math.min(1, dx / STAMP_FULL));
   const stampFade = leave === "left" ? 1 : Math.max(0, Math.min(1, -dx / STAMP_FULL));
   // The pass stamp only reads on a clearly vertical drag, same rule as the release.
@@ -249,10 +290,10 @@ export function TofDeck({
       <div className="relative">
         {top && (
           <>
-            <div aria-hidden="true" className="pointer-events-none absolute -left-[104px] top-1/2 z-20 hidden -translate-y-1/2 sm:block" style={{ opacity: fadeAllowed ? 0.28 + 0.72 * cueFade : 0.08, transform: `translate(${-14 * cueFade}px, -50%) scale(${1 + 0.18 * cueFade})`, transition: dragging ? "none" : "opacity .2s, transform .2s" }}>
+            <div aria-hidden="true" className="pointer-events-none absolute -left-[104px] top-1/2 z-20 hidden -translate-y-1/2 sm:block" style={{ opacity: fadeAllowed ? 0.28 + 0.72 * cueFade : 0.08, transform: `translate(${-14 * cueFade}px, -50%) scale(${1 + 0.18 * cueFade})`, transition: dragging || nudging ? "none" : "opacity .2s, transform .2s" }}>
               <SwipeArrow dir="left" color="#ef4444" />
             </div>
-            <div aria-hidden="true" className="pointer-events-none absolute -right-[104px] top-1/2 z-20 hidden -translate-y-1/2 sm:block" style={{ opacity: 0.28 + 0.72 * cueTail, transform: `translate(${14 * cueTail}px, -50%) scale(${1 + 0.18 * cueTail})`, transition: dragging ? "none" : "opacity .2s, transform .2s" }}>
+            <div aria-hidden="true" className="pointer-events-none absolute -right-[104px] top-1/2 z-20 hidden -translate-y-1/2 sm:block" style={{ opacity: 0.28 + 0.72 * cueTail, transform: `translate(${14 * cueTail}px, -50%) scale(${1 + 0.18 * cueTail})`, transition: dragging || nudging ? "none" : "opacity .2s, transform .2s" }}>
               <SwipeArrow dir="right" color="#19f57c" />
             </div>
           </>

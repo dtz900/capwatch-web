@@ -309,7 +309,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               <div className="text-[13px] font-bold text-[var(--color-pos)]">{nextDealLabel(data?.next_deal ?? null)}</div>
             </div>
           ) : (
-            <TofDeck open={open} locked={locked} onPlay={onPlay} progress={progress} />
+            <TofDeck open={open} locked={locked} onPlay={onPlay} progress={progress} nudge={unfolded} />
           )}
           <div role="status" aria-live="polite">
             {toast && <div className="mt-3 rounded-lg border border-[var(--color-border-h)] bg-[#121216] px-3 py-2 text-[12px] font-semibold">{toast}</div>}
