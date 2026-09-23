@@ -286,7 +286,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
                 ["Grade", "1u a card. Results land overnight."],
               ].map(([head, body], i) => (
                 <li key={head} className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(25,245,124,0.12)] font-[var(--font-display)] text-[15px] text-[var(--color-pos)]">{i + 1}</span>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(25,245,124,0.12)] font-[family-name:var(--font-display)] text-[15px] text-[var(--color-pos)]">{i + 1}</span>
                   <div>
                     <div className="text-[13px] font-extrabold">{head}</div>
                     <div className="text-[12px] leading-snug text-[var(--color-text-soft)]">{body}</div>
@@ -315,7 +315,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         <aside className="order-2 flex flex-col gap-3 lg:order-3">
           {entitlements.isLoggedIn ? (
             <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-3.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-[#2a2a33] font-[var(--font-display)] text-[16px] text-[var(--color-pos)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-[#2a2a33] font-[family-name:var(--font-display)] text-[16px] text-[var(--color-pos)]">
                 {(profile?.username ?? session?.user?.email ?? "?").charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
@@ -325,8 +325,8 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
             </div>
           ) : (
             <div className="rounded-xl border border-[rgba(25,245,124,0.25)] bg-[rgba(25,245,124,0.05)] px-4 py-4">
-              <div className="font-[var(--font-display)] text-[20px] leading-tight">Keep score.</div>
-              <button type="button" onClick={signIn} className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-[var(--color-pos)] font-[var(--font-display)] text-[17px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none">
+              <div className="font-[family-name:var(--font-display)] text-[20px] leading-tight">Keep score.</div>
+              <button type="button" onClick={signIn} className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-[var(--color-pos)] font-[family-name:var(--font-display)] text-[17px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none">
                 SIGN IN
               </button>
             </div>
@@ -344,7 +344,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               </div>
               <div>
                 <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Streak</div>
-                <div className={`mt-1 font-[var(--font-display)] text-[24px] leading-none ${stats.day_streak > 0 ? "text-[var(--color-gold)]" : stats.day_streak < 0 ? "text-[#7dd3fc]" : ""}`}>
+                <div className={`mt-1 font-[family-name:var(--font-display)] text-[24px] leading-none ${stats.day_streak > 0 ? "text-[var(--color-gold)]" : stats.day_streak < 0 ? "text-[#7dd3fc]" : ""}`}>
                   {stats.day_streak > 0 ? `W${stats.day_streak}` : stats.day_streak < 0 ? `L${-stats.day_streak}` : "even"}
                 </div>
                 <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">best W{stats.best_day_streak}</div>
@@ -361,7 +361,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 /** The game's title: chunky game-show caps, set straight, with a small "or" between the two big words. */
 function TofTitle() {
   return (
-    <h2 className="mb-6 flex items-baseline justify-center gap-3 font-[var(--font-display)] leading-none text-[var(--color-text)]" style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
+    <h2 className="mb-6 flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)]" style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
       <span className="text-[52px] tracking-[0.02em] sm:text-[64px]">TAIL</span>
       <span className="text-[18px] tracking-[0.12em] text-[var(--color-pos)] sm:text-[22px]">OR</span>
       <span className="text-[52px] tracking-[0.02em] sm:text-[64px]">FADE</span>
