@@ -83,12 +83,15 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     return () => clearInterval(clock);
   }, []);
   useEffect(() => {
-    if (handId == null || handStatus === "graded") return;
+    // No hand yet is exactly when polling matters most: a visitor who loaded
+    // the page before the daily deal (or during an API blip) should get the
+    // hand without a reload. Only a graded hand has nothing left to fetch.
+    if (handStatus === "graded") return;
     const id = setInterval(() => {
       fetchTofHand().then(setData).catch(() => { /* keep last good */ });
     }, REFETCH_MS);
     return () => clearInterval(id);
-  }, [handId, handStatus]);
+  }, [handStatus]);
 
   useEffect(() => {
     fetchTofBoard("month").then((b) => setBoard({ rows: b.rows, minPlays: b.min_plays })).catch(() => { /* rail stays empty */ });
@@ -128,12 +131,27 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         console.error("tof: capper follows load failed", followsError);
         return;
       }
-      const ids = [...new Set(((follows ?? []) as { capper_id: number }[]).map((f) => f.capper_id))];
+      const followRows = (follows ?? []) as { capper_id: number; market: string | null }[];
+      const ids = [...new Set(followRows.map((f) => f.capper_id))];
       if (ids.length === 0) return;
+      // Same follow-scope rule as My Tails (src/app/my-tails/page.tsx): an
+      // "all" row tails the whole capper, otherwise only the listed markets
+      // count, and a pick with no market_group never matches a scoped
+      // capper. Tailing someone for ML must not hand back their spread.
+      const whole = new Set(followRows.filter((f) => f.market === "all").map((f) => f.capper_id));
+      const scopes = new Map<number, Set<string>>();
+      for (const f of followRows) {
+        if (f.market === "all" || whole.has(f.capper_id)) continue;
+        const set = scopes.get(f.capper_id) ?? new Set<string>();
+        if (f.market) set.add(f.market);
+        scopes.set(f.capper_id, set);
+      }
+      const inScope = (p: TodayPickEntry): boolean =>
+        whole.has(p.capper_id) || Boolean(p.market_group && scopes.get(p.capper_id)?.has(p.market_group));
       const inHand = new Set((handRef.current?.cards ?? []).map((c) => c.handle));
       const today = await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] as TodayPickEntry[] }));
       const at = new Date();
-      const first = today.picks.map((p) => stableFromPick(p, at)).find((s) => s && !inHand.has(s.handle)) ?? null;
+      const first = today.picks.filter(inScope).map((p) => stableFromPick(p, at)).find((s) => s && !inHand.has(s.handle)) ?? null;
       if (!cancelled) setStable(first);
     })();
     return () => { cancelled = true; };

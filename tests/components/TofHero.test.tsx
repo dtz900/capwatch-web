@@ -55,7 +55,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 import { TofHero } from "@/components/tof/TofHero";
-import { fetchTodayPicks } from "@/lib/api";
+import { fetchTodayPicks, fetchTofHand } from "@/lib/api";
 import type { TodayPickEntry, TofCard, TofHandResponse } from "@/lib/types";
 
 function mkCard(id: number, label: string, startAt = "2099-01-01T00:00:00Z"): TofCard {
@@ -92,6 +92,8 @@ beforeEach(() => {
   localStorage.clear();
   selectResult.current = {};
   vi.mocked(fetchTodayPicks).mockResolvedValue({ date: "2026-09-22", picks: [] });
+  vi.mocked(fetchTofHand).mockReset();
+  vi.mocked(fetchTofHand).mockResolvedValue({ hand: null, no_hand_reason: null, next_deal: null });
 });
 
 function stablePick(over: Partial<TodayPickEntry>): TodayPickEntry {
@@ -207,7 +209,7 @@ describe("TofHero", () => {
   });
 
   it("offers a stable card at its grading odds and skips graded, unpriced, and started picks", async () => {
-    selectResult.current = { capper_follows: { data: [{ capper_id: 5, market: null }], error: null } };
+    selectResult.current = { capper_follows: { data: [{ capper_id: 5, market: "all" }], error: null } };
     vi.mocked(fetchTodayPicks).mockResolvedValue({
       date: "2026-09-22",
       picks: [
@@ -227,6 +229,35 @@ describe("TofHero", () => {
     expect(screen.queryByText("GRADED ONE")).not.toBeInTheDocument();
     expect(screen.queryByText("UNPRICED ONE")).not.toBeInTheDocument();
     expect(screen.queryByText("STARTED ONE")).not.toBeInTheDocument();
+  });
+
+  it("only offers a stable card in a market the user actually tails", async () => {
+    selectResult.current = { capper_follows: { data: [{ capper_id: 5, market: "ML" }], error: null } };
+    vi.mocked(fetchTodayPicks).mockResolvedValue({
+      date: "2026-09-22",
+      picks: [
+        stablePick({ pick_id: 907, selection: "NYM -1.5", market_group: "Spread", commence_time: "2099-01-01T00:00:00Z" }),
+        stablePick({ pick_id: 908, selection: "NYM ML", market_group: "ML", commence_time: "2099-01-01T00:00:00Z" }),
+      ],
+    });
+    mockAuth.current = SIGNED_IN;
+    render(<TofHero initial={handOf([mkCard(1, "NYY -1.5", "2000-01-01T00:00:00Z")])} />);
+
+    expect(await screen.findByText("NYM ML")).toBeInTheDocument();
+    expect(screen.queryByText("NYM -1.5")).not.toBeInTheDocument();
+  });
+
+  it("keeps polling for a hand when the deal has not landed yet", async () => {
+    vi.useFakeTimers();
+    try {
+      mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
+      render(<TofHero initial={{ hand: null, no_hand_reason: "not dealt yet", next_deal: null }} />);
+      expect(fetchTofHand).not.toHaveBeenCalled();
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      expect(fetchTofHand).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("ignores a pending play on a card that locked while the user was logging in", async () => {
