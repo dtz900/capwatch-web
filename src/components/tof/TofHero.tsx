@@ -277,14 +277,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
-          {hand && (
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] lg:flex-col lg:items-start">
-              <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5"><span className="text-[var(--color-pos)]">{hand.cards.length}</span> cards</span>
-              <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5">Locks <span className="text-[var(--color-text)]">{hand.first_lock_at ? new Date(hand.first_lock_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }) : ""} PT</span></span>
-              <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[var(--color-text-muted)]">{hand.slate_date}</span>
-            </div>
-          )}
-          <div className="mt-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
             <ol className="mt-3 flex flex-col gap-3">
               {[
