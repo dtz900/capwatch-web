@@ -117,7 +117,7 @@ describe("TofHero", () => {
     mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
     render(<TofHero initial={HAND} />);
     fireEvent.click(await screen.findByRole("button", { name: /^tail$/i }));
-    await screen.findByText(/guest mode/i);
+    await screen.findByText(/sign in to keep score/i);
     expect(push).not.toHaveBeenCalled();
     expect(JSON.parse(localStorage.getItem("ts:tof:pending") ?? "{}")).toEqual({ cardId: 1, choice: "tail", slateDate: "2026-09-22" });
     expect(insert).not.toHaveBeenCalled();

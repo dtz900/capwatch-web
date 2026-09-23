@@ -109,7 +109,7 @@ function HandSummary({ items }: { items: DeckProgressItem[] }) {
           );
         })}
       </div>
-      <div className="mt-auto text-center text-[11px] text-[var(--color-text-muted)]">Results land after the games finish.</div>
+      <div className="mt-auto text-center text-[11px] text-[var(--color-text-muted)]">Graded after the games.</div>
     </div>
   );
 }
@@ -343,8 +343,8 @@ export function TofDeck({
           </button>
         </div>
       )}
-      <div id={hintId} className="text-[11px] font-semibold text-[#52525b]">
-        {top ? "Drag the card, use the arrow keys, or tap a button." : locked.length > 0 ? "Every card is locked. Results land by 6 AM." : ""}
+      <div id={hintId} className="sr-only">
+        {top ? "Drag the card, use the arrow keys, or tap a button." : locked.length > 0 ? "Every card is locked." : ""}
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ function stableFromPick(p: TodayPickEntry, now: Date): StableDeckCard | null {
     kind: "stable", id: -p.pick_id, pick_id: p.pick_id, handle: p.handle, display_name: p.display_name,
     profile_image_url: p.profile_image_url, matchup: p.matchup, game_start_at: p.commence_time ?? "",
     market_group: group, tail_label: p.selection ?? p.market ?? "", tail_odds: odds,
-    note: "From your stable. Tail it or pass. Fading your own tail is not a thing.", capper_streak: 0,
+    note: "From your stable.", capper_streak: 0,
     capper_record: null, sport: "MLB",
   };
   if (p.commence_time && isLocked(card, now)) return null;
@@ -232,7 +232,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         if (card.kind === "shared" && hand) writePendingPlay({ cardId: card.id, choice, slateDate: hand.slate_date });
         if (!guestNudged.current) {
           guestNudged.current = true;
-          setToast("Guest mode: swipes are not tracked. Sign in to keep your record.");
+          setToast("Sign in to keep score.");
           setTimeout(() => setToast(null), 4000);
         }
       }
@@ -276,40 +276,12 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
-        <aside className="order-3 flex flex-col gap-3 lg:order-1">
-          <div className="flex flex-col gap-3">
-            <p className="text-[14px] leading-relaxed text-[#a1a1aa]">
-            Tonight&apos;s board, one hand for everyone. Swipe right to tail the capper, left to fade them. Graded overnight against the real result, in units at the price.
-          </p>
+        <aside className="order-3 flex flex-col gap-2 lg:order-1">
           {hand && (
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em]">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] lg:flex-col lg:items-start">
               <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5"><span className="text-[var(--color-pos)]">{hand.cards.length}</span> cards</span>
-              <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5">First lock <span className="text-[var(--color-text)]">{hand.first_lock_at ? new Date(hand.first_lock_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }) : ""} PT</span></span>
+              <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5">Locks <span className="text-[var(--color-text)]">{hand.first_lock_at ? new Date(hand.first_lock_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }) : ""} PT</span></span>
               <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[var(--color-text-muted)]">{hand.slate_date}</span>
-              </div>
-            )}
-          </div>
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
-            <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
-            <ol className="mt-3 flex flex-col gap-3">
-              {[
-                ["Swipe", "Right to tail the capper, left to fade them, up to pass. Same cards for everyone."],
-                ["Price", "A tail pays the capper's odds. A fade pays the Pinnacle close on the other side."],
-                ["Grade", "Every card is 1 unit. Results land overnight, streaks and the board update with them."],
-              ].map(([head, body], i) => (
-                <li key={head} className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(25,245,124,0.12)] font-[var(--font-lilita)] text-[15px] text-[var(--color-pos)]">{i + 1}</span>
-                  <div>
-                    <div className="text-[13px] font-extrabold">{head}</div>
-                    <div className="text-[12px] leading-snug text-[var(--color-text-soft)]">{body}</div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-          {!entitlements.isLoggedIn && (
-            <div className="rounded-xl border border-dashed border-[var(--color-border-h)] px-4 py-3 text-[12px] leading-snug text-[var(--color-text-muted)]">
-              Playing as a guest. Swipe all you want; nothing counts until you sign in.
             </div>
           )}
         </aside>
@@ -318,7 +290,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
           {state === "no-hand" ? (
             <div className="flex h-[300px] w-[360px] max-w-full flex-col items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] text-center">
               <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">No hand today</div>
-              <div className="text-[13px] text-[var(--color-text-soft)]">{data?.no_hand_reason ?? "Not enough eligible picks yet."}</div>
+              <div className="text-[13px] text-[var(--color-text-soft)]">{data?.no_hand_reason ?? "Not enough picks yet."}</div>
               <div className="text-[13px] font-bold text-[var(--color-pos)]">{nextDealLabel(data?.next_deal ?? null)}</div>
             </div>
           ) : (
@@ -343,9 +315,8 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
           ) : (
             <div className="rounded-xl border border-[rgba(25,245,124,0.25)] bg-[rgba(25,245,124,0.05)] px-4 py-4">
               <div className="font-[var(--font-lilita)] text-[20px] leading-tight">Keep score.</div>
-              <div className="mt-1 text-[12px] leading-snug text-[var(--color-text-soft)]">Sign in to track your record, your streak, and your spot on the board.</div>
               <button type="button" onClick={signIn} className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-[var(--color-pos)] font-[var(--font-lilita)] text-[17px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none">
-                SIGN IN TO PLAY
+                SIGN IN
               </button>
             </div>
           )}
