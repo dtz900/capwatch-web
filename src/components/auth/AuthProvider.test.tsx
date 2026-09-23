@@ -72,6 +72,22 @@ describe("AuthProvider verification", () => {
     await waitFor(() => expect(screen.getByTestId("probe").textContent).toContain("no_capper||somefan|"));
   });
 
+  it("links through the OAuth 2.0 x provider and claims on an x identity", async () => {
+    const rpc = vi.fn(async () => ({ data: { status: "verified", capper_id: 7, handle: "fadeai_", avatar_url: null, username_set: true }, error: null }));
+    const client = fakeSupabase(session([{ provider: "email" }, { provider: "x" }]), rpc);
+    fake.client = client;
+    let link: ((r: string) => Promise<string | null>) | null = null;
+    function Grab() {
+      const { linkX } = useAuth();
+      link = linkX;
+      return null;
+    }
+    render(<AuthProvider><Probe /><Grab /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId("probe").textContent).toContain("verified|fadeai_|"));
+    await link!("/account");
+    expect(client.auth.linkIdentity).toHaveBeenCalledWith(expect.objectContaining({ provider: "x" }));
+  });
+
   it("leaves the state untouched when the claim call fails", async () => {
     const rpc = vi.fn(async () => ({ data: null, error: { message: "boom" } }));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});

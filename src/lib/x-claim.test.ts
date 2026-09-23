@@ -4,6 +4,7 @@ import { displayAvatar, hasTwitterIdentity, parseClaimResult } from "./x-claim";
 describe("hasTwitterIdentity", () => {
   it("is true only when a twitter identity is present", () => {
     expect(hasTwitterIdentity({ identities: [{ provider: "email" }, { provider: "twitter" }] })).toBe(true);
+    expect(hasTwitterIdentity({ identities: [{ provider: "email" }, { provider: "x" }] })).toBe(true);   // OAuth 2.0 provider
     expect(hasTwitterIdentity({ identities: [{ provider: "email" }] })).toBe(false);
     expect(hasTwitterIdentity({ identities: undefined })).toBe(false);
     expect(hasTwitterIdentity(null)).toBe(false);

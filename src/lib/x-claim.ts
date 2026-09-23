@@ -14,8 +14,11 @@ interface IdentityLike {
   provider?: string;
 }
 
+/** Supabase's X / Twitter (OAuth 2.0) provider is "x"; the legacy OAuth 1.0a one is "twitter". */
+export const X_PROVIDERS: readonly string[] = ["x", "twitter"];
+
 export function hasTwitterIdentity(user: { identities?: IdentityLike[] | null } | null | undefined): boolean {
-  return Boolean(user?.identities?.some((i) => i.provider === "twitter"));
+  return Boolean(user?.identities?.some((i) => i.provider !== undefined && X_PROVIDERS.includes(i.provider)));
 }
 
 function str(v: unknown): string | null {

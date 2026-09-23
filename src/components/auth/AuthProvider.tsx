@@ -156,8 +156,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!supabase) return "Sign-in is not available.";
       const safe = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
       document.cookie = `${LINK_RETURN_COOKIE}=${encodeURIComponent(safe)}; path=/; max-age=1800; samesite=lax`;
+      // "x" = the X / Twitter (OAuth 2.0) provider Supabase recommends (the
+      // legacy "twitter" provider is OAuth 1.0a and slated for deprecation).
       const { error } = await supabase.auth.linkIdentity({
-        provider: "twitter",
+        provider: "x",
         options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
       return error ? error.message : null;
