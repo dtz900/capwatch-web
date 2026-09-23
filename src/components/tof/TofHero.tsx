@@ -71,6 +71,8 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [guestChoices, setGuestChoices] = useState<ReadonlyMap<number, TofChoice>>(() => new Map());
   const pendingHandled = useRef(false);
   const guestNudged = useRef(false);
+  // The hero lands folded to its title; the table slides open on a tap.
+  const [unfolded, setUnfolded] = useState(false);
 
   const hand = data?.hand ?? null;
   const handId = hand?.hand_id ?? null;
@@ -272,10 +274,12 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "no-hand" | "playable" | "spectator" = !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-10 pt-6 sm:pb-12 sm:pt-7" style={{ background: FELT }}>
-      <TofTitle />
+    <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-6 pt-6 transition-[padding] duration-500 sm:pt-7 data-[open=true]:pb-10 data-[open=true]:sm:pb-12" style={{ background: FELT }} data-open={unfolded}>
+      <TofTitle open={unfolded} onToggle={() => setUnfolded((u) => !u)} />
 
-      <div className="mx-auto grid max-w-[1240px] grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
+      <div className="tof-fold" data-open={unfolded} id="tof-table">
+      <div>
+      <div className="tof-fold-inner mx-auto grid max-w-[1240px] grid-cols-1 gap-8 pt-6 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start" inert={!unfolded}>
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
@@ -354,17 +358,33 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
           <TofBoard rows={board.rows} me={me} minPlays={board.minPlays} />
         </aside>
       </div>
+      </div>
+      </div>
     </section>
   );
 }
 
-/** The game's title: chunky game-show caps, set straight, with a small "or" between the two big words. */
-function TofTitle() {
+/** The game's title: stencil block caps, set straight, with a small "or"
+    between the two big words. It is the fold's handle: it bobs while the
+    table is closed and opens it on a tap. */
+function TofTitle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <h2 className="mb-6 flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)]" style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
-      <span className="text-[52px] tracking-[0.02em] text-[var(--color-pos)] sm:text-[64px]">TAIL</span>
-      <span className="text-[26px] tracking-[0.08em] text-white sm:text-[32px]">OR</span>
-      <span className="text-[52px] tracking-[0.02em] text-[var(--color-neg)] sm:text-[64px]">FADE</span>
-    </h2>
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls="tof-table"
+      className="group mx-auto flex cursor-pointer select-none flex-col items-center bg-transparent p-0 focus-visible:outline-none"
+    >
+      <h2 className={`flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98] ${open ? "" : "tof-bob"}`} style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
+        <span className="text-[46px] tracking-[0.01em] text-[var(--color-pos)] sm:text-[60px]">TAIL</span>
+        <span className="text-[22px] tracking-[0.06em] text-white sm:text-[28px]">OR</span>
+        <span className="text-[46px] tracking-[0.01em] text-[var(--color-neg)] sm:text-[60px]">FADE</span>
+      </h2>
+      <span className={`mt-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)] transition-opacity duration-300 ${open ? "opacity-0" : "tof-hint"}`} aria-hidden="true">
+        Tap to play
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
+      </span>
+    </button>
   );
 }
