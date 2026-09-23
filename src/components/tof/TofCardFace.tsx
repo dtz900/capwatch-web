@@ -99,7 +99,7 @@ export function TofCardFace({
 
       {/* The capper is the subject of the card. */}
       <div className="relative flex items-center gap-3 pt-1">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[rgba(255,255,255,0.14)] bg-[#26262e] text-[14px] font-extrabold text-[var(--color-text-soft)]">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#2dd4bf] bg-[#26262e] text-[14px] font-extrabold text-[var(--color-text-soft)] shadow-[0_0_0_1px_rgba(45,212,191,0.25)]">
           {card.profile_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={card.profile_image_url} alt="" className="h-full w-full object-cover" />
@@ -111,7 +111,7 @@ export function TofCardFace({
           <div className="truncate text-[19px] font-extrabold leading-tight tracking-[-0.02em]">@{card.handle}</div>
           <div className="mt-1 flex items-center gap-2 text-[11px] font-bold text-[var(--color-text-soft)]">
             <StreakBadge streak={card.capper_streak} size="xs" />
-            {card.capper_record && <span className="truncate">{card.capper_record}</span>}
+            {card.capper_record && <CapperRecord record={card.capper_record} />}
           </div>
         </div>
       </div>
@@ -159,5 +159,23 @@ export function TofCardFace({
         </div>
       )}
     </div>
+  );
+}
+
+/** "W-L · +X.Xu season" from the API; the units segment is colored by sign. */
+function CapperRecord({ record }: { record: string }) {
+  const parts = record.split(" · ");
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 truncate">
+      {parts.map((part, i) => {
+        const tone = part.startsWith("+") ? "text-[var(--color-pos)]" : part.startsWith("-") ? "text-[var(--color-neg)]" : "";
+        return (
+          <span key={i} className="flex items-center gap-1.5">
+            {i > 0 && <span className="text-[var(--color-text-muted)]">·</span>}
+            <span className={tone}>{part}</span>
+          </span>
+        );
+      })}
+    </span>
   );
 }
