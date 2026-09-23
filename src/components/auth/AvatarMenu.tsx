@@ -3,9 +3,11 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { vipTierEnabled } from "@/lib/flags";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { BoardAvatar } from "@/components/tof/BoardAvatar";
+import { displayAvatar } from "@/lib/x-claim";
 
 export function AvatarMenu() {
-  const { session, profile, entitlements, signOut } = useAuth();
+  const { session, profile, entitlements, capper, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -37,16 +39,19 @@ export function AvatarMenu() {
   }
 
   const username = profile?.username ?? null;
-  const initial = (username ?? session?.user?.email ?? "?").charAt(0).toUpperCase();
+  // Same photo as the board and hero: tracked capper photo, then upload,
+  // then the initial.
+  const avatar = displayAvatar(profile, capper);
+  const name = username ?? session?.user?.email ?? "?";
 
   return (
     <div ref={ref} className="relative">
       <button
         aria-label="Account menu"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-b from-[#26262c] to-[#141418] border border-[var(--color-border-h)] text-sm font-bold text-[var(--color-text)]"
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-gradient-to-b from-[#26262c] to-[#141418] text-sm font-bold text-[var(--color-text)]"
       >
-        {initial}
+        {avatar ? <BoardAvatar url={avatar} name={name} size={30} /> : <span aria-hidden="true">{name.charAt(0).toUpperCase()}</span>}
       </button>
       {open && (
         <div className="absolute right-0 top-10 z-50 w-44 rounded-xl bg-[#121216] border border-[var(--color-border-h)] shadow-xl py-1.5">
