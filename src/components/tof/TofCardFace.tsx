@@ -47,6 +47,14 @@ function sideTeam(label: string | null, teams: (string | null)[]): string | null
 }
 
 
+/** Round badge for a pick with no team logo: totals read O / U, anything else its first three letters. */
+function badgeText(label: string): string {
+  const first = label.split(" ")[0]?.toUpperCase() ?? "";
+  if (first === "OVER") return "O";
+  if (first === "UNDER") return "U";
+  return first.slice(0, 3);
+}
+
 export function TofCardFace({
   card, stampTail = 0, stampFade = 0, stampPass = 0, locked = false,
 }: {
@@ -122,13 +130,16 @@ export function TofCardFace({
         <div className="flex items-center gap-4">
           <div className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-full bg-[#ece7d9] shadow-[0_6px_16px_rgba(0,0,0,0.45)]">
             {tailTeam ? <TeamLogo abbr={tailTeam} sport={sport} size={60} flat /> : (
-              <span className="font-[family-name:var(--font-display)] text-[24px] text-[#0a0a0c]">{card.tail_label.split(" ")[0]?.toUpperCase().slice(0, 3)}</span>
+              <span data-testid="pick-badge" className="font-[family-name:var(--font-display)] text-[30px] text-[#0a0a0c]">{badgeText(card.tail_label)}</span>
             )}
           </div>
           <div className="min-w-0">
             <div className="text-[34px] font-extrabold leading-none tracking-[-0.03em]">{card.tail_label}</div>
             <div className="mt-1.5 text-[18px] font-extrabold tabular-nums text-[var(--color-pos)]">{fmtOdds(card.tail_odds)}</div>
-            <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-muted)]">{card.market_group}</div>
+            <div data-testid="pick-matchup" className="mt-1 text-[13px] font-extrabold tracking-[0.02em] text-[var(--color-text)]">
+              {card.matchup}
+              <span className="ml-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-muted)]">· {card.market_group}</span>
+            </div>
           </div>
         </div>
         {fadeLabel && (
