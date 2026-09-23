@@ -167,7 +167,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     if (cached) setData(cached);
     fetchTofHand().then(setData).catch(() => { /* keep cached or empty */ });
   }, [initial]);
-  useEffect(() => { if (data?.hand) writeHandCache(data); }, [data]);
+  // Any authoritative answer is cached, including "no hand": a fresh no-hand
+  // response must replace a cached deck from yesterday, not leave it in place.
+  useEffect(() => { if (data) writeHandCache(data); }, [data]);
   useEffect(() => {
     // Always poll. No hand yet is when it matters most (a visitor who loaded
     // before the daily deal), and a graded hand is not the end either: the
@@ -220,8 +222,10 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       }
       const { data: follows, error: followsError } = await supabase.from("capper_follows").select("capper_id, market").eq("user_id", userId);
       if (followsError) {
-        // Cosmetic: a missing stable card is not worth a toast.
+        // Cosmetic: a missing stable card is not worth a toast. The previous
+        // hand's card must still go, or it rides into this hand's summary.
         console.error("tof: capper follows load failed", followsError);
+        if (!cancelled) setStable(null);
         return;
       }
       const followRows = (follows ?? []) as { capper_id: number; market: string | null }[];
@@ -229,7 +233,10 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       // A stable pick already played this hand is kept whatever the follow
       // list looks like now, so the no-follows exit waits for that check.
       const playedStableId = ((rows ?? []) as TofPlay[]).find((r) => r.stable_pick_id != null)?.stable_pick_id ?? null;
-      if (ids.length === 0 && playedStableId == null) return;
+      if (ids.length === 0 && playedStableId == null) {
+        if (!cancelled) setStable(null);
+        return;
+      }
       // Same follow-scope rule as My Tails (src/app/my-tails/page.tsx): an
       // "all" row tails the whole capper, otherwise only the listed markets
       // count, and a pick with no market_group never matches a scoped

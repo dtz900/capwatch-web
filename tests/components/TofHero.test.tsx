@@ -386,6 +386,43 @@ describe("TofHero", () => {
     expect(screen.getByText("1-1")).toBeInTheDocument();
   });
 
+  it("drops the previous hand's stable card when the next hand loads and the user has no follows", async () => {
+    vi.useFakeTimers();
+    try {
+      selectResult.current = { capper_follows: { data: [{ capper_id: 5, market: "all" }], error: null } };
+      vi.mocked(fetchTodayPicks).mockResolvedValue({ date: "2026-09-22", picks: [stablePick({ pick_id: 904, selection: "Under 8.5", grading_odds: -115, commence_time: "2099-01-01T00:00:00Z" })] });
+      mockAuth.current = SIGNED_IN;
+      render(<TofHero initial={handOf([mkCard(1, "NYY -1.5", "2000-01-01T00:00:00Z")])} />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+      expect(screen.getByText("Under 8.5")).toBeInTheDocument();
+      // Next poll: a new hand, and the follows are gone.
+      selectResult.current = { capper_follows: { data: [], error: null } };
+      const next = handOf([mkCard(2, "BOS ML", "2000-01-01T00:00:00Z")]);
+      vi.mocked(fetchTofHand).mockResolvedValue({ ...next, hand: { ...next.hand!, hand_id: 8 } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+      expect(screen.queryByText("Under 8.5")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("caches a fresh no-hand answer over a previously cached hand", async () => {
+    vi.useFakeTimers();
+    try {
+      mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
+      render(<TofHero initial={HAND} />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(JSON.parse(sessionStorage.getItem("ts:tof:hand") ?? "{}").data.hand).not.toBeNull();
+      vi.mocked(fetchTofHand).mockResolvedValue({ hand: null, no_hand_reason: "no games today", next_deal: null });
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(JSON.parse(sessionStorage.getItem("ts:tof:hand") ?? "{}").data.hand).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("offers a stable card at its grading odds and skips graded, unpriced, and started picks", async () => {
     selectResult.current = { capper_follows: { data: [{ capper_id: 5, market: "all" }], error: null } };
     vi.mocked(fetchTodayPicks).mockResolvedValue({
