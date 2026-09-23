@@ -53,11 +53,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       return;
     }
-    const { data } = await supabase
+    const { data, error: readError } = await supabase
       .from("ts_profiles")
       .select(PROFILE_COLUMNS)
       .eq("user_id", user.id)
       .maybeSingle();
+    if (readError) {
+      // A failed read is not "no row". Treating it as one would downgrade a
+      // paid user to free and fire a spurious self-insert on any transient
+      // failure or a column this deploy expects but the DB has not got yet
+      // (42703). Leave the profile as it stands and say so in the console.
+      console.error("ts_profiles load failed:", readError);
+      return;
+    }
     if (data) {
       setProfile(data as TsProfile);
       return;

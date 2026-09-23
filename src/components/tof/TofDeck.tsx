@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { TofCard, TofChoice } from "@/lib/types";
 import { TofCardFace } from "@/components/tof/TofCardFace";
@@ -44,6 +44,11 @@ export function TofDeck({
   const [dragging, setDragging] = useState(false);
   const [leave, setLeave] = useState<Leave>(null);
   const startX = useRef(0);
+  const hintId = useId();
+  // The fly-off reset is a bare timer, so an unmount mid-animation would fire
+  // setState on a gone component. Held here and cleared on unmount.
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
   const top = open[0] ?? null;
 
   // A new top card means the previous one left; reset any stale transform.
@@ -80,7 +85,9 @@ export function TofDeck({
         return;
       }
       const wait = prefersReducedMotion() ? 0 : 380;
-      setTimeout(() => {
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => {
+        resetTimer.current = null;
         setLeave(null);
         setDx(0);
       }, wait);
@@ -129,8 +136,19 @@ export function TofDeck({
         tabIndex={0}
         onKeyDown={onKey}
         className="relative h-[470px] w-[360px] max-w-full outline-none"
+        role="group"
         aria-label="Tail or Fade deck"
+        aria-describedby={hintId}
       >
+        {stack.length === 0 && locked.length === 0 && (
+          // Every card played and none left locked: the deck would otherwise
+          // be an empty box, so it says so in the card's own recipe.
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e] px-6 text-center">
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Tail or Fade</div>
+            <div className="text-[18px] font-extrabold tracking-[-0.02em]">You played every card.</div>
+            <div className="text-[13px] text-[var(--color-text-soft)]">Results land after the games finish.</div>
+          </div>
+        )}
         {stack.length === 0 && locked.length > 0 && (
           <div className="absolute inset-0">
             <TofCardFace card={locked[0]} locked />
@@ -164,7 +182,7 @@ export function TofDeck({
                 // out, so it never duplicates the top card's visible text.
                 <div
                   aria-hidden="true"
-                  className="h-full rounded-xl border border-[var(--color-border-h)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e]"
+                  className="h-full rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e]"
                 />
               )}
             </div>
@@ -183,6 +201,7 @@ export function TofDeck({
             type="button"
             aria-label="Fade"
             disabled={disabled || top.kind === "stable"}
+            title={top.kind === "stable" ? "Fading your own tail is not a thing." : undefined}
             onClick={() => void commit("left")}
             className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[var(--color-neg)] bg-[rgba(239,68,68,0.10)] text-[var(--color-neg)] disabled:opacity-30"
           >
@@ -208,7 +227,7 @@ export function TofDeck({
           </button>
         </div>
       )}
-      <div className="text-[11px] font-semibold text-[#52525b]">
+      <div id={hintId} className="text-[11px] font-semibold text-[#52525b]">
         {top ? "Drag the card, use the arrow keys, or tap a button." : locked.length > 0 ? "Every card is locked. Results land by 6 AM." : ""}
       </div>
     </div>

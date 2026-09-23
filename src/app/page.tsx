@@ -135,18 +135,6 @@ export default async function Home({ searchParams }: PageProps) {
     noStore();
   }
 
-  // Tail or Fade hand. A failed fetch renders the no-hand state and is not
-  // ISR-cached as a failure; the hero re-fetches client-side every minute.
-  let tofHand: TofHandResponse | null = null;
-  if (tofEnabled()) {
-    try {
-      tofHand = await fetchTofHand();
-    } catch (err) {
-      console.error("tof hand fetch failed:", err);
-      noStore();
-    }
-  }
-
   if (fetchError) {
     return (
       <>
@@ -159,6 +147,20 @@ export default async function Home({ searchParams }: PageProps) {
         </main>
       </>
     );
+  }
+
+  // Tail or Fade hand. A failed fetch renders the no-hand state and is not
+  // ISR-cached as a failure; the hero re-fetches client-side every minute.
+  // Fetched after the leaderboard's early return so a leaderboard outage
+  // does not also pay for a hand the page will never render.
+  let tofHand: TofHandResponse | null = null;
+  if (tofEnabled()) {
+    try {
+      tofHand = await fetchTofHand();
+    } catch (err) {
+      console.error("tof hand fetch failed:", err);
+      noStore();
+    }
   }
 
   const top3 = rows.slice(0, 3);

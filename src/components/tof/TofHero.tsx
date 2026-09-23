@@ -13,17 +13,27 @@ import { TofBoard } from "@/components/tof/TofBoard";
 const RETURN_COOKIE = "ts_return_to";
 const REFETCH_MS = 60_000;
 
-function stableFromPick(p: TodayPickEntry): StableDeckCard | null {
-  if (p.kind !== "straight" || p.pick_id == null || p.odds_taken == null) return null;
+/* The stable card is the user's own tail, offered alongside the shared hand.
+   It has to clear the same bar a dealt card does: still ungraded, priced at
+   the odds the platform will grade it at, and not already under way. */
+function stableFromPick(p: TodayPickEntry, now: Date): StableDeckCard | null {
+  if (p.kind !== "straight" || p.pick_id == null) return null;
+  if (p.outcome != null) return null; // already graded, nothing left to tail
+  // grading_odds is the price the platform scores at; odds_taken is the
+  // fallback until the feed serves it. Never default to a house price.
+  const odds = p.grading_odds ?? p.odds_taken;
+  if (odds == null) return null;
   const group = p.market_group === "ML" || p.market_group === "Spread" || p.market_group === "Game Total" ? p.market_group : null;
   if (!group || !p.matchup) return null;
-  return {
+  const card: StableDeckCard = {
     kind: "stable", id: -p.pick_id, pick_id: p.pick_id, handle: p.handle, display_name: p.display_name,
-    profile_image_url: p.profile_image_url, matchup: p.matchup, game_start_at: "",
-    market_group: group, tail_label: p.selection ?? p.market ?? "", tail_odds: p.odds_taken,
+    profile_image_url: p.profile_image_url, matchup: p.matchup, game_start_at: p.commence_time ?? "",
+    market_group: group, tail_label: p.selection ?? p.market ?? "", tail_odds: odds,
     note: "From your stable. Tail it or pass. Fading your own tail is not a thing.", capper_streak: 0,
     capper_record: null, sport: "MLB",
   };
+  if (p.commence_time && isLocked(card, now)) return null;
+  return card;
 }
 
 function nextDealLabel(next: { date: string; expected_at: string | null } | null): string {
@@ -53,22 +63,32 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [board, setBoard] = useState<{ rows: TofBoardRow[]; minPlays: number }>({ rows: [], minPlays: 10 });
   const [toast, setToast] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
+  // Signed-out passes have nowhere to persist: there is no tof_plays row to
+  // write. Without this the deck would re-deal the same top card forever.
+  const [dismissed, setDismissed] = useState<ReadonlySet<number>>(() => new Set());
   const pendingHandled = useRef(false);
 
   const hand = data?.hand ?? null;
+  const handId = hand?.hand_id ?? null;
+  const handStatus = hand?.status ?? null;
+  // The 60s refetch replaces `data` with a fresh object every minute. The
+  // signed-in load must not re-run on that, so it keys on the hand id and
+  // reaches the cards it needs through this ref instead of the object.
+  const handRef = useRef(hand);
+  useEffect(() => { handRef.current = hand; }, [hand]);
 
-  // Clock tick so locks flip without a reload; hand refetch while anything is open.
+  // Clock tick so locks flip without a reload; hand refetch while the hand is not graded.
   useEffect(() => {
     const clock = setInterval(() => setNow(new Date()), 15_000);
     return () => clearInterval(clock);
   }, []);
   useEffect(() => {
-    if (!hand || hand.status === "graded") return;
+    if (handId == null || handStatus === "graded") return;
     const id = setInterval(() => {
       fetchTofHand().then(setData).catch(() => { /* keep last good */ });
     }, REFETCH_MS);
     return () => clearInterval(id);
-  }, [hand]);
+  }, [handId, handStatus]);
 
   useEffect(() => {
     fetchTofBoard("month").then((b) => setBoard({ rows: b.rows, minPlays: b.min_plays })).catch(() => { /* rail stays empty */ });
@@ -80,11 +100,11 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     // derived-state reset for this branch, not an external-system sync; same
     // pattern as AuthProvider's loadProfile() (pre-existing lint debt here).
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!supabase || !userId || !hand) { setPlays([]); setStats(null); setStable(null); return; }
+    if (!supabase || !userId || handId == null) { setPlays([]); setStats(null); setStable(null); return; }
     let cancelled = false;
     (async () => {
       const { data: rows, error: playsError } = await supabase.from("tof_plays").select("id, hand_id, card_id, stable_pick_id, choice, outcome, units")
-        .eq("user_id", userId).eq("hand_id", hand.hand_id);
+        .eq("user_id", userId).eq("hand_id", handId);
       if (playsError) {
         console.error("tof: plays load failed", playsError);
         if (!cancelled) {
@@ -110,18 +130,25 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       }
       const ids = [...new Set(((follows ?? []) as { capper_id: number }[]).map((f) => f.capper_id))];
       if (ids.length === 0) return;
-      const inHand = new Set(hand.cards.map((c) => c.handle));
+      const inHand = new Set((handRef.current?.cards ?? []).map((c) => c.handle));
       const today = await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] as TodayPickEntry[] }));
-      const first = today.picks.map(stableFromPick).find((s) => s && !inHand.has(s.handle)) ?? null;
+      const at = new Date();
+      const first = today.picks.map((p) => stableFromPick(p, at)).find((s) => s && !inHand.has(s.handle)) ?? null;
       if (!cancelled) setStable(first);
     })();
     return () => { cancelled = true; };
-  }, [supabase, userId, hand]);
+  }, [supabase, userId, handId]);
 
   const playedIds = useMemo(() => new Set(plays.filter((p) => p.card_id != null).map((p) => p.card_id as number)), [plays]);
+  const offDeckIds = useMemo(() => {
+    if (dismissed.size === 0) return playedIds;
+    const ids = new Set(playedIds);
+    for (const id of dismissed) ids.add(id);
+    return ids;
+  }, [playedIds, dismissed]);
   const stablePlayed = plays.some((p) => p.stable_pick_id != null);
   const seed = userId && hand ? `${userId}:${hand.slate_date}` : null;
-  const ordered = useMemo(() => (hand ? orderDeck(hand.cards, playedIds, now, seed) : { open: [], locked: [] }), [hand, playedIds, now, seed]);
+  const ordered = useMemo(() => (hand ? orderDeck(hand.cards, offDeckIds, now, seed) : { open: [], locked: [] }), [hand, offDeckIds, now, seed]);
   const open: DeckCard[] = useMemo(() => {
     const shared = ordered.open.map((c) => ({ ...c, kind: "shared" as const }));
     return stable && !stablePlayed ? [...shared, stable] : shared;
@@ -158,7 +185,12 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   const onPlay = useCallback(async (card: DeckCard, choice: TofChoice): Promise<boolean> => {
     if (!entitlements.isLoggedIn) {
-      if (choice === "pass") return true; // anonymous browsing: pass just flips the card
+      if (choice === "pass") {
+        // Anonymous browsing: nothing to write, so remember the dismissal
+        // locally or the deck hands the same card back forever.
+        setDismissed((prev) => { const next = new Set(prev); next.add(card.id); return next; });
+        return true;
+      }
       if (card.kind === "shared" && hand) writePendingPlay({ cardId: card.id, choice, slateDate: hand.slate_date });
       document.cookie = `${RETURN_COOKIE}=${encodeURIComponent("/")}; path=/; max-age=1800; samesite=lax`;
       router.push("/login");
@@ -227,7 +259,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
           ) : (
             <TofDeck open={open} locked={locked} onPlay={onPlay} />
           )}
-          {toast && <div className="mt-3 rounded-lg border border-[var(--color-border-h)] bg-[#121216] px-3 py-2 text-[12px] font-semibold">{toast}</div>}
+          <div role="status" aria-live="polite">
+            {toast && <div className="mt-3 rounded-lg border border-[var(--color-border-h)] bg-[#121216] px-3 py-2 text-[12px] font-semibold">{toast}</div>}
+          </div>
         </div>
 
         <div className="order-3 flex flex-col gap-3">

@@ -34,12 +34,30 @@ describe("TofDeck", () => {
     expect(screen.queryByRole("button", { name: /^tail$/i })).not.toBeInTheDocument();
   });
 
+  it("tells a spectator they played every card when nothing is open or locked", () => {
+    render(<TofDeck open={[]} locked={[]} onPlay={vi.fn()} />);
+    expect(screen.getByText("Tail or Fade")).toBeInTheDocument();
+    expect(screen.getByText("You played every card.")).toBeInTheDocument();
+    expect(screen.getByText("Results land after the games finish.")).toBeInTheDocument();
+  });
+
   it("disables fade on a stable card", () => {
     const stable: DeckCard = { kind: "stable", id: -555, pick_id: 555, handle: "picksoffice", display_name: null,
       profile_image_url: null, matchup: "CHC @ MIL", game_start_at: "2099-01-01T00:00:00Z", market_group: "Game Total",
       tail_label: "Under 8.5", tail_odds: -110, note: "From your stable.", capper_streak: 1, capper_record: null, sport: "MLB" };
     render(<TofDeck open={[stable]} locked={[]} onPlay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: /^fade$/i })).toBeDisabled();
+    const fade = screen.getByRole("button", { name: /^fade$/i });
+    expect(fade).toBeDisabled();
+    expect(fade).toHaveAttribute("title", "Fading your own tail is not a thing.");
+  });
+
+  it("exposes the deck as a described group", () => {
+    render(<TofDeck open={[card(1)]} locked={[]} onPlay={vi.fn()} />);
+    const deck = screen.getByRole("group", { name: /tail or fade deck/i });
+    const describedBy = deck.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy as string)?.textContent)
+      .toBe("Drag the card, use the arrow keys, or tap a button.");
   });
 
   it("snaps a stable card back after a fade drag past the threshold", async () => {

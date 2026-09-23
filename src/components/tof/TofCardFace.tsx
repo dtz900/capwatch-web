@@ -36,7 +36,7 @@ export function TofCardFace({
   const fadeLabel = shared?.fade_label ?? null;
   const unpriced = shared?.fade_odds_source === "no_close_available";
   return (
-    <div className="relative flex h-full flex-col gap-3.5 overflow-hidden rounded-xl border border-[var(--color-border-h)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e] p-5 select-none">
+    <div className="relative flex h-full flex-col gap-3.5 overflow-hidden rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e] p-5 select-none">
       <div className="pointer-events-none absolute left-5 top-6 rotate-[-14deg] rounded-lg border-[3px] border-[var(--color-pos)] px-3 py-1 text-[26px] font-extrabold tracking-[0.12em] text-[var(--color-pos)]" style={{ opacity: stampTail }}>TAIL</div>
       <div className="pointer-events-none absolute right-5 top-6 rotate-[14deg] rounded-lg border-[3px] border-[var(--color-neg)] px-3 py-1 text-[26px] font-extrabold tracking-[0.12em] text-[var(--color-neg)]" style={{ opacity: stampFade }}>FADE</div>
 

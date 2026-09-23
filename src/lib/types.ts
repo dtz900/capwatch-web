@@ -458,6 +458,12 @@ export interface TodayPickEntry {
   selection: string | null;
   line: number | null;
   odds_taken: number | null;
+  /** The price the platform actually grades this pick at. Present once the
+      feed serves it; prefer it over odds_taken wherever a payout is scored. */
+  grading_odds?: number | null;
+  /** Scheduled start of the pick's game, once the feed serves it. Used to
+      keep a started game off the Tail or Fade stable card. */
+  commence_time?: string | null;
   /** The capper's own posted stake in units; the slip's default when the
       user has no per-capper stake assigned. */
   units?: number | null;
