@@ -6,6 +6,7 @@ import { TopNav } from "@/components/nav/TopNav";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { EmailAlertsToggle } from "@/components/account/EmailAlertsToggle";
+import { EmailPrefToggle } from "@/components/account/EmailPrefToggle";
 import { AvatarUpload } from "@/components/account/AvatarUpload";
 import { XVerificationCard } from "@/components/account/XVerificationCard";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
@@ -295,6 +296,14 @@ export default function AccountPage() {
           Notifications
         </h2>
         <EmailAlertsToggle />
+        {tofEnabled() && (
+          <EmailPrefToggle
+            column="email_tof_deals"
+            title="Email me when the daily hand drops"
+            subtitle="One short nudge when the deck is dealt. No picks in it."
+            ariaLabel="Toggle daily hand emails"
+          />
+        )}
       </div>
 
       {/* Bet slip record */}
