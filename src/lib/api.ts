@@ -20,6 +20,8 @@ import type {
   PalaceEntry,
   PalaceCandidate,
   TodayPicksResponse,
+  TofHandResponse,
+  TofBoardResponse,
 } from "./types";
 
 // KV TTLs. Short enough that admin refresh-aggregates / regrade actions
@@ -932,4 +934,19 @@ export async function fetchPickOutcomes(
     }
   }
   return out;
+}
+
+/** Today's Tail or Fade hand. No data cache: the landing page is ISR at
+ * 300s and the hero re-fetches client-side while any card is open. Throws on
+ * a non-2xx so page.tsx can fall back to a null hand without caching it. */
+export async function fetchTofHand(): Promise<TofHandResponse> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/public/tof/hand`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`tof hand fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchTofBoard(window: "month" | "season" = "month"): Promise<TofBoardResponse> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/public/tof/board?window=${window}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`tof board fetch failed: ${res.status}`);
+  return res.json();
 }

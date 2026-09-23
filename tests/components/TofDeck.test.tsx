@@ -1,0 +1,132 @@
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { TofDeck, type DeckCard } from "@/components/tof/TofDeck";
+
+const card = (id: number): DeckCard => ({
+  kind: "shared", id, position: id, category: "heater", handle: "luckyluke", display_name: null,
+  profile_image_url: null, capper_streak: 6, capper_record: "22-14 · +11.3u season", sport: "MLB",
+  matchup: "NYY @ BAL", game_start_at: "2099-01-01T00:00:00Z", game_state: "scheduled", home_score: null,
+  away_score: null, market_group: "Spread", tail_label: "NYY -1.5", tail_odds: 130, fade_label: "BAL +1.5",
+  fade_odds_at_deal: -150, fade_odds_source: "pending", note: "Six straight winners.", rival: null,
+  field_count: null, tail_outcome: null, fade_outcome: null, tail_units: null, fade_units: null, crowd: null,
+});
+
+describe("TofDeck", () => {
+  it("renders the top card and calls onPlay with the button choice", async () => {
+    const onPlay = vi.fn().mockResolvedValue(true);
+    render(<TofDeck open={[card(1), card(2)]} locked={[]} onPlay={onPlay} />);
+    // Both fixture cards carry this label and the next card renders under the top one.
+    expect(screen.getAllByText("NYY -1.5").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: /^tail$/i }));
+    await waitFor(() => expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), "tail"));
+  });
+
+  it("commits a pass when the card is dragged up past the threshold", async () => {
+    const onPlay = vi.fn().mockResolvedValue(true);
+    render(<TofDeck open={[card(1), card(2)]} locked={[]} onPlay={onPlay} />);
+    const deck = screen.getByTestId("tof-deck");
+    const topCard = deck.firstElementChild as HTMLElement;
+    const face = Array.from(deck.children).find((el) => (el as HTMLElement).style.zIndex === "10") as HTMLElement ?? topCard;
+    fireEvent.pointerDown(face, { clientX: 200, clientY: 400, pointerId: 1 });
+    fireEvent.pointerMove(face, { clientX: 205, clientY: 200, pointerId: 1 });
+    fireEvent.pointerUp(face, { clientX: 205, clientY: 200, pointerId: 1 });
+    await waitFor(() => expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), "pass"));
+  });
+
+  it("a pointer cancel settles the card without committing, even past the threshold", async () => {
+    const onPlay = vi.fn().mockResolvedValue(true);
+    render(<TofDeck open={[card(1)]} locked={[]} onPlay={onPlay} />);
+    const cardDiv = screen.getByText("NYY -1.5").closest('[style*="transform"]') as HTMLElement;
+    expect(cardDiv).toBeTruthy();
+    fireEvent.pointerDown(cardDiv, { clientX: 200, clientY: 400, pointerId: 1 });
+    fireEvent.pointerMove(cardDiv, { clientX: 500, clientY: 400, pointerId: 1 });
+    fireEvent.pointerCancel(cardDiv, { clientX: 500, clientY: 400, pointerId: 1 });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(onPlay).not.toHaveBeenCalled();
+    expect(cardDiv.style.transform).toBe("translate(0px, 0px) rotate(0deg)");
+  });
+
+  it("supports arrow keys on the focused deck", async () => {
+    const onPlay = vi.fn().mockResolvedValue(true);
+    render(<TofDeck open={[card(1)]} locked={[]} onPlay={onPlay} />);
+    const deck = screen.getByTestId("tof-deck");
+    fireEvent.keyDown(deck, { key: "ArrowLeft" });
+    await waitFor(() => expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), "fade"));
+  });
+
+  it("shows locked cards face up without buttons when nothing is open", () => {
+    render(<TofDeck open={[]} locked={[{ ...card(3), game_start_at: "2000-01-01T00:00:00Z" }]} onPlay={vi.fn()} />);
+    expect(screen.getAllByText(/locked/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: /^tail$/i })).not.toBeInTheDocument();
+  });
+
+  it("tells a spectator they played every card when nothing is open or locked", () => {
+    render(<TofDeck open={[]} locked={[]} onPlay={vi.fn()} />);
+    expect(screen.getByText("Tail or Fade")).toBeInTheDocument();
+    expect(screen.getByText("You played every card.")).toBeInTheDocument();
+    expect(screen.getByText("Results land after the games finish.")).toBeInTheDocument();
+  });
+
+  it("shows each graded play's result and units, and the hand's record in the footer", () => {
+    const progress = [
+      { id: 1, handle: "a", tail_label: "TEX ML", tail_odds: -126, fade_label: "NYM ML", fade_odds: 105, choice: "tail" as const, outcome: "loss" as const, units: -1 },
+      { id: 2, handle: "b", tail_label: "PHI ML", tail_odds: -140, fade_label: "MIL ML", fade_odds: -135, choice: "tail" as const, outcome: "win" as const, units: 0.7142857 },
+      { id: 3, handle: "c", tail_label: "TB ML", tail_odds: 105, fade_label: "NYY ML", fade_odds: -152, choice: "pass" as const, outcome: null, units: null },
+    ];
+    render(<TofDeck open={[]} locked={[]} onPlay={vi.fn()} progress={progress} />);
+    expect(screen.getByLabelText("loss, -1.00u")).toBeInTheDocument();
+    expect(screen.getByLabelText("win, +0.71u")).toBeInTheDocument();
+    expect(screen.getByText("Graded")).toBeInTheDocument();
+    expect(screen.getByText("1-1")).toBeInTheDocument();
+    expect(screen.getByText("-0.29u")).toBeInTheDocument();
+    expect(screen.queryByText(/graded after the games/i)).not.toBeInTheDocument();
+  });
+
+  it("calls the record partial while a tail or fade is still ungraded", () => {
+    const progress = [
+      { id: 1, handle: "a", tail_label: "TEX ML", tail_odds: -126, fade_label: "NYM ML", fade_odds: 105, choice: "fade" as const, outcome: "win" as const, units: 1.05 },
+      { id: 2, handle: "b", tail_label: "PHI ML", tail_odds: -140, fade_label: "MIL ML", fade_odds: -135, choice: "tail" as const, outcome: null, units: null },
+    ];
+    render(<TofDeck open={[]} locked={[]} onPlay={vi.fn()} progress={progress} />);
+    expect(screen.getByText("So far")).toBeInTheDocument();
+    expect(screen.getByText("1-0")).toBeInTheDocument();
+    expect(screen.getByText("1 pending")).toBeInTheDocument();
+  });
+
+  it("disables fade on a stable card", () => {
+    const stable: DeckCard = { kind: "stable", id: -555, pick_id: 555, handle: "picksoffice", display_name: null,
+      profile_image_url: null, matchup: "CHC @ MIL", game_start_at: "2099-01-01T00:00:00Z", market_group: "Game Total",
+      tail_label: "Under 8.5", tail_odds: -110, note: "From your stable.", capper_streak: 1, capper_record: null, sport: "MLB" };
+    render(<TofDeck open={[stable]} locked={[]} onPlay={vi.fn()} />);
+    const fade = screen.getByRole("button", { name: /^fade$/i });
+    expect(fade).toBeDisabled();
+    expect(fade).toHaveAttribute("title", "Fading your own tail is not a thing.");
+  });
+
+  it("exposes the deck as a described group", () => {
+    render(<TofDeck open={[card(1)]} locked={[]} onPlay={vi.fn()} />);
+    const deck = screen.getByRole("group", { name: /tail or fade deck/i });
+    const describedBy = deck.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy as string)?.textContent)
+      .toBe("Drag the card, use the arrow keys, or tap a button.");
+  });
+
+  it("snaps a stable card back after a fade drag past the threshold", async () => {
+    const onPlay = vi.fn().mockResolvedValue(true);
+    const stable: DeckCard = { kind: "stable", id: -555, pick_id: 555, handle: "picksoffice", display_name: null,
+      profile_image_url: null, matchup: "CHC @ MIL", game_start_at: "2099-01-01T00:00:00Z", market_group: "Game Total",
+      tail_label: "Under 8.5", tail_odds: -110, note: "From your stable.", capper_streak: 1, capper_record: null, sport: "MLB" };
+    render(<TofDeck open={[stable]} locked={[]} onPlay={onPlay} />);
+    const face = screen.getByText("Under 8.5");
+    const cardDiv = face.closest('[style*="transform"]') as HTMLElement;
+    expect(cardDiv).toBeTruthy();
+
+    fireEvent.pointerDown(cardDiv, { clientX: 200, pointerId: 1 });
+    fireEvent.pointerMove(cardDiv, { clientX: 0, pointerId: 1 });
+    fireEvent.pointerUp(cardDiv, { clientX: 0, pointerId: 1 });
+
+    await waitFor(() => expect(cardDiv.style.transform).toBe("translate(0px, 0px) rotate(0deg)"));
+    expect(onPlay).not.toHaveBeenCalled();
+  });
+});

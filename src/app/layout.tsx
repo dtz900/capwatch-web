@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Manrope, Cinzel } from "next/font/google";
+import { Manrope, Cinzel, Black_Ops_One } from "next/font/google";
 import { Suspense } from "react";
 import { AnalyticsWithExclusion } from "@/components/analytics/AnalyticsWithExclusion";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { UsernameClaimProvider } from "@/components/auth/UsernameClaim";
 import { BrandFooter } from "@/components/nav/BrandFooter";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
 import { PipelineStaleBanner } from "@/components/nav/PipelineStaleBanner";
@@ -23,6 +24,15 @@ const cinzel = Cinzel({
   subsets: ["latin"],
   weight: ["500", "700", "900"],
   variable: "--font-cinzel",
+  display: "swap",
+});
+
+// Black Ops One: stencil block caps for the Tail or Fade title, stamps and
+// numerals. Heavy and flat, not cartoon.
+const display = Black_Ops_One({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -78,16 +88,18 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${cinzel.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${cinzel.variable} ${display.variable}`}>
       <body>
         <AuthProvider>
-          <Suspense fallback={null}>
-            <PipelineStaleBanner />
-          </Suspense>
-          {children}
-          <BrandFooter />
-          <MobileTabBar />
-          <AnalyticsWithExclusion />
+          <UsernameClaimProvider>
+            <Suspense fallback={null}>
+              <PipelineStaleBanner />
+            </Suspense>
+            {children}
+            <BrandFooter />
+            <MobileTabBar />
+            <AnalyticsWithExclusion />
+          </UsernameClaimProvider>
         </AuthProvider>
       </body>
     </html>

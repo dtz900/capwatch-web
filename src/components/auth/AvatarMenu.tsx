@@ -5,7 +5,7 @@ import { vipTierEnabled } from "@/lib/flags";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export function AvatarMenu() {
-  const { session, entitlements, signOut } = useAuth();
+  const { session, profile, entitlements, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -36,7 +36,8 @@ export function AvatarMenu() {
     );
   }
 
-  const initial = (session?.user?.email ?? "?").charAt(0).toUpperCase();
+  const username = profile?.username ?? null;
+  const initial = (username ?? session?.user?.email ?? "?").charAt(0).toUpperCase();
 
   return (
     <div ref={ref} className="relative">
@@ -50,7 +51,7 @@ export function AvatarMenu() {
       {open && (
         <div className="absolute right-0 top-10 z-50 w-44 rounded-xl bg-[#121216] border border-[var(--color-border-h)] shadow-xl py-1.5">
           <div className="px-3 py-1.5 text-xs text-[var(--color-text-muted)] truncate">
-            {session?.user?.email}
+            {username ? `@${username}` : session?.user?.email}
           </div>
           {vipTierEnabled() &&
             (entitlements.isVip ? (

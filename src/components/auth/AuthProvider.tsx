@@ -1,15 +1,23 @@
 "use client";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { resolveEntitlements, type Entitlements } from "@/lib/entitlements";
 import { vipEnabled } from "@/lib/flags";
 
+export interface TsProfile {
+  tier: string;
+  username: string | null;
+  username_changed_at: string | null;
+}
+
 interface AuthState {
   session: Session | null;
-  profile: { tier: string } | null;
+  profile: TsProfile | null;
   entitlements: Entitlements;
   signOut: () => Promise<void>;
+  /** Re-read ts_profiles (after a username claim). */
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -17,11 +25,14 @@ const AuthContext = createContext<AuthState>({
   profile: null,
   entitlements: { isLoggedIn: false, isVip: false },
   signOut: async () => {},
+  refreshProfile: async () => {},
 });
+
+const PROFILE_COLUMNS = "tier, username, username_changed_at";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<{ tier: string } | null>(null);
+  const [profile, setProfile] = useState<TsProfile | null>(null);
   const enabled =
     vipEnabled() &&
     !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -35,40 +46,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, [supabase]);
 
-  useEffect(() => {
+  const loadProfile = useCallback(async () => {
     if (!supabase) return;
     const user = session?.user;
     if (!user?.id) {
       setProfile(null);
       return;
     }
-    supabase
+    let { data, error: readError } = await supabase
       .from("ts_profiles")
-      .select("tier")
+      .select(PROFILE_COLUMNS)
       .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          setProfile(data);
-          return;
-        }
-        // No row = first TailSlips login. The app owns roster membership
-        // (the shared-project signup trigger was dropped 2026-07-13, since
-        // it swept FADE AI signups into the TailSlips roster); self-insert
-        // is allowed by RLS, tier pinned to 'free'. Missing row still
-        // resolves to free if this races or fails.
-        setProfile({ tier: "free" });
-        void supabase
-          .from("ts_profiles")
-          .upsert(
-            { user_id: user.id, email: user.email ?? null },
-            { onConflict: "user_id", ignoreDuplicates: true }
-          )
-          .then(({ error }) => {
-            if (error) console.error("ts_profiles self-insert failed:", error);
-          });
-      });
-  }, [session, supabase]);
+      .maybeSingle();
+    if (readError?.code === "42703") {
+      // Staged deploy: this build expects the username columns but the DB
+      // has not got them yet. The tier must still resolve or every paid
+      // user reads as free until the migration lands, so fall back to the
+      // columns that have always existed.
+      console.warn("ts_profiles: username columns missing, reading tier only");
+      const fallback = await supabase.from("ts_profiles").select("tier").eq("user_id", user.id).maybeSingle();
+      data = fallback.data as typeof data;
+      readError = fallback.error;
+    }
+    if (readError) {
+      // A failed read is not "no row". Treating it as one would downgrade a
+      // paid user to free and fire a spurious self-insert on any transient
+      // failure or a column this deploy expects but the DB has not got yet
+      // (42703). Leave the profile as it stands and say so in the console.
+      console.error("ts_profiles load failed:", readError);
+      return;
+    }
+    if (data) {
+      setProfile(data as TsProfile);
+      return;
+    }
+    // No row = first TailSlips login. The app owns roster membership
+    // (the shared-project signup trigger was dropped 2026-07-13, since
+    // it swept FADE AI signups into the TailSlips roster); self-insert
+    // is allowed by RLS, tier pinned to 'free'. Missing row still
+    // resolves to free if this races or fails.
+    setProfile({ tier: "free", username: null, username_changed_at: null });
+    const { error } = await supabase
+      .from("ts_profiles")
+      .upsert({ user_id: user.id, email: user.email ?? null }, { onConflict: "user_id", ignoreDuplicates: true });
+    if (error) console.error("ts_profiles self-insert failed:", error);
+  }, [supabase, session]);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
 
   const value: AuthState = {
     session,
@@ -78,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!supabase) return;
       await supabase.auth.signOut();
     },
+    refreshProfile: loadProfile,
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

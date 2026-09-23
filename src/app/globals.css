@@ -116,3 +116,28 @@ html, body {
 .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.16);
 }
+
+/* Tail or Fade: the hero lands collapsed to its title. The title bobs every
+   few seconds as the "tap me" cue, and the table slides open beneath it. */
+@keyframes tof-bob {
+  0%, 70%, 100% { transform: translateY(0); }
+  78% { transform: translateY(-9px); }
+  86% { transform: translateY(0); }
+  92% { transform: translateY(-4px); }
+}
+.tof-bob { animation: tof-bob 2.6s ease-in-out infinite; }
+@keyframes tof-hint {
+  0%, 100% { transform: translateY(0); opacity: .55; }
+  50% { transform: translateY(4px); opacity: 1; }
+}
+.tof-hint { animation: tof-hint 1.3s ease-in-out infinite; }
+.tof-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .55s cubic-bezier(.2,.8,.2,1); }
+.tof-fold[data-open="true"] { grid-template-rows: 1fr; }
+.tof-fold > div { overflow: hidden; min-height: 0; }
+.tof-fold[data-settled="true"] > div { overflow: visible; }
+.tof-fold-inner { opacity: 0; transform: translateY(-18px); transition: opacity .4s ease .1s, transform .55s cubic-bezier(.2,.8,.2,1); }
+.tof-fold[data-open="true"] .tof-fold-inner { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .tof-bob, .tof-hint { animation: none; }
+  .tof-fold, .tof-fold-inner { transition: none; }
+}

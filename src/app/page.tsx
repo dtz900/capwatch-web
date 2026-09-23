@@ -17,10 +17,11 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
-import { fetchLeaderboard, minPicksForWindow, type LeaderboardFilters } from "@/lib/api";
+import { fetchLeaderboard, fetchTofHand, minPicksForWindow, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
+import { tofEnabled } from "@/lib/flags";
 import { SITE_NAME } from "@/lib/seo";
-import type { Window, Sort, BetTypeFilter, SportFilter } from "@/lib/types";
+import type { Window, Sort, BetTypeFilter, SportFilter, TofHandResponse } from "@/lib/types";
 import { buildRootOgFingerprint, ROOT_OG_CARD_VERSION } from "./_root-og";
 
 interface PageProps {
@@ -147,6 +148,20 @@ export default async function Home({ searchParams }: PageProps) {
     );
   }
 
+  // Tail or Fade hand. A failed fetch renders the no-hand state and is not
+  // ISR-cached as a failure; the hero re-fetches client-side every minute.
+  // Fetched after the leaderboard's early return so a leaderboard outage
+  // does not also pay for a hand the page will never render.
+  let tofHand: TofHandResponse | null = null;
+  if (tofEnabled()) {
+    try {
+      tofHand = await fetchTofHand();
+    } catch (err) {
+      console.error("tof hand fetch failed:", err);
+      noStore();
+    }
+  }
+
   const top3 = rows.slice(0, 3);
   const rest = rows.slice(3, 50);
   // Hero numbers come from platform_stats (cross-capper, all-time, no filter)
@@ -185,7 +200,7 @@ export default async function Home({ searchParams }: PageProps) {
         <LeaderboardPrefsRestorer />
       </Suspense>
       <SportTint sport={filters.sport} />
-      <TopNav />
+      <TopNav tofHand={tofHand} />
       <LivePicksProvider initial={liveInitial} sport={filters.sport}>
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
           <Hero stats={heroStats} sport={filters.sport} />

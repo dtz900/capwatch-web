@@ -458,6 +458,12 @@ export interface TodayPickEntry {
   selection: string | null;
   line: number | null;
   odds_taken: number | null;
+  /** The price the platform actually grades this pick at. Present once the
+      feed serves it; prefer it over odds_taken wherever a payout is scored. */
+  grading_odds?: number | null;
+  /** Scheduled start of the pick's game, once the feed serves it. Used to
+      keep a started game off the Tail or Fade stable card. */
+  commence_time?: string | null;
   /** The capper's own posted stake in units; the slip's default when the
       user has no per-capper stake assigned. */
   units?: number | null;
@@ -478,4 +484,96 @@ export interface TodayPickEntry {
 export interface TodayPicksResponse {
   date: string;
   picks: TodayPickEntry[];
+}
+
+// ---------- Tail or Fade ----------
+export type TofChoice = "tail" | "fade" | "pass";
+export type TofCategory = "contested" | "heater" | "cold" | "wolf" | "wildcard";
+export type TofOutcome = "win" | "loss" | "push" | "void";
+
+export interface TofCard {
+  id: number;
+  position: number;
+  category: TofCategory;
+  handle: string | null;
+  display_name: string | null;
+  profile_image_url: string | null;
+  capper_streak: number;
+  capper_record: string | null;
+  sport: "MLB" | "NFL" | string;
+  matchup: string;
+  game_start_at: string;
+  game_state: "scheduled" | "in_progress" | "final";
+  home_score: number | null;
+  away_score: number | null;
+  market_group: "ML" | "Spread" | "Game Total";
+  tail_label: string;
+  tail_odds: number;
+  fade_label: string;
+  fade_odds_at_deal: number | null;
+  fade_odds_source: "pending" | "pinnacle_close" | "no_close_available";
+  note: string;
+  rival: { handle: string | null; streak: number; label: string | null; odds: number | null } | null;
+  field_count: number | null;
+  tail_outcome: TofOutcome | null;
+  fade_outcome: TofOutcome | null;
+  tail_units: number | null;
+  fade_units: number | null;
+  crowd: { tail_pct: number; fade_pct: number; plays: number } | null;
+}
+
+export interface TofHand {
+  hand_id: number;
+  slate_date: string;
+  status: "open" | "locked" | "graded";
+  dealt_at: string | null;
+  first_lock_at: string | null;
+  last_lock_at: string | null;
+  cards: TofCard[];
+}
+
+export interface TofHandResponse {
+  hand: TofHand | null;
+  no_hand_reason: string | null;
+  next_deal: { date: string; expected_at: string | null } | null;
+}
+
+export interface TofBoardRow {
+  rank: number;
+  username: string;
+  plays: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  units: number;
+  day_streak: number;
+}
+
+export interface TofBoardResponse {
+  window: "month" | "season";
+  min_plays: number;
+  rows: TofBoardRow[];
+}
+
+/** A row of tof_plays as the browser client reads it (RLS: own rows). */
+export interface TofPlay {
+  id: number;
+  hand_id: number;
+  card_id: number | null;
+  stable_pick_id: number | null;
+  choice: TofChoice;
+  outcome: TofOutcome | null;
+  units: number | null;
+}
+
+/** A row of tof_tailer_stats (RLS: own rows). */
+export interface TofStats {
+  window: "month" | "season";
+  plays: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  units: number;
+  day_streak: number;
+  best_day_streak: number;
 }

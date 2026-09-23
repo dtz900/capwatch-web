@@ -9,3 +9,10 @@ export function vipEnabled(): boolean {
 export function vipTierEnabled(): boolean {
   return process.env.NEXT_PUBLIC_VIP_TIER_ENABLED === "true";
 }
+
+/* Tail or Fade, the daily swipe game on the landing page. Needs accounts
+   (vipEnabled) because a play is a row under the user's id. Off by default;
+   David flips it after a full local run (decisions/log.md 2026-09-22). */
+export function tofEnabled(): boolean {
+  return vipEnabled() && process.env.NEXT_PUBLIC_TOF_ENABLED === "true";
+}

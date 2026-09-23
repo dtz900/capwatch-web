@@ -4,7 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { NavSearch } from "@/components/nav/NavSearch";
-import { vipEnabled } from "@/lib/flags";
+import { tofEnabled, vipEnabled } from "@/lib/flags";
+import { TofHero } from "@/components/tof/TofHero";
+import type { TofHandResponse } from "@/lib/types";
 import { AvatarMenu } from "@/components/auth/AvatarMenu";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useNewTailPicks } from "@/lib/useTailsNotif";
@@ -22,7 +24,10 @@ function isActive(href: string, pathname: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function TopNav() {
+/** Site nav plus, when the flag is on, the Tail or Fade hero folded under it
+    on every page. The leaderboard passes its server-fetched hand for first
+    paint; other pages let the hero hydrate from the session cache. */
+export function TopNav({ tofHand = null }: { tofHand?: TofHandResponse | null } = {}) {
   const pathname = usePathname() || "/";
   const flagOn = vipEnabled();
   const { entitlements } = useAuth();
@@ -36,6 +41,7 @@ export function TopNav() {
     : BASE_LINKS;
 
   return (
+    <>
     <nav
       className="sticky top-0 z-30 backdrop-blur-md bg-[rgba(10,10,12,0.85)]
                     border-b border-[rgba(255,255,255,0.06)]"
@@ -95,5 +101,7 @@ export function TopNav() {
         </div>
       </div>
     </nav>
+    {tofEnabled() && <TofHero initial={tofHand} />}
+    </>
   );
 }
