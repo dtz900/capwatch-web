@@ -55,7 +55,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 import { TofHero } from "@/components/tof/TofHero";
-import { fetchTodayPicks, fetchTofHand } from "@/lib/api";
+import { fetchTodayPicks, fetchTofBoard, fetchTofHand } from "@/lib/api";
 import type { TodayPickEntry, TofCard, TofHandResponse } from "@/lib/types";
 
 function mkCard(id: number, label: string, startAt = "2099-01-01T00:00:00Z"): TofCard {
@@ -267,6 +267,51 @@ describe("TofHero", () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(10); });
       const after = selectSpy.mock.calls.filter((c) => c[0] === "tof_plays").length;
       expect(after).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps polling after the hand is graded so the next day's deal shows up", async () => {
+    vi.useFakeTimers();
+    try {
+      mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
+      render(<TofHero initial={{ ...HAND, hand: { ...HAND.hand!, status: "graded" } }} />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      expect(fetchTofHand).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("re-reads the tailer board when the hand flips to graded", async () => {
+    vi.useFakeTimers();
+    try {
+      mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
+      render(<TofHero initial={HAND} />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      const before = vi.mocked(fetchTofBoard).mock.calls.length;
+      vi.mocked(fetchTofHand).mockResolvedValue({ ...HAND, hand: { ...HAND.hand!, status: "graded" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(vi.mocked(fetchTofBoard).mock.calls.length).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("pulls the stable card once its game starts while the page is open", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    try {
+      const startsSoon = new Date(Date.now() + 20_000).toISOString();
+      mockAuth.current = SIGNED_IN;
+      selectResult.current = { capper_follows: { data: [{ capper_id: 5, market: "all" }], error: null } };
+      vi.mocked(fetchTodayPicks).mockResolvedValue({ date: "2026-09-22", picks: [stablePick({ pick_id: 905, selection: "CHC ML", market: "ML", market_group: "ML", matchup: "CHC @ MIL", commence_time: startsSoon, grading_odds: -120 })] });
+      render(<TofHero initial={handOf([mkCard(1, "NYY -1.5", "2000-01-01T00:00:00Z")])} />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+      expect(screen.getByText("CHC ML")).toBeInTheDocument();
+      await act(async () => { await vi.advanceTimersByTimeAsync(45_000); });
+      expect(screen.queryByText("CHC ML")).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }

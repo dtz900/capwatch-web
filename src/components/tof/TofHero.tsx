@@ -138,19 +138,22 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   }, [initial]);
   useEffect(() => { if (data?.hand) writeHandCache(data); }, [data]);
   useEffect(() => {
-    // No hand yet is exactly when polling matters most: a visitor who loaded
-    // the page before the daily deal (or during an API blip) should get the
-    // hand without a reload. Only a graded hand has nothing left to fetch.
-    if (handStatus === "graded") return;
+    // Always poll. No hand yet is when it matters most (a visitor who loaded
+    // before the daily deal), and a graded hand is not the end either: the
+    // next day's hand replaces it at the same endpoint, so a tab left open
+    // overnight has to pick up the new deal without a reload.
     const id = setInterval(() => {
       fetchTofHand().then(setData).catch(() => { /* keep last good */ });
     }, REFETCH_MS);
     return () => clearInterval(id);
-  }, [handStatus]);
+  }, []);
 
   useEffect(() => {
+    // Re-read when the hand's status changes too: once grading lands the
+    // board's ranks and units move with it, and the rail next to the user's
+    // own fresh stats should not be a snapshot from before.
     fetchTofBoard("month").then((b) => setBoard({ rows: b.rows, minPlays: b.min_plays })).catch(() => { /* rail stays empty */ });
-  }, []);
+  }, [handStatus]);
 
   // Signed-in loads: plays for this hand, month stats, the stable card.
   useEffect(() => {
@@ -231,8 +234,12 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const ordered = useMemo(() => (hand ? orderDeck(hand.cards, offDeckIds, now, seed) : { open: [], locked: [] }), [hand, offDeckIds, now, seed]);
   const open: DeckCard[] = useMemo(() => {
     const shared = ordered.open.map((c) => ({ ...c, kind: "shared" as const }));
-    return stable && !stablePlayed ? [...shared, stable] : shared;
-  }, [ordered.open, stable, stablePlayed]);
+    // The stable card was screened for a started game when it was loaded;
+    // the 15s clock has to keep screening it, same as the shared cards, or
+    // it stays playable past first pitch and the insert bounces off RLS.
+    const stableOpen = stable && !stablePlayed && !(stable.game_start_at && isLocked(stable, now));
+    return stableOpen ? [...shared, stable] : shared;
+  }, [ordered.open, stable, stablePlayed, now]);
   const locked: DeckCard[] = useMemo(() => ordered.locked.map((c) => ({ ...c, kind: "shared" as const })), [ordered.locked]);
 
   // Deal order with what the user did on each card, for the dots and the summary.
