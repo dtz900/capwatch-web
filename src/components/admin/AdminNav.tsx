@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/admin/pipeline", label: "Pipeline" },
   { href: "/admin/research", label: "Research" },
   { href: "/admin/parlay-palace", label: "Parlay Palace" },
+  { href: "/admin/tof", label: "Tail or Fade" },
   { href: "/admin/users", label: "Users" },
 ];
 

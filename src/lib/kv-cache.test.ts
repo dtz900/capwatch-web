@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 let store: Map<string, unknown>;
 let getSpy: ReturnType<typeof vi.fn>;
 let setSpy: ReturnType<typeof vi.fn>;
+let incrSpy: ReturnType<typeof vi.fn>;
+let expireSpy: ReturnType<typeof vi.fn>;
 
 vi.mock("@upstash/redis", () => {
   return {
@@ -14,9 +16,13 @@ vi.mock("@upstash/redis", () => {
     Redis: vi.fn().mockImplementation(function RedisMock(this: {
       get: typeof getSpy;
       set: typeof setSpy;
+      incr: typeof incrSpy;
+      expire: typeof expireSpy;
     }) {
       this.get = getSpy;
       this.set = setSpy;
+      this.incr = incrSpy;
+      this.expire = expireSpy;
     }),
   };
 });
@@ -25,6 +31,12 @@ beforeEach(() => {
   vi.resetModules();
   store = new Map();
   getSpy = vi.fn(async (key: string) => (store.has(key) ? store.get(key) : null));
+  incrSpy = vi.fn(async (key: string) => {
+    const next = ((store.get(key) as number | undefined) ?? 0) + 1;
+    store.set(key, next);
+    return next;
+  });
+  expireSpy = vi.fn(async () => 1);
   setSpy = vi.fn(async (key: string, value: unknown) => {
     store.set(key, value);
     return "OK";
@@ -82,5 +94,46 @@ describe("withKvCache", () => {
     expect(getSpy).not.toHaveBeenCalled();
     expect(setSpy).not.toHaveBeenCalled();
     expect(await readLastKnownGood("k3")).toBeNull();
+  });
+});
+
+describe("kvRateLimit", () => {
+  it("allows up to the limit in a window and blocks the next call", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    const { kvRateLimit } = await import("./kv-cache");
+
+    expect(await kvRateLimit("ip-a", 2, 60)).toBe(true);
+    expect(await kvRateLimit("ip-a", 2, 60)).toBe(true);
+    expect(await kvRateLimit("ip-a", 2, 60)).toBe(false);
+    // The TTL is paid for once, by the call that created the bucket.
+    expect(expireSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts each key separately", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    const { kvRateLimit } = await import("./kv-cache");
+
+    expect(await kvRateLimit("ip-b", 1, 60)).toBe(true);
+    expect(await kvRateLimit("ip-c", 1, 60)).toBe(true);
+    expect(await kvRateLimit("ip-b", 1, 60)).toBe(false);
+  });
+
+  it("fails open with no Redis configured, so telemetry is never lost to it", async () => {
+    const { kvRateLimit } = await import("./kv-cache");
+    for (let i = 0; i < 5; i++) {
+      expect(await kvRateLimit("ip-d", 1, 60)).toBe(true);
+    }
+    expect(incrSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails open when Redis raises", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    incrSpy.mockRejectedValueOnce(new Error("upstash down"));
+    const { kvRateLimit } = await import("./kv-cache");
+
+    expect(await kvRateLimit("ip-e", 1, 60)).toBe(true);
   });
 });

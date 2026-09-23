@@ -191,3 +191,31 @@ export async function purgeKvByPrefix(prefix: string): Promise<number> {
   }
   return deleted;
 }
+
+/**
+ * Fixed-window rate limit, for the handful of routes that must accept
+ * unauthenticated writes (Tail or Fade guest telemetry). Returns true when
+ * the call is allowed.
+ *
+ * Fails OPEN: with no Upstash configured (local dev, preview without the
+ * integration) or on a Redis error, every call is allowed. These routes are
+ * analytics, so a limiter outage must never cost a real datapoint, and the
+ * database constraints are what actually protect the table.
+ */
+export async function kvRateLimit(
+  key: string,
+  limit: number,
+  windowSec: number,
+): Promise<boolean> {
+  const client = getClient();
+  if (!client) return true;
+  try {
+    const bucket = `rl:${key}:${Math.floor(Date.now() / 1000 / windowSec)}`;
+    const n = await client.incr(bucket);
+    // Only the first caller in a window pays for the expire call.
+    if (n === 1) await client.expire(bucket, windowSec);
+    return n <= limit;
+  } catch {
+    return true;
+  }
+}
