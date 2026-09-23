@@ -32,13 +32,80 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 }
 
+/** One entry per card in the hand, in deal order, with what the user did on it. */
+export interface DeckProgressItem {
+  id: number;
+  handle: string;
+  tail_label: string;
+  tail_odds: number;
+  fade_label: string | null;
+  fade_odds: number | null;
+  choice: TofChoice | null;
+}
+
+const CHOICE_COLOR: Record<TofChoice, string> = { tail: "#19f57c", fade: "#ef4444", pass: "#71717a" };
+
+function ProgressDots({ items, currentId, done }: { items: DeckProgressItem[]; currentId: number | null; done: boolean }) {
+  const idx = items.findIndex((it) => it.id === currentId);
+  const played = items.filter((it) => it.choice).length;
+  return (
+    <div className="flex w-[360px] max-w-full items-center justify-between" aria-label={`${played} of ${items.length} cards played`}>
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+        {done ? `${played} of ${items.length} played` : idx >= 0 ? `Card ${idx + 1} of ${items.length}` : `${items.length} cards`}
+      </div>
+      <div className="flex items-center gap-1.5">
+        {items.map((it, k) => {
+          const current = !done && k === idx;
+          const color = it.choice ? CHOICE_COLOR[it.choice] : current ? "#f7f3e9" : "rgba(255,255,255,0.14)";
+          return <span key={it.id} className="h-2 rounded-full transition-all duration-200" style={{ width: current ? 20 : 8, background: color }} />;
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HandSummary({ items }: { items: DeckProgressItem[] }) {
+  const count = (c: TofChoice) => items.filter((it) => it.choice === c).length;
+  return (
+    <div className="absolute inset-0 flex flex-col gap-3 overflow-hidden rounded-xl border border-[rgba(25,245,124,0.3)] bg-[linear-gradient(180deg,rgba(25,245,124,0.10)_0%,#101015_45%,#0b0b0e_100%)] p-5">
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-pos)]">Hand complete</div>
+      <div className="text-[26px] font-extrabold leading-none tracking-[-0.03em]">You played every card.</div>
+      <div className="grid grid-cols-3 gap-2">
+        {(["tail", "fade", "pass"] as TofChoice[]).map((c) => (
+          <div key={c} className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-3 py-2.5">
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">{c}</div>
+            <div className="mt-1 text-[24px] font-extrabold leading-none" style={{ color: CHOICE_COLOR[c] }}>{count(c)}</div>
+          </div>
+        ))}
+      </div>
+      <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
+        {items.map((it) => {
+          const c = it.choice;
+          const color = c ? CHOICE_COLOR[c] : "#52525b";
+          const label = c === "fade" ? it.fade_label ?? it.tail_label : it.tail_label;
+          const odds = c === "fade" ? it.fade_odds : it.tail_odds;
+          return (
+            <div key={it.id} className="flex items-center gap-2.5 rounded-lg border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] px-2.5 py-2">
+              <span className="w-[52px] rounded-md py-1 text-center text-[9px] font-extrabold tracking-[0.1em]" style={{ background: `${color}1f`, color }}>{(c ?? "locked").toUpperCase()}</span>
+              <span className="min-w-0 flex-grow truncate text-[12px] font-bold">@{it.handle} · {label}</span>
+              <span className="text-[12px] font-bold tabular-nums text-[var(--color-text-muted)]">{odds == null ? "" : odds > 0 ? `+${odds}` : odds}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-auto text-center text-[11px] text-[var(--color-text-muted)]">Results land after the games finish.</div>
+    </div>
+  );
+}
+
 export function TofDeck({
-  open, locked, onPlay, disabled = false,
+  open, locked, onPlay, disabled = false, progress,
 }: {
   open: DeckCard[];
   locked: DeckCard[];
   onPlay: (card: DeckCard, choice: TofChoice) => Promise<boolean>;
   disabled?: boolean;
+  progress?: DeckProgressItem[];
 }) {
   const [dx, setDx] = useState(0);
   const [dy, setDy] = useState(0);
@@ -139,10 +206,14 @@ export function TofDeck({
   const topTransition = reduced ? "none" : leave ? "transform .38s ease-in" : dragging ? "none" : "transform .25s ease-out";
   const stampTail = leave === "right" ? 1 : Math.max(0, Math.min(1, dx / STAMP_FULL));
   const stampFade = leave === "left" ? 1 : Math.max(0, Math.min(1, -dx / STAMP_FULL));
+  // The pass stamp only reads on a clearly vertical drag, same rule as the release.
+  const stampPass = leave === "up" ? 1 : (-dy > Math.abs(dx) ? Math.max(0, Math.min(1, -dy / STAMP_FULL)) : 0);
   const stack = open.slice(0, 3);
 
+  const allDone = stack.length === 0 && locked.length === 0;
   return (
-    <div className="flex flex-col items-center gap-5">
+    <div className="flex flex-col items-center gap-3">
+      {progress && progress.length > 0 && <ProgressDots items={progress} currentId={top?.id ?? null} done={allDone} />}
       <div
         data-testid="tof-deck"
         tabIndex={0}
@@ -152,9 +223,10 @@ export function TofDeck({
         aria-label="Tail or Fade deck"
         aria-describedby={hintId}
       >
-        {stack.length === 0 && locked.length === 0 && (
-          // Every card played and none left locked: the deck would otherwise
-          // be an empty box, so it says so in the card's own recipe.
+        {allDone && progress && progress.length > 0 && <HandSummary items={progress} />}
+        {allDone && !(progress && progress.length > 0) && (
+          // Every card played and none left locked, with no per-card record to
+          // summarize: the deck still says so in the card's own recipe.
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e] px-6 text-center">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Tail or Fade</div>
             <div className="text-[18px] font-extrabold tracking-[-0.02em]">You played every card.</div>
@@ -188,7 +260,7 @@ export function TofDeck({
               onPointerCancel={isTop ? onUp : undefined}
             >
               {isTop ? (
-                <TofCardFace card={card} stampTail={stampTail} stampFade={stampFade} />
+                <TofCardFace card={card} stampTail={stampTail} stampFade={stampFade} stampPass={stampPass} />
               ) : (
                 // The next cards render their real faces so the one underneath
                 // shows through as the top card swipes away. They are inert:

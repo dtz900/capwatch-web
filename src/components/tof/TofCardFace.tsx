@@ -49,11 +49,12 @@ function SideMark({ team, label, sport, color }: { team: string | null; label: s
 }
 
 export function TofCardFace({
-  card, stampTail = 0, stampFade = 0, locked = false,
+  card, stampTail = 0, stampFade = 0, stampPass = 0, locked = false,
 }: {
   card: DeckCard;
   stampTail?: number;
   stampFade?: number;
+  stampPass?: number;
   locked?: boolean;
 }) {
   const category = card.kind === "stable" ? "stable" : card.category;
@@ -83,6 +84,7 @@ export function TofCardFace({
       />
 
       <div className="pointer-events-none absolute left-5 top-8 z-20 rotate-[-14deg] rounded-lg border-[3px] border-[var(--color-pos)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[var(--color-pos)]" style={{ opacity: stampTail }}>TAIL</div>
+      <div className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 rotate-[-6deg] rounded-lg border-[3px] border-[#a1a1aa] bg-[rgba(10,10,12,0.75)] px-4 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[#d4d4d8]" style={{ opacity: stampPass }}>PASS</div>
       <div className="pointer-events-none absolute right-5 top-8 z-20 rotate-[14deg] rounded-lg border-[3px] border-[var(--color-neg)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[var(--color-neg)]" style={{ opacity: stampFade }}>FADE</div>
 
       <div className="relative flex items-center justify-between">

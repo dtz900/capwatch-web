@@ -7,7 +7,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchTofBoard, fetchTofHand, fetchTodayPicks } from "@/lib/api";
 import { clearPendingPlay, isLocked, orderDeck, readPendingPlay, unitsLabel, writePendingPlay } from "@/lib/tof/deck";
 import type { TofBoardRow, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
-import { TofDeck, type DeckCard, type StableDeckCard } from "@/components/tof/TofDeck";
+import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
 
 const RETURN_COOKIE = "ts_return_to";
@@ -65,7 +65,8 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [now, setNow] = useState(() => new Date());
   // Signed-out passes have nowhere to persist: there is no tof_plays row to
   // write. Without this the deck would re-deal the same top card forever.
-  const [dismissed, setDismissed] = useState<ReadonlySet<number>>(() => new Set());
+  // Guest choices never reach the database; they still drive the deck and the dots.
+  const [guestChoices, setGuestChoices] = useState<ReadonlyMap<number, TofChoice>>(() => new Map());
   const pendingHandled = useRef(false);
   const guestNudged = useRef(false);
 
@@ -160,11 +161,11 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   const playedIds = useMemo(() => new Set(plays.filter((p) => p.card_id != null).map((p) => p.card_id as number)), [plays]);
   const offDeckIds = useMemo(() => {
-    if (dismissed.size === 0) return playedIds;
+    if (guestChoices.size === 0) return playedIds;
     const ids = new Set(playedIds);
-    for (const id of dismissed) ids.add(id);
+    for (const id of guestChoices.keys()) ids.add(id);
     return ids;
-  }, [playedIds, dismissed]);
+  }, [playedIds, guestChoices]);
   const stablePlayed = plays.some((p) => p.stable_pick_id != null);
   const seed = userId && hand ? `${userId}:${hand.slate_date}` : null;
   const ordered = useMemo(() => (hand ? orderDeck(hand.cards, offDeckIds, now, seed) : { open: [], locked: [] }), [hand, offDeckIds, now, seed]);
@@ -173,6 +174,24 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     return stable && !stablePlayed ? [...shared, stable] : shared;
   }, [ordered.open, stable, stablePlayed]);
   const locked: DeckCard[] = useMemo(() => ordered.locked.map((c) => ({ ...c, kind: "shared" as const })), [ordered.locked]);
+
+  // Deal order with what the user did on each card, for the dots and the summary.
+  const progress = useMemo<DeckProgressItem[]>(() => {
+    if (!hand) return [];
+    const byCard = new Map<number, TofChoice>();
+    for (const p of plays) if (p.card_id != null) byCard.set(p.card_id, p.choice);
+    for (const [id, c] of guestChoices) if (!byCard.has(id)) byCard.set(id, c);
+    const items: DeckProgressItem[] = hand.cards.map((c) => ({
+      id: c.id, handle: c.handle ?? "capper", tail_label: c.tail_label, tail_odds: c.tail_odds,
+      fade_label: c.fade_label, fade_odds: c.fade_odds_at_deal, choice: byCard.get(c.id) ?? null,
+    }));
+    if (stable) {
+      const sp = plays.find((p) => p.stable_pick_id === stable.pick_id);
+      items.push({ id: stable.id, handle: stable.handle ?? "capper", tail_label: stable.tail_label, tail_odds: stable.tail_odds,
+        fade_label: null, fade_odds: null, choice: sp?.choice ?? guestChoices.get(stable.id) ?? null });
+    }
+    return items;
+  }, [hand, plays, guestChoices, stable]);
 
   const writePlay = useCallback(async (card: DeckCard, choice: TofChoice): Promise<boolean> => {
     if (!supabase || !userId || !hand) return false;
@@ -208,7 +227,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       // dismissal lives in local state or the deck hands the same card back
       // forever. A tail or fade is stashed so the latest one lands after
       // sign-in if that card is still open, and the first one nudges once.
-      setDismissed((prev) => { const next = new Set(prev); next.add(card.id); return next; });
+      setGuestChoices((prev) => { const next = new Map(prev); next.set(card.id, choice); return next; });
       if (choice !== "pass") {
         if (card.kind === "shared" && hand) writePendingPlay({ cardId: card.id, choice, slateDate: hand.slate_date });
         if (!guestNudged.current) {
@@ -303,7 +322,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               <div className="text-[13px] font-bold text-[var(--color-pos)]">{nextDealLabel(data?.next_deal ?? null)}</div>
             </div>
           ) : (
-            <TofDeck open={open} locked={locked} onPlay={onPlay} />
+            <TofDeck open={open} locked={locked} onPlay={onPlay} progress={progress} />
           )}
           <div role="status" aria-live="polite">
             {toast && <div className="mt-3 rounded-lg border border-[var(--color-border-h)] bg-[#121216] px-3 py-2 text-[12px] font-semibold">{toast}</div>}
