@@ -19,9 +19,11 @@ const FOLD_MS = 550; // matches .tof-fold in globals.css
 /* The stable card is the user's own tail, offered alongside the shared hand.
    It has to clear the same bar a dealt card does: still ungraded, priced at
    the odds the platform will grade it at, and not already under way. */
-function stableFromPick(p: TodayPickEntry, now: Date): StableDeckCard | null {
+function stableFromPick(p: TodayPickEntry, now: Date, played = false): StableDeckCard | null {
   if (p.kind !== "straight" || p.pick_id == null) return null;
-  if (p.outcome != null) return null; // already graded, nothing left to tail
+  // A pick the user already played stays on the card for the summary even
+  // once it has started or graded; only an unplayed candidate is screened.
+  if (!played && p.outcome != null) return null; // already graded, nothing left to tail
   // grading_odds is the price the platform scores at; odds_taken is the
   // fallback until the feed serves it. Never default to a house price.
   const odds = p.grading_odds ?? p.odds_taken;
@@ -35,19 +37,37 @@ function stableFromPick(p: TodayPickEntry, now: Date): StableDeckCard | null {
     note: "From your stable.", capper_streak: 0,
     capper_record: null, sport: "MLB",
   };
-  if (p.commence_time && isLocked(card, now)) return null;
+  if (!played && p.commence_time && isLocked(card, now)) return null;
   return card;
 }
 
-function nextDealLabel(next: { date: string; expected_at: string | null } | null): string {
+const PT_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" });
+
+/** "Deck drops today at 12:00 PM PT" or "Next deck Sat Sep 26 at 9:00 AM PT".
+    The API sends the day-aware drop time; if it is missing (older API) the
+    time is derived from the weekday: noon PT weekdays, 9 AM PT weekends. */
+function nextDealLabel(next: { date: string; expected_at: string | null } | null, now = new Date()): string {
   if (!next) return "";
-  if (next.expected_at) {
-    const t = new Date(next.expected_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
-    return `Deals at ${t} PT`;
-  }
-  const d = new Date(`${next.date}T12:00:00Z`);
-  return `Next deal ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  const noon = new Date(`${next.date}T12:00:00Z`); // a safe midday instant for weekday/format only
+  const weekend = noon.getUTCDay() === 0 || noon.getUTCDay() === 6;
+  const time = next.expected_at
+    ? new Date(next.expected_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" })
+    : weekend ? "9:00 AM" : "12:00 PM";
+  const today = PT_DATE.format(now) === next.date;
+  if (today) return `Deck drops today at ${time} PT`;
+  const wd = noon.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+  const md = noon.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  return `Next deck ${wd} ${md} at ${time} PT`;
 }
+
+const NO_HAND_COPY: Record<string, string> = {
+  "no hand yet": "Today's deck hasn't dropped yet.",
+  "not dealt yet": "Today's deck hasn't dropped yet.",
+  "waiting for deal time": "Today's deck hasn't dropped yet.",
+  "no games today": "No games today.",
+  "no games after the drop": "Only early games today, so nothing to deal.",
+  "fewer than 3 cards": "Not enough picks for a hand today.",
+};
 
 export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const router = useRouter();
@@ -213,7 +233,14 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       const inHand = new Set((handRef.current?.cards ?? []).map((c) => c.handle));
       const today = await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] as TodayPickEntry[] }));
       const at = new Date();
-      const first = today.picks.filter(inScope).map((p) => stableFromPick(p, at)).find((s) => s && !inHand.has(s.handle)) ?? null;
+      // If the user already played a stable pick this hand, that pick is the
+      // stable card (for the dots and the summary) whatever state it is in
+      // now; a fresh candidate is only chosen when nothing was played.
+      const playedStableId = ((rows ?? []) as TofPlay[]).find((r) => r.stable_pick_id != null)?.stable_pick_id ?? null;
+      const playedPick = playedStableId != null ? today.picks.find((p) => p.pick_id === playedStableId) : undefined;
+      const first = playedPick
+        ? stableFromPick(playedPick, at, true)
+        : today.picks.filter(inScope).map((p) => stableFromPick(p, at)).find((s) => s && !inHand.has(s.handle)) ?? null;
       if (!cancelled) setStable(first);
     })();
     return () => { cancelled = true; };
@@ -397,7 +424,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
           ) : state === "no-hand" ? (
             <div className="flex h-[300px] w-[360px] max-w-full flex-col items-center justify-center gap-2 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] text-center">
               <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">No hand today</div>
-              <div className="text-[13px] text-[var(--color-text-soft)]">{data?.no_hand_reason ?? "Not enough picks yet."}</div>
+              <div className="text-[13px] text-[var(--color-text-soft)]">{NO_HAND_COPY[data?.no_hand_reason ?? ""] ?? data?.no_hand_reason ?? "Not enough picks yet."}</div>
               <div className="text-[13px] font-bold text-[var(--color-pos)]">{nextDealLabel(data?.next_deal ?? null)}</div>
             </div>
           ) : (

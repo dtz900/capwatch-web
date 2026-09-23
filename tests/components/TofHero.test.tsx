@@ -111,7 +111,27 @@ describe("TofHero", () => {
     mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
     render(<TofHero initial={{ hand: null, no_hand_reason: "no games today", next_deal: { date: "2026-09-23", expected_at: null } }} />);
     expect(screen.getByText(/no hand today/i)).toBeInTheDocument();
-    expect(screen.getByText(/2026-09-23|Sep 23/)).toBeInTheDocument();
+    expect(screen.getByText("No games today.")).toBeInTheDocument();
+    expect(screen.getByText("Next deck Wed Sep 23 at 12:00 PM PT")).toBeInTheDocument();
+  });
+
+  it("knows weekend decks drop at 9 AM PT and uses the API's time when it has one", () => {
+    mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
+    const { unmount } = render(<TofHero initial={{ hand: null, no_hand_reason: "fewer than 3 cards", next_deal: { date: "2026-09-26", expected_at: null } }} />);
+    expect(screen.getByText("Not enough picks for a hand today.")).toBeInTheDocument();
+    expect(screen.getByText("Next deck Sat Sep 26 at 9:00 AM PT")).toBeInTheDocument();
+    unmount();
+    render(<TofHero initial={{ hand: null, no_hand_reason: "no games after the drop", next_deal: { date: "2026-09-27", expected_at: "2026-09-27T09:00:00-07:00" } }} />);
+    expect(screen.getByText("Only early games today, so nothing to deal.")).toBeInTheDocument();
+    expect(screen.getByText("Next deck Sun Sep 27 at 9:00 AM PT")).toBeInTheDocument();
+  });
+
+  it("says today when the next deck is later today", () => {
+    mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
+    const todayPT = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    render(<TofHero initial={{ hand: null, no_hand_reason: "no hand yet", next_deal: { date: todayPT, expected_at: `${todayPT}T12:00:00-07:00` } }} />);
+    expect(screen.getByText("Today's deck hasn't dropped yet.")).toBeInTheDocument();
+    expect(screen.getByText("Deck drops today at 12:00 PM PT")).toBeInTheDocument();
   });
 
   it("lets a guest tail without signing in, stashes the play, and moves the deck", async () => {
@@ -315,6 +335,29 @@ describe("TofHero", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("keeps the stable card the user actually played on the summary after it has started and graded", async () => {
+    selectResult.current = {
+      capper_follows: { data: [{ capper_id: 5, market: "all" }], error: null },
+      tof_plays: { data: [
+        { id: 1, hand_id: 7, card_id: 1, stable_pick_id: null, choice: "tail", outcome: "win", units: 0.77 },
+        { id: 2, hand_id: 7, card_id: null, stable_pick_id: 904, choice: "tail", outcome: "loss", units: -1 },
+      ], error: null },
+    };
+    vi.mocked(fetchTodayPicks).mockResolvedValue({
+      date: "2026-09-22",
+      picks: [
+        stablePick({ pick_id: 904, selection: "PLAYED ONE", grading_odds: -115, commence_time: "2000-01-01T00:00:00Z", outcome: "L" }),
+        stablePick({ pick_id: 905, selection: "FRESH ONE", grading_odds: -105, commence_time: "2099-01-01T00:00:00Z" }),
+      ],
+    });
+    mockAuth.current = SIGNED_IN;
+    render(<TofHero initial={HAND} />);
+    expect(await screen.findByText(/PLAYED ONE/)).toBeInTheDocument();
+    expect(screen.queryByText(/FRESH ONE/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("loss, -1.00u")).toBeInTheDocument();
+    expect(screen.getByText("1-1")).toBeInTheDocument();
   });
 
   it("offers a stable card at its grading odds and skips graded, unpriced, and started picks", async () => {
