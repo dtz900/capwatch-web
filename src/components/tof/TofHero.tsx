@@ -271,11 +271,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   return (
     <section className="border-b border-[var(--color-border)] pb-10 pt-6 sm:pb-12 sm:pt-7" style={{ background: "radial-gradient(ellipse 720px 380px at 50% 18%, rgba(25,245,124,0.09) 0%, rgba(25,245,124,0) 70%)" }}>
-      <div className="flex flex-col items-center">
-        <TofTitle />
-      </div>
+      <TofTitle />
 
-      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
@@ -358,24 +356,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   );
 }
 
-/** The game's title: chunky rounded type on an arch with a solid offset shadow. A logo, not a headline. */
+/** Title parked for now: the arched logo treatment is coming back once the card design settles. */
 function TofTitle() {
-  return (
-    <div className="flex flex-col items-center">
-      <h2 className="sr-only">Tail or Fade</h2>
-      <svg viewBox="0 0 640 150" className="h-auto w-[min(92vw,560px)]" aria-hidden="true" style={{ filter: "drop-shadow(0 5px 0 #0f9a4c) drop-shadow(0 12px 18px rgba(0,0,0,0.55))" }}>
-        <defs>
-          <path id="tof-title-arc" d="M 30 132 Q 320 -10 610 132" fill="none" />
-          <linearGradient id="tof-title-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#ffffff" />
-            <stop offset="0.55" stopColor="#f7f3e9" />
-            <stop offset="1" stopColor="#19f57c" />
-          </linearGradient>
-        </defs>
-        <text fontFamily="var(--font-lilita), 'Arial Black', sans-serif" fontSize="80" letterSpacing="3" fill="url(#tof-title-fill)" stroke="#0a0a0c" strokeWidth="2" paintOrder="stroke">
-          <textPath href="#tof-title-arc" startOffset="50%" textAnchor="middle">TAIL OR FADE</textPath>
-        </text>
-      </svg>
-    </div>
-  );
+  return <h2 className="sr-only">Tail or Fade</h2>;
 }
