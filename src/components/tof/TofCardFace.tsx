@@ -86,8 +86,10 @@ export function TofCardFace({
 
   return (
     <div
-      className="relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.10)] bg-clip-padding p-4 select-none"
-      style={{ background: `linear-gradient(180deg, ${wash} 0%, #121217 46%, #0b0b0e 100%)` }}
+      className="relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.10)] p-4 select-none"
+      // The gradient must not tile into the border strip (a repeat there shows the wash color
+      // as a 1px line along the bottom edge), so it is clipped to the padding box and not repeated.
+      style={{ backgroundImage: `linear-gradient(180deg, ${wash} 0%, #121217 46%, #0b0b0e 100%)`, backgroundClip: "padding-box", backgroundOrigin: "border-box", backgroundRepeat: "no-repeat" }}
     >
       {identityTeam && (
         <div aria-hidden="true" className="pointer-events-none absolute -right-6 bottom-6 opacity-[0.13]" style={{ transform: "rotate(-12deg)", maskImage: "linear-gradient(180deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 92%)", WebkitMaskImage: "linear-gradient(180deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 92%)" }}>
