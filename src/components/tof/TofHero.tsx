@@ -14,6 +14,7 @@ const RETURN_COOKIE = "ts_return_to";
 
 const FELT = "radial-gradient(ellipse 62% 120% at 50% 40%, #12432f 0%, #0c2f22 45%, #071c15 72%, #0a0a0c 100%)";
 const REFETCH_MS = 60_000;
+const FOLD_MS = 550; // matches .tof-fold in globals.css
 
 /* The stable card is the user's own tail, offered alongside the shared hand.
    It has to clear the same bar a dealt card does: still ungraded, priced at
@@ -73,6 +74,18 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const guestNudged = useRef(false);
   // The hero lands folded to its title; the table slides open on a tap.
   const [unfolded, setUnfolded] = useState(false);
+  // The fold clips overflow while it slides. Once open and settled the clip
+  // comes off so the button glows and card shadows are not cut at the edge.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    if (!unfolded) return;
+    const t = setTimeout(() => setSettled(true), FOLD_MS + 50);
+    return () => clearTimeout(t);
+  }, [unfolded]);
+  const toggleFold = useCallback(() => {
+    setSettled(false);
+    setUnfolded((u) => !u);
+  }, []);
 
   const hand = data?.hand ?? null;
   const handId = hand?.hand_id ?? null;
@@ -275,9 +288,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   return (
     <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-6 pt-6 transition-[padding] duration-500 sm:pt-7 data-[open=true]:pb-10 data-[open=true]:sm:pb-12" style={{ background: FELT }} data-open={unfolded}>
-      <TofTitle open={unfolded} onToggle={() => setUnfolded((u) => !u)} />
+      <TofTitle open={unfolded} onToggle={toggleFold} />
 
-      <div className="tof-fold" data-open={unfolded} id="tof-table">
+      <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
       <div>
       <div className="tof-fold-inner mx-auto grid max-w-[1240px] grid-cols-1 gap-8 pt-6 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start" inert={!unfolded}>
         <aside className="order-3 flex flex-col gap-2 lg:order-1">

@@ -134,6 +134,7 @@ html, body {
 .tof-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .55s cubic-bezier(.2,.8,.2,1); }
 .tof-fold[data-open="true"] { grid-template-rows: 1fr; }
 .tof-fold > div { overflow: hidden; min-height: 0; }
+.tof-fold[data-settled="true"] > div { overflow: visible; }
 .tof-fold-inner { opacity: 0; transform: translateY(-18px); transition: opacity .4s ease .1s, transform .55s cubic-bezier(.2,.8,.2,1); }
 .tof-fold[data-open="true"] .tof-fold-inner { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
