@@ -65,6 +65,15 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
   // below, which would leave requireUsername()'s promise pending forever and
   // wedge every later call behind `pending`. Settle it false and close.
   const userId = session?.user?.id ?? null;
+  // After an X verification the claim function sets the username while the
+  // replay effect may already have re-opened this modal; a claim modal for a
+  // user who now has a name closes itself and settles true.
+  const hasName = Boolean(profile?.username);
+  useEffect(() => {
+    // Same side-effect-on-a-caller shape as the sign-out settle below.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open && mode === "claim" && hasName) settle(true);
+  }, [open, mode, hasName, settle]);
   useEffect(() => {
     // Settling an outstanding promise is a side effect on a caller outside
     // React, not derived state, and there is no render-time place to do it.
@@ -117,8 +126,12 @@ function UsernameModal({
         : null,
     [],
   );
-  // A linked X handle (non-capper) is offered as the starting value.
-  const [value, setValue] = useState(suggestedName ?? "");
+  // A linked X handle (non-capper) is offered as the value until the user
+  // types. Derived, not initialized: after the OAuth return the modal can
+  // mount before tof_claim_x_identity() has answered, so the suggestion
+  // often arrives later.
+  const [typed, setTyped] = useState<string | null>(null);
+  const value = typed ?? suggestedName ?? "";
   // Local validation is a pure function of `value`, so it's derived during
   // render rather than mirrored into state via an effect.
   const localCheck = useMemo(() => validateUsername(value), [value]);
@@ -238,7 +251,7 @@ function UsernameModal({
             maxLength={20}
             value={value}
             placeholder={currentName ?? "your_name"}
-            onChange={(e) => setValue(e.target.value.trim())}
+            onChange={(e) => setTyped(e.target.value.trim())}
             className="min-w-0 flex-grow bg-transparent text-[15px] font-bold text-[var(--color-text)] outline-none placeholder:text-[#52525b]"
           />
           <span aria-live="polite" className="shrink-0">

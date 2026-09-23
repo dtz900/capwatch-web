@@ -1,9 +1,10 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
+import { CallbackErrorBanner } from "@/components/auth/CallbackErrorBanner";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchTofBoard, fetchTofHand, fetchTodayPicks } from "@/lib/api";
 import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, readHandCache, unitsLabel, writeGuestChoices, writeHandCache } from "@/lib/tof/deck";
@@ -465,6 +466,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
           ) : (
             <TofDeck open={open} locked={locked} onPlay={onPlay} progress={progress} nudge={unfolded} />
           )}
+          <Suspense fallback={null}>
+            <CallbackErrorBanner className="mt-3" />
+          </Suspense>
           <div role="status" aria-live="polite">
             {toast && <div className="mt-3 rounded-lg border border-[var(--color-border-h)] bg-[#121216] px-3 py-2 text-[12px] font-semibold">{toast}</div>}
           </div>

@@ -10,7 +10,7 @@ vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => mockAuth.curre
 const claim = vi.hoisted(() => ({ requireUsername: vi.fn().mockResolvedValue(true), openChange: vi.fn() }));
 vi.mock("@/components/auth/UsernameClaim", () => ({ useUsernameClaim: () => claim }));
 const push = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams("") }));
 vi.mock("@/lib/api", () => ({
   fetchTofHand: vi.fn(),
   fetchTofBoard: vi.fn().mockResolvedValue({ window: "month", min_plays: 10, rows: [] }),

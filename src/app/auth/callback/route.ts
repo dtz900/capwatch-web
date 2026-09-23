@@ -4,6 +4,11 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { errorRedirectTarget } from "./redirects";
 
 const RETURN_COOKIE = "ts_return_to";
+// Written only by linkX (identity link). A failure in that flow goes back to
+// the page the user left; a failed sign-in still lands on /login, since the
+// sign-in buttons write RETURN_COOKIE before pushing to /login and the
+// landing and capper pages render no error banner.
+const LINK_RETURN_COOKIE = "ts_link_return";
 
 /**
  * Magic-link landing. Exchanges the PKCE code for a session, then sends the
@@ -19,12 +24,12 @@ const RETURN_COOKIE = "ts_return_to";
  * can diagnose from a silent bounce, so failures now land on /login with a
  * specific message and the option to request a fresh link from this browser.
  */
-/** A failure lands on the page the user left (link flow) or /login. */
+/** A failure lands on the page the user left (identity link) or /login (sign-in). */
 async function errorRedirect(origin: string, message: string): Promise<NextResponse> {
   const jar = await cookies();
-  const raw = jar.get(RETURN_COOKIE)?.value;
-  if (raw) jar.delete(RETURN_COOKIE);
-  return NextResponse.redirect(errorRedirectTarget(origin, raw, message));
+  const link = jar.get(LINK_RETURN_COOKIE)?.value;
+  if (link) jar.delete(LINK_RETURN_COOKIE);
+  return NextResponse.redirect(errorRedirectTarget(origin, link, message));
 }
 
 export async function GET(request: Request) {
@@ -58,12 +63,16 @@ export async function GET(request: Request) {
   }
 
   const jar = await cookies();
-  const raw = jar.get(RETURN_COOKIE)?.value;
+  // The link cookie wins when both are set (a sign-in return cookie can
+  // linger from an earlier visit); both are cleared either way.
+  const linkRaw = jar.get(LINK_RETURN_COOKIE)?.value;
+  const raw = linkRaw ?? jar.get(RETURN_COOKIE)?.value;
   let dest = "/";
   if (raw) {
     const decoded = decodeURIComponent(raw);
     if (decoded.startsWith("/") && !decoded.startsWith("//")) dest = decoded;
-    jar.delete(RETURN_COOKIE);
   }
+  if (jar.get(RETURN_COOKIE)) jar.delete(RETURN_COOKIE);
+  if (jar.get(LINK_RETURN_COOKIE)) jar.delete(LINK_RETURN_COOKIE);
   return NextResponse.redirect(`${origin}${dest}`);
 }

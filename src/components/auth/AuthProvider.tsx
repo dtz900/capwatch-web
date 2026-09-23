@@ -48,7 +48,9 @@ const AuthContext = createContext<AuthState>({
 });
 
 const PROFILE_COLUMNS = "tier, username, username_changed_at, avatar_url";
-const RETURN_COOKIE = "ts_return_to";
+// Identity-link return path. Separate from ts_return_to (sign-in) so the
+// callback can tell a failed link from a failed magic link.
+const LINK_RETURN_COOKIE = "ts_link_return";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -153,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (returnTo: string) => {
       if (!supabase) return "Sign-in is not available.";
       const safe = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
-      document.cookie = `${RETURN_COOKIE}=${encodeURIComponent(safe)}; path=/; max-age=1800; samesite=lax`;
+      document.cookie = `${LINK_RETURN_COOKIE}=${encodeURIComponent(safe)}; path=/; max-age=1800; samesite=lax`;
       const { error } = await supabase.auth.linkIdentity({
         provider: "twitter",
         options: { redirectTo: `${window.location.origin}/auth/callback` },
