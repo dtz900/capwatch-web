@@ -88,7 +88,10 @@ export function TofCardFace({
       <div className="pointer-events-none absolute right-5 top-8 z-20 rotate-[14deg] rounded-lg border-[3px] border-[var(--color-neg)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[var(--color-neg)]" style={{ opacity: stampFade }}>FADE</div>
 
       <div className="relative flex items-center justify-between">
-        <span className="rounded-md border px-2 py-1 text-[10px] font-extrabold tracking-[0.14em]" style={{ color: tag.color, borderColor: `${tag.color}66`, background: `${tag.color}1a` }}>{tag.label}</span>
+        <span className="flex items-center gap-1.5">
+          <span className="rounded-md border px-2 py-1 text-[10px] font-extrabold tracking-[0.14em]" style={{ color: tag.color, borderColor: `${tag.color}66`, background: `${tag.color}1a` }}>{tag.label}</span>
+          {locked && live && <span className="rounded-md border border-[rgba(255,255,255,0.12)] px-1.5 py-1 text-[9px] font-extrabold tracking-[0.14em] text-[var(--color-text-muted)]">LOCKED</span>}
+        </span>
         {live ? (
           <span className="flex items-center gap-1.5 rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.04)] px-2.5 py-1 text-[11px] font-extrabold tabular-nums">
             {!final && <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-pos)]" />}

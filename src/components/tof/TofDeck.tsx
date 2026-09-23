@@ -67,7 +67,7 @@ function ProgressDots({ items, currentId, done }: { items: DeckProgressItem[]; c
   return (
     <div className="flex w-[360px] max-w-full items-center justify-between" aria-label={`${played} of ${items.length} cards played`}>
       <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-        {done ? `${played} of ${items.length} played` : idx >= 0 ? `Card ${idx + 1} of ${items.length}` : `${items.length} cards`}
+        {done || idx < 0 ? `${played} of ${items.length} played` : `Card ${idx + 1} of ${items.length}`}
       </div>
       <div className="flex items-center gap-1.5">
         {items.map((it, k) => {
