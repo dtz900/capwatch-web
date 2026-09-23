@@ -25,6 +25,10 @@ export interface StableDeckCard {
 export type DeckCard = (TofCard & { kind: "shared" }) | StableDeckCard;
 
 const DRAG_THRESHOLD = 90;
+// A pass takes a deliberate, clearly vertical drag: much farther than a
+// sideways tail or fade, so a sloppy sideways fling never reads as a pass.
+const UP_THRESHOLD = 190;
+const UP_DOMINANCE = 1.6;
 const STAMP_FULL = 80;
 type Leave = "left" | "right" | "up" | null;
 
@@ -44,6 +48,18 @@ export interface DeckProgressItem {
 }
 
 const CHOICE_COLOR: Record<TofChoice, string> = { tail: "#19f57c", fade: "#ef4444", pass: "#71717a" };
+
+/** Chunky directional arrow drawn beside the deck: red points left to fade, green right to tail. */
+function SwipeArrow({ dir, color }: { dir: "left" | "right"; color: string }) {
+  const d = dir === "right"
+    ? "M4 20h26M20 8l12 12-12 12"
+    : "M36 20H10M20 8L8 20l12 12";
+  return (
+    <svg width="56" height="40" viewBox="0 0 40 40" fill="none" stroke={color} strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 3px 8px rgba(0,0,0,0.6))" }}>
+      <path d={d} />
+    </svg>
+  );
+}
 
 function ProgressDots({ items, currentId, done }: { items: DeckProgressItem[]; currentId: number | null; done: boolean }) {
   const idx = items.findIndex((it) => it.id === currentId);
@@ -186,7 +202,7 @@ export function TofDeck({
     if (!dragging) return;
     // Up wins only when the drag is clearly vertical, so a diagonal fling
     // toward a side still reads as tail or fade.
-    if (dy < -DRAG_THRESHOLD && -dy > Math.abs(dx)) void commit("up");
+    if (dy < -UP_THRESHOLD && -dy > Math.abs(dx) * UP_DOMINANCE) void commit("up");
     else if (dx > DRAG_THRESHOLD) void commit("right");
     else if (dx < -DRAG_THRESHOLD) void commit("left");
     else { setDragging(false); setDx(0); setDy(0); }
@@ -207,13 +223,28 @@ export function TofDeck({
   const stampTail = leave === "right" ? 1 : Math.max(0, Math.min(1, dx / STAMP_FULL));
   const stampFade = leave === "left" ? 1 : Math.max(0, Math.min(1, -dx / STAMP_FULL));
   // The pass stamp only reads on a clearly vertical drag, same rule as the release.
-  const stampPass = leave === "up" ? 1 : (-dy > Math.abs(dx) ? Math.max(0, Math.min(1, -dy / STAMP_FULL)) : 0);
+  const stampPass = leave === "up" ? 1 : (-dy > Math.abs(dx) * UP_DOMINANCE ? Math.max(0, Math.min(1, -dy / UP_THRESHOLD)) : 0);
+  // Side cues off the card: they wake up as the drag heads their way.
+  const cueFade = leave === "left" ? 1 : Math.max(0, Math.min(1, -dx / STAMP_FULL));
+  const cueTail = leave === "right" ? 1 : Math.max(0, Math.min(1, dx / STAMP_FULL));
+  const fadeAllowed = !!top && top.kind !== "stable";
   const stack = open.slice(0, 3);
 
   const allDone = stack.length === 0 && locked.length === 0;
   return (
     <div className="flex flex-col items-center gap-3">
       {progress && progress.length > 0 && <ProgressDots items={progress} currentId={top?.id ?? null} done={allDone} />}
+      <div className="relative">
+        {top && (
+          <>
+            <div aria-hidden="true" className="pointer-events-none absolute -left-[74px] top-1/2 hidden -translate-y-1/2 sm:block" style={{ opacity: fadeAllowed ? 0.28 + 0.72 * cueFade : 0.08, transform: `translate(${-14 * cueFade}px, -50%) scale(${1 + 0.18 * cueFade})`, transition: dragging ? "none" : "opacity .2s, transform .2s" }}>
+              <SwipeArrow dir="left" color="#ef4444" />
+            </div>
+            <div aria-hidden="true" className="pointer-events-none absolute -right-[74px] top-1/2 hidden -translate-y-1/2 sm:block" style={{ opacity: 0.28 + 0.72 * cueTail, transform: `translate(${14 * cueTail}px, -50%) scale(${1 + 0.18 * cueTail})`, transition: dragging ? "none" : "opacity .2s, transform .2s" }}>
+              <SwipeArrow dir="right" color="#19f57c" />
+            </div>
+          </>
+        )}
       <div
         data-testid="tof-deck"
         tabIndex={0}
@@ -277,6 +308,7 @@ export function TofDeck({
             {locked.length} locked at the back
           </div>
         )}
+      </div>
       </div>
 
       {top && (

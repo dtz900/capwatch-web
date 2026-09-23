@@ -161,12 +161,9 @@ export function TofCardFace({
             <span><span className="text-[var(--color-pos)]">{shared.crowd.tail_pct}%</span> tailed</span>
           </div>
         </div>
-      ) : (
-        <div className="relative flex justify-between text-[10px] font-extrabold tracking-[0.14em]">
-          <span className="text-[var(--color-neg)]">{fadeLabel ? `← FADE${unpriced ? " (unpriced)" : ""}` : "PASS"}</span>
-          <span className="text-[var(--color-pos)]">TAIL →</span>
-        </div>
-      )}
+      ) : unpriced ? (
+        <div className="relative text-[10px] font-bold tracking-[0.08em] text-[var(--color-text-muted)]">Fade is unpriced on this card: it never moves units.</div>
+      ) : null}
     </div>
   );
 }
