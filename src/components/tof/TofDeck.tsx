@@ -20,6 +20,9 @@ export interface StableDeckCard {
   capper_streak: number;
   capper_record: string | null;
   sport: string;
+  /** A stable play whose pick could not be resolved (capper unfollowed since):
+      counted and graded on the summary, never dealt. */
+  placeholder?: boolean;
 }
 
 export type DeckCard = (TofCard & { kind: "shared" }) | StableDeckCard;
@@ -50,7 +53,7 @@ export interface DeckProgressItem {
   id: number;
   handle: string;
   tail_label: string;
-  tail_odds: number;
+  tail_odds: number | null;
   fade_label: string | null;
   fade_odds: number | null;
   choice: TofChoice | null;
@@ -280,6 +283,14 @@ export function TofDeck({
     setDx(e.clientX - startX.current);
     setDy(e.clientY - startY.current);
   }
+  // pointercancel: the browser or a system gesture took the pointer away.
+  // Nothing is committed; the card just settles back.
+  function onCancel() {
+    if (!dragging) return;
+    setDragging(false);
+    setDx(0);
+    setDy(0);
+  }
   function onUp() {
     if (!dragging) return;
     // Up wins only when the drag is clearly vertical, so a diagonal fling
@@ -364,7 +375,7 @@ export function TofDeck({
               onPointerDown={isTop ? onDown : undefined}
               onPointerMove={isTop ? onMove : undefined}
               onPointerUp={isTop ? onUp : undefined}
-              onPointerCancel={isTop ? onUp : undefined}
+              onPointerCancel={isTop ? onCancel : undefined}
             >
               {isTop ? (
                 <TofCardFace card={card} stampTail={stampTail} stampFade={stampFade} stampPass={stampPass} />

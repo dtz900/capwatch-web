@@ -6,7 +6,7 @@ import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchTofBoard, fetchTofHand, fetchTodayPicks } from "@/lib/api";
 import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, readHandCache, unitsLabel, writeGuestChoices, writeHandCache } from "@/lib/tof/deck";
-import type { TofBoardRow, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
+import type { TofBoardRow, TofCard, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
 
@@ -46,6 +46,17 @@ const PT_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angele
 /** "Deck drops today at 12:00 PM PT" or "Next deck Sat Sep 26 at 9:00 AM PT".
     The API sends the day-aware drop time; if it is missing (older API) the
     time is derived from the weekday: noon PT weekdays, 9 AM PT weekends. */
+/** The user played a stable pick this hand but the pick is no longer
+    reachable (they unfollowed the capper since). Keep the play on the
+    summary under a generic label so the count and the grade stay right. */
+function placeholderStable(pickId: number): StableDeckCard {
+  return {
+    kind: "stable", id: -pickId, pick_id: pickId, handle: "your stable", display_name: null,
+    profile_image_url: null, matchup: "", game_start_at: "", market_group: "ML", tail_label: "Stable pick",
+    tail_odds: 0, note: "From your stable.", capper_streak: 0, capper_record: null, sport: "MLB", placeholder: true,
+  };
+}
+
 function nextDealLabel(next: { date: string; expected_at: string | null } | null, now = new Date()): string {
   if (!next) return "";
   const noon = new Date(`${next.date}T12:00:00Z`); // a safe midday instant for weekday/format only
@@ -215,7 +226,10 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       }
       const followRows = (follows ?? []) as { capper_id: number; market: string | null }[];
       const ids = [...new Set(followRows.map((f) => f.capper_id))];
-      if (ids.length === 0) return;
+      // A stable pick already played this hand is kept whatever the follow
+      // list looks like now, so the no-follows exit waits for that check.
+      const playedStableId = ((rows ?? []) as TofPlay[]).find((r) => r.stable_pick_id != null)?.stable_pick_id ?? null;
+      if (ids.length === 0 && playedStableId == null) return;
       // Same follow-scope rule as My Tails (src/app/my-tails/page.tsx): an
       // "all" row tails the whole capper, otherwise only the listed markets
       // count, and a pick with no market_group never matches a scoped
@@ -231,15 +245,16 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       const inScope = (p: TodayPickEntry): boolean =>
         whole.has(p.capper_id) || Boolean(p.market_group && scopes.get(p.capper_id)?.has(p.market_group));
       const inHand = new Set((handRef.current?.cards ?? []).map((c) => c.handle));
-      const today = await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] as TodayPickEntry[] }));
+      const today = ids.length > 0
+        ? await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] as TodayPickEntry[] }))
+        : { date: "", picks: [] as TodayPickEntry[] };
       const at = new Date();
       // If the user already played a stable pick this hand, that pick is the
       // stable card (for the dots and the summary) whatever state it is in
       // now; a fresh candidate is only chosen when nothing was played.
-      const playedStableId = ((rows ?? []) as TofPlay[]).find((r) => r.stable_pick_id != null)?.stable_pick_id ?? null;
       const playedPick = playedStableId != null ? today.picks.find((p) => p.pick_id === playedStableId) : undefined;
-      const first = playedPick
-        ? stableFromPick(playedPick, at, true)
+      const first = playedStableId != null
+        ? (playedPick ? stableFromPick(playedPick, at, true) : null) ?? placeholderStable(playedStableId)
         : today.picks.filter(inScope).map((p) => stableFromPick(p, at)).find((s) => s && !inHand.has(s.handle)) ?? null;
       if (!cancelled) setStable(first);
     })();
@@ -287,7 +302,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     });
     if (stable) {
       const sp = plays.find((p) => p.stable_pick_id === stable.pick_id);
-      items.push({ id: stable.id, handle: stable.handle ?? "capper", tail_label: stable.tail_label, tail_odds: stable.tail_odds,
+      items.push({ id: stable.id, handle: stable.handle ?? "capper", tail_label: stable.tail_label, tail_odds: stable.placeholder ? null : stable.tail_odds,
         fade_label: null, fade_odds: null, choice: sp?.choice ?? guestChoices.get(stable.id) ?? null,
         outcome: sp?.outcome ?? null, units: sp?.units ?? null });
     }
@@ -353,7 +368,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   // After login: every swipe made as a guest on this slate becomes a real
   // play, in deal order, once this user's plays have loaded (so nothing is
   // written twice). Cards that locked or were already played are skipped.
-  // A dismissed username prompt stops the run and keeps the stash for the
+  // The username gate runs ONCE up front (going through onPlay per card
+  // would re-open the claim modal with a stale closure after the first
+  // claim). A dismissed prompt stops the run and keeps the stash for the
   // next attempt; a completed run clears it.
   useEffect(() => {
     const key = userId && handId != null ? `${userId}:${handId}` : null;
@@ -361,17 +378,23 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     replayedFor.current = key;
     const stash = readGuestChoices(hand.slate_date);
     if (stash.size === 0) { clearGuestChoices(); return; }
+    const at = new Date();
+    const todo = hand.cards
+      .map((card) => ({ card, choice: stash.get(card.id) }))
+      .filter((x): x is { card: TofCard; choice: TofChoice } => !!x.choice && !isLocked(x.card, at) && !playedIds.has(x.card.id));
+    if (todo.length === 0) { clearGuestChoices(); return; }
     (async () => {
-      const at = new Date();
-      for (const card of hand.cards) {
-        const choice = stash.get(card.id);
-        if (!choice || isLocked(card, at) || playedIds.has(card.id)) continue;
-        const ok = await onPlay({ ...card, kind: "shared" }, choice);
+      if (todo.some((x) => x.choice !== "pass")) {
+        const ok = await requireUsername();
+        if (!ok) { replayedFor.current = null; return; }
+      }
+      for (const { card, choice } of todo) {
+        const ok = await writePlay({ ...card, kind: "shared" }, choice);
         if (!ok) { replayedFor.current = null; return; }
       }
       clearGuestChoices();
     })();
-  }, [userId, handId, hand, playsLoadedFor, playedIds, onPlay]);
+  }, [userId, handId, hand, playsLoadedFor, playedIds, requireUsername, writePlay]);
 
   const me = profile?.username && stats ? { username: profile.username, stats } : null;
   const state: "loading" | "no-hand" | "playable" | "spectator" = data === null ? "loading" : !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";

@@ -222,6 +222,32 @@ describe("TofHero", () => {
     await waitFor(() => expect(screen.getByText(/you played every card/i)).toBeInTheDocument());
   });
 
+  it("asks for a username once, then writes every replayed guest swipe", async () => {
+    insert.mockResolvedValue({ error: null });
+    localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-22", choices: [[1, "tail"], [2, "fade"]] }));
+    mockAuth.current = { ...SIGNED_IN, profile: { tier: "free", username: null, username_changed_at: null } };
+    render(<TofHero initial={TWO_CARDS} />);
+    await waitFor(() => expect(insert).toHaveBeenCalledTimes(2));
+    expect(claim.requireUsername).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(localStorage.getItem("ts:tof:guest")).toBeNull());
+  });
+
+  it("keeps a played stable pick on the summary after the user unfollowed that capper", async () => {
+    selectResult.current = {
+      capper_follows: { data: [], error: null },
+      tof_plays: { data: [
+        { id: 1, hand_id: 7, card_id: 1, stable_pick_id: null, choice: "tail", outcome: "win", units: 0.77 },
+        { id: 2, hand_id: 7, card_id: null, stable_pick_id: 904, choice: "tail", outcome: "loss", units: -1 },
+      ], error: null },
+    };
+    mockAuth.current = SIGNED_IN;
+    render(<TofHero initial={HAND} />);
+    expect(await screen.findByText(/Stable pick/)).toBeInTheDocument();
+    expect(fetchTodayPicks).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("loss, -1.00u")).toBeInTheDocument();
+    expect(screen.getByText("1-1")).toBeInTheDocument();
+  });
+
   it("replays a guest pass too, and never re-inserts a play the user already has", async () => {
     insert.mockResolvedValue({ error: null });
     selectResult.current["tof_plays"] = { data: [{ id: 9, hand_id: 7, card_id: 1, stable_pick_id: null, choice: "tail", outcome: null, units: null }], error: null };

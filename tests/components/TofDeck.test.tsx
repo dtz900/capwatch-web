@@ -33,6 +33,19 @@ describe("TofDeck", () => {
     await waitFor(() => expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), "pass"));
   });
 
+  it("a pointer cancel settles the card without committing, even past the threshold", async () => {
+    const onPlay = vi.fn().mockResolvedValue(true);
+    render(<TofDeck open={[card(1)]} locked={[]} onPlay={onPlay} />);
+    const cardDiv = screen.getByText("NYY -1.5").closest('[style*="transform"]') as HTMLElement;
+    expect(cardDiv).toBeTruthy();
+    fireEvent.pointerDown(cardDiv, { clientX: 200, clientY: 400, pointerId: 1 });
+    fireEvent.pointerMove(cardDiv, { clientX: 500, clientY: 400, pointerId: 1 });
+    fireEvent.pointerCancel(cardDiv, { clientX: 500, clientY: 400, pointerId: 1 });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(onPlay).not.toHaveBeenCalled();
+    expect(cardDiv.style.transform).toBe("translate(0px, 0px) rotate(0deg)");
+  });
+
   it("supports arrow keys on the focused deck", async () => {
     const onPlay = vi.fn().mockResolvedValue(true);
     render(<TofDeck open={[card(1)]} locked={[]} onPlay={onPlay} />);
