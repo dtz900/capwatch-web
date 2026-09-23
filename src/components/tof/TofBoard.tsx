@@ -8,7 +8,7 @@ const RANK_COLOR = ["#f5c54a", "#d4d4d8", "#c8814a"];
 export function TofBoard({ rows, me, minPlays }: { rows: TofBoardRow[]; me: { username: string; stats: TofStats } | null; minPlays: number }) {
   const meOnBoard = me ? rows.some((r) => r.username === me.username) : false;
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
+    <div className="rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-4">
       <div className="flex items-baseline justify-between">
         <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Tailers · this month</div>
         <div className="text-[10px] font-bold text-[#52525b]">min {minPlays} plays</div>

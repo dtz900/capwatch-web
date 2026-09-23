@@ -281,7 +281,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       <div>
       <div className="tof-fold-inner mx-auto grid max-w-[1240px] grid-cols-1 gap-8 pt-6 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start" inert={!unfolded}>
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
+          <div className="rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-4">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
             <ol className="mt-3 flex flex-col gap-3">
               {[
@@ -303,7 +303,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
         <div className="order-1 flex flex-col items-center lg:order-2">
           {state === "no-hand" ? (
-            <div className="flex h-[300px] w-[360px] max-w-full flex-col items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] text-center">
+            <div className="flex h-[300px] w-[360px] max-w-full flex-col items-center justify-center gap-2 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] text-center">
               <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">No hand today</div>
               <div className="text-[13px] text-[var(--color-text-soft)]">{data?.no_hand_reason ?? "Not enough picks yet."}</div>
               <div className="text-[13px] font-bold text-[var(--color-pos)]">{nextDealLabel(data?.next_deal ?? null)}</div>
@@ -318,7 +318,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
         <aside className="order-2 flex flex-col gap-3 lg:order-3">
           {entitlements.isLoggedIn ? (
-            <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-3.5">
+            <div className="flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-3.5">
               <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-[#2a2a33] font-[family-name:var(--font-display)] text-[16px] text-[var(--color-pos)]">
                 {(profile?.username ?? session?.user?.email ?? "?").charAt(0).toUpperCase()}
               </div>
@@ -336,7 +336,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
             </div>
           )}
           {stats && (
-            <div className="grid grid-cols-3 gap-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-3.5">
+            <div className="grid grid-cols-3 gap-2.5 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-3.5">
               <div>
                 <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Month</div>
                 <div className="mt-1 text-[22px] font-extrabold leading-none tabular-nums">{stats.wins}-{stats.losses}</div>
