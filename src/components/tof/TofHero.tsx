@@ -251,23 +251,25 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "no-hand" | "playable" | "spectator" = !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="border-b border-[var(--color-border)] pb-10 pt-7 sm:pb-12 sm:pt-8" style={{ background: "radial-gradient(ellipse 720px 380px at 50% 18%, rgba(25,245,124,0.09) 0%, rgba(25,245,124,0) 70%)" }}>
-      <div className="flex flex-col items-center gap-3 text-center">
+    <section className="border-b border-[var(--color-border)] pb-10 pt-6 sm:pb-12 sm:pt-7" style={{ background: "radial-gradient(ellipse 720px 380px at 50% 18%, rgba(25,245,124,0.09) 0%, rgba(25,245,124,0) 70%)" }}>
+      <div className="flex flex-col items-center">
         <TofTitle />
-        <p className="max-w-[560px] text-[15px] leading-relaxed text-[#a1a1aa]">
-          Tonight&apos;s board, one hand for everyone. Swipe right to tail the capper, left to fade them. Graded overnight against the real result, in units at the price.
-        </p>
-        {hand && (
-          <div className="mt-1 flex flex-wrap items-center justify-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em]">
-            <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5"><span className="text-[var(--color-pos)]">{hand.cards.length}</span> cards</span>
-            <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5">First lock <span className="text-[var(--color-text)]">{hand.first_lock_at ? new Date(hand.first_lock_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }) : ""} PT</span></span>
-            <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[var(--color-text-muted)]">{hand.slate_date}</span>
-          </div>
-        )}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
+      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
         <aside className="order-3 flex flex-col gap-3 lg:order-1">
+          <div className="flex flex-col gap-3">
+            <p className="text-[14px] leading-relaxed text-[#a1a1aa]">
+            Tonight&apos;s board, one hand for everyone. Swipe right to tail the capper, left to fade them. Graded overnight against the real result, in units at the price.
+          </p>
+          {hand && (
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em]">
+              <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5"><span className="text-[var(--color-pos)]">{hand.cards.length}</span> cards</span>
+              <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5">First lock <span className="text-[var(--color-text)]">{hand.first_lock_at ? new Date(hand.first_lock_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }) : ""} PT</span></span>
+              <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[var(--color-text-muted)]">{hand.slate_date}</span>
+              </div>
+            )}
+          </div>
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
             <ol className="mt-3 flex flex-col gap-3">

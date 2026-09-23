@@ -73,8 +73,7 @@ export function TofCardFace({
 
   return (
     <div
-      className="relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e] p-4 pt-3 select-none"
-      style={{ borderTop: `4px solid ${tag.color}` }}
+      className="relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e] p-4 select-none"
     >
       {/* Team-tinted corners: the two sides of the card carry their team colors at low alpha. */}
       <div

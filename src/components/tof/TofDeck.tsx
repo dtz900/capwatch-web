@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { TofCard, TofChoice } from "@/lib/types";
-import { CATEGORY, TofCardFace } from "@/components/tof/TofCardFace";
+import { TofCardFace } from "@/components/tof/TofCardFace";
 
 export interface StableDeckCard {
   kind: "stable";
@@ -164,7 +164,7 @@ export function TofDeck({
           const isTop = k === 0;
           const style = isTop
             ? { transform: topTransform, transition: topTransition, zIndex: 10, touchAction: "none" as const, cursor: "grab" }
-            : { transform: `translateY(${-16 * k}px) scale(${1 - 0.04 * k})`, transition: reduced ? "none" : "transform .3s ease-out", zIndex: 10 - k, opacity: k === 2 ? 0.8 : 1 };
+            : { transform: `translateY(${12 * k}px) scale(${1 - 0.035 * k})`, transition: reduced ? "none" : "transform .3s ease-out", zIndex: 10 - k, opacity: k === 2 ? 0.7 : 0.9 };
           return (
             <div
               key={card.id}
@@ -178,13 +178,11 @@ export function TofDeck({
               {isTop ? (
                 <TofCardFace card={card} stampTail={stampTail} stampFade={stampFade} />
               ) : (
-                // A card underneath the top of the deck: its colored category
-                // tab peeks out above the top card, and nothing else, so it
-                // never duplicates the top card's visible text.
+                // A card underneath the top of the deck: only its shape peeks
+                // out below, so it never duplicates the top card's visible text.
                 <div
                   aria-hidden="true"
-                  className="h-full rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e]"
-                  style={{ borderTop: `4px solid ${(CATEGORY[card.kind === "stable" ? "stable" : card.category] ?? CATEGORY.wildcard).color}` }}
+                  className="h-full rounded-xl border border-[var(--color-border-h)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e]"
                 />
               )}
             </div>
