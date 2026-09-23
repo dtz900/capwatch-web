@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const fake = vi.hoisted(() => ({ client: null as unknown }));
 
@@ -76,16 +76,14 @@ describe("AuthProvider verification", () => {
     const rpc = vi.fn(async () => ({ data: { status: "verified", capper_id: 7, handle: "fadeai_", avatar_url: null, username_set: true }, error: null }));
     const client = fakeSupabase(session([{ provider: "email" }, { provider: "x" }]), rpc);
     fake.client = client;
-    let link: ((r: string) => Promise<string | null>) | null = null;
-    function Grab() {
+    function LinkButton() {
       const { linkX } = useAuth();
-      link = linkX;
-      return null;
+      return <button type="button" onClick={() => void linkX("/account")}>link</button>;
     }
-    render(<AuthProvider><Probe /><Grab /></AuthProvider>);
+    render(<AuthProvider><Probe /><LinkButton /></AuthProvider>);
     await waitFor(() => expect(screen.getByTestId("probe").textContent).toContain("verified|fadeai_|"));
-    await link!("/account");
-    expect(client.auth.linkIdentity).toHaveBeenCalledWith(expect.objectContaining({ provider: "x" }));
+    fireEvent.click(screen.getByRole("button", { name: "link" }));
+    await waitFor(() => expect(client.auth.linkIdentity).toHaveBeenCalledWith(expect.objectContaining({ provider: "x" })));
   });
 
   it("leaves the state untouched when the claim call fails", async () => {
