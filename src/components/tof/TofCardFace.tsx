@@ -14,6 +14,14 @@ export const CATEGORY: Record<string, { label: string; color: string }> = {
   stable: { label: "YOUR TAIL", color: "#d4d4d8" },
 };
 
+/** Team color pulled most of the way to the page black, for a card wash that stays dark. */
+function deepTone(hex: string, keep = 0.42): string {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return "#17171d";
+  const mix = (v: number, base: number) => Math.round(v * keep + base * (1 - keep)).toString(16).padStart(2, "0");
+  return `#${mix(parseInt(m[1], 16), 0x0c)}${mix(parseInt(m[2], 16), 0x0c)}${mix(parseInt(m[3], 16), 0x10)}`;
+}
+
 export function fmtOdds(o: number | null | undefined): string {
   if (o == null) return "";
   return o > 0 ? `+${o}` : String(o);
@@ -69,13 +77,23 @@ export function TofCardFace({
   const fadeOdds = shared ? shared.fade_odds_at_deal : null;
   const tailColor = tailTeam ? teamColor(tailTeam, sport) : "#19f57c";
   const fadeColor = fadeTeam ? teamColor(fadeTeam, sport) : "#ef4444";
+  // Each card carries its tail team: a deep wash at the top and a big faded logo, so a
+  // stack of cards reads as different cards, the way photos do on a dating deck.
+  const wash = deepTone(tailColor);
+  const identityTeam = tailTeam ?? fadeTeam;
   const live = shared && shared.game_state !== "scheduled" && shared.home_score != null && shared.away_score != null;
   const final = shared?.game_state === "final";
 
   return (
     <div
-      className="relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-gradient-to-b from-[#17171d] via-[#101015] to-[#0b0b0e] p-4 select-none"
+      className="relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.10)] p-4 select-none"
+      style={{ background: `linear-gradient(180deg, ${wash} 0%, #121217 46%, #0b0b0e 100%)` }}
     >
+      {identityTeam && (
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-8 opacity-[0.14]" style={{ transform: "rotate(-12deg)" }}>
+          <TeamLogo abbr={identityTeam} sport={sport} size={230} flat />
+        </div>
+      )}
       {/* Team-tinted corners: the two sides of the card carry their team colors at low alpha. */}
       <div
         aria-hidden="true"

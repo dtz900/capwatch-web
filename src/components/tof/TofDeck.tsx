@@ -259,7 +259,7 @@ export function TofDeck({
         data-testid="tof-deck"
         tabIndex={0}
         onKeyDown={onKey}
-        className="relative h-[470px] w-[360px] max-w-full outline-none"
+        className="relative mt-14 h-[470px] w-[360px] max-w-full outline-none"
         role="group"
         aria-label="Tail or Fade deck"
         aria-describedby={hintId}
@@ -279,7 +279,7 @@ export function TofDeck({
           const isTop = k === 0;
           const style = isTop
             ? { transform: topTransform, transition: topTransition, zIndex: 10, touchAction: "none" as const, cursor: "grab" }
-            : { transform: `translateY(${12 * k}px) scale(${1 - 0.035 * k})`, transition: reduced ? "none" : "transform .3s ease-out", zIndex: 10 - k, opacity: k === 2 ? 0.55 : 1 };
+            : { transform: `translateY(${-30 * k}px) scale(${1 - 0.04 * k})`, transition: reduced ? "none" : "transform .3s ease-out", zIndex: 10 - k, opacity: 1 };
           return (
             <div
               key={card.id}
