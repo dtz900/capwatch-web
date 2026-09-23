@@ -237,10 +237,10 @@ export function TofDeck({
       <div className="relative">
         {top && (
           <>
-            <div aria-hidden="true" className="pointer-events-none absolute -left-[74px] top-1/2 hidden -translate-y-1/2 sm:block" style={{ opacity: fadeAllowed ? 0.28 + 0.72 * cueFade : 0.08, transform: `translate(${-14 * cueFade}px, -50%) scale(${1 + 0.18 * cueFade})`, transition: dragging ? "none" : "opacity .2s, transform .2s" }}>
+            <div aria-hidden="true" className="pointer-events-none absolute -left-[104px] top-1/2 z-20 hidden -translate-y-1/2 sm:block" style={{ opacity: fadeAllowed ? 0.28 + 0.72 * cueFade : 0.08, transform: `translate(${-14 * cueFade}px, -50%) scale(${1 + 0.18 * cueFade})`, transition: dragging ? "none" : "opacity .2s, transform .2s" }}>
               <SwipeArrow dir="left" color="#ef4444" />
             </div>
-            <div aria-hidden="true" className="pointer-events-none absolute -right-[74px] top-1/2 hidden -translate-y-1/2 sm:block" style={{ opacity: 0.28 + 0.72 * cueTail, transform: `translate(${14 * cueTail}px, -50%) scale(${1 + 0.18 * cueTail})`, transition: dragging ? "none" : "opacity .2s, transform .2s" }}>
+            <div aria-hidden="true" className="pointer-events-none absolute -right-[104px] top-1/2 z-20 hidden -translate-y-1/2 sm:block" style={{ opacity: 0.28 + 0.72 * cueTail, transform: `translate(${14 * cueTail}px, -50%) scale(${1 + 0.18 * cueTail})`, transition: dragging ? "none" : "opacity .2s, transform .2s" }}>
               <SwipeArrow dir="right" color="#19f57c" />
             </div>
           </>
