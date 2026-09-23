@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { errorRedirectTarget } from "./redirects";
 
 const RETURN_COOKIE = "ts_return_to";
+// Written only by linkX (identity link). A failure in that flow goes back to
+// the page the user left; a failed sign-in still lands on /login, since the
+// sign-in buttons write RETURN_COOKIE before pushing to /login and the
+// landing and capper pages render no error banner.
+const LINK_RETURN_COOKIE = "ts_link_return";
 
 /**
  * Magic-link landing. Exchanges the PKCE code for a session, then sends the
@@ -18,6 +24,14 @@ const RETURN_COOKIE = "ts_return_to";
  * can diagnose from a silent bounce, so failures now land on /login with a
  * specific message and the option to request a fresh link from this browser.
  */
+/** A failure lands on the page the user left (identity link) or /login (sign-in). */
+async function errorRedirect(origin: string, message: string): Promise<NextResponse> {
+  const jar = await cookies();
+  const link = jar.get(LINK_RETURN_COOKIE)?.value;
+  if (link) jar.delete(LINK_RETURN_COOKIE);
+  return NextResponse.redirect(errorRedirectTarget(origin, link, message));
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -27,9 +41,7 @@ export async function GET(request: Request) {
   // Supabase can redirect here with an error instead of a code (expired or
   // already-used link). Surface it.
   if (providerError && !code) {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(providerErrorDesc || providerError)}`,
-    );
+    return errorRedirect(origin, providerErrorDesc || providerError);
   }
 
   if (code) {
@@ -44,21 +56,23 @@ export async function GET(request: Request) {
       const msg = verifierMiss
         ? "That sign-in link has to be opened in the same browser you requested it from. Enter your email here and open the new link right here."
         : `Sign-in failed: ${error.message}`;
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(msg)}`);
+      return errorRedirect(origin, msg);
     }
   } else {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent("That sign-in link is missing its code. Request a new one.")}`,
-    );
+    return errorRedirect(origin, "That sign-in link is missing its code. Request a new one.");
   }
 
   const jar = await cookies();
-  const raw = jar.get(RETURN_COOKIE)?.value;
+  // The link cookie wins when both are set (a sign-in return cookie can
+  // linger from an earlier visit); both are cleared either way.
+  const linkRaw = jar.get(LINK_RETURN_COOKIE)?.value;
+  const raw = linkRaw ?? jar.get(RETURN_COOKIE)?.value;
   let dest = "/";
   if (raw) {
     const decoded = decodeURIComponent(raw);
     if (decoded.startsWith("/") && !decoded.startsWith("//")) dest = decoded;
-    jar.delete(RETURN_COOKIE);
   }
+  if (jar.get(RETURN_COOKIE)) jar.delete(RETURN_COOKIE);
+  if (jar.get(LINK_RETURN_COOKIE)) jar.delete(LINK_RETURN_COOKIE);
   return NextResponse.redirect(`${origin}${dest}`);
 }

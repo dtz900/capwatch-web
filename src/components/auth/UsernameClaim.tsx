@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { nextUsernameChange, validateUsername } from "@/lib/tof/username";
+import { VerifyWithX } from "@/components/auth/VerifyWithX";
 
 /* One modal, mounted once in the root layout. requireUsername() is the gate
    every play goes through: a user with a name passes straight through, a
@@ -25,7 +26,7 @@ export function useUsernameClaim(): ClaimCtx {
 type Mode = "claim" | "change";
 
 export function UsernameClaimProvider({ children }: { children: ReactNode }) {
-  const { session, profile, refreshProfile } = useAuth();
+  const { session, profile, refreshProfile, suggestedUsername } = useAuth();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("claim");
   const resolver = useRef<((ok: boolean) => void) | null>(null);
@@ -64,6 +65,15 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
   // below, which would leave requireUsername()'s promise pending forever and
   // wedge every later call behind `pending`. Settle it false and close.
   const userId = session?.user?.id ?? null;
+  // After an X verification the claim function sets the username while the
+  // replay effect may already have re-opened this modal; a claim modal for a
+  // user who now has a name closes itself and settles true.
+  const hasName = Boolean(profile?.username);
+  useEffect(() => {
+    // Same side-effect-on-a-caller shape as the sign-out settle below.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open && mode === "claim" && hasName) settle(true);
+  }, [open, mode, hasName, settle]);
   useEffect(() => {
     // Settling an outstanding promise is a side effect on a caller outside
     // React, not derived state, and there is no render-time place to do it.
@@ -84,6 +94,7 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
           userId={session.user.id}
           currentName={profile?.username ?? null}
           changedAt={profile?.username_changed_at ?? null}
+          suggestedName={mode === "claim" ? suggestedUsername : null}
           onDone={async () => {
             await refreshProfile();
             settle(true);
@@ -98,12 +109,13 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
 type Availability = "idle" | "checking" | "available" | "taken";
 
 function UsernameModal({
-  mode, userId, currentName, changedAt, onDone, onDismiss,
+  mode, userId, currentName, changedAt, suggestedName, onDone, onDismiss,
 }: {
   mode: Mode;
   userId: string;
   currentName: string | null;
   changedAt: string | null;
+  suggestedName: string | null;
   onDone: () => Promise<void>;
   onDismiss: () => void;
 }) {
@@ -114,7 +126,12 @@ function UsernameModal({
         : null,
     [],
   );
-  const [value, setValue] = useState("");
+  // A linked X handle (non-capper) is offered as the value until the user
+  // types. Derived, not initialized: after the OAuth return the modal can
+  // mount before tof_claim_x_identity() has answered, so the suggestion
+  // often arrives later.
+  const [typed, setTyped] = useState<string | null>(null);
+  const value = typed ?? suggestedName ?? "";
   // Local validation is a pure function of `value`, so it's derived during
   // render rather than mirrored into state via an effect.
   const localCheck = useMemo(() => validateUsername(value), [value]);
@@ -234,7 +251,7 @@ function UsernameModal({
             maxLength={20}
             value={value}
             placeholder={currentName ?? "your_name"}
-            onChange={(e) => setValue(e.target.value.trim())}
+            onChange={(e) => setTyped(e.target.value.trim())}
             className="min-w-0 flex-grow bg-transparent text-[15px] font-bold text-[var(--color-text)] outline-none placeholder:text-[#52525b]"
           />
           <span aria-live="polite" className="shrink-0">
@@ -252,6 +269,12 @@ function UsernameModal({
         <div className="mt-2 min-h-[16px] text-[11px] text-[var(--color-text-muted)]">
           {localError ?? serverError ?? "3 to 20 characters. Letters, numbers, underscores. One change every 30 days."}
         </div>
+        {mode === "claim" && (
+          <div className="mt-3">
+            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Tracked capper?</div>
+            <VerifyWithX returnTo={typeof window === "undefined" ? "/" : window.location.pathname} label="Verify with X and use my handle" />
+          </div>
+        )}
         {nextChange && (
           <div className="mt-2 text-[12px] font-semibold text-[var(--color-gold)]">
             Next change allowed {nextChange.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.

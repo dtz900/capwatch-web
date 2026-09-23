@@ -541,6 +541,8 @@ export interface TofHandResponse {
 export interface TofBoardRow {
   rank: number;
   username: string;
+  avatar_url: string | null;
+  capper_handle: string | null;
   plays: number;
   wins: number;
   losses: number;

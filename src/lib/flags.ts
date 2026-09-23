@@ -16,3 +16,10 @@ export function vipTierEnabled(): boolean {
 export function tofEnabled(): boolean {
   return vipEnabled() && process.env.NEXT_PUBLIC_TOF_ENABLED === "true";
 }
+
+/* Verify with X: identity linking on an existing email account. Dark until
+   the Twitter provider and manual linking are configured on the Supabase
+   project (spec 2026-09-23-tailslips-x-verification-design.md). */
+export function xAuthEnabled(): boolean {
+  return vipEnabled() && process.env.NEXT_PUBLIC_X_AUTH_ENABLED === "true";
+}

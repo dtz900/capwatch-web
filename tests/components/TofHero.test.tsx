@@ -10,7 +10,7 @@ vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => mockAuth.curre
 const claim = vi.hoisted(() => ({ requireUsername: vi.fn().mockResolvedValue(true), openChange: vi.fn() }));
 vi.mock("@/components/auth/UsernameClaim", () => ({ useUsernameClaim: () => claim }));
 const push = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams("") }));
 vi.mock("@/lib/api", () => ({
   fetchTofHand: vi.fn(),
   fetchTofBoard: vi.fn().mockResolvedValue({ window: "month", min_plays: 10, rows: [] }),
@@ -109,10 +109,10 @@ function stablePick(over: Partial<TodayPickEntry>): TodayPickEntry {
 describe("TofHero", () => {
   it("renders the no-hand state with the next deal", () => {
     mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
-    render(<TofHero initial={{ hand: null, no_hand_reason: "no games today", next_deal: { date: "2026-09-23", expected_at: null } }} />);
+    render(<TofHero initial={{ hand: null, no_hand_reason: "no games today", next_deal: { date: "2026-12-23", expected_at: null } }} />);
     expect(screen.getByText(/no hand today/i)).toBeInTheDocument();
     expect(screen.getByText("No games today.")).toBeInTheDocument();
-    expect(screen.getByText("Next deck Wed Sep 23 at 11:00 AM PT")).toBeInTheDocument();
+    expect(screen.getByText("Next deck Wed Dec 23 at 11:00 AM PT")).toBeInTheDocument();
   });
 
   it("knows weekend decks drop at 9 AM PT and uses the API's time when it has one", () => {

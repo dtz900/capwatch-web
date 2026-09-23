@@ -6,7 +6,11 @@ import { TopNav } from "@/components/nav/TopNav";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { EmailAlertsToggle } from "@/components/account/EmailAlertsToggle";
-import { tofEnabled, vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { AvatarUpload } from "@/components/account/AvatarUpload";
+import { XVerificationCard } from "@/components/account/XVerificationCard";
+import { BoardAvatar } from "@/components/tof/BoardAvatar";
+import { displayAvatar } from "@/lib/x-claim";
+import { tofEnabled, vipEnabled, vipTierEnabled, xAuthEnabled } from "@/lib/flags";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchPickOutcomes } from "@/lib/api";
 import { slipProfit } from "@/lib/betslip";
@@ -63,12 +67,17 @@ function Stat({
 }
 
 export default function AccountPage() {
-  const { entitlements, session, profile, signOut } = useAuth();
+  const { entitlements, session, profile, capper, signOut } = useAuth();
   const { requireUsername, openChange } = useUsernameClaim();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tails, setTails] = useState<TailSummary | null>(null);
   const [slip, setSlip] = useState<SlipSummary | null>(null);
+  // A failed X link lands back here with ?error= (auth/callback). Read once;
+  // the logged-in tree only renders on the client, so no hydration mismatch.
+  const [callbackError] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("error"),
+  );
 
   const userId = session?.user?.id ?? null;
   const supabase = useMemo(
@@ -198,9 +207,7 @@ export default function AccountPage() {
       <div className="rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[rgba(47,217,192,0.12)] text-lg font-extrabold uppercase text-[#2fd9c0]">
-              {email.slice(0, 1) || "?"}
-            </div>
+            <BoardAvatar url={displayAvatar(profile, capper)} name={profile?.username ?? email} size={48} />
             <div className="min-w-0">
               <div className="truncate text-[15px] font-bold text-[var(--color-text)]">
                 {profile?.username ? `@${profile.username}` : email}
@@ -232,6 +239,30 @@ export default function AccountPage() {
           </button>
         </div>
       </div>
+
+      {callbackError && (
+        <p className="mt-4 rounded-lg border border-[var(--color-neg)]/40 bg-[var(--color-neg)]/10 px-3 py-2 text-sm text-[var(--color-neg)]">
+          {callbackError}
+        </p>
+      )}
+
+      {tofEnabled() && (
+        <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+            Photo
+          </h2>
+          <AvatarUpload />
+        </div>
+      )}
+
+      {xAuthEnabled() && (
+        <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+            X verification
+          </h2>
+          <XVerificationCard />
+        </div>
+      )}
 
       {/* My Tails summary */}
       <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
