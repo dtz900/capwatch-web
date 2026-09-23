@@ -367,6 +367,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
             <p className="mt-2 text-[11.5px] leading-snug text-[var(--color-text-muted)]">
               Free to play. Nothing is wagered and nothing pays out. Units are just how we keep score.
             </p>
+            <p className="mt-2 text-[11.5px] font-bold leading-snug text-[var(--color-text-soft)]">
+              New deck at noon PT on weekdays, 9 AM PT on weekends.
+            </p>
             <div className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
             <ol className="mt-3 flex flex-col gap-3">
               {[
