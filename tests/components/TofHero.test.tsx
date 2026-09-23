@@ -293,7 +293,7 @@ describe("TofHero", () => {
     await waitFor(() => expect(screen.getByText("Card 1 of 2")).toBeInTheDocument());
   });
 
-  it("keeps the fold open across a remount within the session", async () => {
+  it("lands folded on every mount, even after being opened", async () => {
     mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false } };
     const first = render(<TofHero initial={HAND} />);
     const title = screen.getByRole("button", { name: /tail\s*or\s*fade/i });
@@ -302,7 +302,7 @@ describe("TofHero", () => {
     expect(title).toHaveAttribute("aria-expanded", "true");
     first.unmount();
     render(<TofHero initial={HAND} />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /tail\s*or\s*fade/i })).toHaveAttribute("aria-expanded", "true"));
+    expect(screen.getByRole("button", { name: /tail\s*or\s*fade/i })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("with no server hand, paints the cached hand and then refetches", async () => {

@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchTofBoard, fetchTofHand, fetchTodayPicks } from "@/lib/api";
-import { clearPendingPlay, isLocked, orderDeck, readFoldOpen, readGuestChoices, readHandCache, readPendingPlay, unitsLabel, writeFoldOpen, writeGuestChoices, writeHandCache, writePendingPlay } from "@/lib/tof/deck";
+import { clearPendingPlay, isLocked, orderDeck, readGuestChoices, readHandCache, readPendingPlay, unitsLabel, writeGuestChoices, writeHandCache, writePendingPlay } from "@/lib/tof/deck";
 import type { TofBoardRow, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
@@ -83,15 +83,8 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   }, [slateDate, guestChoices]);
   const pendingHandled = useRef(false);
   const guestNudged = useRef(false);
-  // The hero lands folded to its title; the table slides open on a tap.
+  // The hero lands folded to its title on every page; the table slides open on a tap.
   const [unfolded, setUnfolded] = useState(false);
-  // Session memory: the fold stays how the visitor left it as they move
-  // between pages. Read after mount so the server and first client render
-  // agree (same reset-in-effect pattern as loadProfile; lint debt noted).
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (readFoldOpen()) setUnfolded(true);
-  }, []);
   // The fold clips overflow while it slides. Once open and settled the clip
   // comes off so the button glows and card shadows are not cut at the edge.
   const [settled, setSettled] = useState(false);
@@ -102,7 +95,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   }, [unfolded]);
   const toggleFold = useCallback(() => {
     setSettled(false);
-    setUnfolded((u) => { writeFoldOpen(!u); return !u; });
+    setUnfolded((u) => !u);
   }, []);
 
   const hand = data?.hand ?? null;
@@ -315,7 +308,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "loading" | "no-hand" | "playable" | "spectator" = data === null ? "loading" : !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-6 pt-6 transition-[padding] duration-500 sm:pt-7 data-[open=true]:pb-10 data-[open=true]:sm:pb-12" style={{ background: FELT }} data-open={unfolded}>
+    <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-3 pt-3 transition-[padding] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
       <TofTitle open={unfolded} onToggle={toggleFold} />
 
       <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
@@ -430,15 +423,23 @@ function TofTitle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
       aria-controls="tof-table"
       className="group mx-auto flex cursor-pointer select-none flex-col items-center bg-transparent p-0 focus-visible:outline-none"
     >
+      {open && (
+        <span className="pp-rise mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
+          Tap to close
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6.5 5 3.5 8 6.5" /></svg>
+        </span>
+      )}
       <h2 className={`flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98] ${open ? "" : "tof-bob"}`} style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
         <span className="text-[46px] tracking-[0.01em] text-[var(--color-pos)] sm:text-[60px]">TAIL</span>
         <span className="text-[22px] tracking-[0.06em] text-white sm:text-[28px]">OR</span>
         <span className="text-[46px] tracking-[0.01em] text-[var(--color-neg)] sm:text-[60px]">FADE</span>
       </h2>
-      <span className={`mt-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)] transition-opacity duration-300 ${open ? "opacity-0" : "tof-hint"}`} aria-hidden="true">
-        Tap to play
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
-      </span>
+      {!open && (
+        <span className="tof-hint mt-1 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
+          Tap to play
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
+        </span>
+      )}
     </button>
   );
 }

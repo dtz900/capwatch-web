@@ -122,18 +122,9 @@ export function writeGuestChoices(slateDate: string, choices: ReadonlyMap<number
   }
 }
 
-/* The fold and the first-card nudge are per browser session: a fresh tab
-   lands folded and gets the nudge once; moving between pages keeps whatever
-   the visitor last had. */
-const FOLD_KEY = "ts:tof:open";
+/* The first-card nudge is once per browser session, not once per page. */
 const NUDGE_KEY = "ts:tof:nudged";
 
-export function readFoldOpen(): boolean {
-  try { return sessionStorage.getItem(FOLD_KEY) === "1"; } catch { return false; }
-}
-export function writeFoldOpen(open: boolean): void {
-  try { sessionStorage.setItem(FOLD_KEY, open ? "1" : "0"); } catch { /* fine */ }
-}
 export function nudgeSeen(): boolean {
   try { return sessionStorage.getItem(NUDGE_KEY) === "1"; } catch { return false; }
 }
