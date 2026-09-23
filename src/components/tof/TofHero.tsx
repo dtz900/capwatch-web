@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
@@ -11,6 +11,17 @@ import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } fr
 import { TofBoard } from "@/components/tof/TofBoard";
 
 const RETURN_COOKIE = "ts_return_to";
+
+// Dev-only background candidates for the game band. Click through on localhost; delete once one is chosen.
+const BG_OPTIONS: { name: string; style: CSSProperties }[] = [
+  { name: "page", style: { background: "#0a0a0c" } },
+  { name: "charcoal", style: { background: "#16171c" } },
+  { name: "slate", style: { background: "#121a24" } },
+  { name: "felt", style: { background: "radial-gradient(ellipse at 50% 30%, #12432f 0%, #0b2d20 60%, #071c15 100%)" } },
+  { name: "navy", style: { background: "#0d1430" } },
+  { name: "dots", style: { backgroundColor: "#141519", backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)", backgroundSize: "18px 18px" } },
+  { name: "teal", style: { background: "#0a2422" } },
+];
 const REFETCH_MS = 60_000;
 
 /* The stable card is the user's own tail, offered alongside the shared hand.
@@ -62,6 +73,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [stats, setStats] = useState<TofStats | null>(null);
   const [board, setBoard] = useState<{ rows: TofBoardRow[]; minPlays: number }>({ rows: [], minPlays: 10 });
   const [toast, setToast] = useState<string | null>(null);
+  const [bg, setBg] = useState(0);
   const [now, setNow] = useState(() => new Date());
   // Signed-out passes have nowhere to persist: there is no tof_plays row to
   // write. Without this the deck would re-deal the same top card forever.
@@ -270,8 +282,16 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "no-hand" | "playable" | "spectator" = !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="mx-[calc(50%-50vw)] border-b border-[rgba(25,245,124,0.10)] bg-[#0a2422] px-[max(16px,calc(50vw-620px))] pb-10 pt-6 sm:pb-12 sm:pt-7">
+    <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-10 pt-6 sm:pb-12 sm:pt-7" style={BG_OPTIONS[bg].style}>
       <TofTitle />
+      {process.env.NODE_ENV === "development" && (
+        <div className="mx-auto mb-4 flex max-w-[1240px] flex-wrap items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em]">
+          <span className="text-[var(--color-text-muted)]">bg</span>
+          {BG_OPTIONS.map((o, i) => (
+            <button key={o.name} type="button" onClick={() => setBg(i)} className={`rounded-full border px-2.5 py-1 ${i === bg ? "border-[var(--color-pos)] text-[var(--color-pos)]" : "border-[var(--color-border-h)] text-[var(--color-text-soft)]"}`}>{o.name}</button>
+          ))}
+        </div>
+      )}
 
       <div className="mx-auto grid max-w-[1240px] grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
