@@ -234,6 +234,19 @@ describe("TofHero", () => {
     expect(localStorage.getItem("ts:tof:guest")).not.toBeNull();
   });
 
+  it("shows graded results on the summary and reads stats from time_window", async () => {
+    selectResult.current["tof_plays"] = { data: [{ id: 9, hand_id: 7, card_id: 1, stable_pick_id: null, choice: "tail", outcome: "loss", units: -1 }], error: null };
+    selectResult.current["tof_tailer_stats"] = { data: { time_window: "month", plays: 4, wins: 1, losses: 3, pushes: 0, units: "-2.2857", day_streak: -1, best_day_streak: 0 }, error: null };
+    mockAuth.current = SIGNED_IN;
+    render(<TofHero initial={HAND} />);
+    expect(await screen.findByLabelText("loss, -1.00u")).toBeInTheDocument();
+    expect(screen.getByText("0-1")).toBeInTheDocument();
+    expect(screen.getAllByText("1-3").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("-2.29u").length).toBeGreaterThan(0);
+    expect(screen.getByText("Month")).toBeInTheDocument();
+    expect(selectSpy).toHaveBeenCalledWith("tof_tailer_stats", expect.stringContaining("time_window"));
+  });
+
   it("offers a stable card at its grading odds and skips graded, unpriced, and started picks", async () => {
     selectResult.current = { capper_follows: { data: [{ capper_id: 5, market: "all" }], error: null } };
     vi.mocked(fetchTodayPicks).mockResolvedValue({

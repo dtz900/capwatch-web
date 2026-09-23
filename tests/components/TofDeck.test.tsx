@@ -54,6 +54,32 @@ describe("TofDeck", () => {
     expect(screen.getByText("Results land after the games finish.")).toBeInTheDocument();
   });
 
+  it("shows each graded play's result and units, and the hand's record in the footer", () => {
+    const progress = [
+      { id: 1, handle: "a", tail_label: "TEX ML", tail_odds: -126, fade_label: "NYM ML", fade_odds: 105, choice: "tail" as const, outcome: "loss" as const, units: -1 },
+      { id: 2, handle: "b", tail_label: "PHI ML", tail_odds: -140, fade_label: "MIL ML", fade_odds: -135, choice: "tail" as const, outcome: "win" as const, units: 0.7142857 },
+      { id: 3, handle: "c", tail_label: "TB ML", tail_odds: 105, fade_label: "NYY ML", fade_odds: -152, choice: "pass" as const, outcome: null, units: null },
+    ];
+    render(<TofDeck open={[]} locked={[]} onPlay={vi.fn()} progress={progress} />);
+    expect(screen.getByLabelText("loss, -1.00u")).toBeInTheDocument();
+    expect(screen.getByLabelText("win, +0.71u")).toBeInTheDocument();
+    expect(screen.getByText("Graded")).toBeInTheDocument();
+    expect(screen.getByText("1-1")).toBeInTheDocument();
+    expect(screen.getByText("-0.29u")).toBeInTheDocument();
+    expect(screen.queryByText(/graded after the games/i)).not.toBeInTheDocument();
+  });
+
+  it("calls the record partial while a tail or fade is still ungraded", () => {
+    const progress = [
+      { id: 1, handle: "a", tail_label: "TEX ML", tail_odds: -126, fade_label: "NYM ML", fade_odds: 105, choice: "fade" as const, outcome: "win" as const, units: 1.05 },
+      { id: 2, handle: "b", tail_label: "PHI ML", tail_odds: -140, fade_label: "MIL ML", fade_odds: -135, choice: "tail" as const, outcome: null, units: null },
+    ];
+    render(<TofDeck open={[]} locked={[]} onPlay={vi.fn()} progress={progress} />);
+    expect(screen.getByText("So far")).toBeInTheDocument();
+    expect(screen.getByText("1-0")).toBeInTheDocument();
+    expect(screen.getByText("1 pending")).toBeInTheDocument();
+  });
+
   it("disables fade on a stable card", () => {
     const stable: DeckCard = { kind: "stable", id: -555, pick_id: 555, handle: "picksoffice", display_name: null,
       profile_image_url: null, matchup: "CHC @ MIL", game_start_at: "2099-01-01T00:00:00Z", market_group: "Game Total",

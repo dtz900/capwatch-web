@@ -173,13 +173,16 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         setPlays((rows ?? []) as TofPlay[]);
         setPlaysLoadedFor(`${userId}:${handId}`);
       }
-      const { data: st, error: statsError } = await supabase.from("tof_tailer_stats").select("window, plays, wins, losses, pushes, units, day_streak, best_day_streak")
-        .eq("user_id", userId).eq("window", "month").maybeSingle();
+      // The column is time_window ("window" is reserved in Postgres); the
+      // app-side shape keeps `window`.
+      const { data: st, error: statsError } = await supabase.from("tof_tailer_stats").select("time_window, plays, wins, losses, pushes, units, day_streak, best_day_streak")
+        .eq("user_id", userId).eq("time_window", "month").maybeSingle();
       if (statsError) {
         // Cosmetic: a missing stats rail is not worth a toast.
         console.error("tof: tailer stats load failed", statsError);
       } else if (!cancelled) {
-        setStats((st as TofStats | null) ?? null);
+        const row = st as (Omit<TofStats, "window"> & { time_window: TofStats["window"] }) | null;
+        setStats(row ? { window: row.time_window, plays: row.plays, wins: row.wins, losses: row.losses, pushes: row.pushes, units: Number(row.units), day_streak: row.day_streak, best_day_streak: row.best_day_streak } : null);
       }
       const { data: follows, error: followsError } = await supabase.from("capper_follows").select("capper_id, market").eq("user_id", userId);
       if (followsError) {
@@ -232,17 +235,22 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   // Deal order with what the user did on each card, for the dots and the summary.
   const progress = useMemo<DeckProgressItem[]>(() => {
     if (!hand) return [];
-    const byCard = new Map<number, TofChoice>();
-    for (const p of plays) if (p.card_id != null) byCard.set(p.card_id, p.choice);
-    for (const [id, c] of guestChoices) if (!byCard.has(id)) byCard.set(id, c);
-    const items: DeckProgressItem[] = hand.cards.map((c) => ({
-      id: c.id, handle: c.handle ?? "capper", tail_label: c.tail_label, tail_odds: c.tail_odds,
-      fade_label: c.fade_label, fade_odds: c.fade_odds_at_deal, choice: byCard.get(c.id) ?? null,
-    }));
+    const byCard = new Map<number, TofPlay>();
+    for (const p of plays) if (p.card_id != null) byCard.set(p.card_id, p);
+    const items: DeckProgressItem[] = hand.cards.map((c) => {
+      const play = byCard.get(c.id);
+      return {
+        id: c.id, handle: c.handle ?? "capper", tail_label: c.tail_label, tail_odds: c.tail_odds,
+        fade_label: c.fade_label, fade_odds: c.fade_odds_at_deal,
+        choice: play?.choice ?? guestChoices.get(c.id) ?? null,
+        outcome: play?.outcome ?? null, units: play?.units ?? null,
+      };
+    });
     if (stable) {
       const sp = plays.find((p) => p.stable_pick_id === stable.pick_id);
       items.push({ id: stable.id, handle: stable.handle ?? "capper", tail_label: stable.tail_label, tail_odds: stable.tail_odds,
-        fade_label: null, fade_odds: null, choice: sp?.choice ?? guestChoices.get(stable.id) ?? null });
+        fade_label: null, fade_odds: null, choice: sp?.choice ?? guestChoices.get(stable.id) ?? null,
+        outcome: sp?.outcome ?? null, units: sp?.units ?? null });
     }
     return items;
   }, [hand, plays, guestChoices, stable]);

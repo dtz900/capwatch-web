@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { TofCard, TofChoice } from "@/lib/types";
+import type { TofCard, TofChoice, TofOutcome } from "@/lib/types";
 import { TofCardFace } from "@/components/tof/TofCardFace";
 
 export interface StableDeckCard {
@@ -54,6 +54,9 @@ export interface DeckProgressItem {
   fade_label: string | null;
   fade_odds: number | null;
   choice: TofChoice | null;
+  /** Set once the play is graded. Passes never carry a result. */
+  outcome?: TofOutcome | null;
+  units?: number | null;
 }
 
 const CHOICE_COLOR: Record<TofChoice, string> = { tail: "#19f57c", fade: "#ef4444", pass: "#71717a" };
@@ -97,10 +100,25 @@ function LockIcon() {
   );
 }
 
+const OUTCOME_COLOR: Record<string, string> = { win: "#19f57c", loss: "#ef4444", push: "#a1a1aa", void: "#a1a1aa" };
+const OUTCOME_LETTER: Record<string, string> = { win: "W", loss: "L", push: "P", void: "V" };
+
+function signedUnits(u: number): string {
+  return `${u > 0 ? "+" : u < 0 ? "-" : ""}${Math.abs(u).toFixed(2)}u`;
+}
+
 function HandSummary({ items }: { items: DeckProgressItem[] }) {
   const count = (c: TofChoice) => items.filter((it) => it.choice === c).length;
   const played = items.filter((it) => it.choice).length;
   const lockedOut = items.length - played;
+  // Result line: only tails and fades grade; passes are neither won nor lost.
+  const graded = items.filter((it) => it.outcome != null);
+  const pending = items.filter((it) => (it.choice === "tail" || it.choice === "fade") && it.outcome == null).length;
+  const wins = graded.filter((it) => it.outcome === "win").length;
+  const losses = graded.filter((it) => it.outcome === "loss").length;
+  const pushes = graded.filter((it) => it.outcome === "push").length;
+  const units = graded.reduce((sum, it) => sum + Number(it.units ?? 0), 0);
+  const record = pushes > 0 ? `${wins}-${losses}-${pushes}` : `${wins}-${losses}`;
   return (
     <div className="absolute inset-0 flex flex-col gap-3 overflow-hidden rounded-xl border border-[rgba(25,245,124,0.3)] bg-[linear-gradient(180deg,rgba(25,245,124,0.10)_0%,#101015_45%,#0b0b0e_100%)] p-5">
       <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-pos)]">{lockedOut > 0 ? "Hand locked" : "Hand complete"}</div>
@@ -124,11 +142,26 @@ function HandSummary({ items }: { items: DeckProgressItem[] }) {
               <span className="flex w-[52px] items-center justify-center rounded-md py-1 text-[9px] font-extrabold tracking-[0.1em]" style={{ background: `${color}1f`, color }} aria-label={c ?? "locked"}>{c ? c.toUpperCase() : <LockIcon />}</span>
               <span className="min-w-0 flex-grow truncate text-[12px] font-bold">@{it.handle} · {label}</span>
               <span className="text-[12px] font-bold tabular-nums text-[var(--color-text-muted)]">{odds == null ? "" : odds > 0 ? `+${odds}` : odds}</span>
+              {it.outcome != null && (
+                <span className="flex w-[74px] shrink-0 items-center justify-end gap-1.5 text-[12px] font-extrabold tabular-nums" style={{ color: OUTCOME_COLOR[it.outcome] ?? "#a1a1aa" }} aria-label={`${it.outcome}, ${signedUnits(Number(it.units ?? 0))}`}>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-md text-[11px]" style={{ background: `${OUTCOME_COLOR[it.outcome] ?? "#a1a1aa"}22` }}>{OUTCOME_LETTER[it.outcome] ?? "?"}</span>
+                  {signedUnits(Number(it.units ?? 0))}
+                </span>
+              )}
             </div>
           );
         })}
       </div>
-      <div className="mt-auto text-center text-[11px] text-[var(--color-text-muted)]">Graded after the games.</div>
+      {graded.length === 0 ? (
+        <div className="mt-auto text-center text-[11px] text-[var(--color-text-muted)]">Graded after the games.</div>
+      ) : (
+        <div className="mt-auto flex items-center justify-center gap-2 text-[12px] font-bold">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">{pending > 0 ? "So far" : "Graded"}</span>
+          <span className="tabular-nums">{record}</span>
+          <span className="tabular-nums" style={{ color: units > 0 ? "#19f57c" : units < 0 ? "#ef4444" : "#a1a1aa" }}>{signedUnits(units)}</span>
+          {pending > 0 && <span className="text-[11px] font-medium text-[var(--color-text-muted)]">{pending} pending</span>}
+        </div>
+      )}
     </div>
   );
 }
