@@ -270,10 +270,10 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "no-hand" | "playable" | "spectator" = !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="border-b border-[var(--color-border)] pb-10 pt-6 sm:pb-12 sm:pt-7" style={{ background: "radial-gradient(ellipse 720px 380px at 50% 18%, rgba(25,245,124,0.09) 0%, rgba(25,245,124,0) 70%)" }}>
+    <section className="mx-[calc(50%-50vw)] border-b border-[rgba(25,245,124,0.10)] bg-[#0a2422] px-[max(16px,calc(50vw-620px))] pb-10 pt-6 sm:pb-12 sm:pt-7">
       <TofTitle />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
+      <div className="mx-auto grid max-w-[1240px] grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
