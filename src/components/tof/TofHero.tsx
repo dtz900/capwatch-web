@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchTofBoard, fetchTofHand, fetchTodayPicks } from "@/lib/api";
-import { clearGuestChoices, isLocked, orderDeck, readGuestChoices, readHandCache, unitsLabel, writeGuestChoices, writeHandCache } from "@/lib/tof/deck";
+import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, readHandCache, unitsLabel, writeGuestChoices, writeHandCache } from "@/lib/tof/deck";
 import type { TofBoardRow, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
@@ -214,7 +214,10 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       if (!cancelled) setStable(first);
     })();
     return () => { cancelled = true; };
-  }, [supabase, userId, handId]);
+    // handStatus: when the minute poll sees the hand flip to graded, the
+    // plays and stats carry outcomes now and must be read again (a page left
+    // open overnight would otherwise show pending results until a reload).
+  }, [supabase, userId, handId, handStatus]);
 
   const playedIds = useMemo(() => new Set(plays.filter((p) => p.card_id != null).map((p) => p.card_id as number)), [plays]);
   const offDeckIds = useMemo(() => {
@@ -237,7 +240,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     if (!hand) return [];
     const byCard = new Map<number, TofPlay>();
     for (const p of plays) if (p.card_id != null) byCard.set(p.card_id, p);
-    const items: DeckProgressItem[] = hand.cards.map((c) => {
+    // Same order the deck deals, so "Card 2 of 4" and the highlighted dot
+    // always mean the card on top.
+    const items: DeckProgressItem[] = dealOrder(hand.cards, seed).map((c) => {
       const play = byCard.get(c.id);
       return {
         id: c.id, handle: c.handle ?? "capper", tail_label: c.tail_label, tail_odds: c.tail_odds,
@@ -253,7 +258,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         outcome: sp?.outcome ?? null, units: sp?.units ?? null });
     }
     return items;
-  }, [hand, plays, guestChoices, stable]);
+  }, [hand, seed, plays, guestChoices, stable]);
 
   const writePlay = useCallback(async (card: DeckCard, choice: TofChoice): Promise<boolean> => {
     if (!supabase || !userId || !hand) return false;

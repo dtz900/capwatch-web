@@ -247,6 +247,31 @@ describe("TofHero", () => {
     expect(selectSpy).toHaveBeenCalledWith("tof_tailer_stats", expect.stringContaining("time_window"));
   });
 
+  it("labels the top card Card 1 for a signed-in user even when the seeded shuffle reorders the hand", async () => {
+    mockAuth.current = SIGNED_IN;
+    const five = handOf([1, 2, 3, 4, 5].map((i) => ({ ...mkCard(i, `T${i} ML`), position: i })));
+    render(<TofHero initial={five} />);
+    expect(await screen.findByText("Card 1 of 5")).toBeInTheDocument();
+  });
+
+  it("re-reads plays and stats when the poll sees the hand flip to graded", async () => {
+    vi.useFakeTimers();
+    try {
+      mockAuth.current = SIGNED_IN;
+      render(<TofHero initial={HAND} />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      const before = selectSpy.mock.calls.filter((c) => c[0] === "tof_plays").length;
+      expect(before).toBeGreaterThan(0);
+      vi.mocked(fetchTofHand).mockResolvedValue({ ...HAND, hand: { ...HAND.hand!, status: "graded" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      const after = selectSpy.mock.calls.filter((c) => c[0] === "tof_plays").length;
+      expect(after).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("offers a stable card at its grading odds and skips graded, unpriced, and started picks", async () => {
     selectResult.current = { capper_follows: { data: [{ capper_id: 5, market: "all" }], error: null } };
     vi.mocked(fetchTodayPicks).mockResolvedValue({
@@ -328,7 +353,9 @@ describe("TofHero", () => {
     mockAuth.current = SIGNED_IN;
     render(<TofHero initial={TWO_CARDS} />);
     await waitFor(() => expect(insert).toHaveBeenCalledWith("tof_plays", { user_id: "u1", hand_id: 7, card_id: 1, stable_pick_id: null, choice: "pass" }));
-    await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
+    // Card 1 is written and off the deck; only BOS ML is left face up.
+    await waitFor(() => expect(screen.queryByText("NYY -1.5")).not.toBeInTheDocument());
+    expect(screen.getByText("BOS ML")).toBeInTheDocument();
   });
 
   it("forgets guest plays from a different slate date", async () => {

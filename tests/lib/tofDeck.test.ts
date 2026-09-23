@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { isLocked, seededShuffle, orderDeck, readGuestChoices, writeGuestChoices, clearGuestChoices, unitsLabel } from "@/lib/tof/deck";
+import { isLocked, seededShuffle, orderDeck, dealOrder, readGuestChoices, writeGuestChoices, clearGuestChoices, unitsLabel } from "@/lib/tof/deck";
 import type { TofCard } from "@/lib/types";
 
 const NOW = new Date("2026-09-22T20:00:00Z");
@@ -43,6 +43,22 @@ describe("orderDeck", () => {
     expect(anon.open.map((c) => c.id)).toEqual([2, 3]);
     const seeded = orderDeck(cards, new Set(), NOW, "u1:2026-09-22");
     expect([...seeded.open.map((c) => c.id)].sort()).toEqual([2, 3]);
+  });
+});
+
+describe("dealOrder", () => {
+  it("keeps the rest of the hand in the same order after a card is played", () => {
+    const cards = [1, 2, 3, 4, 5].map((i) => ({ ...card(i, "2099-01-01T00:00:00Z"), position: i }));
+    const order = dealOrder(cards, "u9:2026-09-22").map((c) => c.id);
+    expect([...order].sort()).toEqual([1, 2, 3, 4, 5]);
+    const afterOne = orderDeck(cards, new Set([order[0]]), NOW, "u9:2026-09-22").open.map((c) => c.id);
+    expect(afterOne).toEqual(order.slice(1));
+    const afterTwo = orderDeck(cards, new Set([order[0], order[1]]), NOW, "u9:2026-09-22").open.map((c) => c.id);
+    expect(afterTwo).toEqual(order.slice(2));
+  });
+  it("is deal position for a guest", () => {
+    const cards = [3, 1, 2].map((i) => ({ ...card(i, "2099-01-01T00:00:00Z"), position: i }));
+    expect(dealOrder(cards, null).map((c) => c.id)).toEqual([1, 2, 3]);
   });
 });
 

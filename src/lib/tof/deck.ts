@@ -36,17 +36,24 @@ export function seededShuffle<T>(items: T[], seed: string): T[] {
   return out;
 }
 
+/** The order this user is dealt the whole hand in: deal position for a
+    guest, a per-user seeded shuffle otherwise. The deck, the progress dots
+    and the summary all read from this one order, and it is fixed for the
+    whole hand (shuffling only the still-open cards would reorder the fan
+    after every swipe). */
+export function dealOrder(cards: TofCard[], seed: string | null): TofCard[] {
+  const byPosition = [...cards].sort((a, b) => a.position - b.position);
+  return seed ? seededShuffle(byPosition, seed) : byPosition;
+}
+
 export function orderDeck(
   cards: TofCard[],
   playedCardIds: Set<number>,
   now: Date,
   seed: string | null,
 ): { open: TofCard[]; locked: TofCard[] } {
-  const byPosition = [...cards].sort((a, b) => a.position - b.position);
-  const unplayed = byPosition.filter((c) => !playedCardIds.has(c.id));
-  const openCards = unplayed.filter((c) => !isLocked(c, now));
-  const lockedCards = unplayed.filter((c) => isLocked(c, now));
-  return { open: seed ? seededShuffle(openCards, seed) : openCards, locked: lockedCards };
+  const unplayed = dealOrder(cards, seed).filter((c) => !playedCardIds.has(c.id));
+  return { open: unplayed.filter((c) => !isLocked(c, now)), locked: unplayed.filter((c) => isLocked(c, now)) };
 }
 
 export function unitsLabel(n: number | null | undefined): string {

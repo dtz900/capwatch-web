@@ -53,11 +53,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       return;
     }
-    const { data, error: readError } = await supabase
+    let { data, error: readError } = await supabase
       .from("ts_profiles")
       .select(PROFILE_COLUMNS)
       .eq("user_id", user.id)
       .maybeSingle();
+    if (readError?.code === "42703") {
+      // Staged deploy: this build expects the username columns but the DB
+      // has not got them yet. The tier must still resolve or every paid
+      // user reads as free until the migration lands, so fall back to the
+      // columns that have always existed.
+      console.warn("ts_profiles: username columns missing, reading tier only");
+      const fallback = await supabase.from("ts_profiles").select("tier").eq("user_id", user.id).maybeSingle();
+      data = fallback.data as typeof data;
+      readError = fallback.error;
+    }
     if (readError) {
       // A failed read is not "no row". Treating it as one would downgrade a
       // paid user to free and fire a spurious self-insert on any transient

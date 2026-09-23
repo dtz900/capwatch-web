@@ -12,6 +12,8 @@ interface ReadResult {
 }
 
 const readResult = vi.hoisted(() => ({ current: { data: null, error: null } as ReadResult }));
+// What a tier-only select("tier") returns; null means "same as readResult".
+const tierOnlyResult = vi.hoisted(() => ({ current: null as ReadResult | null }));
 const currentSession = vi.hoisted(() => ({
   current: null as { user: { id: string; email: string } } | null,
 }));
@@ -25,7 +27,7 @@ vi.mock("@/lib/supabase/client", () => ({
       signOut: () => Promise.resolve(),
     },
     from: () => ({
-      select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve(readResult.current) }) }),
+      select: (cols: string) => ({ eq: () => ({ maybeSingle: () => Promise.resolve(cols === "tier" && tierOnlyResult.current ? tierOnlyResult.current : readResult.current) }) }),
       upsert,
     }),
   }),
@@ -62,6 +64,15 @@ describe("AuthProvider", () => {
     await waitFor(() => expect(errorSpy).toHaveBeenCalledWith("ts_profiles load failed:", expect.anything()));
     expect(screen.getByTestId("tier")).toHaveTextContent("none");
     expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a tier-only read when the username columns are missing, so paid users stay paid", async () => {
+    readResult.current = { data: null, error: { code: "42703", message: 'column ts_profiles.username does not exist' } };
+    tierOnlyResult.current = { data: { tier: "vip" } as unknown as ProfileRow, error: null };
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId("tier")).toHaveTextContent("vip"));
+    expect(upsert).not.toHaveBeenCalled();
+    tierOnlyResult.current = null;
   });
 
   it("still self-inserts a free row when the read succeeds with no row", async () => {
