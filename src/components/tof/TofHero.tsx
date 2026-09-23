@@ -43,9 +43,9 @@ function stableFromPick(p: TodayPickEntry, now: Date, played = false): StableDec
 
 const PT_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" });
 
-/** "Deck drops today at 12:00 PM PT" or "Next deck Sat Sep 26 at 9:00 AM PT".
+/** "Deck drops today at 11:00 AM PT" or "Next deck Sat Sep 26 at 9:00 AM PT".
     The API sends the day-aware drop time; if it is missing (older API) the
-    time is derived from the weekday: noon PT weekdays, 9 AM PT weekends. */
+    time is derived from the weekday: 11 AM PT weekdays, 9 AM PT weekends. */
 /** The user played a stable pick this hand but the pick is no longer
     reachable (they unfollowed the capper since). Keep the play on the
     summary under a generic label so the count and the grade stay right. */
@@ -63,7 +63,7 @@ function nextDealLabel(next: { date: string; expected_at: string | null } | null
   const weekend = noon.getUTCDay() === 0 || noon.getUTCDay() === 6;
   const time = next.expected_at
     ? new Date(next.expected_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" })
-    : weekend ? "9:00 AM" : "12:00 PM";
+    : weekend ? "9:00 AM" : "11:00 AM";
   const today = PT_DATE.format(now) === next.date;
   if (today) return `Deck drops today at ${time} PT`;
   const wd = noon.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
@@ -418,7 +418,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               Free to play. Nothing is wagered and nothing pays out. Units are just how we keep score.
             </p>
             <p className="mt-2 text-[11.5px] font-bold leading-snug text-[var(--color-text-soft)]">
-              New deck at noon PT on weekdays, 9 AM PT on weekends.
+              New deck at 11 AM PT on weekdays, 9 AM PT on weekends.
             </p>
             <div className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
             <ol className="mt-3 flex flex-col gap-3">
