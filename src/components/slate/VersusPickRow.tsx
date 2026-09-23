@@ -30,7 +30,7 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
   const betText = formatPickText({ pick, awayTeam, homeTeam });
 
   return (
-    <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0 py-2 text-[12px] items-start">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0 py-2 text-[12px] items-start">
       <Link
         href={pick.handle ? `/cappers/${pick.handle}` : "#"}
         className="shrink-0 row-span-2 self-start mt-0.5 rounded-full"
@@ -84,7 +84,7 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
       </div>
 
       {/* Bottom line: bet text + units (or outcome badge once graded) */}
-      <div className="flex items-baseline justify-between gap-2 mt-0.5">
+      <div className="flex items-baseline justify-between gap-2 mt-0.5 min-w-0">
         <span
           className={`tabular-nums truncate ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
           style={tier ? { color: tier.color } : undefined}

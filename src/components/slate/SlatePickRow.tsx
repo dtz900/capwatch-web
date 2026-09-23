@@ -122,7 +122,7 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
         <div className="shrink-0 w-5 flex justify-end">{iconNode}</div>
       </div>
 
-      <div className="sm:hidden grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5 py-2 text-[12px] items-start">
+      <div className="sm:hidden grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5 py-2 text-[12px] items-start">
         <Link
           href={pick.handle ? `/cappers/${pick.handle}` : "#"}
           className="shrink-0 row-span-2 self-start mt-0.5 rounded-full"
@@ -154,7 +154,7 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
           <div className="ml-auto shrink-0">{iconNode}</div>
         </div>
 
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex items-baseline justify-between gap-2 min-w-0">
           <span
             className={`tabular-nums truncate ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
             style={tier ? { color: tier.color } : undefined}

@@ -160,7 +160,7 @@ function Side({
       ? "0 sharps"
       : `${picks.length} ${picks.length === 1 ? "sharp" : "sharps"} · ${formatRiskedAndPnl(risked, pnl, showPnl)}`;
   return (
-    <div>
+    <div className="min-w-0">
       <div
         className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-y-0.5 pb-2 mb-1 border-b-2"
         style={{ borderColor: color }}
@@ -314,7 +314,7 @@ export function GameBlock({ game }: { game: SlateGame }) {
       <div className="px-5 sm:px-7 pt-6 pb-7 sm:pb-8">
 
         {hasMlAction && (
-          <div className="grid grid-cols-2 gap-x-3 sm:gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
+          <div className="grid grid-cols-2 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] gap-x-3 sm:gap-x-10 gap-y-6 mt-8 max-w-[680px] mx-auto">
             <Side
               team={game.away_team}
               sport={sport}
