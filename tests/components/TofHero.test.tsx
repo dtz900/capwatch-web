@@ -17,6 +17,11 @@ vi.mock("@/lib/api", () => ({
   fetchTodayPicks: vi.fn().mockResolvedValue({ date: "2026-09-22", picks: [] }),
 }));
 const insert = vi.hoisted(() => vi.fn());
+// Per-table select result override, keyed by table name, so a test can force
+// a single table's select (e.g. a failed tof_plays load) to resolve with an
+// error while every other table keeps the default empty-success shape.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const selectResult = vi.hoisted(() => ({ current: {} as Record<string, any> }));
 // The hero issues .eq() chains of varying depth against different tables
 // (two .eq()s for tof_plays and tof_tailer_stats, a single .eq() for
 // capper_follows). Real supabase query builders are thenable at every
@@ -32,9 +37,9 @@ vi.mock("@/lib/supabase/client", () => ({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const chain: any = {
           eq: () => chain,
-          maybeSingle: () => Promise.resolve({ data: null }),
+          maybeSingle: () => Promise.resolve(selectResult.current[table] ?? { data: null, error: null }),
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          then: (resolve: any) => resolve({ data: [], error: null }),
+          then: (resolve: any) => resolve(selectResult.current[table] ?? { data: [], error: null }),
         };
         return chain;
       },
@@ -65,6 +70,7 @@ beforeEach(() => {
   push.mockReset();
   claim.requireUsername.mockClear();
   localStorage.clear();
+  selectResult.current = {};
 });
 
 describe("TofHero", () => {
@@ -96,5 +102,16 @@ describe("TofHero", () => {
     await waitFor(() => expect(insert).toHaveBeenCalledWith("tof_plays",
       { user_id: "u1", hand_id: 7, card_id: 1, stable_pick_id: null, choice: "fade" }));
     expect(claim.requireUsername).toHaveBeenCalled();
+  });
+
+  it("surfaces a failed plays load with a toast instead of silently showing an empty deck", async () => {
+    selectResult.current = { tof_plays: { data: null, error: { message: "boom" } } };
+    mockAuth.current = {
+      session: { user: { id: "u1", email: "d@x.com" } },
+      profile: { tier: "free", username: "dt_fades", username_changed_at: null },
+      entitlements: { isLoggedIn: true, isVip: false },
+    };
+    render(<TofHero initial={HAND} />);
+    expect(await screen.findByText(/could not load your plays/i)).toBeInTheDocument();
   });
 });

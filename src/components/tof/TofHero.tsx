@@ -83,13 +83,31 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     if (!supabase || !userId || !hand) { setPlays([]); setStats(null); setStable(null); return; }
     let cancelled = false;
     (async () => {
-      const { data: rows } = await supabase.from("tof_plays").select("id, hand_id, card_id, stable_pick_id, choice, outcome, units")
+      const { data: rows, error: playsError } = await supabase.from("tof_plays").select("id, hand_id, card_id, stable_pick_id, choice, outcome, units")
         .eq("user_id", userId).eq("hand_id", hand.hand_id);
-      if (!cancelled) setPlays((rows ?? []) as TofPlay[]);
-      const { data: st } = await supabase.from("tof_tailer_stats").select("window, plays, wins, losses, pushes, units, day_streak, best_day_streak")
+      if (playsError) {
+        console.error("tof: plays load failed", playsError);
+        if (!cancelled) {
+          setToast("Could not load your plays. Refresh to try again.");
+          setTimeout(() => setToast(null), 3000);
+        }
+      } else if (!cancelled) {
+        setPlays((rows ?? []) as TofPlay[]);
+      }
+      const { data: st, error: statsError } = await supabase.from("tof_tailer_stats").select("window, plays, wins, losses, pushes, units, day_streak, best_day_streak")
         .eq("user_id", userId).eq("window", "month").maybeSingle();
-      if (!cancelled) setStats((st as TofStats | null) ?? null);
-      const { data: follows } = await supabase.from("capper_follows").select("capper_id, market").eq("user_id", userId);
+      if (statsError) {
+        // Cosmetic: a missing stats rail is not worth a toast.
+        console.error("tof: tailer stats load failed", statsError);
+      } else if (!cancelled) {
+        setStats((st as TofStats | null) ?? null);
+      }
+      const { data: follows, error: followsError } = await supabase.from("capper_follows").select("capper_id, market").eq("user_id", userId);
+      if (followsError) {
+        // Cosmetic: a missing stable card is not worth a toast.
+        console.error("tof: capper follows load failed", followsError);
+        return;
+      }
       const ids = [...new Set(((follows ?? []) as { capper_id: number }[]).map((f) => f.capper_id))];
       if (ids.length === 0) return;
       const inHand = new Set(hand.cards.map((c) => c.handle));
@@ -123,9 +141,15 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     if (error) {
       setToast(error.code === "23505" ? "Already played." : /policy|violates/i.test(error.message) ? "That card just locked." : "Could not save that play. Try again.");
       setTimeout(() => setToast(null), 3000);
-      const { data: rows } = await supabase.from("tof_plays").select("id, hand_id, card_id, stable_pick_id, choice, outcome, units")
+      const { data: rows, error: reReadError } = await supabase.from("tof_plays").select("id, hand_id, card_id, stable_pick_id, choice, outcome, units")
         .eq("user_id", userId).eq("hand_id", hand.hand_id);
-      setPlays((rows ?? []) as TofPlay[]);
+      if (reReadError) {
+        console.error("tof: plays re-read failed after insert error", reReadError);
+        setToast("Could not load your plays. Refresh to try again.");
+        setTimeout(() => setToast(null), 3000);
+      } else {
+        setPlays((rows ?? []) as TofPlay[]);
+      }
       return false;
     }
     setPlays((prev) => [...prev, { id: -Date.now(), hand_id: hand.hand_id, card_id: row.card_id, stable_pick_id: row.stable_pick_id, choice, outcome: null, units: null }]);
