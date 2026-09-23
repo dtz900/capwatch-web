@@ -143,6 +143,7 @@ export default async function Home({ searchParams }: PageProps) {
       tofHand = await fetchTofHand();
     } catch (err) {
       console.error("tof hand fetch failed:", err);
+      noStore();
     }
   }
 
