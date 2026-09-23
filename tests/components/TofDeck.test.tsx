@@ -41,4 +41,22 @@ describe("TofDeck", () => {
     render(<TofDeck open={[stable]} locked={[]} onPlay={vi.fn()} />);
     expect(screen.getByRole("button", { name: /^fade$/i })).toBeDisabled();
   });
+
+  it("snaps a stable card back after a fade drag past the threshold", async () => {
+    const onPlay = vi.fn().mockResolvedValue(true);
+    const stable: DeckCard = { kind: "stable", id: -555, pick_id: 555, handle: "picksoffice", display_name: null,
+      profile_image_url: null, matchup: "CHC @ MIL", game_start_at: "2099-01-01T00:00:00Z", market_group: "Game Total",
+      tail_label: "Under 8.5", tail_odds: -110, note: "From your stable.", capper_streak: 1, capper_record: null, sport: "MLB" };
+    render(<TofDeck open={[stable]} locked={[]} onPlay={onPlay} />);
+    const face = screen.getByText("Under 8.5");
+    const cardDiv = face.closest('[style*="transform"]') as HTMLElement;
+    expect(cardDiv).toBeTruthy();
+
+    fireEvent.pointerDown(cardDiv, { clientX: 200, pointerId: 1 });
+    fireEvent.pointerMove(cardDiv, { clientX: 0, pointerId: 1 });
+    fireEvent.pointerUp(cardDiv, { clientX: 0, pointerId: 1 });
+
+    await waitFor(() => expect(cardDiv.style.transform).toBe("translateX(0px) rotate(0deg)"));
+    expect(onPlay).not.toHaveBeenCalled();
+  });
 });

@@ -63,7 +63,14 @@ export function TofDeck({
     async (dir: Exclude<Leave, null>) => {
       if (!top || leave || disabled) return;
       const choice: TofChoice = dir === "right" ? "tail" : dir === "left" ? "fade" : "pass";
-      if (choice === "fade" && top.kind === "stable") return;
+      if (choice === "fade" && top.kind === "stable") {
+        // A stable card can't be faded. If this came from a drag past the
+        // threshold, the card is still visually offset; snap it back instead
+        // of leaving it stranded until the next pointer down.
+        setDragging(false);
+        setDx(0);
+        return;
+      }
       setLeave(dir);
       setDragging(false);
       const ok = await onPlay(top, choice);
