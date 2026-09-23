@@ -358,11 +358,13 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   );
 }
 
-/** The game's title: tall condensed caps, set straight, letter-spaced like a scoreboard. */
+/** The game's title: chunky game-show caps, set straight, with a small "or" between the two big words. */
 function TofTitle() {
   return (
-    <h2 className="mb-6 text-center font-[var(--font-display)] text-[56px] leading-none tracking-[0.08em] text-[var(--color-text)] sm:text-[72px]" style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
-      TAIL <span className="text-[var(--color-pos)]">OR</span> FADE
+    <h2 className="mb-6 flex items-baseline justify-center gap-3 font-[var(--font-display)] leading-none text-[var(--color-text)]" style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
+      <span className="text-[52px] tracking-[0.02em] sm:text-[64px]">TAIL</span>
+      <span className="text-[18px] tracking-[0.12em] text-[var(--color-pos)] sm:text-[22px]">OR</span>
+      <span className="text-[52px] tracking-[0.02em] sm:text-[64px]">FADE</span>
     </h2>
   );
 }

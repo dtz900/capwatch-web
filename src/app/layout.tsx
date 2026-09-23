@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope, Cinzel, Bebas_Neue } from "next/font/google";
+import { Manrope, Cinzel, Luckiest_Guy } from "next/font/google";
 import { Suspense } from "react";
 import { AnalyticsWithExclusion } from "@/components/analytics/AnalyticsWithExclusion";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -27,9 +27,9 @@ const cinzel = Cinzel({
   display: "swap",
 });
 
-// Bebas Neue: tall condensed caps for the Tail or Fade title, stamps and
-// numerals. Broadcast scoreboard energy, not editorial.
-const bebas = Bebas_Neue({
+// Luckiest Guy: chunky game-show caps for the Tail or Fade title, stamps
+// and numerals. Fun, not editorial.
+const luckiest = Luckiest_Guy({
   subsets: ["latin"],
   weight: ["400"],
   variable: "--font-display",
@@ -88,7 +88,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${cinzel.variable} ${bebas.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${cinzel.variable} ${luckiest.variable}`}>
       <body>
         <AuthProvider>
           <UsernameClaimProvider>
