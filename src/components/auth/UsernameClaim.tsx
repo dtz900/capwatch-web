@@ -29,21 +29,30 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("claim");
   const resolver = useRef<((ok: boolean) => void) | null>(null);
+  // A second requireUsername() call while the modal is already open (waiting
+  // on the first) reuses this promise instead of overwriting `resolver`,
+  // which would otherwise orphan the first caller's promise forever. Both
+  // callers settle together: true on a successful claim, false on dismiss.
+  const pending = useRef<Promise<boolean> | null>(null);
 
   const settle = useCallback((ok: boolean) => {
     resolver.current?.(ok);
     resolver.current = null;
+    pending.current = null;
     setOpen(false);
   }, []);
 
   const requireUsername = useCallback(async () => {
     if (!session?.user?.id) return false;
     if (profile?.username) return true;
+    if (pending.current) return pending.current;
     setMode("claim");
     setOpen(true);
-    return new Promise<boolean>((resolve) => {
+    const promise = new Promise<boolean>((resolve) => {
       resolver.current = resolve;
     });
+    pending.current = promise;
+    return promise;
   }, [session, profile]);
 
   const openChange = useCallback(() => {
@@ -93,41 +102,48 @@ function UsernameModal({
     [],
   );
   const [value, setValue] = useState("");
-  const [localError, setLocalError] = useState<string | null>(null);
+  // Local validation is a pure function of `value`, so it's derived during
+  // render rather than mirrored into state via an effect.
+  const localCheck = useMemo(() => validateUsername(value), [value]);
+  const localError = value && !localCheck.ok ? localCheck.reason : null;
+  const eligible = Boolean(value) && localCheck.ok && Boolean(supabase);
   const [availability, setAvailability] = useState<Availability>("idle");
+  // Fold stale results back to "idle" without a reset effect: whatever the
+  // last debounced check found, it no longer applies once the field holds
+  // something that isn't currently checkable.
+  const displayAvailability: Availability = eligible ? availability : "idle";
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const nextChange = mode === "change" ? nextUsernameChange(changedAt) : null;
 
   useEffect(() => {
-    const check = validateUsername(value);
-    if (!value) {
-      setLocalError(null);
-      setAvailability("idle");
-      return;
-    }
-    if (!check.ok) {
-      setLocalError(check.reason);
-      setAvailability("idle");
-      return;
-    }
-    setLocalError(null);
-    if (!supabase) return;
-    setAvailability("checking");
-    const id = setTimeout(async () => {
-      const { data, error } = await supabase.rpc("tof_username_available", { candidate: value });
-      if (error) {
-        setAvailability("idle");
-        setServerError("Could not check that name. Try again.");
-        return;
-      }
-      setServerError(null);
-      setAvailability(data ? "available" : "taken");
+    if (!eligible || !supabase) return;
+    const client = supabase;
+    let cancelled = false;
+    // Every setState call below runs inside the timer/async callback, never
+    // synchronously in the effect body, so a debounce restart never forces
+    // an extra render pass on its own.
+    const id = setTimeout(() => {
+      setAvailability("checking");
+      void (async () => {
+        const { data, error } = await client.rpc("tof_username_available", { candidate: value });
+        if (cancelled) return;
+        if (error) {
+          setAvailability("idle");
+          setServerError("Could not check that name. Try again.");
+          return;
+        }
+        setServerError(null);
+        setAvailability(data ? "available" : "taken");
+      })();
     }, 300);
-    return () => clearTimeout(id);
-  }, [value, supabase]);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [eligible, value, supabase]);
 
-  const canClaim = !busy && !localError && availability === "available" && !nextChange;
+  const canClaim = !busy && !localError && displayAvailability === "available" && !nextChange;
 
   async function claim() {
     if (!supabase || !canClaim) return;
@@ -149,12 +165,17 @@ function UsernameModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(10,10,12,0.85)] px-4" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(10,10,12,0.85)] px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Board profile setup"
+    >
       <div className="w-full max-w-[440px] rounded-xl border border-[var(--color-border-h)] bg-gradient-to-b from-[#17171d] to-[#101015] p-7 shadow-2xl">
         <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-pos)]">
           {mode === "change" ? "Account" : "Before your first swipe"}
         </div>
-        <h2 id="username-title" className="mt-1.5 text-[26px] font-extrabold tracking-[-0.03em] leading-none">
+        <h2 className="mt-1.5 text-[26px] font-extrabold tracking-[-0.03em] leading-none">
           {mode === "change" ? "Change your username" : "Pick a username"}
         </h2>
         <p className="mt-2 text-[13px] leading-relaxed text-[#a1a1aa]">
@@ -176,13 +197,13 @@ function UsernameModal({
             onChange={(e) => setValue(e.target.value.trim())}
             className="min-w-0 flex-grow bg-transparent text-[15px] font-bold text-[var(--color-text)] outline-none placeholder:text-[#52525b]"
           />
-          {availability === "available" && (
+          {displayAvailability === "available" && (
             <span className="text-[11px] font-extrabold text-[var(--color-pos)]">AVAILABLE</span>
           )}
-          {availability === "taken" && (
+          {displayAvailability === "taken" && (
             <span className="text-[11px] font-extrabold text-[var(--color-neg)]">TAKEN</span>
           )}
-          {availability === "checking" && (
+          {displayAvailability === "checking" && (
             <span className="text-[11px] font-extrabold text-[var(--color-text-muted)]">CHECKING</span>
           )}
         </div>
