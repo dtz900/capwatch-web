@@ -284,14 +284,23 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               <span className="rounded-full border border-[var(--color-border-h)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[var(--color-text-muted)]">{hand.slate_date}</span>
             </div>
           )}
-          <div className="mt-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-3.5">
-            <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How to play</div>
-            <ul className="mt-2.5 flex flex-col gap-2 text-[13px] font-bold">
-              <li className="flex items-center gap-2.5"><span className="font-[var(--font-lilita)] text-[15px] text-[var(--color-pos)]">→</span>Tail the capper</li>
-              <li className="flex items-center gap-2.5"><span className="font-[var(--font-lilita)] text-[15px] text-[var(--color-neg)]">←</span>Fade the capper</li>
-              <li className="flex items-center gap-2.5"><span className="font-[var(--font-lilita)] text-[15px] text-[var(--color-text-muted)]">↑</span>Pass</li>
-            </ul>
-            <div className="mt-2.5 text-[11px] text-[var(--color-text-muted)]">1u a card. Graded overnight.</div>
+          <div className="mt-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-4">
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">How it works</div>
+            <ol className="mt-3 flex flex-col gap-3">
+              {[
+                ["Swipe", "Right to tail, left to fade, up to pass."],
+                ["Price", "Tails pay the capper's odds. Fades pay the Pinnacle close."],
+                ["Grade", "1u a card. Results land overnight."],
+              ].map(([head, body], i) => (
+                <li key={head} className="flex gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(25,245,124,0.12)] font-[var(--font-lilita)] text-[15px] text-[var(--color-pos)]">{i + 1}</span>
+                  <div>
+                    <div className="text-[13px] font-extrabold">{head}</div>
+                    <div className="text-[12px] leading-snug text-[var(--color-text-soft)]">{body}</div>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
         </aside>
 
