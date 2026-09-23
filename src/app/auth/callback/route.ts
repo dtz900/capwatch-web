@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { errorRedirectTarget } from "./redirects";
 
 const RETURN_COOKIE = "ts_return_to";
 
@@ -18,6 +19,14 @@ const RETURN_COOKIE = "ts_return_to";
  * can diagnose from a silent bounce, so failures now land on /login with a
  * specific message and the option to request a fresh link from this browser.
  */
+/** A failure lands on the page the user left (link flow) or /login. */
+async function errorRedirect(origin: string, message: string): Promise<NextResponse> {
+  const jar = await cookies();
+  const raw = jar.get(RETURN_COOKIE)?.value;
+  if (raw) jar.delete(RETURN_COOKIE);
+  return NextResponse.redirect(errorRedirectTarget(origin, raw, message));
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -27,9 +36,7 @@ export async function GET(request: Request) {
   // Supabase can redirect here with an error instead of a code (expired or
   // already-used link). Surface it.
   if (providerError && !code) {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(providerErrorDesc || providerError)}`,
-    );
+    return errorRedirect(origin, providerErrorDesc || providerError);
   }
 
   if (code) {
@@ -44,12 +51,10 @@ export async function GET(request: Request) {
       const msg = verifierMiss
         ? "That sign-in link has to be opened in the same browser you requested it from. Enter your email here and open the new link right here."
         : `Sign-in failed: ${error.message}`;
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(msg)}`);
+      return errorRedirect(origin, msg);
     }
   } else {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent("That sign-in link is missing its code. Request a new one.")}`,
-    );
+    return errorRedirect(origin, "That sign-in link is missing its code. Request a new one.");
   }
 
   const jar = await cookies();
