@@ -10,3 +10,12 @@ describe("unsubKind", () => {
     expect(unsubKind("tof")).toEqual({ column: "email_tof_deals", heading: "Deal emails", done: "You are unsubscribed from the daily hand email." });
   });
 });
+
+import { unsubPayload } from "./kinds";
+
+describe("unsubPayload", () => {
+  it("signs the user id alone for legacy tail-alert links and user:kind otherwise", () => {
+    expect(unsubPayload("u1", undefined)).toBe("u1");
+    expect(unsubPayload("u1", "tof")).toBe("u1:tof");
+  });
+});

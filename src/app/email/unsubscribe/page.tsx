@@ -2,7 +2,7 @@ import crypto from "crypto";
 import Link from "next/link";
 import { createServiceSupabase } from "@/lib/supabase/service";
 
-import { unsubKind } from "./kinds";
+import { unsubKind, unsubPayload } from "./kinds";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +10,10 @@ export const dynamic = "force-dynamic";
  * stay in sync with the backend's core/email_unsub.py: hex
  * HMAC-SHA256(EMAIL_UNSUB_SECRET, user_id). The service client bypasses
  * RLS, so a verified token is the only thing authorizing the write. */
-function validToken(userId: string, token: string): boolean {
+function validToken(userId: string, token: string, k: string | undefined): boolean {
   const secret = process.env.EMAIL_UNSUB_SECRET;
   if (!secret || !userId || !token) return false;
-  const expected = crypto.createHmac("sha256", secret).update(userId).digest("hex");
+  const expected = crypto.createHmac("sha256", secret).update(unsubPayload(userId, k)).digest("hex");
   const a = Buffer.from(expected, "utf8");
   const b = Buffer.from(token, "utf8");
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -27,7 +27,7 @@ export default async function UnsubscribePage({
   const { u = "", t = "", k } = await searchParams;
   const kind = unsubKind(k);
   let ok = false;
-  if (validToken(u, t)) {
+  if (validToken(u, t, k)) {
     const supabase = createServiceSupabase();
     if (supabase) {
       const { error } = await supabase
