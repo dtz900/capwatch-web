@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
@@ -12,16 +12,7 @@ import { TofBoard } from "@/components/tof/TofBoard";
 
 const RETURN_COOKIE = "ts_return_to";
 
-// Dev-only background candidates for the game band. Click through on localhost; delete once one is chosen.
-const BG_OPTIONS: { name: string; style: CSSProperties }[] = [
-  { name: "page", style: { background: "#0a0a0c" } },
-  { name: "charcoal", style: { background: "#16171c" } },
-  { name: "slate", style: { background: "#121a24" } },
-  { name: "felt", style: { background: "radial-gradient(ellipse 62% 120% at 50% 40%, #12432f 0%, #0c2f22 45%, #071c15 72%, #0a0a0c 100%)" } },
-  { name: "navy", style: { background: "#0d1430" } },
-  { name: "dots", style: { backgroundColor: "#141519", backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)", backgroundSize: "18px 18px" } },
-  { name: "teal", style: { background: "#0a2422" } },
-];
+const FELT = "radial-gradient(ellipse 62% 120% at 50% 40%, #12432f 0%, #0c2f22 45%, #071c15 72%, #0a0a0c 100%)";
 const REFETCH_MS = 60_000;
 
 /* The stable card is the user's own tail, offered alongside the shared hand.
@@ -73,7 +64,6 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [stats, setStats] = useState<TofStats | null>(null);
   const [board, setBoard] = useState<{ rows: TofBoardRow[]; minPlays: number }>({ rows: [], minPlays: 10 });
   const [toast, setToast] = useState<string | null>(null);
-  const [bg, setBg] = useState(3);
   const [now, setNow] = useState(() => new Date());
   // Signed-out passes have nowhere to persist: there is no tof_plays row to
   // write. Without this the deck would re-deal the same top card forever.
@@ -282,16 +272,8 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "no-hand" | "playable" | "spectator" = !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-10 pt-6 sm:pb-12 sm:pt-7" style={BG_OPTIONS[bg].style}>
+    <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-10 pt-6 sm:pb-12 sm:pt-7" style={{ background: FELT }}>
       <TofTitle />
-      {process.env.NODE_ENV === "development" && (
-        <div className="mx-auto mb-4 flex max-w-[1240px] flex-wrap items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em]">
-          <span className="text-[var(--color-text-muted)]">bg</span>
-          {BG_OPTIONS.map((o, i) => (
-            <button key={o.name} type="button" onClick={() => setBg(i)} className={`rounded-full border px-2.5 py-1 ${i === bg ? "border-[var(--color-pos)] text-[var(--color-pos)]" : "border-[var(--color-border-h)] text-[var(--color-text-soft)]"}`}>{o.name}</button>
-          ))}
-        </div>
-      )}
 
       <div className="mx-auto grid max-w-[1240px] grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start">
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
@@ -304,7 +286,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
                 ["Grade", "1u a card. Results land overnight."],
               ].map(([head, body], i) => (
                 <li key={head} className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(25,245,124,0.12)] font-[var(--font-lilita)] text-[15px] text-[var(--color-pos)]">{i + 1}</span>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(25,245,124,0.12)] font-[var(--font-display)] text-[15px] text-[var(--color-pos)]">{i + 1}</span>
                   <div>
                     <div className="text-[13px] font-extrabold">{head}</div>
                     <div className="text-[12px] leading-snug text-[var(--color-text-soft)]">{body}</div>
@@ -333,7 +315,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
         <aside className="order-2 flex flex-col gap-3 lg:order-3">
           {entitlements.isLoggedIn ? (
             <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-3.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-[#2a2a33] font-[var(--font-lilita)] text-[16px] text-[var(--color-pos)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-h)] bg-[#2a2a33] font-[var(--font-display)] text-[16px] text-[var(--color-pos)]">
                 {(profile?.username ?? session?.user?.email ?? "?").charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
@@ -343,8 +325,8 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
             </div>
           ) : (
             <div className="rounded-xl border border-[rgba(25,245,124,0.25)] bg-[rgba(25,245,124,0.05)] px-4 py-4">
-              <div className="font-[var(--font-lilita)] text-[20px] leading-tight">Keep score.</div>
-              <button type="button" onClick={signIn} className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-[var(--color-pos)] font-[var(--font-lilita)] text-[17px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none">
+              <div className="font-[var(--font-display)] text-[20px] leading-tight">Keep score.</div>
+              <button type="button" onClick={signIn} className="mt-3 flex h-11 w-full items-center justify-center rounded-full bg-[var(--color-pos)] font-[var(--font-display)] text-[17px] tracking-[0.06em] text-[#0a0a0c] shadow-[0_4px_0_#0f9a4c] transition-transform active:translate-y-[3px] active:shadow-none">
                 SIGN IN
               </button>
             </div>
@@ -362,7 +344,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               </div>
               <div>
                 <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Streak</div>
-                <div className={`mt-1 font-[var(--font-lilita)] text-[24px] leading-none ${stats.day_streak > 0 ? "text-[var(--color-gold)]" : stats.day_streak < 0 ? "text-[#7dd3fc]" : ""}`}>
+                <div className={`mt-1 font-[var(--font-display)] text-[24px] leading-none ${stats.day_streak > 0 ? "text-[var(--color-gold)]" : stats.day_streak < 0 ? "text-[#7dd3fc]" : ""}`}>
                   {stats.day_streak > 0 ? `W${stats.day_streak}` : stats.day_streak < 0 ? `L${-stats.day_streak}` : "even"}
                 </div>
                 <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">best W{stats.best_day_streak}</div>
@@ -376,7 +358,11 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   );
 }
 
-/** Title parked for now: the arched logo treatment is coming back once the card design settles. */
+/** The game's title: tall condensed caps, set straight, letter-spaced like a scoreboard. */
 function TofTitle() {
-  return <h2 className="sr-only">Tail or Fade</h2>;
+  return (
+    <h2 className="mb-6 text-center font-[var(--font-display)] text-[56px] leading-none tracking-[0.08em] text-[var(--color-text)] sm:text-[72px]" style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
+      TAIL <span className="text-[var(--color-pos)]">OR</span> FADE
+    </h2>
+  );
 }

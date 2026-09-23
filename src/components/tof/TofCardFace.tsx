@@ -83,9 +83,9 @@ export function TofCardFace({
         style={{ background: `radial-gradient(circle at 12% 62%, ${fadeColor}2e 0%, transparent 42%), radial-gradient(circle at 88% 62%, ${tailColor}2e 0%, transparent 42%)` }}
       />
 
-      <div className="pointer-events-none absolute left-5 top-8 z-20 rotate-[-14deg] rounded-lg border-[3px] border-[var(--color-pos)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[var(--color-pos)]" style={{ opacity: stampTail }}>TAIL</div>
-      <div className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 rotate-[-6deg] rounded-lg border-[3px] border-[#a1a1aa] bg-[rgba(10,10,12,0.75)] px-4 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[#d4d4d8]" style={{ opacity: stampPass }}>PASS</div>
-      <div className="pointer-events-none absolute right-5 top-8 z-20 rotate-[14deg] rounded-lg border-[3px] border-[var(--color-neg)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-lilita)] text-[30px] tracking-[0.1em] text-[var(--color-neg)]" style={{ opacity: stampFade }}>FADE</div>
+      <div className="pointer-events-none absolute left-5 top-8 z-20 rotate-[-14deg] rounded-lg border-[3px] border-[var(--color-pos)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-display)] text-[30px] tracking-[0.1em] text-[var(--color-pos)]" style={{ opacity: stampTail }}>TAIL</div>
+      <div className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 rotate-[-6deg] rounded-lg border-[3px] border-[#a1a1aa] bg-[rgba(10,10,12,0.75)] px-4 py-1 font-[var(--font-display)] text-[30px] tracking-[0.1em] text-[#d4d4d8]" style={{ opacity: stampPass }}>PASS</div>
+      <div className="pointer-events-none absolute right-5 top-8 z-20 rotate-[14deg] rounded-lg border-[3px] border-[var(--color-neg)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[var(--font-display)] text-[30px] tracking-[0.1em] text-[var(--color-neg)]" style={{ opacity: stampFade }}>FADE</div>
 
       <div className="relative flex items-center justify-between">
         <span className="flex items-center gap-1.5">
@@ -135,7 +135,7 @@ export function TofCardFace({
           )}
         </div>
         <div className="flex flex-col items-center gap-1">
-          <div className="font-[var(--font-lilita)] text-[26px] leading-none text-[var(--color-text-muted)]">VS</div>
+          <div className="font-[var(--font-display)] text-[26px] leading-none text-[var(--color-text-muted)]">VS</div>
           <div className="text-[9px] font-bold tracking-[0.08em] text-[#52525b]">{card.market_group.toUpperCase()}</div>
         </div>
         <div className="flex flex-col items-center gap-1.5 text-center">

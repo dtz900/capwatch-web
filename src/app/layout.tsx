@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope, Cinzel, Lilita_One } from "next/font/google";
+import { Manrope, Cinzel, Bebas_Neue } from "next/font/google";
 import { Suspense } from "react";
 import { AnalyticsWithExclusion } from "@/components/analytics/AnalyticsWithExclusion";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -27,12 +27,12 @@ const cinzel = Cinzel({
   display: "swap",
 });
 
-// Lilita One: chunky rounded display face for the Tail or Fade game title
-// and its action buttons. Game-show energy, not editorial.
-const lilita = Lilita_One({
+// Bebas Neue: tall condensed caps for the Tail or Fade title, stamps and
+// numerals. Broadcast scoreboard energy, not editorial.
+const bebas = Bebas_Neue({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--font-lilita",
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -88,7 +88,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${cinzel.variable} ${lilita.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${cinzel.variable} ${bebas.variable}`}>
       <body>
         <AuthProvider>
           <UsernameClaimProvider>
