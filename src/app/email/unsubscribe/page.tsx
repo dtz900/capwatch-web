@@ -2,6 +2,8 @@ import crypto from "crypto";
 import Link from "next/link";
 import { createServiceSupabase } from "@/lib/supabase/service";
 
+import { unsubKind } from "./kinds";
+
 export const dynamic = "force-dynamic";
 
 /* Signed one-click unsubscribe for tail email alerts. Token scheme must
@@ -20,16 +22,17 @@ function validToken(userId: string, token: string): boolean {
 export default async function UnsubscribePage({
   searchParams,
 }: {
-  searchParams: Promise<{ u?: string; t?: string }>;
+  searchParams: Promise<{ u?: string; t?: string; k?: string }>;
 }) {
-  const { u = "", t = "" } = await searchParams;
+  const { u = "", t = "", k } = await searchParams;
+  const kind = unsubKind(k);
   let ok = false;
   if (validToken(u, t)) {
     const supabase = createServiceSupabase();
     if (supabase) {
       const { error } = await supabase
         .from("ts_profiles")
-        .update({ email_tail_alerts: false })
+        .update({ [kind.column]: false })
         .eq("user_id", u);
       ok = !error;
     }
@@ -39,12 +42,12 @@ export default async function UnsubscribePage({
     <main className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-6 text-center">
       <div className="w-full rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-8">
         <h1 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-          Tail alerts
+          {kind.heading}
         </h1>
         {ok ? (
           <>
             <p className="mt-3 text-[15px] font-bold text-[var(--color-text)]">
-              You are unsubscribed from tail alerts.
+              {kind.done}
             </p>
             <p className="mt-2 text-xs text-[var(--color-text-muted)]">
               You can turn them back on anytime from your{" "}
