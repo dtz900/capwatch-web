@@ -22,6 +22,13 @@ export function TofBoard({ rows, me, minPlays }: { rows: TofBoardRow[]; me: TofB
         <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Tailers · this month</div>
         <div className="text-[10px] font-bold text-[#52525b]">min {minPlays} plays</div>
       </div>
+      <Link
+        href="/hat"
+        className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#f5c54a] hover:underline"
+      >
+        <span aria-hidden>🧢</span>
+        <span>Winner gets the hat</span>
+      </Link>
       {rows.length === 0 ? (
         <div className="mt-3 text-[12px] text-[var(--color-text-muted)]">Nobody has {minPlays} graded plays yet. Be first.</div>
       ) : (
