@@ -29,11 +29,8 @@ export function StatStrip({ stats }: { stats: Stat[] }) {
   );
 }
 
-export interface DayCount {
-  /** YYYY-MM-DD, oldest first. */
-  date: string;
-  count: number;
-}
+export type { DayCount } from "@/lib/admin/signup-trend";
+import type { DayCount } from "@/lib/admin/signup-trend";
 
 /** Signups per day. Flat when nothing is happening, which is the point: the
  *  shape of the last three weeks is the fastest read on whether a launch or a
