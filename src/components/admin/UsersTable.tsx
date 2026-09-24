@@ -14,13 +14,18 @@ export interface UserRow {
   email: string | null;
   username: string | null;
   tier: string | null;
+  /** ISO, for sorting only. Every date SHOWN is preformatted by the server:
+   *  this component renders on both sides of the wire, and formatting a date
+   *  here would read as UTC on the server and PT in the browser, which is a
+   *  hydration mismatch (React #418, hit in production 2026-09-24). */
   createdAt: string | null;
+  joinedLabel: string | null;
   /** The capper this account verified as, when it claimed one through X. */
   capperHandle: string | null;
   stable: StableRef[];
   slip: { total: number; wins: number; losses: number; pushes: number; pending: number; units: number };
-  lastSlipAt: string | null;
-  tof: { plays: number; wins: number; losses: number; pushes: number; units: number; streak: number; lastPlayed: string | null } | null;
+  lastSlipLabel: string | null;
+  tof: { plays: number; wins: number; losses: number; pushes: number; units: number; streak: number; lastPlayedLabel: string | null } | null;
 }
 
 type SortKey = "joined" | "active" | "stable" | "units";
@@ -31,13 +36,6 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "stable", label: "Biggest stable" },
   { key: "units", label: "Units" },
 ];
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 /* Everything a row has done: tails, logged bets, hands played. One number, so
    the accounts that signed up and never came back sink and the people
@@ -190,7 +188,7 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
                   </span>
 
                   <span className="hidden w-[64px] shrink-0 text-right text-[11px] font-bold tabular-nums text-[var(--color-text-muted)] lg:block">
-                    {fmtDate(u.createdAt)}
+                    {u.joinedLabel ?? ""}
                   </span>
                 </button>
 
@@ -223,7 +221,7 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
                             <dt className="text-[var(--color-text-muted)]">Bet slip</dt>
                             <dd className="tabular-nums">
                               {u.slip.total} logged, {u.slip.pending} pending
-                              {u.lastSlipAt ? `, last ${fmtDate(u.lastSlipAt)}` : ""}
+                              {u.lastSlipLabel ? `, last ${u.lastSlipLabel}` : ""}
                             </dd>
                           </div>
                           {u.tof && u.tof.plays > 0 && (
@@ -231,13 +229,13 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
                               <dt className="text-[var(--color-text-muted)]">Tail or Fade</dt>
                               <dd className="tabular-nums">
                                 {u.tof.plays} played, {u.tof.streak} day streak
-                                {u.tof.lastPlayed ? `, last ${fmtDate(u.tof.lastPlayed)}` : ""}
+                                {u.tof.lastPlayedLabel ? `, last ${u.tof.lastPlayedLabel}` : ""}
                               </dd>
                             </div>
                           )}
                           <div className="flex gap-2">
                             <dt className="text-[var(--color-text-muted)]">Joined</dt>
-                            <dd className="tabular-nums">{u.createdAt ? fmtDate(u.createdAt) : "no roster row"}</dd>
+                            <dd className="tabular-nums">{u.joinedLabel ?? "no roster row"}</dd>
                           </div>
                           <div className="flex gap-2">
                             <dt className="text-[var(--color-text-muted)]">Id</dt>
