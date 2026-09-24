@@ -55,10 +55,15 @@ export default function Hat() {
         <h2 className="text-[20px] font-bold mt-9 mb-3">How to win it</h2>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Play the daily hand. You are shown real picks from tracked cappers with the capper hidden,
-          and you call each one tail or fade. Your calls are graded against the actual result at the
-          odds and stake the capper posted, the same way every capper on the leaderboard is graded.
+          and you call each one tail or fade. Your calls are graded against the actual result once
+          the games land.
         </p>
         <ul className="mb-4 list-disc pl-5">
+          <Rule>
+            Every card is worth <strong className="text-[var(--color-text)]">one unit</strong>. A
+            tail scores at the odds the capper posted. A fade scores at the Pinnacle close, which is
+            the market price on the side you took instead.
+          </Rule>
           <Rule>
             You need at least <strong className="text-[var(--color-text)]">10 graded plays</strong>{" "}
             inside the calendar month to appear on the board at all.
@@ -103,11 +108,13 @@ export default function Hat() {
             within three days of the month closing, and message the winning account.
           </Rule>
           <Rule>
-            To claim, verify your X account on your{" "}
+            To claim, confirm the account is yours and send us a shipping address within 14 days.
+            Usually that means verifying your X account on your{" "}
             <Link href="/account" className="underline hover:text-[var(--color-text)]">
               account page
-            </Link>{" "}
-            and send us a shipping address within 14 days.
+            </Link>
+            . If that option is not available to you, reply to us and we will confirm you another
+            way.
           </Rule>
           <Rule>Unclaimed after 14 days, the hat moves to the next player down.</Rule>
         </ul>
@@ -121,7 +128,7 @@ export default function Hat() {
           <Rule>One hat per person per month, and one account per person.</Rule>
           <Rule>
             Extra accounts made to farm the board are disqualified, along with the person running
-            them. X verification at claim time is how we check.
+            them. Confirming the winning account at claim time is how we check.
           </Rule>
           <Rule>TailSlips employees and the people who build it are not eligible.</Rule>
           <Rule>
