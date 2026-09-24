@@ -3,7 +3,8 @@ import { fetchPickOutcomes } from "@/lib/api";
 import { slipProfit } from "@/lib/betslip";
 import { MARKET_LABELS } from "@/lib/edges";
 import { UsersTable, type UserRow } from "@/components/admin/UsersTable";
-import { StatStrip, SignupTrend, type DayCount } from "@/components/admin/UsersOverview";
+import { StatStrip, SignupTrend } from "@/components/admin/UsersOverview";
+import { buildTrend, dayLabel, ptDayKey } from "@/lib/admin/signup-trend";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Users | TailSlips Admin" };
@@ -51,52 +52,6 @@ interface TofStatRow {
 }
 
 const TREND_DAYS = 21;
-const TZ = "America/Los_Angeles";
-
-/* Every date on this page is resolved in Pacific here on the server, never in
-   the browser. The list is a client component that also renders on the
-   server, so a date formatted inside it would say UTC on one side and the
-   viewer's zone on the other: a hydration mismatch (React #418, hit in
-   production 2026-09-24). Pacific rather than the server's own clock so
-   "today" means today where David is, whatever region ran the render. */
-function dayKey(d: Date): string {
-  // en-CA gives YYYY-MM-DD, which sorts and keys correctly.
-  return d.toLocaleDateString("en-CA", { timeZone: TZ });
-}
-
-function dayLabel(iso: string | null): string | null {
-  if (!iso) return null;
-  // A date-only column (tof_tailer_stats.last_played_date) is already a
-  // calendar day. Parsing it as a Date would read midnight UTC and shift it a
-  // day back in Pacific, so it is formatted from its own parts.
-  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  const d = dateOnly
-    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]), 12)
-    : new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("en-US", {
-    ...(dateOnly ? {} : { timeZone: TZ }),
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function signupDays(profiles: ProfileRow[]): DayCount[] {
-  const counts = new Map<string, number>();
-  for (const p of profiles) {
-    const k = dayKey(new Date(p.created_at));
-    counts.set(k, (counts.get(k) ?? 0) + 1);
-  }
-  const out: DayCount[] = [];
-  const cursor = new Date();
-  cursor.setDate(cursor.getDate() - (TREND_DAYS - 1));
-  for (let i = 0; i < TREND_DAYS; i++) {
-    const k = dayKey(cursor);
-    out.push({ date: k, count: counts.get(k) ?? 0 });
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return out;
-}
 
 export default async function AdminUsersPage() {
   const db = createServiceSupabase();
@@ -227,7 +182,8 @@ export default async function AdminUsersPage() {
   // newest unexplained activity.
   rows.sort((a, b) => (b.createdAt ?? "9999").localeCompare(a.createdAt ?? "9999"));
 
-  const days = signupDays(profiles);
+  const todayKey = ptDayKey(new Date());
+  const days = buildTrend(profiles.map((p) => p.created_at), todayKey, TREND_DAYS);
   const newThisWeek = days.slice(-7).reduce((n, d) => n + d.count, 0);
   const joinedToday = days[days.length - 1]?.count ?? 0;
   const withUsername = rows.filter((u) => u.username).length;
