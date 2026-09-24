@@ -1,23 +1,25 @@
 import { createServiceSupabase } from "@/lib/supabase/service";
 import { fetchPickOutcomes } from "@/lib/api";
 import { slipProfit } from "@/lib/betslip";
-import { formatUnits } from "@/lib/formatters";
 import { MARKET_LABELS } from "@/lib/edges";
+import { UsersTable, type UserRow } from "@/components/admin/UsersTable";
+import { StatStrip, SignupTrend, type DayCount } from "@/components/admin/UsersOverview";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Users | TailSlips Admin" };
 
-/* Admin roster: every TailSlips user with their stable (whole-capper and
-   market-scoped tails) and bet slip record. Service-role reads because
-   all three tables are owner-scoped by RLS. Users are unioned from
-   ts_profiles + follows + slips so activity from a user whose roster row
-   was cleaned (recreated on their next visit) still shows. */
+/* Admin roster: every TailSlips account with what it has actually done.
+   Service-role reads because ts_profiles, capper_follows, user_bet_slips and
+   tof_tailer_stats are all owner-scoped by RLS. Users are unioned from
+   profiles + follows + slips so activity from a user whose roster row was
+   cleaned (recreated on their next visit) still shows. */
 
 interface ProfileRow {
   user_id: string;
   email: string | null;
   tier: string;
   created_at: string;
+  username: string | null;
 }
 
 interface FollowRow {
@@ -37,20 +39,40 @@ interface SlipRow {
   created_at: string;
 }
 
-interface UserView {
-  profile: ProfileRow | null;
-  userId: string;
-  whole: { handle: string; name: string | null }[];
-  scoped: { handle: string; name: string | null; markets: string[] }[];
-  slip: { total: number; wins: number; losses: number; pushes: number; pending: number; units: number };
-  lastSlipAt: string | null;
+interface TofStatRow {
+  user_id: string;
+  plays: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  units: number;
+  day_streak: number;
+  last_played_date: string | null;
 }
 
-function fmtDate(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const TREND_DAYS = 21;
+
+/** Local-date key, so "today" on this page means today where David is, not
+ *  wherever the row's UTC timestamp happens to land. */
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function signupDays(profiles: ProfileRow[]): DayCount[] {
+  const counts = new Map<string, number>();
+  for (const p of profiles) {
+    const k = dayKey(new Date(p.created_at));
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  const out: DayCount[] = [];
+  const cursor = new Date();
+  cursor.setDate(cursor.getDate() - (TREND_DAYS - 1));
+  for (let i = 0; i < TREND_DAYS; i++) {
+    const k = dayKey(cursor);
+    out.push({ date: k, count: counts.get(k) ?? 0 });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
 }
 
 export default async function AdminUsersPage() {
@@ -63,14 +85,22 @@ export default async function AdminUsersPage() {
     );
   }
 
-  const [profilesRes, followsRes, slipsRes] = await Promise.all([
-    db.from("ts_profiles").select("user_id, email, tier, created_at").order("created_at", { ascending: false }),
+  const [profilesRes, followsRes, slipsRes, tofRes, claimedRes] = await Promise.all([
+    db.from("ts_profiles").select("user_id, email, tier, created_at, username").order("created_at", { ascending: false }),
     db.from("capper_follows").select("user_id, capper_id, market"),
     db.from("user_bet_slips").select("user_id, pick_id, parlay_id, stake, odds, selection, capper_handle, created_at"),
+    db
+      .from("tof_tailer_stats")
+      .select("user_id, plays, wins, losses, pushes, units, day_streak, last_played_date")
+      .eq("time_window", "season"),
+    db.from("cappers").select("handle, claimed_by_user_id").not("claimed_by_user_id", "is", null),
   ]);
+
   const profiles = (profilesRes.data ?? []) as ProfileRow[];
   const follows = (followsRes.data ?? []) as FollowRow[];
   const slips = (slipsRes.data ?? []) as SlipRow[];
+  const tofStats = (tofRes.data ?? []) as TofStatRow[];
+  const claimed = (claimedRes.data ?? []) as { handle: string; claimed_by_user_id: string }[];
 
   const capperIds = [...new Set(follows.map((f) => f.capper_id))];
   const cappersById = new Map<number, { handle: string; display_name: string | null }>();
@@ -100,8 +130,10 @@ export default async function AdminUsersPage() {
     ]),
   ];
   const profileById = new Map(profiles.map((p) => [p.user_id, p]));
+  const tofByUser = new Map(tofStats.map((t) => [t.user_id, t]));
+  const capperByUser = new Map(claimed.map((c) => [c.claimed_by_user_id, c.handle]));
 
-  const users: UserView[] = userIds.map((userId) => {
+  const rows: UserRow[] = userIds.map((userId) => {
     const mine = follows.filter((f) => f.user_id === userId);
     const wholeIds = new Set(mine.filter((f) => f.market === "all").map((f) => f.capper_id));
     const scopedByCapper = new Map<number, string[]>();
@@ -109,10 +141,7 @@ export default async function AdminUsersPage() {
       if (f.market === "all" || wholeIds.has(f.capper_id)) continue;
       scopedByCapper.set(f.capper_id, [...(scopedByCapper.get(f.capper_id) ?? []), f.market]);
     }
-    const capperRef = (id: number) => {
-      const c = cappersById.get(id);
-      return { handle: c?.handle ?? `#${id}`, name: c?.display_name ?? null };
-    };
+    const handleOf = (id: number) => cappersById.get(id)?.handle ?? `#${id}`;
 
     const myslips = slips.filter((s) => s.user_id === userId);
     const slip = { total: myslips.length, wins: 0, losses: 0, pushes: 0, pending: 0, units: 0 };
@@ -125,8 +154,7 @@ export default async function AdminUsersPage() {
           : s.parlay_id != null
             ? outcomes.parlays[s.parlay_id] ?? null
             : null;
-      const outcome =
-        graded?.outcome ?? (s.pick_id == null && s.parlay_id == null ? "V" : null);
+      const outcome = graded?.outcome ?? (s.pick_id == null && s.parlay_id == null ? "V" : null);
       if (outcome === null) {
         slip.pending += 1;
         continue;
@@ -138,117 +166,83 @@ export default async function AdminUsersPage() {
       slip.units += slipProfit(outcome, s.stake, s.odds ?? graded?.market_odds ?? null) ?? 0;
     }
 
+    const profile = profileById.get(userId) ?? null;
+    const t = tofByUser.get(userId) ?? null;
+
     return {
-      profile: profileById.get(userId) ?? null,
       userId,
-      whole: [...wholeIds].map(capperRef),
-      scoped: [...scopedByCapper.entries()].map(([id, markets]) => ({ ...capperRef(id), markets })),
+      email: profile?.email ?? null,
+      username: profile?.username ?? null,
+      tier: profile?.tier ?? null,
+      createdAt: profile?.created_at ?? null,
+      capperHandle: capperByUser.get(userId) ?? null,
+      stable: [
+        ...[...wholeIds].map((id) => ({ handle: handleOf(id), markets: null })),
+        ...[...scopedByCapper.entries()].map(([id, markets]) => ({
+          handle: handleOf(id),
+          markets: markets.map((m) => MARKET_LABELS[m] ?? m),
+        })),
+      ],
       slip,
       lastSlipAt,
+      tof: t
+        ? {
+            plays: t.plays,
+            wins: t.wins,
+            losses: t.losses,
+            pushes: t.pushes,
+            units: Number(t.units ?? 0),
+            streak: t.day_streak,
+            lastPlayed: t.last_played_date,
+          }
+        : null,
     };
   });
 
-  // Most recently joined first; roster-pending rows (no profile) on top
-  // since they represent the newest unexplained activity.
-  users.sort((a, b) => (b.profile?.created_at ?? "9999") .localeCompare(a.profile?.created_at ?? "9999"));
+  // Newest first; roster-pending rows (no profile) on top since they are the
+  // newest unexplained activity.
+  rows.sort((a, b) => (b.createdAt ?? "9999").localeCompare(a.createdAt ?? "9999"));
+
+  const days = signupDays(profiles);
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const newThisWeek = profiles.filter((p) => new Date(p.created_at) >= weekAgo).length;
+  const joinedToday = days[days.length - 1]?.count ?? 0;
+  const withUsername = rows.filter((u) => u.username).length;
+  const verified = rows.filter((u) => u.capperHandle).length;
+  const withStable = rows.filter((u) => u.stable.length > 0).length;
+  const withSlip = rows.filter((u) => u.slip.total > 0).length;
+  const playedTof = rows.filter((u) => (u.tof?.plays ?? 0) > 0).length;
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-bold text-[var(--color-text)]">Users</h1>
-        <span className="text-xs text-[var(--color-text-muted)]">
-          {users.length} user{users.length === 1 ? "" : "s"}
-        </span>
+    <main className="mx-auto max-w-[1080px] px-7 pb-16">
+      <header className="pb-5 pt-10">
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.20em] text-[var(--color-text-muted)]">
+          Admin · users
+        </div>
+        <h1 className="text-[32px] font-extrabold leading-none tracking-[-0.02em]">Roster</h1>
+        <p className="mt-2 text-[13px] font-medium text-[var(--color-text-soft)]">
+          Every account and what it has actually done. Sorted newest first; switch to{" "}
+          <strong>most active</strong> to put the people using the site on top.
+        </p>
+      </header>
+
+      <div className="grid gap-3 lg:grid-cols-[1fr_360px]">
+        <StatStrip
+          stats={[
+            { label: "Accounts", value: rows.length, note: `${joinedToday} today` },
+            { label: "New · 7d", value: newThisWeek },
+            { label: "Username", value: withUsername },
+            { label: "Verified", value: verified },
+            { label: "Has stable", value: withStable },
+            { label: "Played ToF", value: playedTof, note: `${withSlip} logged a bet` },
+          ]}
+        />
+        <SignupTrend days={days} />
       </div>
 
-      <div className="mt-4 space-y-4">
-        {users.length === 0 && (
-          <p className="text-sm text-[var(--color-text-muted)]">No users yet.</p>
-        )}
-        {users.map((u) => (
-          <div
-            key={u.userId}
-            className="rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-4"
-          >
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="text-[15px] font-bold text-[var(--color-text)]">
-                {u.profile?.email ?? "(no email on file)"}
-              </span>
-              {u.profile?.tier === "vip" && (
-                <span className="rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-gold)] border border-[var(--color-gold)]">
-                  VIP
-                </span>
-              )}
-              {!u.profile && (
-                <span className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] border border-[var(--color-border)]">
-                  roster row pending
-                </span>
-              )}
-              <span className="ml-auto text-xs text-[var(--color-text-muted)]">
-                {u.profile ? `joined ${fmtDate(u.profile.created_at)}` : ""}
-              </span>
-            </div>
-            <div className="mt-1 font-mono text-[10px] text-[var(--color-text-muted)]">{u.userId}</div>
-
-            <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-                  Stable
-                </div>
-                {u.whole.length === 0 && u.scoped.length === 0 ? (
-                  <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">No tails.</p>
-                ) : (
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {u.whole.map((c) => (
-                      <span
-                        key={`w-${c.handle}`}
-                        className="rounded-md bg-[rgba(47,217,192,0.10)] px-2 py-1 text-xs font-semibold text-[#2fd9c0]"
-                      >
-                        @{c.handle}
-                      </span>
-                    ))}
-                    {u.scoped.map((c) => (
-                      <span
-                        key={`s-${c.handle}`}
-                        className="rounded-md bg-[rgba(202,164,90,0.10)] px-2 py-1 text-xs font-semibold text-[var(--color-gold)]"
-                        title="Market-scoped tail"
-                      >
-                        @{c.handle} · {c.markets.map((m) => MARKET_LABELS[m] ?? m).join(", ")}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-                  Bet Slip
-                </div>
-                {u.slip.total === 0 ? (
-                  <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">No bets logged.</p>
-                ) : (
-                  <div className="mt-1.5 flex items-baseline gap-3 tabular-nums">
-                    <span className="text-sm font-extrabold text-[var(--color-text)]">
-                      {u.slip.wins}-{u.slip.losses}
-                      {u.slip.pushes > 0 ? `-${u.slip.pushes}` : ""}
-                    </span>
-                    <span
-                      className={`text-sm font-extrabold ${
-                        u.slip.units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"
-                      }`}
-                    >
-                      {formatUnits(u.slip.units)}u
-                    </span>
-                    <span className="text-xs text-[var(--color-text-muted)]">
-                      {u.slip.total} logged · {u.slip.pending} pending
-                      {u.lastSlipAt ? ` · last ${fmtDate(u.lastSlipAt)}` : ""}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="mt-6">
+        <UsersTable rows={rows} />
       </div>
     </main>
   );
