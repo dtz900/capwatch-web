@@ -23,6 +23,10 @@ interface AuthState {
   session: Session | null;
   profile: TsProfile | null;
   entitlements: Entitlements;
+  /** False until the first getSession() lands. `session` is null before that
+   *  whether or not anyone is signed in, so any decision that turns on being
+   *  SIGNED OUT has to wait for this or it will fire for everybody. */
+  authReady: boolean;
   /** The capper this account owns, once tof_claim_x_identity() says verified. */
   capper: VerifiedCapper | null;
   claimStatus: ClaimStatus;
@@ -39,6 +43,7 @@ const AuthContext = createContext<AuthState>({
   session: null,
   profile: null,
   entitlements: { isLoggedIn: false, isVip: false },
+  authReady: false,
   capper: null,
   claimStatus: "idle",
   suggestedUsername: null,
@@ -55,6 +60,7 @@ const LINK_RETURN_COOKIE = "ts_link_return";
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<TsProfile | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const enabled =
     vipEnabled() &&
     !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -63,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setSessionChecked(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, [supabase]);
@@ -167,10 +173,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [supabase],
   );
 
+  // No client configured means nobody can be signed in, so the answer is
+  // already final; otherwise it waits for the first getSession().
+  const authReady = supabase ? sessionChecked : true;
+
   const value: AuthState = {
     session,
     profile,
     entitlements: resolveEntitlements(session, profile),
+    authReady,
     capper:
       claimResult?.status === "verified"
         ? { id: claimResult.capper_id, handle: claimResult.handle, avatar_url: claimResult.avatar_url }

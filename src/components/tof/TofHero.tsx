@@ -14,6 +14,8 @@ import { TofBoard } from "@/components/tof/TofBoard";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
+import { peekAnonId } from "@/lib/tof/anon";
+import { shouldLandOpen } from "@/lib/tof/first-visit";
 
 const RETURN_COOKIE = "ts_return_to";
 
@@ -87,7 +89,7 @@ const NO_HAND_COPY: Record<string, string> = {
 
 export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const router = useRouter();
-  const { session, profile, entitlements, capper } = useAuth();
+  const { session, profile, entitlements, capper, authReady } = useAuth();
   const { requireUsername } = useUsernameClaim();
   const userId = session?.user?.id ?? null;
   const supabase = useMemo(
@@ -148,6 +150,31 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     setSettled(false);
     setUnfolded((u) => !u);
   }, []);
+  // First visit lands OPEN. The fold exists so the page is not a game you
+  // have already played, and that reasoning does not apply to someone who has
+  // never played: arriving from a post that says "swipe right to tail" and
+  // finding a collapsed title with the leaderboard underneath is a dead end.
+  // So exactly once, for a signed-out browser that has never swiped a card,
+  // the table slides itself open (which also plays the deck nudge). Everyone
+  // else still lands folded, as before. Waits for authReady because a signed-
+  // in user reads as signed out until the first getSession() lands.
+  const autoOpenDecided = useRef(false);
+  useEffect(() => {
+    if (autoOpenDecided.current || !authReady || !slateDate) return;
+    autoOpenDecided.current = true;
+    const open = shouldLandOpen({
+      authReady,
+      isLoggedIn,
+      slateDate,
+      hasSwipedBefore: peekAnonId() !== null,
+      guestChoiceCount: readGuestChoices(slateDate).size,
+    });
+    if (!open) return;
+    // Derived-state open on first paint (same pattern as the guest-choice
+    // reset above): the server renders folded, so this cannot run in render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setUnfolded(true);
+  }, [authReady, isLoggedIn, slateDate]);
 
   const hand = data?.hand ?? null;
   const handId = hand?.hand_id ?? null;
