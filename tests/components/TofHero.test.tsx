@@ -269,15 +269,32 @@ describe("TofHero", () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it("keeps the stash when the username prompt is dismissed, so the swipes are not lost", async () => {
+  /* Was: the prompt ran first and a dismissal kept the stash instead of
+     writing. In practice the stash is keyed to a slate date, so "kept" meant
+     lost as soon as the day rolled: prosportshq00 swiped two tails as a guest
+     on 2026-09-24, signed up two minutes later, dismissed the modal, and
+     ended the day with zero plays. The picks are the user's intent; a
+     username is only how they appear on the board. */
+  it("writes the swipes even when the username prompt is dismissed", async () => {
     insert.mockResolvedValue({ error: null });
     claim.requireUsername.mockResolvedValueOnce(false);
     localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-22", choices: [[1, "tail"]] }));
     mockAuth.current = SIGNED_IN;
     render(<TofHero initial={HAND} />);
+    await waitFor(() => expect(insert).toHaveBeenCalled());
+    expect(insert).toHaveBeenCalledWith("tof_plays", expect.objectContaining({ card_id: 1, choice: "tail" }));
+    await waitFor(() => expect(localStorage.getItem("ts:tof:guest")).toBeNull());
+  });
+
+  it("asks for a username only after the swipes are written", async () => {
+    const order: string[] = [];
+    insert.mockImplementation(async () => { order.push("insert"); return { error: null }; });
+    claim.requireUsername.mockImplementation(async () => { order.push("username"); return true; });
+    localStorage.setItem("ts:tof:guest", JSON.stringify({ slateDate: "2026-09-22", choices: [[1, "tail"]] }));
+    mockAuth.current = SIGNED_IN;
+    render(<TofHero initial={HAND} />);
     await waitFor(() => expect(claim.requireUsername).toHaveBeenCalled());
-    expect(insert).not.toHaveBeenCalled();
-    expect(localStorage.getItem("ts:tof:guest")).not.toBeNull();
+    expect(order).toEqual(["insert", "username"]);
   });
 
   it("shows graded results on the summary and reads stats from time_window", async () => {
