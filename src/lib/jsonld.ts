@@ -121,7 +121,7 @@ export function parlayPalaceArticleNode(entry: PalaceEntry): JsonLdNode {
     "@context": "https://schema.org",
     "@type": "Article",
     "@id": `${url}#article`,
-    headline: entry.title ?? "Winning MLB parlay",
+    headline: entry.title ?? "Winning parlay",
     description: entry.recap_blurb ?? undefined,
     url,
     datePublished: entry.published_at ?? undefined,

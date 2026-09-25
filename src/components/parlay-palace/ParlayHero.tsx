@@ -1,6 +1,7 @@
 import type { PalaceEntry } from "@/lib/types";
 import { formatUnits2 } from "@/lib/formatters";
 import { CapperAvatar } from "./CapperAvatar";
+import { SportBadge } from "./SportBadge";
 
 // Card "art": full-bleed hero with a cinematic bottom scrim so the foil
 // numeral never fights the subject. Gold-foil treatment, no neon.
@@ -37,11 +38,14 @@ export function ParlayHero({ entry }: { entry: PalaceEntry }) {
           Parlay Palace
         </div>
         <div className="mt-1 h-px w-9 bg-[#caa45a]" />
-        {entry.slate_date && (
-          <div className="mt-1.5 text-[10px] uppercase tracking-[0.2em] text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
-            {entry.slate_date}
-          </div>
-        )}
+        <div className="mt-1.5 flex items-center gap-1.5">
+          {entry.slate_date && (
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+              {entry.slate_date}
+            </div>
+          )}
+          <SportBadge sport={entry.sport} />
+        </div>
       </div>
 
       {/* name plate */}
