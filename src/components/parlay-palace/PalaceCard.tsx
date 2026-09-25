@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { PalaceEntry } from "@/lib/types";
 import { formatUnits2 } from "@/lib/formatters";
 import { CapperAvatar } from "./CapperAvatar";
+import { SportBadge } from "./SportBadge";
 
 const FRAME_GRADIENT =
   "linear-gradient(135deg,#caa45a 0%,#f3e3b3 22%,#9c7a36 46%,#e9cf93 68%,#8a6e3a 100%)";
@@ -82,8 +83,11 @@ export function PalaceCard({ entry }: { entry: PalaceEntry }) {
             />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-bold text-white truncate">
-              @{entry.capper_handle ?? "unknown"}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="text-[13px] font-bold text-white truncate">
+                @{entry.capper_handle ?? "unknown"}
+              </div>
+              <SportBadge sport={entry.sport} />
             </div>
             <div className="text-[11px] text-[rgba(255,255,255,0.42)] mt-0.5 truncate">
               {[

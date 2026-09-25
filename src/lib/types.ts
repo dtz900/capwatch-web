@@ -406,6 +406,9 @@ export interface PalaceBody {
   hero: { kind: "photo" | "clip" | "headshot"; url: string } | null;
   hero_kind: "photo" | "clip" | "headshot" | null;
   media_attribution: string;
+  /** "MLB" | "NFL". Optional for bodies enriched before the palace gained a
+   *  second sport; those are MLB. */
+  sport?: string | null;
   capper_handle: string | null;
   capper_display_name: string | null;
   capper_image_url: string | null;
@@ -424,6 +427,9 @@ export interface PalaceEntry {
   hero_url: string | null;
   body: PalaceBody | null;
   published_at: string | null;
+  /** "MLB" | "NFL". The API defaults entries stored before the palace gained
+   *  a second sport to "MLB". */
+  sport?: string | null;
 }
 
 export interface PalaceCandidate {
@@ -434,6 +440,8 @@ export interface PalaceCandidate {
   profit_units: number;
   leg_count: number;
   graded_at: string | null;
+  /** Which sport's legs the palace will enrich this parlay against. */
+  sport?: string | null;
   status: "candidate" | "draft" | "published";
 }
 
