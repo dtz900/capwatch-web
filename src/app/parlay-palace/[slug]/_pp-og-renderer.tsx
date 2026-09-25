@@ -6,7 +6,7 @@ import { formatUnits2 } from "@/lib/formatters";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "Winning MLB parlay on TailSlips";
+export const alt = "Winning parlay on TailSlips";
 
 // Palette mirrors the live Parlay Palace card. Gold-foil hall-of-fame, no neon.
 const BG = "#0b0d11";

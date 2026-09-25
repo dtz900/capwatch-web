@@ -15,13 +15,13 @@ export const revalidate = 60;
 export const maxDuration = 30;
 
 export const metadata: Metadata = {
-  title: "Parlay Palace · Biggest winning MLB parlays | TailSlips",
+  title: "Parlay Palace · Biggest winning MLB and NFL parlays | TailSlips",
   description:
-    "Every big winning MLB parlay tracked on TailSlips. Real cappers, real receipts, graded against final outcomes.",
+    "Every big winning MLB and NFL parlay tracked on TailSlips. Real cappers, real receipts, graded against final outcomes.",
   alternates: { canonical: "/parlay-palace" },
   openGraph: {
     title: "Parlay Palace | TailSlips",
-    description: "The biggest winning MLB parlays, graded and verified.",
+    description: "The biggest winning MLB and NFL parlays, graded and verified.",
     url: "/parlay-palace",
     type: "website",
     siteName: SITE_NAME,
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Parlay Palace | TailSlips",
-    description: "The biggest winning MLB parlays, graded and verified.",
+    description: "The biggest winning MLB and NFL parlays, graded and verified.",
     site: "@FadeAI_",
   },
 };
@@ -106,7 +106,7 @@ export default async function ParlayPalacePage({ searchParams }: PageProps) {
         <PalaceTitle
           kicker="TailSlips"
           title="Parlay Palace"
-          description="The biggest winning MLB parlays tracked on TailSlips. Every leg graded against final box scores."
+          description="The biggest winning MLB and NFL parlays tracked on TailSlips. Every leg graded against final box scores."
         />
         <div className="flex items-center justify-center gap-7 mb-8 text-[11px] uppercase tracking-[0.22em] font-extrabold">
           <SortTab
