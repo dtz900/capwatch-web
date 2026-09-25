@@ -23,6 +23,20 @@ interface PageProps {
 }
 
 const PALACE_OG_CARD_VERSION = "6";
+// Per-entry version bumps. X caches a card by page URL, so an entry whose art
+// changed after it was shared needs a new ?v= to get re-crawled. Old links
+// still work: any other ?v= redirects to the current one.
+const PALACE_OG_VERSION_BY_SLUG: Record<string, string> = {
+  // 2026-09-25: hero swapped from a stale Steelers photo of Jonnu Smith to an
+  // in-game ATL at GB photo.
+  "lottolocks-6leg-nfl-2026-09-24-103484": "7",
+};
+
+function palaceOgVersion(slug: string): string {
+  return STATIC_PALACE_OG[slug]?.version
+    ?? PALACE_OG_VERSION_BY_SLUG[slug]
+    ?? PALACE_OG_CARD_VERSION;
+}
 const STATIC_PALACE_OG: Record<string, { version: string; image: string }> = {
   "moneyplayzz-3leg-2026-04-03-5617": {
     version: "5",
@@ -39,7 +53,7 @@ export async function generateMetadata(
     if (!entry) return { title: "Parlay Palace | TailSlips" };
     const staticOg = STATIC_PALACE_OG[slug];
     const ogQs = new URLSearchParams();
-    ogQs.set("v", staticOg?.version ?? PALACE_OG_CARD_VERSION);
+    ogQs.set("v", palaceOgVersion(slug));
     if (entry.published_at) ogQs.set("t", String(Date.parse(entry.published_at) || 0));
     if (entry.units_profit != null) ogQs.set("p", String(Math.round(entry.units_profit * 100)));
     if (entry.combined_odds != null) ogQs.set("o", String(entry.combined_odds));
@@ -100,7 +114,7 @@ function palaceEntryHash(entry: Awaited<ReturnType<typeof fetchPalaceEntry>>): s
 export default async function PalaceDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const sp = searchParams ? await searchParams : {};
-  const palaceVersion = STATIC_PALACE_OG[slug]?.version ?? PALACE_OG_CARD_VERSION;
+  const palaceVersion = palaceOgVersion(slug);
   if (sp.v !== palaceVersion) redirect(`/parlay-palace/${slug}?v=${palaceVersion}`);
 
   let entry;
