@@ -27,7 +27,18 @@ const update = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/client", () => ({
   createBrowserSupabase: () => ({
     rpc,
-    from: () => ({ update: (patch: { username: string }) => ({ eq: () => update(patch) }) }),
+    // update().eq().select(): the claim reads back the rows it wrote. A test
+    // result without `data` means "one row written"; pass data: [] for none.
+    from: () => ({
+      update: (patch: { username: string }) => ({
+        eq: () => ({
+          select: async () => {
+            const r = (await update(patch)) as { data?: unknown[]; error: unknown } | undefined;
+            return { data: [{ user_id: "u1" }], ...r };
+          },
+        }),
+      }),
+    }),
   }),
 }));
 
@@ -271,6 +282,50 @@ describe("UsernameClaim", () => {
     render(<UsernameClaimProvider><div>page</div></UsernameClaimProvider>);
     await act(async () => {});
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    vi.unstubAllEnvs();
+  });
+
+  /* Codex on #154: a first login's profile is synthetic until the roster row
+     is inserted, and a filtered update against a missing row returns no error
+     and writes nothing. That must not count as a claim. */
+  it("treats an update that matched no row as a failed claim", async () => {
+    stubSupabaseEnv();
+    rpc.mockResolvedValue({ data: true, error: null });
+    update.mockResolvedValue({ data: [], error: null });
+    const refreshProfile = vi.fn().mockResolvedValue(undefined);
+    const done = vi.fn();
+    mockAuth.current = signedInNoName(refreshProfile);
+    render(<UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>);
+    fireEvent.click(screen.getByText("play"));
+    const input = await screen.findByLabelText("Username");
+    await act(async () => { fireEvent.change(input, { target: { value: "dt_fades" } }); });
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    fireEvent.click(await screen.findByRole("button", { name: /claim/i }));
+
+    expect(await screen.findByText(/still being set up/i)).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(refreshProfile).not.toHaveBeenCalled();
+    expect(done).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  /* Codex on #154: the provider outlives client navigation, so an exempt
+     route has to close a forced claim that is already open, not just avoid
+     opening a new one. */
+  it("closes an open forced claim when the visitor navigates to an exempt route", async () => {
+    stubSupabaseEnv();
+    const done = vi.fn();
+    mockAuth.current = signedInNoName();
+    const tree = () => <UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>;
+    const { rerender } = render(tree());
+    fireEvent.click(screen.getByText("play"));
+    await screen.findByRole("dialog", { name: "Pick a username" });
+
+    nav.pathname = "/email/unsubscribe";
+    await act(async () => { rerender(tree()); });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(done).toHaveBeenCalledWith(false));
     vi.unstubAllEnvs();
   });
 

@@ -105,6 +105,15 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
   // loaded row still says "no name" and the modal would reopen on a user who
   // just claimed one; this stops that for the rest of the session.
   const claimedFor = useRef<string | null>(null);
+  // The provider outlives client navigation, so a forced claim that is
+  // already up has to close itself when the visitor reaches an exempt route
+  // (history back to /login, an unsubscribe link, /admin). Settling false
+  // releases any play that was waiting on it.
+  useEffect(() => {
+    // Same side-effect-on-a-caller shape as the settles above.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open && mode === "claim" && !forceable) settle(false);
+  }, [open, mode, forceable, settle]);
   useEffect(() => {
     if (!needsName || !forceable || open || claimedFor.current === userId) return;
     setMode("claim");
@@ -221,7 +230,21 @@ function UsernameModal({
     if (!supabase || !canClaim) return;
     setBusy(true);
     setServerError(null);
-    const { error } = await supabase.from("ts_profiles").update({ username: value }).eq("user_id", userId);
+    // .select() so a write that matched no row is visible. On a first login
+    // the profile is synthetic until the roster self-insert lands, and a
+    // filtered update against a row that does not exist yet returns no error
+    // and changes nothing. Counting that as a claim would close a mandatory
+    // dialog on an account that is still unnamed.
+    const { data: written, error } = await supabase
+      .from("ts_profiles")
+      .update({ username: value })
+      .eq("user_id", userId)
+      .select("user_id");
+    if (!error && (!written || written.length === 0)) {
+      setBusy(false);
+      setServerError("Your account is still being set up. Try again in a second.");
+      return;
+    }
     if (error) {
       setBusy(false);
       // Only a verdict about the name itself invalidates the availability
