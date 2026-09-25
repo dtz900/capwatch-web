@@ -16,6 +16,7 @@ import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
 import { peekAnonId } from "@/lib/tof/anon";
 import { shouldLandOpen } from "@/lib/tof/first-visit";
+import { replayGuestPicks } from "@/lib/tof/replay";
 
 const RETURN_COOKIE = "ts_return_to";
 
@@ -441,15 +442,18 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       .filter((x): x is { card: TofCard; choice: TofChoice } => !!x.choice && !isLocked(x.card, at) && !playedIds.has(x.card.id));
     if (todo.length === 0) { clearGuestChoices(); return; }
     (async () => {
-      if (todo.some((x) => x.choice !== "pass")) {
-        const ok = await requireUsername();
-        if (!ok) { replayedFor.current = null; return; }
-      }
-      for (const { card, choice } of todo) {
-        const ok = await writePlay({ ...card, kind: "shared" }, choice);
-        if (!ok) { replayedFor.current = null; return; }
-      }
+      // Writes first, username prompt after: see replayGuestPicks.
+      const { written, ok } = await replayGuestPicks({
+        todo,
+        writePlay: (card, choice) => writePlay({ ...card, kind: "shared" }, choice),
+        requireUsername: () => { void requireUsername(); },
+      });
+      if (!ok) { replayedFor.current = null; return; }
       clearGuestChoices();
+      if (written > 0) {
+        setToast(`${written} pick${written === 1 ? "" : "s"} saved to your account.`);
+        setTimeout(() => setToast(null), 4000);
+      }
     })();
   }, [userId, handId, hand, playsLoadedFor, playedIds, requireUsername, writePlay]);
 
