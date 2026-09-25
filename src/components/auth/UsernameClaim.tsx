@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createBrowserSupabase } from "@/lib/supabase/client";
@@ -25,8 +26,14 @@ export function useUsernameClaim(): ClaimCtx {
 
 type Mode = "claim" | "change";
 
+/* Routes that never force the claim: signing in and its callback (the claim
+   follows on the page they land on), one-click email unsubscribes, and the
+   admin tools. */
+const FORCE_EXEMPT = ["/login", "/auth", "/email", "/admin"];
+
 export function UsernameClaimProvider({ children }: { children: ReactNode }) {
-  const { session, profile, refreshProfile, suggestedUsername } = useAuth();
+  const { session, profile, refreshProfile, suggestedUsername, signOut } = useAuth();
+  const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("claim");
   const resolver = useRef<((ok: boolean) => void) | null>(null);
@@ -83,6 +90,36 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
     if (open && !userId) settle(false);
   }, [open, userId, settle]);
 
+  // Every signed-in account gets a name, not just the ones that try to play.
+  // Without one a user is invisible on the board and cannot see their own
+  // Tail or Fade record, and the first real signup (2026-09-24) dismissed the
+  // old optional prompt and never came back to it. So the claim opens on any
+  // page, as soon as the profile says there is no name, and cannot be closed
+  // except by claiming (typed or through X) or signing out.
+  // `profile` null means not loaded yet (or no roster row): never force on
+  // that, only on a loaded row whose username is empty. Paths where a modal
+  // would be in the way of the thing the visitor came to do are exempt.
+  const forceable = !FORCE_EXEMPT.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const needsName = Boolean(userId) && profile !== null && !profile.username;
+  // Set on a successful claim. If the profile re-read lags or fails, the
+  // loaded row still says "no name" and the modal would reopen on a user who
+  // just claimed one; this stops that for the rest of the session.
+  const claimedFor = useRef<string | null>(null);
+  // The provider outlives client navigation, so a forced claim that is
+  // already up has to close itself when the visitor reaches an exempt route
+  // (history back to /login, an unsubscribe link, /admin). Settling false
+  // releases any play that was waiting on it.
+  useEffect(() => {
+    // Same side-effect-on-a-caller shape as the settles above.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open && mode === "claim" && !forceable) settle(false);
+  }, [open, mode, forceable, settle]);
+  useEffect(() => {
+    if (!needsName || !forceable || open || claimedFor.current === userId) return;
+    setMode("claim");
+    setOpen(true);
+  }, [needsName, forceable, open, userId]);
+
   const value = useMemo(() => ({ requireUsername, openChange }), [requireUsername, openChange]);
 
   return (
@@ -96,10 +133,12 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
           changedAt={profile?.username_changed_at ?? null}
           suggestedName={mode === "claim" ? suggestedUsername : null}
           onDone={async () => {
+            claimedFor.current = session.user.id;
             await refreshProfile();
             settle(true);
           }}
           onDismiss={() => settle(false)}
+          onSignOut={() => { void signOut(); }}
         />
       )}
     </Ctx.Provider>
@@ -109,7 +148,7 @@ export function UsernameClaimProvider({ children }: { children: ReactNode }) {
 type Availability = "idle" | "checking" | "available" | "taken";
 
 function UsernameModal({
-  mode, userId, currentName, changedAt, suggestedName, onDone, onDismiss,
+  mode, userId, currentName, changedAt, suggestedName, onDone, onDismiss, onSignOut,
 }: {
   mode: Mode;
   userId: string;
@@ -118,6 +157,8 @@ function UsernameModal({
   suggestedName: string | null;
   onDone: () => Promise<void>;
   onDismiss: () => void;
+  /** The only way out of a claim: an account cannot stay signed in unnamed. */
+  onSignOut: () => void;
 }) {
   const supabase = useMemo(
     () =>
@@ -189,7 +230,21 @@ function UsernameModal({
     if (!supabase || !canClaim) return;
     setBusy(true);
     setServerError(null);
-    const { error } = await supabase.from("ts_profiles").update({ username: value }).eq("user_id", userId);
+    // .select() so a write that matched no row is visible. On a first login
+    // the profile is synthetic until the roster self-insert lands, and a
+    // filtered update against a row that does not exist yet returns no error
+    // and changes nothing. Counting that as a claim would close a mandatory
+    // dialog on an account that is still unnamed.
+    const { data: written, error } = await supabase
+      .from("ts_profiles")
+      .update({ username: value })
+      .eq("user_id", userId)
+      .select("user_id");
+    if (!error && (!written || written.length === 0)) {
+      setBusy(false);
+      setServerError("Your account is still being set up. Try again in a second.");
+      return;
+    }
     if (error) {
       setBusy(false);
       // Only a verdict about the name itself invalidates the availability
@@ -221,7 +276,8 @@ function UsernameModal({
       aria-modal="true"
       aria-labelledby={headingId}
       onKeyDown={(e) => {
-        if (e.key === "Escape") {
+        // Claiming is mandatory, so Escape only backs out of a rename.
+        if (e.key === "Escape" && mode === "change") {
           e.stopPropagation();
           onDismiss();
         }
@@ -229,7 +285,7 @@ function UsernameModal({
     >
       <div className="w-full max-w-[440px] rounded-xl border border-[var(--color-border-h)] bg-gradient-to-b from-[#17171d] to-[#101015] p-7 shadow-2xl">
         <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-pos)]">
-          {mode === "change" ? "Account" : "Before your first swipe"}
+          {mode === "change" ? "Account" : "One last step"}
         </div>
         <h2 id={headingId} className="mt-1.5 text-[26px] font-extrabold tracking-[-0.03em] leading-none">
           {mode === "change" ? "Change your username" : "Pick a username"}
@@ -301,10 +357,10 @@ function UsernameModal({
         </button>
         <button
           type="button"
-          onClick={onDismiss}
+          onClick={mode === "change" ? onDismiss : onSignOut}
           className="mt-2 h-10 w-full rounded-lg border border-[var(--color-border)] text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--color-text-soft)]"
         >
-          {mode === "change" ? "Cancel" : "Not now"}
+          {mode === "change" ? "Cancel" : "Sign out"}
         </button>
       </div>
     </div>

@@ -6,6 +6,7 @@ interface MockAuthState {
   profile: { tier: string; username: string | null; username_changed_at: string | null } | null;
   entitlements: { isLoggedIn: boolean; isVip: boolean };
   refreshProfile: () => Promise<void>;
+  signOut?: () => Promise<void>;
 }
 
 const mockAuth = vi.hoisted(() => ({
@@ -18,12 +19,26 @@ const mockAuth = vi.hoisted(() => ({
 }));
 vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => mockAuth.current }));
 
+const nav = vi.hoisted(() => ({ pathname: "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
+
 const rpc = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/client", () => ({
   createBrowserSupabase: () => ({
     rpc,
-    from: () => ({ update: (patch: { username: string }) => ({ eq: () => update(patch) }) }),
+    // update().eq().select(): the claim reads back the rows it wrote. A test
+    // result without `data` means "one row written"; pass data: [] for none.
+    from: () => ({
+      update: (patch: { username: string }) => ({
+        eq: () => ({
+          select: async () => {
+            const r = (await update(patch)) as { data?: unknown[]; error: unknown } | undefined;
+            return { data: [{ user_id: "u1" }], ...r };
+          },
+        }),
+      }),
+    }),
   }),
 }));
 
@@ -58,6 +73,7 @@ function stubSupabaseEnv() {
 beforeEach(() => {
   rpc.mockReset();
   update.mockReset();
+  nav.pathname = "/";
 });
 
 describe("UsernameClaim", () => {
@@ -197,28 +213,135 @@ describe("UsernameClaim", () => {
     vi.unstubAllEnvs();
   });
 
-  it("names the dialog by its heading, focuses the input, and settles false on Escape", async () => {
+  it("names the dialog by its heading and focuses the input", async () => {
     stubSupabaseEnv();
-    const done = vi.fn();
     mockAuth.current = signedInNoName();
-    const opener = document.createElement("button");
-    document.body.appendChild(opener);
-    opener.focus();
+    render(<UsernameClaimProvider><Trigger onDone={vi.fn()} /></UsernameClaimProvider>);
 
-    render(<UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>);
-    fireEvent.click(screen.getByText("play"));
-
-    const dialog = await screen.findByRole("dialog", { name: "Pick a username" });
+    await screen.findByRole("dialog", { name: "Pick a username" });
     const input = screen.getByLabelText("Username");
     await waitFor(() => expect(input).toHaveFocus());
     // The availability badge has to sit in a live region to be announced.
     expect(input.closest("div")?.querySelector('[aria-live="polite"]')).toBeTruthy();
+    vi.unstubAllEnvs();
+  });
+
+  /* Mandatory since 2026-09-24: an unnamed account is invisible on the board
+     and cannot see its own record, and the first real signup dismissed the
+     old optional prompt and never came back. */
+  it("opens on its own for a signed-in account with no username, without any play", async () => {
+    stubSupabaseEnv();
+    mockAuth.current = signedInNoName();
+    render(<UsernameClaimProvider><div>page</div></UsernameClaimProvider>);
+    expect(await screen.findByRole("dialog", { name: "Pick a username" })).toBeInTheDocument();
+    vi.unstubAllEnvs();
+  });
+
+  it("cannot be escaped: Escape leaves the claim open and there is no Not now", async () => {
+    stubSupabaseEnv();
+    const done = vi.fn();
+    mockAuth.current = signedInNoName();
+    render(<UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>);
+    fireEvent.click(screen.getByText("play"));
+    const dialog = await screen.findByRole("dialog", { name: "Pick a username" });
 
     await act(async () => { fireEvent.keyDown(dialog, { key: "Escape" }); });
-    await waitFor(() => expect(done).toHaveBeenCalledWith(false));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(done).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /not now/i })).not.toBeInTheDocument();
+    vi.unstubAllEnvs();
+  });
+
+  it("offers sign out as the only way out of a claim", async () => {
+    stubSupabaseEnv();
+    const signOut = vi.fn().mockResolvedValue(undefined);
+    mockAuth.current = { ...signedInNoName(), signOut };
+    render(<UsernameClaimProvider><div>page</div></UsernameClaimProvider>);
+    await screen.findByRole("dialog", { name: "Pick a username" });
+    fireEvent.click(screen.getByRole("button", { name: /sign out/i }));
+    expect(signOut).toHaveBeenCalledTimes(1);
+    vi.unstubAllEnvs();
+  });
+
+  it("does not force the claim on sign-in, auth, unsubscribe or admin pages", async () => {
+    stubSupabaseEnv();
+    mockAuth.current = signedInNoName();
+    for (const path of ["/login", "/auth/callback", "/email/unsubscribe", "/admin/users"]) {
+      nav.pathname = path;
+      const { unmount } = render(<UsernameClaimProvider><div>page</div></UsernameClaimProvider>);
+      await act(async () => {});
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      unmount();
+    }
+    vi.unstubAllEnvs();
+  });
+
+  it("does not force the claim before the profile has loaded", async () => {
+    stubSupabaseEnv();
+    mockAuth.current = { ...signedInNoName(), profile: null };
+    render(<UsernameClaimProvider><div>page</div></UsernameClaimProvider>);
+    await act(async () => {});
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    await waitFor(() => expect(opener).toHaveFocus());
-    opener.remove();
+    vi.unstubAllEnvs();
+  });
+
+  /* Codex on #154: a first login's profile is synthetic until the roster row
+     is inserted, and a filtered update against a missing row returns no error
+     and writes nothing. That must not count as a claim. */
+  it("treats an update that matched no row as a failed claim", async () => {
+    stubSupabaseEnv();
+    rpc.mockResolvedValue({ data: true, error: null });
+    update.mockResolvedValue({ data: [], error: null });
+    const refreshProfile = vi.fn().mockResolvedValue(undefined);
+    const done = vi.fn();
+    mockAuth.current = signedInNoName(refreshProfile);
+    render(<UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>);
+    fireEvent.click(screen.getByText("play"));
+    const input = await screen.findByLabelText("Username");
+    await act(async () => { fireEvent.change(input, { target: { value: "dt_fades" } }); });
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    fireEvent.click(await screen.findByRole("button", { name: /claim/i }));
+
+    expect(await screen.findByText(/still being set up/i)).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(refreshProfile).not.toHaveBeenCalled();
+    expect(done).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  /* Codex on #154: the provider outlives client navigation, so an exempt
+     route has to close a forced claim that is already open, not just avoid
+     opening a new one. */
+  it("closes an open forced claim when the visitor navigates to an exempt route", async () => {
+    stubSupabaseEnv();
+    const done = vi.fn();
+    mockAuth.current = signedInNoName();
+    const tree = () => <UsernameClaimProvider><Trigger onDone={done} /></UsernameClaimProvider>;
+    const { rerender } = render(tree());
+    fireEvent.click(screen.getByText("play"));
+    await screen.findByRole("dialog", { name: "Pick a username" });
+
+    nav.pathname = "/email/unsubscribe";
+    await act(async () => { rerender(tree()); });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(done).toHaveBeenCalledWith(false));
+    vi.unstubAllEnvs();
+  });
+
+  it("still lets Escape cancel a rename", async () => {
+    stubSupabaseEnv();
+    mockAuth.current = {
+      session: { user: { id: "u1", email: "d@x.com" } },
+      profile: { tier: "free", username: "dt_fades", username_changed_at: null },
+      entitlements: { isLoggedIn: true, isVip: false },
+      refreshProfile: vi.fn(),
+    };
+    render(<UsernameClaimProvider><ChangeTrigger /></UsernameClaimProvider>);
+    fireEvent.click(screen.getByText("change"));
+    const dialog = await screen.findByRole("dialog");
+    await act(async () => { fireEvent.keyDown(dialog, { key: "Escape" }); });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     vi.unstubAllEnvs();
   });
 
