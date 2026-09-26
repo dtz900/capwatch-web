@@ -14,7 +14,6 @@ import { TofBoard } from "@/components/tof/TofBoard";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
-import { peekAnonId } from "@/lib/tof/anon";
 import { shouldLandOpen } from "@/lib/tof/first-visit";
 import { replayGuestPicks } from "@/lib/tof/replay";
 
@@ -111,6 +110,13 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [guestChoices, setGuestChoices] = useState<ReadonlyMap<number, TofChoice>>(() => new Map());
   const slateDate = data?.hand?.slate_date ?? null;
   const guestHydrated = useRef<string | null>(null);
+  // The slate whose stored choices are IN `guestChoices`. State, not the ref,
+  // so it lands in the same render as the hydrated map: the persist effect
+  // and the land-open decision below key on it and never see the initial
+  // empty map as "no choices" (the ref flips before that render, and the
+  // persist effect used to write the empty map over the stash for one
+  // commit; Codex on #157).
+  const [guestHydratedFor, setGuestHydratedFor] = useState<string | null>(null);
   // Guest choices only ever describe a signed-out visit. Once signed in the
   // database is the record: the in-memory map is dropped so it cannot hide
   // cards that were never written, and the stored stash is consumed by the
@@ -122,16 +128,18 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       // Derived-state reset when auth flips (same pattern as loadProfile).
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setGuestChoices((prev) => (prev.size === 0 ? prev : new Map()));
+      setGuestHydratedFor(null);
       return;
     }
     if (!slateDate || guestHydrated.current === slateDate) return;
     guestHydrated.current = slateDate;
     setGuestChoices(readGuestChoices(slateDate));
+    setGuestHydratedFor(slateDate);
   }, [slateDate, isLoggedIn]);
   useEffect(() => {
-    if (isLoggedIn || !slateDate || guestHydrated.current !== slateDate) return;
+    if (isLoggedIn || !slateDate || guestHydratedFor !== slateDate) return;
     writeGuestChoices(slateDate, guestChoices);
-  }, [slateDate, guestChoices, isLoggedIn]);
+  }, [slateDate, guestChoices, isLoggedIn, guestHydratedFor]);
   // "<user>:<hand>" once that user's plays for that hand have loaded. The
   // guest-swipe replay waits for it so it never re-inserts a written play.
   const [playsLoadedFor, setPlaysLoadedFor] = useState<string | null>(null);
@@ -151,35 +159,49 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     setSettled(false);
     setUnfolded((u) => !u);
   }, []);
-  // First visit lands OPEN. The fold exists so the page is not a game you
-  // have already played, and that reasoning does not apply to someone who has
-  // never played: arriving from a post that says "swipe right to tail" and
-  // finding a collapsed title with the leaderboard underneath is a dead end.
-  // So exactly once, for a signed-out browser that has never swiped a card,
-  // the table slides itself open (which also plays the deck nudge). Everyone
-  // else still lands folded, as before. Waits for authReady because a signed-
-  // in user reads as signed out until the first getSession() lands.
-  const autoOpenDecided = useRef(false);
+  const hand = data?.hand ?? null;
+  const handId = hand?.hand_id ?? null;
+  const handStatus = hand?.status ?? null;
+  // An unswiped deck lands OPEN. The fold exists so the page is not a game
+  // you have already played, and that reasoning does not apply to a deck you
+  // have not touched: a collapsed title with the leaderboard underneath is a
+  // dead end. So once per mount, when this visitor has no swipes on the
+  // current hand (guest choices for the slate, or a signed-in user's plays
+  // once they have loaded) and the hand is still open, the table slides
+  // itself open (which also plays the deck nudge). Anyone who has played the
+  // hand, or arrives after it locked, still lands folded. "wait" keeps the
+  // decision pending until auth, the hand and the plays (or the guest
+  // stash) are all in. The decision is keyed to the HAND, not the mount:
+  // pages without a server hand paint the session-cached hand first and
+  // replace it with the fetched one, and across a deal rollover the cached
+  // hand is yesterday's; a mount-wide flag would spend itself on that and
+  // leave the new deck folded (Codex on #157).
+  const autoOpenDecidedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (autoOpenDecided.current || !authReady || !slateDate) return;
-    autoOpenDecided.current = true;
-    const open = shouldLandOpen({
+    if (!slateDate) return;
+    const handKey = `${slateDate}:${handId ?? ""}`;
+    if (autoOpenDecidedFor.current === handKey) return;
+    const playsKey = userId && handId != null ? `${userId}:${handId}` : null;
+    const verdict = shouldLandOpen({
       authReady,
       isLoggedIn,
       slateDate,
-      hasSwipedBefore: peekAnonId() !== null,
-      guestChoiceCount: readGuestChoices(slateDate).size,
+      handStatus,
+      // From hydrated state, never a storage read: the stash is rewritten
+      // from state and reads empty for a commit before hydration lands.
+      guestChoiceCount: guestHydratedFor === slateDate ? guestChoices.size : 0,
+      playsOnThisHand: !isLoggedIn
+        ? (guestHydratedFor === slateDate ? 0 : null)
+        : playsLoadedFor === playsKey ? plays.length : null,
     });
-    if (!open) return;
+    if (verdict === "wait") return;
+    autoOpenDecidedFor.current = handKey;
+    if (verdict === "fold") return;
     // Derived-state open on first paint (same pattern as the guest-choice
     // reset above): the server renders folded, so this cannot run in render.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUnfolded(true);
-  }, [authReady, isLoggedIn, slateDate]);
-
-  const hand = data?.hand ?? null;
-  const handId = hand?.hand_id ?? null;
-  const handStatus = hand?.status ?? null;
+  }, [authReady, isLoggedIn, slateDate, handStatus, userId, handId, playsLoadedFor, plays, guestHydratedFor, guestChoices]);
   // The 60s refetch replaces `data` with a fresh object every minute. The
   // signed-in load must not re-run on that, so it keys on the hand id and
   // reaches the cards it needs through this ref instead of the object.
