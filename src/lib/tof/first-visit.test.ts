@@ -39,6 +39,13 @@ describe("shouldLandOpen", () => {
     expect(shouldLandOpen({ ...member, playsOnThisHand: null })).toBe("wait");
   });
 
+  it("waits for a guest's stored stash to hydrate before deciding", () => {
+    // The component passes null until the stash is in state; deciding from
+    // an empty map would reopen a deck the guest already swiped (Codex on #157).
+    expect(shouldLandOpen({ ...guest, playsOnThisHand: null })).toBe("wait");
+    expect(shouldLandOpen({ ...guest, playsOnThisHand: null, guestChoiceCount: 3 })).toBe("wait");
+  });
+
   it("folds when the hand is no longer open: nothing left to swipe", () => {
     expect(shouldLandOpen({ ...guest, handStatus: "locked" })).toBe("fold");
     expect(shouldLandOpen({ ...member, handStatus: "graded" })).toBe("fold");

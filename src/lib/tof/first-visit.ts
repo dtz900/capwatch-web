@@ -20,7 +20,8 @@ export interface ArrivalState {
   handStatus: "open" | "locked" | "graded" | null;
   /** Guest choices already stored for this slate, from an earlier visit today. */
   guestChoiceCount: number;
-  /** Signed-in plays on this hand; null until they have loaded. Guests pass 0. */
+  /** Signed-in plays on this hand, null until loaded. A guest passes 0 once
+   *  the stored stash has hydrated into state, null before that. */
   playsOnThisHand: number | null;
 }
 
@@ -28,12 +29,12 @@ export type LandVerdict = "open" | "fold" | "wait";
 
 export function shouldLandOpen(s: ArrivalState): LandVerdict {
   if (!s.authReady || !s.slateDate || !s.handStatus) return "wait";
+  // Plays (member) or the stash (guest) not in yet: no verdict, the
+  // component keeps the decision pending rather than guessing from empty.
+  if (s.playsOnThisHand === null) return "wait";
   // A locked or graded hand has nothing to swipe; opening it is the old
   // "game you already played" takeover.
   if (s.handStatus !== "open") return "fold";
-  if (s.isLoggedIn) {
-    if (s.playsOnThisHand === null) return "wait";
-    return s.playsOnThisHand === 0 ? "open" : "fold";
-  }
-  return s.guestChoiceCount === 0 ? "open" : "fold";
+  const swipes = s.isLoggedIn ? s.playsOnThisHand : s.guestChoiceCount;
+  return swipes === 0 ? "open" : "fold";
 }
