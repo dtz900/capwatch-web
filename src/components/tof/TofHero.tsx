@@ -14,7 +14,6 @@ import { TofBoard } from "@/components/tof/TofBoard";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
-import { peekAnonId } from "@/lib/tof/anon";
 import { shouldLandOpen } from "@/lib/tof/first-visit";
 import { replayGuestPicks } from "@/lib/tof/replay";
 
@@ -151,35 +150,38 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     setSettled(false);
     setUnfolded((u) => !u);
   }, []);
-  // First visit lands OPEN. The fold exists so the page is not a game you
-  // have already played, and that reasoning does not apply to someone who has
-  // never played: arriving from a post that says "swipe right to tail" and
-  // finding a collapsed title with the leaderboard underneath is a dead end.
-  // So exactly once, for a signed-out browser that has never swiped a card,
-  // the table slides itself open (which also plays the deck nudge). Everyone
-  // else still lands folded, as before. Waits for authReady because a signed-
-  // in user reads as signed out until the first getSession() lands.
+  const hand = data?.hand ?? null;
+  const handId = hand?.hand_id ?? null;
+  const handStatus = hand?.status ?? null;
+  // An unswiped deck lands OPEN. The fold exists so the page is not a game
+  // you have already played, and that reasoning does not apply to a deck you
+  // have not touched: a collapsed title with the leaderboard underneath is a
+  // dead end. So once per mount, when this visitor has no swipes on the
+  // current hand (guest choices for the slate, or a signed-in user's plays
+  // once they have loaded) and the hand is still open, the table slides
+  // itself open (which also plays the deck nudge). Anyone who has played the
+  // hand, or arrives after it locked, still lands folded. "wait" keeps the
+  // decision pending until auth, the hand and the plays are all in.
   const autoOpenDecided = useRef(false);
   useEffect(() => {
-    if (autoOpenDecided.current || !authReady || !slateDate) return;
-    autoOpenDecided.current = true;
-    const open = shouldLandOpen({
+    if (autoOpenDecided.current || !slateDate) return;
+    const playsKey = userId && handId != null ? `${userId}:${handId}` : null;
+    const verdict = shouldLandOpen({
       authReady,
       isLoggedIn,
       slateDate,
-      hasSwipedBefore: peekAnonId() !== null,
+      handStatus,
       guestChoiceCount: readGuestChoices(slateDate).size,
+      playsOnThisHand: !isLoggedIn ? 0 : playsLoadedFor === playsKey ? plays.length : null,
     });
-    if (!open) return;
+    if (verdict === "wait") return;
+    autoOpenDecided.current = true;
+    if (verdict === "fold") return;
     // Derived-state open on first paint (same pattern as the guest-choice
     // reset above): the server renders folded, so this cannot run in render.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUnfolded(true);
-  }, [authReady, isLoggedIn, slateDate]);
-
-  const hand = data?.hand ?? null;
-  const handId = hand?.hand_id ?? null;
-  const handStatus = hand?.status ?? null;
+  }, [authReady, isLoggedIn, slateDate, handStatus, userId, handId, playsLoadedFor, plays]);
   // The 60s refetch replaces `data` with a fresh object every minute. The
   // signed-in load must not re-run on that, so it keys on the hand id and
   // reaches the cards it needs through this ref instead of the object.
