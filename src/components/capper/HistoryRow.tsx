@@ -204,10 +204,11 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
         <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
           {isOutcomeOnly ? (
             <span
-              className="text-[10px] italic text-[var(--color-text-muted)]"
-              title="Capper did not post odds. Counted toward Win % only."
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase tracking-[0.12em] font-bold
+                         bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[var(--color-text-muted)]"
+              title="No odds were given for this bet and no market price was available, so it counts toward the record but not the units."
             >
-              no odds
+              no odds given
             </span>
           ) : (
             <>
@@ -371,8 +372,12 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
         <div className="mt-1 text-[11px] text-[var(--color-text-muted)] font-medium tabular-nums flex items-center gap-3 flex-wrap">
           {pick.line != null && <span>Line {pick.line}</span>}
           {isOutcomeOnly ? (
-            <span className="italic opacity-75" title="No odds posted. Counts toward Win % only.">
-              no odds
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase tracking-[0.12em] font-bold
+                         bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[var(--color-text-muted)]"
+              title="No odds were given for this bet and no market price was available, so it counts toward the record but not the units."
+            >
+              no odds given
             </span>
           ) : oddsText ? (
             <span>

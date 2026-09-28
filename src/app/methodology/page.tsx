@@ -143,8 +143,9 @@ export default function Methodology() {
           1+ hits is priced very differently from a bench bat&apos;s), and Pinnacle&apos;s prop
           coverage is sparse. So when a capper posts a player prop without committing to specific
           odds, we grade it on outcome only: the pick still counts toward Win %, but it is
-          excluded from the unit profit and ROI calculation. Those rows show &quot;no odds&quot;
-          in the history table where the odds and profit would normally be. The capper gets
+          excluded from the unit profit and ROI calculation. The same applies to a parlay
+          posted without a ticket price. Those rows carry a &quot;no odds given&quot; stamp in
+          the history table where the odds and profit would normally be. The capper gets
           credit for being right or wrong, without a fabricated payout shaping the bottom line.
         </p>
 
