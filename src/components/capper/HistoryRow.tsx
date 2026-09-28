@@ -8,8 +8,10 @@ import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
 
+// Odds column is 108px so the "NO ODDS GIVEN" stamp fits on one line
+// (Codex on #158); the header row shares this constant, so it stays aligned.
 export const DESKTOP_GRID =
-  "hidden sm:grid grid-cols-[64px_minmax(220px,1fr)_56px_72px_64px_80px_28px] gap-3 items-center";
+  "hidden sm:grid grid-cols-[64px_minmax(220px,1fr)_56px_108px_64px_80px_28px] gap-3 items-center";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -204,7 +206,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
         <div className="text-right tabular-nums text-[12px] text-[var(--color-text-soft)]">
           {isOutcomeOnly ? (
             <span
-              className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase tracking-[0.12em] font-bold
+              className="inline-flex items-center whitespace-nowrap px-1.5 py-0.5 rounded text-[9px] uppercase tracking-[0.08em] font-bold
                          bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[var(--color-text-muted)]"
               title="No odds were given for this bet and no market price was available, so it counts toward the record but not the units."
             >
@@ -373,7 +375,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           {pick.line != null && <span>Line {pick.line}</span>}
           {isOutcomeOnly ? (
             <span
-              className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase tracking-[0.12em] font-bold
+              className="inline-flex items-center whitespace-nowrap px-1.5 py-0.5 rounded text-[9px] uppercase tracking-[0.08em] font-bold
                          bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.18)] text-[var(--color-text-muted)]"
               title="No odds were given for this bet and no market price was available, so it counts toward the record but not the units."
             >
