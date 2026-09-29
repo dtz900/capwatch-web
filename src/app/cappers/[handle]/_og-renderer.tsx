@@ -2,13 +2,18 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchCapperProfile, fetchLeaderboard } from "@/lib/api";
-import { formatRecord, formatRoiNumeric, formatUnitsForTitle } from "@/lib/seo";
-import { formatRangeLabel, leagueScopedLabel, marketFilterLabel } from "@/lib/capperFilters";
+import { formatRecord, formatRoiNumeric, formatUnitsForTitle, leagueLabel } from "@/lib/seo";
+import {
+  capperRecordPill,
+  formatRangeLabel,
+  leagueScopedLabel,
+  marketFilterLabel,
+} from "@/lib/capperFilters";
 import type { BetTypeFilter, SportFilter, Window } from "@/lib/types";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "Verified MLB capper record on TailSlips";
+export const alt = "Verified capper record on TailSlips";
 
 // Color tokens from globals.css. Keep these in sync with the live theme so the
 // OG card matches what users see on the page.
@@ -29,7 +34,7 @@ const GOLD = "#f5c54a";
 const BLUE = "#60a5fa";
 const BLUE_SOFT = "rgba(37, 99, 235, 0.15)";
 const BLUE_BORDER = "rgba(37, 99, 235, 0.6)";
-// Pill accent: violet for the standard "MLB CAPPER RECORD" mark.
+// Pill accent: violet for the standard capper record mark.
 const VIOLET = "#c4b5fd";
 const VIOLET_SOFT = "rgba(167, 139, 250, 0.12)";
 const VIOLET_BORDER = "rgba(167, 139, 250, 0.45)";
@@ -51,9 +56,7 @@ interface TierVisuals {
 }
 
 function tierVisuals(tier: Tier, rank: number | null, sport: SportFilter): TierVisuals {
-  // The pill names the league on the card. All-league cards keep the
-  // original wording.
-  const recordPill = sport === "nfl" ? "NFL CAPPER RECORD" : "MLB CAPPER RECORD";
+  const recordPill = capperRecordPill(sport);
   if (tier === "model") {
     return {
       pill: {
@@ -410,7 +413,7 @@ export async function renderCapperOg(
   } catch (err) {
     console.error("[og-renderer] primary render failed", { handle, err });
     try {
-      const fallback = new ImageResponse(buildFallbackJsx(handle, logoDataUri), { ...size });
+      const fallback = new ImageResponse(buildFallbackJsx(handle, logoDataUri, sport), { ...size });
       const buf = await fallback.arrayBuffer();
       return new Response(buf, {
         headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
@@ -455,7 +458,7 @@ export async function renderCapperOg(
               fontSize: 30,
               color: TEXT_SOFT,
             }}>
-              Verified MLB capper record
+              Verified {leagueLabel(sport)} capper record
             </div>
           </div>
         ), { ...size });
@@ -1066,7 +1069,7 @@ function buildOgJsx(inputs: RenderInputs) {
   );
 }
 
-function buildFallbackJsx(handle: string, logoDataUri: string | null) {
+function buildFallbackJsx(handle: string, logoDataUri: string | null, sport: SportFilter) {
   return (
     <div
       style={{
@@ -1102,7 +1105,7 @@ function buildFallbackJsx(handle: string, logoDataUri: string | null) {
             display: "flex",
           }}
         >
-          Verified MLB capper record on TailSlips
+          Verified {leagueLabel(sport)} capper record on TailSlips
         </div>
       </div>
       <div style={{ color: TEXT_SOFT, fontWeight: 700, fontSize: 22, display: "flex" }}>

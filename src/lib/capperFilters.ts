@@ -25,6 +25,14 @@ export function buildCapperShareParams(view: {
   };
 }
 
+/** League pill on the capper OG card. The all-league card names both leagues
+ * so a mixed record is never labeled as MLB only. */
+export function capperRecordPill(sport: SportFilter): string {
+  if (sport === "nfl") return "NFL CAPPER RECORD";
+  if (sport === "mlb") return "MLB CAPPER RECORD";
+  return "MLB + NFL CAPPER RECORD";
+}
+
 /** Scope label led by the league when one is selected, e.g. "NFL · Season".
  * Unchanged across all leagues. */
 export function leagueScopedLabel(sport: SportFilter, label: string): string {

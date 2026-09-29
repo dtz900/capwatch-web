@@ -64,7 +64,7 @@ const VALID_WINDOWS: Window[] = ["last_7", "last_30", "season", "all_time"];
 const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
 const PAGE_SIZE = 25;
 const DEFAULT_WINDOW: Window = "season";
-const OG_CARD_VERSION = "15";
+const OG_CARD_VERSION = "16";
 
 export const revalidate = 60;
 export const maxDuration = 30;
@@ -304,7 +304,7 @@ export async function generateMetadata({
         type: "profile",
         siteName: SITE_NAME,
         images: [
-          { url: ogImage, width: 1200, height: 630, alt: "Verified MLB capper record on TailSlips" },
+          { url: ogImage, width: 1200, height: 630, alt: `Verified ${leagueLabel(sport)} capper record on TailSlips` },
         ],
       },
       twitter: {
@@ -332,7 +332,7 @@ export async function generateMetadata({
         type: "profile",
         siteName: SITE_NAME,
         images: [
-          { url: ogImage, width: 1200, height: 630, alt: "Verified MLB capper record on TailSlips" },
+          { url: ogImage, width: 1200, height: 630, alt: `Verified ${leagueLabel(sport)} capper record on TailSlips` },
         ],
       },
       twitter: {
