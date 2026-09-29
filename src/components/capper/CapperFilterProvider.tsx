@@ -31,6 +31,7 @@ const PAGE_SIZE = 25;
 
 interface FilterContextValue {
   handle: string;
+  sport: SportFilter;
   profile: CapperProfile;
   window: Window;
   betType: BetTypeFilter;
@@ -312,6 +313,7 @@ export function CapperFilterProvider({
 
   const value: FilterContextValue = {
     handle,
+    sport,
     profile,
     window,
     betType,
