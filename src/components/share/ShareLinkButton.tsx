@@ -14,6 +14,12 @@ interface Props {
   label?: string;
   /** Render a more prominent button instead of the muted default. */
   prominent?: boolean;
+  /** Anchor to land on, without the leading "#". */
+  hash?: string;
+  /** Icon only below the sm breakpoint, for tight spots like a card header. */
+  compact?: boolean;
+  /** Accessible name; defaults to "Copy share link". */
+  ariaLabel?: string;
 }
 
 /**
@@ -30,6 +36,9 @@ export function ShareLinkButton({
   queryParams = {},
   label = "Share",
   prominent = false,
+  hash,
+  compact = false,
+  ariaLabel = "Copy share link",
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
@@ -44,7 +53,7 @@ export function ShareLinkButton({
     const path = basePath.startsWith("/") ? basePath : `/${basePath}`;
     const origin =
       typeof window !== "undefined" ? window.location.origin : "https://tailslips.com";
-    const url = `${origin}${path}?${qs.toString()}`;
+    const url = `${origin}${path}?${qs.toString()}${hash ? `#${hash}` : ""}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -61,27 +70,29 @@ export function ShareLinkButton({
     ? "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--color-accent,#5eead4)] text-[#06121b] text-[12px] font-bold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity"
     : "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[rgba(255,255,255,0.04)] text-[var(--color-text-soft)] text-[11px] font-bold uppercase tracking-[0.08em] hover:text-white hover:bg-[rgba(255,255,255,0.10)] transition-colors";
 
+  const textCls = compact ? "hidden sm:inline" : undefined;
+
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label="Copy share link"
+      aria-label={ariaLabel}
       className={baseCls}
     >
       {copied ? (
         <>
           <CheckIcon />
-          Copied
+          <span className={textCls}>Copied</span>
         </>
       ) : error ? (
         <>
           <ErrorIcon />
-          Try again
+          <span className={textCls}>Try again</span>
         </>
       ) : (
         <>
           <LinkIcon />
-          {label}
+          <span className={textCls}>{label}</span>
         </>
       )}
     </button>

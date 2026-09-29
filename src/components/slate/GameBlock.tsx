@@ -3,6 +3,8 @@ import { VersusPickRow } from "./VersusPickRow";
 import { TeamLogo } from "./TeamLogo";
 import { type ScoreStatusState } from "./ScoreStatus";
 import { BookieAction } from "./BookieAction";
+import { ShareLinkButton } from "@/components/share/ShareLinkButton";
+import type { SlateGameShareLink } from "@/lib/slate-share";
 import { pickMlSide } from "@/lib/bet-format";
 import { teamColor } from "@/lib/teams";
 import { liveLabel } from "@/lib/live-label";
@@ -200,7 +202,14 @@ function Side({
   );
 }
 
-export function GameBlock({ game }: { game: SlateGame }) {
+export function GameBlock({
+  game,
+  share,
+}: {
+  game: SlateGame;
+  /** Share link for this card; the button is omitted when absent. */
+  share?: SlateGameShareLink;
+}) {
   const pitchers =
     game.away_starter && game.home_starter
       ? `${shortPitcher(game.away_starter)} vs ${shortPitcher(game.home_starter)}`
@@ -245,7 +254,18 @@ export function GameBlock({ game }: { game: SlateGame }) {
         className="sticky top-[110px] xl:top-16 z-10 bg-[#15151a]
                    border-t border-[rgba(255,255,255,0.10)]"
       >
-        <div className="px-4 sm:px-6 py-4 sm:py-5">
+        <div className="relative px-4 sm:px-6 py-4 sm:py-5">
+          {share && (
+            <div className="absolute right-3 sm:right-5 top-3 sm:top-4">
+              <ShareLinkButton
+                basePath="/slate"
+                queryParams={share.queryParams}
+                hash={share.hash}
+                compact
+                ariaLabel={`Copy share link for ${game.away_team ?? "away"} at ${game.home_team ?? "home"}`}
+              />
+            </div>
+          )}
           <div className="flex items-center justify-center gap-3 sm:gap-5">
             <div className="flex items-center gap-2.5 sm:gap-3">
               <TeamLogo
