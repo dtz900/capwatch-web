@@ -69,6 +69,10 @@ describe("buildRailGames", () => {
       game_time: null,
       inning: null,
       inning_half: null,
+      sport: "MLB",
+      period: null,
+      clock: null,
+      status_name: null,
       sharp_count: 1,
     });
   });
