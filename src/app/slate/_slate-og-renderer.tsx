@@ -298,7 +298,7 @@ function normalizeSlugAbbr(token: string): string {
  * variants (ARI, CHW, OAK, WAS...) are normalized. null => caller falls back
  * to the most-bet game. Powers ?game= on the OG URL.
  */
-function resolveRequestedGame(games: SlateGame[], slug: string | undefined): SlateGame | null {
+export function resolveRequestedGame(games: SlateGame[], slug: string | undefined): SlateGame | null {
   if (!slug) return null;
   const raw = slug.trim();
   if (!raw) return null;

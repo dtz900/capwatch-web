@@ -17,7 +17,8 @@ import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
 import type { SlateGame, SlateResponse } from "@/lib/types";
-import { buildSlateOgFingerprint, slateBetCount } from "./_slate-og-renderer";
+import { slateGameShareLink, type SlateShareView } from "@/lib/slate-share";
+import { buildSlateOgFingerprint, resolveRequestedGame, slateBetCount } from "./_slate-og-renderer";
 
 interface PageProps {
   searchParams: Promise<{
@@ -142,6 +143,18 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       description = totalPicks > 0
         ? `${lead} on ${SITE_NAME}: ${totalPicks} picks from ${sharpsCount} tracked sharps across ${gamesWithPicks} games. Grouped by game, ranked by leaderboard performance.`
         : `${lead} on ${SITE_NAME}: ${data.games.length} games on the board, no picks tweeted yet. Check back as cappers post.`;
+      // A game-card share (?game=) leads with that matchup so the text
+      // matches the card image, which features the same game.
+      const featured = resolveRequestedGame(data.games, sp.game ?? sp.name ?? sp.matchup);
+      if (featured && featured.picks.length > 0) {
+        const matchup = `${featured.away_team} @ ${featured.home_team}`;
+        const bets = slateBetCount(featured.picks);
+        const sharps = new Set(featured.picks.map((pk) => pk.capper_id)).size;
+        const betWord = bets === 1 ? "pick" : "picks";
+        const sharpWord = sharps === 1 ? "sharp" : "sharps";
+        title = `${matchup} · ${bets} ${betWord} from ${sharps} ${sharpWord} · ${lead}`;
+        description = `${matchup} on ${SITE_NAME}: ${bets} ${betWord} from ${sharps} tracked ${sharpWord}, ranked by leaderboard performance. Part of ${lead.charAt(0).toLowerCase()}${lead.slice(1)}.`;
+      }
     }
   } catch {
     // fall through with the static defaults above
@@ -299,6 +312,15 @@ export default async function SlatePage({ searchParams }: PageProps) {
   const nflCaption = isNfl ? weekLabel(data, p.week) : "Weekly board";
   const mlbCaption = isNfl ? "Daily board" : dateParam === "today" ? "Tonight" : "Tomorrow";
 
+  // NFL links pin the week the API actually served, so a card shared from
+  // the current-week board still opens that week after it rolls.
+  const shareView: SlateShareView = {
+    sport,
+    dateParam,
+    week: isNfl ? data.week?.week ?? p.week : undefined,
+  };
+  const shareFor = (g: SlateGame) => slateGameShareLink(g, data.games, shareView);
+
   const pickedByDay = isNfl ? groupByDay(gamesWithPicks) : null;
   const quietByDay = isNfl ? groupByDay(gamesWithoutPicks) : null;
 
@@ -397,7 +419,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
                       <section key={bucket.day} className="flex flex-col gap-5">
                         <DayHeader label={bucket.label} count={bucket.games.length} />
                         {bucket.games.map((g) => (
-                          <GameBlock key={g.game_id} game={g} />
+                          <GameBlock key={g.game_id} game={g} share={shareFor(g)} />
                         ))}
                       </section>
                     ))}
@@ -405,7 +427,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
                 ) : (
                   <div className="flex flex-col gap-5 mt-2">
                     {gamesWithPicks.map((g) => (
-                      <GameBlock key={g.game_id} game={g} />
+                      <GameBlock key={g.game_id} game={g} share={shareFor(g)} />
                     ))}
                   </div>
                 )}
