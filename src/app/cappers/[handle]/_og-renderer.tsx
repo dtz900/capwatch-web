@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchCapperProfile, fetchLeaderboard } from "@/lib/api";
 import { formatRecord, formatRoiNumeric, formatUnitsForTitle } from "@/lib/seo";
-import { formatRangeLabel, marketFilterLabel } from "@/lib/capperFilters";
-import type { BetTypeFilter, Window } from "@/lib/types";
+import { formatRangeLabel, leagueScopedLabel, marketFilterLabel } from "@/lib/capperFilters";
+import type { BetTypeFilter, SportFilter, Window } from "@/lib/types";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -50,7 +50,10 @@ interface TierVisuals {
   avatarShadow: string;
 }
 
-function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
+function tierVisuals(tier: Tier, rank: number | null, sport: SportFilter): TierVisuals {
+  // The pill names the league on the card. All-league cards keep the
+  // original wording.
+  const recordPill = sport === "nfl" ? "NFL CAPPER RECORD" : "MLB CAPPER RECORD";
   if (tier === "model") {
     return {
       pill: {
@@ -67,7 +70,7 @@ function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
   if (tier === "top3" && rank !== null) {
     return {
       pill: {
-        text: "MLB CAPPER RECORD",
+        text: recordPill,
         color: VIOLET,
         background: VIOLET_SOFT,
         border: VIOLET_BORDER,
@@ -80,7 +83,7 @@ function tierVisuals(tier: Tier, rank: number | null): TierVisuals {
   }
   return {
     pill: {
-      text: "MLB CAPPER RECORD",
+      text: recordPill,
       color: TEXT_MUTED,
       background: "transparent",
       border: BORDER,
@@ -156,6 +159,7 @@ interface RenderInputs {
   trajectorySeries: number[];
   tier: Tier;
   rank: number | null;
+  sport: SportFilter;
 }
 
 // Capper og URLs are fingerprinted with picks_count + refreshed_at, so a
@@ -239,6 +243,9 @@ function buildFilterLabel(w: Window, bt: BetTypeFilter): string {
 }
 
 export interface RenderOpts {
+  /** League the shared view is scoped to. Scopes the seedless profile fetch
+   * and the league pill. */
+  sport?: SportFilter;
   window?: Window;
   bet_type?: BetTypeFilter;
   /** When set, render the per-market straight-pick slice (e.g. "spread"),
@@ -266,6 +273,7 @@ export async function renderCapperOg(
   opts: RenderOpts = {},
 ): Promise<Response> {
   const window: Window = opts.window ?? DEFAULT_OG_WINDOW;
+  const sport: SportFilter = opts.sport ?? "all";
   const market = opts.market;
   const seed = opts.seed;
   const range = opts.range;
@@ -296,6 +304,7 @@ export async function renderCapperOg(
   } else {
   try {
     const profile = await fetchCapperProfile(handle, {
+      sport,
       history_limit: 1,
       history_offset: 0,
       bet_type: bet_type !== "all" ? bet_type : undefined,
@@ -340,7 +349,7 @@ export async function renderCapperOg(
       hasData = true;
     }
   } catch (err) {
-    console.error("[og-renderer] fetchCapperProfile failed", { handle, window, bet_type, market, err });
+    console.error("[og-renderer] fetchCapperProfile failed", { handle, sport, window, bet_type, market, err });
   }
   }
 
@@ -370,16 +379,18 @@ export async function renderCapperOg(
     roiPct,
     picksCount,
     trackedSinceLabel: trackedSince ? formatTrackedSince(trackedSince) : "",
+    // A seed label arrives already league-scoped from the page metadata.
     filterLabel: range
-      ? formatRangeLabel(range.start, range.end)
+      ? leagueScopedLabel(sport, formatRangeLabel(range.start, range.end))
       : market && marketLabel
-        ? [marketLabel, windowLabel(window)].filter(Boolean).join(" · ")
+        ? leagueScopedLabel(sport, [marketLabel, windowLabel(window)].filter(Boolean).join(" · "))
         : seed?.filterLabel
           ? seed.filterLabel
-          : buildFilterLabel(window, bet_type),
+          : leagueScopedLabel(sport, buildFilterLabel(window, bet_type)),
     trajectorySeries,
     tier,
     rank,
+    sport,
   };
 
   // A successfully rendered card can still be DEGRADED: profile fetch failed
@@ -597,13 +608,14 @@ function buildPremiumOgJsx(inputs: RenderInputs) {
     trajectorySeries,
     tier,
     rank,
+    sport,
   } = inputs;
   const unitsLabel = formatUnitsForTitle(unitsRaw);
   const roiLabel = formatRoiNumeric(roiPct);
   const unitsColor = unitsRaw >= 0 ? POS : NEG;
   const roiColor = roiPct >= 0 ? POS : NEG;
   const initial = handle.slice(0, 1).toUpperCase();
-  const visuals = tierVisuals(tier, rank);
+  const visuals = tierVisuals(tier, rank, sport);
   const parsed = parseRecordLine(record);
   const decisions = parsed.wins + parsed.losses;
   const winPct = decisions > 0 ? Math.round((parsed.wins / decisions) * 100) : 0;
@@ -877,13 +889,14 @@ function buildOgJsx(inputs: RenderInputs) {
     filterLabel,
     tier,
     rank,
+    sport,
   } = inputs;
   const unitsLabel = formatUnitsForTitle(unitsRaw);
   const roiLabel = formatRoiNumeric(roiPct);
   const unitsColor = unitsRaw >= 0 ? POS : NEG;
   const roiColor = roiPct >= 0 ? POS : NEG;
   const initial = handle.slice(0, 1).toUpperCase();
-  const visuals = tierVisuals(tier, rank);
+  const visuals = tierVisuals(tier, rank, sport);
 
   // Subline composition. When a filter is active, lead with the filter cut
   // so viewers immediately know they're seeing a slice (Straights, Season,

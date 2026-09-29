@@ -1,5 +1,5 @@
 import { renderCapperOg } from "../_og-renderer";
-import type { BetTypeFilter, Window } from "@/lib/types";
+import type { BetTypeFilter, SportFilter, Window } from "@/lib/types";
 
 // Route Handler variant of the OG image route, used when the page wants the
 // preview to reflect a specific filter cut (window, bet type, market). The
@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 const VALID_WINDOWS: ReadonlyArray<Window> = ["all_time", "season", "last_30", "last_7"];
 const VALID_BET_TYPES: ReadonlyArray<BetTypeFilter> = ["all", "straights", "parlays"];
+const VALID_SPORTS: ReadonlyArray<SportFilter> = ["all", "mlb", "nfl"];
 
 export async function GET(
   request: Request,
@@ -37,6 +38,8 @@ export async function GET(
   const bet_type: BetTypeFilter = VALID_BET_TYPES.includes(bt as BetTypeFilter)
     ? (bt as BetTypeFilter)
     : "all";
+  const sp = url.searchParams.get("sp");
+  const sport: SportFilter = VALID_SPORTS.includes(sp as SportFilter) ? (sp as SportFilter) : "all";
   const market = mk ? mk.trim() : undefined;
   // rs/re carry a custom date range. Normally the seed params render the
   // range card directly, but when metadata was built under deadline pressure
@@ -50,5 +53,5 @@ export async function GET(
     rec && Number.isFinite(units) && Number.isFinite(roi) && Number.isFinite(picks)
       ? { record: rec, units, roi, picks, filterLabel: fl, trajectory, avatarUrl: av }
       : undefined;
-  return renderCapperOg(handle, { window, bet_type, market: market || undefined, seed, range });
+  return renderCapperOg(handle, { sport, window, bet_type, market: market || undefined, seed, range });
 }

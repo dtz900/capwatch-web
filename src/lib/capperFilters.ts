@@ -1,4 +1,36 @@
-import type { BetTypeFilter, CapperAggregate, MarketSlice, Window } from "./types";
+import type { BetTypeFilter, CapperAggregate, MarketSlice, SportFilter, Window } from "./types";
+
+/** Query params for a shared profile link, mirroring the provider's syncUrl so
+ * the link (and the OG card built from it) shows the view being shared.
+ * Values at their page default are undefined to keep the URL clean. */
+export function buildCapperShareParams(view: {
+  sport: SportFilter;
+  window: Window;
+  betType: BetTypeFilter;
+  market: string;
+  outcome: string;
+  range: { start: string; end: string } | null;
+}): Record<string, string | undefined> {
+  const { sport, window, betType, market, outcome, range } = view;
+  // A specific market implies straights, as in the filter bar and OG renderer.
+  const effBetType = market ? "straights" : betType;
+  return {
+    sport: sport !== "all" ? sport : undefined,
+    start: range?.start,
+    end: range?.end,
+    window: !range && window !== "season" ? window : undefined,
+    bet_type: effBetType !== "all" ? effBetType : undefined,
+    market: market || undefined,
+    outcome: outcome || undefined,
+  };
+}
+
+/** Scope label led by the league when one is selected, e.g. "NFL · Season".
+ * Unchanged across all leagues. */
+export function leagueScopedLabel(sport: SportFilter, label: string): string {
+  if (sport === "all") return label;
+  return [sport.toUpperCase(), label].filter(Boolean).join(" · ");
+}
 
 export interface MarketOption {
   /** Raw display_market key. Doubles as the history `market` param value. */

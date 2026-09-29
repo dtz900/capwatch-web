@@ -23,7 +23,7 @@ import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
 import { fetchCapperProfile, fetchEnabledSportsbooks, fetchLeaderboard, withDeadline } from "@/lib/api";
 import { breadcrumbNode, capperPersonNode, faqNode } from "@/lib/jsonld";
-import { formatRangeLabel, marketFilterLabel } from "@/lib/capperFilters";
+import { formatRangeLabel, leagueScopedLabel, marketFilterLabel } from "@/lib/capperFilters";
 import {
   buildCapperDescription,
   buildCapperFaq,
@@ -32,6 +32,7 @@ import {
   formatRecord,
   formatRoiForTitle,
   formatUnitsForTitle,
+  leagueLabel,
   SITE_NAME,
   SITE_URL,
 } from "@/lib/seo";
@@ -88,6 +89,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { handle } = await params;
   const sp = await searchParams;
+  const sport = parseSport(sp.sport);
 
   // Resolve filters from the page's own query params so social previews can
   // intentionally show the same performance window a user is sharing.
@@ -114,7 +116,7 @@ export async function generateMetadata({
   // URL so social click-throughs land on the filtered view they were sold.
   const canonical = `/cappers/${handle}`;
   const sharedQs = new URLSearchParams();
-  if (parseSport(sp.sport) !== "all") sharedQs.set("sport", parseSport(sp.sport));
+  if (sport !== "all") sharedQs.set("sport", sport);
   if (sp.window) sharedQs.set("window", sp.window);
   if (sp.bet_type) sharedQs.set("bet_type", sp.bet_type);
   if (market) sharedQs.set("market", market);
@@ -142,6 +144,9 @@ export async function generateMetadata({
     },
   ): string => {
     const q = new URLSearchParams();
+    // League travels on the image URL so the card's seedless self-fetch and
+    // its league pill match the shared view.
+    if (sport !== "all") q.set("sp", sport);
     if (range) { q.set("rs", range.start); q.set("re", range.end); }
     q.set("w", window);
     q.set("bt", betType);
@@ -152,8 +157,10 @@ export async function generateMetadata({
     if (refreshTs > 0) q.set("r", String(refreshTs));
     if (seed) {
       q.set("rec", seed.record);
-      q.set("u", seed.units.toFixed(2));
-      q.set("roi", seed.roi.toFixed(2));
+      // 4dp: at 2dp a 40.949 seed becomes 40.95 and the card re-rounds it to
+      // +41.0u while the page shows +40.9u.
+      q.set("u", seed.units.toFixed(4));
+      q.set("roi", seed.roi.toFixed(4));
       q.set("pc", String(seed.picks));
       q.set("fl", seed.filterLabel);
       if (seed.trajectory && seed.trajectory.length >= 2) {
@@ -180,7 +187,7 @@ export async function generateMetadata({
     // the image route fetches its own data.
     const profile = await withDeadline<Awaited<ReturnType<typeof fetchCapperProfile>> | null>(
       fetchCapperProfile(handle, {
-        sport: parseSport(sp.sport),
+        sport,
         history_limit: 1,
         history_offset: 0,
         bet_type: betType !== "all" ? betType : undefined,
@@ -197,7 +204,7 @@ export async function generateMetadata({
     const windowAgg = profile.aggregates[DEFAULT_WINDOW] ?? allTimeAgg;
 
     const baseInputs = {
-      sport: parseSport(sp.sport),
+      sport,
       handle,
       displayName: profile.capper.display_name,
       windowAgg,
@@ -237,7 +244,10 @@ export async function generateMetadata({
     const fLabel = marketLabel
       ? [marketLabel, windowWord].filter(Boolean).join(" · ")
       : filterLabelFor(window, betType);
-    const effectiveLabel = range ? formatRangeLabel(range.start, range.end) : fLabel;
+    // Led by the league when one is selected, so the title and the card read
+    // "NFL · Season" rather than passing an NFL record off as the full one.
+    const viewLabel = range ? formatRangeLabel(range.start, range.end) : fLabel;
+    const effectiveLabel = leagueScopedLabel(sport, viewLabel);
     const effectiveAgg = range ? rangeAgg : statAgg;
     const effectiveHasFilter = range ? !!rangeAgg : hasFilter;
     let title: string;
@@ -254,7 +264,7 @@ export async function generateMetadata({
           ? `${profile.capper.display_name} (@${handle})`
           : `@${handle}`;
       title = `@${handle} · ${effectiveLabel} · ${r} ${u} (${ro}) · ${SITE_NAME}`;
-      description = `${name} on ${effectiveLabel.toLowerCase()}: ${r} (${u}, ${ro}) across ${effectiveAgg.picks_count} graded picks. Verified on ${SITE_NAME}.`;
+      description = `${name} on ${leagueScopedLabel(sport, viewLabel.toLowerCase())}:${r} (${u}, ${ro}) across ${effectiveAgg.picks_count} graded picks. Verified on ${SITE_NAME}.`;
       ogDescription = `${effectiveLabel}: ${r} ${u} (${ro}) across ${effectiveAgg.picks_count} graded picks.`;
     } else {
       title = buildCapperTitle(baseInputs);
@@ -307,8 +317,9 @@ export async function generateMetadata({
       robots: { index: true, follow: true },
     };
   } catch {
-    const title = `@${handle} · MLB capper record on ${SITE_NAME}`;
-    const description = `@${handle} is tracked on ${SITE_NAME}. Every public MLB pick is parsed within seconds and graded against final game outcomes.`;
+    const league = leagueLabel(sport);
+    const title = `@${handle} · ${league} capper record on ${SITE_NAME}`;
+    const description = `@${handle} is tracked on ${SITE_NAME}. Every public ${league} pick is parsed within seconds and graded against final game outcomes.`;
     const ogImage = buildOgImageUrl(0, 0);
     return {
       title,
