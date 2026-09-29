@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildCapperShareParams,
+  capperRecordPill,
   formatRangeLabel,
   leagueScopedLabel,
   rangeScopeLabel,
@@ -37,6 +38,16 @@ describe("buildCapperShareParams", () => {
     expect(out.start).toBe("2026-09-21");
     expect(out.end).toBe("2026-09-27");
     expect(out.window).toBeUndefined();
+  });
+});
+
+describe("capperRecordPill", () => {
+  it("names the selected league", () => {
+    expect(capperRecordPill("nfl")).toBe("NFL CAPPER RECORD");
+    expect(capperRecordPill("mlb")).toBe("MLB CAPPER RECORD");
+  });
+  it("never labels the all-league record as MLB only", () => {
+    expect(capperRecordPill("all")).toBe("MLB + NFL CAPPER RECORD");
   });
 });
 
