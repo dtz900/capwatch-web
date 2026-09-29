@@ -17,7 +17,7 @@ import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
 import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
 import type { SlateGame, SlateResponse } from "@/lib/types";
-import { slateGameShareLink, type SlateShareView } from "@/lib/slate-share";
+import { pinnedNflWeek, slateGameShareLink, type SlateShareView } from "@/lib/slate-share";
 import { buildSlateOgFingerprint, resolveRequestedGame, slateBetCount } from "./_slate-og-renderer";
 
 interface PageProps {
@@ -146,7 +146,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       // A game-card share (?game=) leads with that matchup so the text
       // matches the card image, which features the same game.
       const featured = resolveRequestedGame(data.games, sp.game ?? sp.name ?? sp.matchup);
-      if (featured && featured.picks.length > 0) {
+      if (featured && featured.away_team && featured.home_team && featured.picks.length > 0) {
         const matchup = `${featured.away_team} @ ${featured.home_team}`;
         const bets = slateBetCount(featured.picks);
         const sharps = new Set(featured.picks.map((pk) => pk.capper_id)).size;
@@ -312,12 +312,12 @@ export default async function SlatePage({ searchParams }: PageProps) {
   const nflCaption = isNfl ? weekLabel(data, p.week) : "Weekly board";
   const mlbCaption = isNfl ? "Daily board" : dateParam === "today" ? "Tonight" : "Tomorrow";
 
-  // NFL links pin the week the API actually served, so a card shared from
-  // the current-week board still opens that week after it rolls.
+  // NFL links pin the regular-season week the API actually served, so a card
+  // shared from the current-week board still opens that week after it rolls.
   const shareView: SlateShareView = {
     sport,
     dateParam,
-    week: isNfl ? data.week?.week ?? p.week : undefined,
+    week: isNfl ? pinnedNflWeek(data.week, p.week) : undefined,
   };
   const shareFor = (g: SlateGame) => slateGameShareLink(g, data.games, shareView);
 

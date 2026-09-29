@@ -9,6 +9,18 @@ export interface SlateShareView {
   week: number | undefined;
 }
 
+/** NFL week to pin a share link to. The API reads a numeric week as a
+ * REGULAR-SEASON week, so only a regular-season board can be pinned by
+ * number; a preseason or playoff board keeps whatever week the URL already
+ * carried (usually none, meaning the current week). */
+export function pinnedNflWeek(
+  served: { week: number | null; season_type: "pre" | "reg" | "post" | null } | null | undefined,
+  urlWeek: number | undefined,
+): number | undefined {
+  if (served?.season_type === "reg" && served.week != null) return served.week;
+  return urlWeek;
+}
+
 interface ShareableGame {
   game_id: number;
   away_team: string | null;

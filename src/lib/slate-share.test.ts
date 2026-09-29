@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { slateGameShareLink } from "./slate-share";
+import { pinnedNflWeek, slateGameShareLink } from "./slate-share";
 
 const game = (game_id: number, away_team: string | null, home_team: string | null) => ({
   game_id,
@@ -8,6 +8,20 @@ const game = (game_id: number, away_team: string | null, home_team: string | nul
 });
 const PHI_ATL = game(824001, "PHI", "ATL");
 const mlbToday = { sport: "mlb" as const, dateParam: "today" as const, week: undefined };
+
+describe("pinnedNflWeek", () => {
+  it("pins a regular-season board to the week the API served", () => {
+    expect(pinnedNflWeek({ week: 4, season_type: "reg" }, undefined)).toBe(4);
+  });
+  it("never pins a playoff or preseason board by number", () => {
+    // The API reads week=1 as regular-season week 1, not Wild Card.
+    expect(pinnedNflWeek({ week: 1, season_type: "post" }, undefined)).toBeUndefined();
+    expect(pinnedNflWeek({ week: 3, season_type: "pre" }, undefined)).toBeUndefined();
+  });
+  it("keeps the URL week when the API sent no week meta", () => {
+    expect(pinnedNflWeek(null, 7)).toBe(7);
+  });
+});
 
 describe("slateGameShareLink", () => {
   it("features the matchup by its readable slug and anchors to the card", () => {
