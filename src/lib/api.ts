@@ -380,6 +380,11 @@ export interface CapperProfileFilters {
   bet_type?: BetTypeFilter;
   start?: string;
   end?: string;
+  /** Identity + precomputed aggregates only: the API loads no picks, so
+   *  history and pending come back empty. For the OG card and page metadata,
+   *  which must answer inside a crawler's budget. The API ignores it when a
+   *  date range is set. */
+  summary?: boolean;
 }
 
 export interface AuditFilters {
@@ -568,6 +573,9 @@ export async function fetchCapperProfile(
   if (filters.bet_type) params.set("bet_type", filters.bet_type);
   if (filters.start) params.set("start", filters.start);
   if (filters.end) params.set("end", filters.end);
+  // Part of the query string, so a summary response gets its own cache key
+  // and can never be served to the page as a full profile.
+  if (filters.summary) params.set("summary", "true");
   const qs = params.toString();
   const url = `${API_BASE}/api/public/cappers/${encodeURIComponent(handle)}${qs ? `?${qs}` : ""}`;
   const cacheKey = `profile:v1:${handle.toLowerCase()}:${qs}`;

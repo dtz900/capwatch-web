@@ -313,6 +313,7 @@ export async function renderCapperOg(
       bet_type: bet_type !== "all" ? bet_type : undefined,
       start: range?.start,
       end: range?.end,
+      summary: true,
     });
     const agg = profile.aggregates[window] ?? profile.aggregates["all_time"];
     displayName = profile.capper.display_name;

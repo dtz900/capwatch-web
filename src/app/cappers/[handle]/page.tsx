@@ -193,6 +193,7 @@ export async function generateMetadata({
         bet_type: betType !== "all" ? betType : undefined,
         start: range?.start,
         end: range?.end,
+        summary: true,
       }),
       2000,
       null,
