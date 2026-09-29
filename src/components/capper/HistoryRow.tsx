@@ -73,8 +73,18 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
     pick.grading_odds_source === "posted_capped";
   // outcome-only: capper posted no odds and we have no honest close-line
   // proxy (player props, or ML where Pinnacle is missing). Hide the odds
-  // and profit cells; the row still shows W/L via the bar color.
+  // and units cells; the profit cell carries a W/L/P stamp instead.
   const isOutcomeOnly = pick.grading_odds_source === "no_close_available";
+  const outcomeStamp =
+    pick.outcome === "W" ? (
+      <span className="text-[var(--color-pos)]">W</span>
+    ) : pick.outcome === "L" ? (
+      <span className="text-[var(--color-neg)]">L</span>
+    ) : pick.outcome === "P" ? (
+      <span className="text-[var(--color-text-muted)]">P</span>
+    ) : (
+      ""
+    );
   const profitColor =
     pick.profit_units == null
       ? "text-[var(--color-text-muted)]"
@@ -231,7 +241,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
         </div>
         <div className={`text-right tabular-nums text-[13px] font-extrabold ${profitColor}`}>
           {isOutcomeOnly
-            ? ""
+            ? outcomeStamp
             : pick.profit_units != null
               ? `${formatUnitsSmart(pick.profit_units)}u`
               : ""}
@@ -307,10 +317,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           </div>
           <div className={`tabular-nums text-[14px] font-extrabold ${profitColor}`}>
             {isOutcomeOnly
-              ? (pick.outcome === "W" ? <span className="text-[var(--color-pos)]">W</span>
-                : pick.outcome === "L" ? <span className="text-[var(--color-neg)]">L</span>
-                : pick.outcome === "P" ? <span className="text-[var(--color-text-muted)]">P</span>
-                : "")
+              ? outcomeStamp
               : pick.profit_units != null
                 ? `${formatUnitsSmart(pick.profit_units)}u`
                 : ""}
