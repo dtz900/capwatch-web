@@ -37,6 +37,7 @@ export async function GET(request: Request): Promise<Response> {
 
   let rows: SlateCapperSummary[] = [];
   let dateLabel = "";
+  let roundLabel: string | null = null;
   let graded = 0;
   let sharps = 0;
   try {
@@ -55,7 +56,10 @@ export async function GET(request: Request): Promise<Response> {
       if (!wk) throw new Error("no week data");
       summary = wk.capper_summary ?? [];
       graded = wk.summary?.graded_count ?? 0;
-      dateLabel = `WEEK OF ${fmt(wk.week_start)}`;
+      dateLabel = wk.label
+        ? `${wk.label.toUpperCase()} · ${fmt(wk.week_start)} - ${fmt(wk.week_end)}`
+        : `WEEK OF ${fmt(wk.week_start)}`;
+      roundLabel = wk.label ?? null;
     } else {
       const slate = await fetchSlate(date);
       summary = slate.capper_summary ?? [];
@@ -85,9 +89,15 @@ export async function GET(request: Request): Promise<Response> {
 
   return renderStandingsCard({
     marquee:
-      sport === "nfl" ? `${dateLabel} · FINAL` : week ? `WEEK FINAL · ${dateLabel}` : `FINAL STANDINGS · ${dateLabel}`,
+      sport === "nfl"
+        ? `${dateLabel} · FINAL`
+        : roundLabel
+          ? dateLabel
+          : week
+            ? `WEEK FINAL · ${dateLabel}`
+            : `FINAL STANDINGS · ${dateLabel}`,
     strip: `${graded} PICKS · ${sharps} SHARPS`,
-    heroLabel: week ? "SHARP OF THE WEEK" : "TONIGHT'S TOP SHARP",
+    heroLabel: roundLabel ? "SHARP OF THE SERIES" : week ? "SHARP OF THE WEEK" : "TONIGHT'S TOP SHARP",
     footer: "tailslips.com/slate",
     rows: cardRows,
   });
