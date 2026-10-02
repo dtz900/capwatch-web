@@ -6,6 +6,7 @@ import {
   AWARD_CARD_VERSION,
   AWARD_CATEGORIES,
   MONTHLY_AWARDS,
+  awardHeadline,
   awardVerifyHref,
   getAward,
 } from "@/lib/awards";
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const award = getAward(slug);
   if (!award) return { title: `Monthly Awards | ${SITE_NAME}` };
   const category = AWARD_CATEGORIES[award.category];
-  const title = `${award.monthLabel} #${award.rank} ${category.headline}: @${award.handle}`;
+  const title = `${award.monthLabel} #${award.rank} ${awardHeadline(award)}: @${award.handle}`;
   const description = `${award.displayName} finished ${award.monthLabel} at ${award.unitsProfit >= 0 ? "+" : ""}${award.unitsProfit.toFixed(1)}u on ${award.picksCount} graded ${category.label} (${award.wins}-${award.losses}${award.pushes ? `-${award.pushes}` : ""}). Every pick verified against the original tweet on ${SITE_NAME}.`;
   return {
     title: `${title} | ${SITE_NAME}`,
@@ -57,7 +58,7 @@ export default async function AwardPage({ params }: PageProps) {
 
   const category = AWARD_CATEGORIES[award.category];
   const verifyHref = awardVerifyHref(award);
-  const shareText = `${award.monthLabel} #${award.rank} ${category.headline.toLowerCase()} on ${SITE_NAME}: @${award.handle}, ${award.unitsProfit >= 0 ? "+" : ""}${award.unitsProfit.toFixed(1)}u on ${award.picksCount} graded ${category.label}.`;
+  const shareText = `${award.monthLabel} #${award.rank} ${awardHeadline(award).toLowerCase()} on ${SITE_NAME}: @${award.handle}, ${award.unitsProfit >= 0 ? "+" : ""}${award.unitsProfit.toFixed(1)}u on ${award.picksCount} graded ${category.label}.`;
   const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(`${SITE_URL}/awards/${slug}`)}`;
 
   return (
@@ -70,7 +71,7 @@ export default async function AwardPage({ params }: PageProps) {
           </Link>
         </p>
         <h1 className="mt-2 text-2xl font-black sm:text-3xl">
-          {award.monthLabel}: #{award.rank} {category.headline}
+          {award.monthLabel}: #{award.rank} {awardHeadline(award)}
         </h1>
 
         <div className="mt-6 overflow-hidden rounded-lg border border-white/10">
@@ -78,7 +79,7 @@ export default async function AwardPage({ params }: PageProps) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/awards/${slug}/og?cv=${AWARD_CARD_VERSION}`}
-            alt={`${award.monthLabel} #${award.rank} ${category.headline} award for @${award.handle}`}
+            alt={`${award.monthLabel} #${award.rank} ${awardHeadline(award)} award for @${award.handle}`}
             width={1200}
             height={630}
             className="h-auto w-full"

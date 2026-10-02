@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
-import { AWARD_CATEGORIES, MONTHLY_AWARDS, type MonthlyAward } from "@/lib/awards";
+import { MONTHLY_AWARDS, awardHeadline, type MonthlyAward } from "@/lib/awards";
 import { SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-static";
@@ -9,7 +9,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: `Monthly Capper Awards | ${SITE_NAME}`,
   description:
-    "TailSlips monthly awards: the top MLB cappers each month by graded, tweet-verified record. Straights, moneyline, and more.",
+    "TailSlips monthly awards: the top MLB and NFL cappers each month by graded, tweet-verified record. Straights, moneyline, and more.",
   alternates: { canonical: "/awards" },
 };
 
@@ -44,7 +44,7 @@ function groupAwards(): Array<{
         monthLabel: awards[0].monthLabel,
         categories: [...categories.entries()].map(([key, list]) => ({
           key,
-          headline: AWARD_CATEGORIES[key as keyof typeof AWARD_CATEGORIES].headline,
+          headline: awardHeadline(list[0]),
           awards: list.sort((a, b) => a.rank - b.rank),
         })),
       };
