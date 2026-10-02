@@ -333,8 +333,13 @@ export async function fetchWeekStandings(
   // reading MLB's schedule falls back to the Mon-Sun week.
   let round: PostseasonRound | null = null;
   try {
-    const season = Number(slateDateIso.slice(0, 4));
-    round = activeRound(roundsFromSchedule(await fetchPostseasonGames(season)), slateDateIso);
+    // Tomorrow's page on a gap day must not advance to a round that has
+    // not started yet (Codex P2 on #168): anchor on the earlier of the
+    // viewed date and today's slate day.
+    const today = currentSlateDay();
+    const anchor = slateDateIso < today ? slateDateIso : today;
+    const season = Number(anchor.slice(0, 4));
+    round = activeRound(roundsFromSchedule(await fetchPostseasonGames(season)), anchor);
   } catch {
     round = null;
   }

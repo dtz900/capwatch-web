@@ -74,10 +74,21 @@ export function roundDaysToFetch(round: PostseasonRound, todaySlateDay: string):
 
 const SCHEDULE_URL = "https://statsapi.mlb.com/api/v1/schedule/postseason";
 
-/** MLB's postseason schedule for `season`, flattened to games. */
+const SCHEDULE_TIMEOUT_MS = 4_000;
+
+/** MLB's postseason schedule for `season`, flattened to games. Bounded so a
+ * stalled StatsAPI degrades to the Mon-Sun board instead of holding the
+ * slate render to the function ceiling (Codex P1 on #168). */
 export async function fetchPostseasonGames(season: number): Promise<ScheduleGame[]> {
   const url = `${SCHEDULE_URL}?season=${season}&fields=dates,games,gameType,officialDate,status,detailedState`;
-  const res = await fetch(url, { next: { revalidate: 900 } });
+  const ctrl = new AbortController();
+  const timeoutId = setTimeout(() => ctrl.abort(), SCHEDULE_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url, { next: { revalidate: 900 }, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) throw new Error(`postseason schedule ${res.status}`);
   const body = (await res.json()) as { dates?: { games?: ScheduleGame[] }[] };
   return (body.dates ?? []).flatMap((d) => d.games ?? []);
