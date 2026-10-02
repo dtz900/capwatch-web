@@ -11,6 +11,9 @@ import type { DaySummary, SlateCapperSummary } from "./types";
 export interface WeekStandings {
   week_start: string;
   week_end: string;
+  /** Set during the MLB postseason: the round this rollup covers
+   * ("Wild Card Series", ...). Null for a regular Mon-Sun week. */
+  label?: string | null;
   days_counted: string[];
   summary: DaySummary;
   capper_summary: SlateCapperSummary[];

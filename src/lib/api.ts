@@ -2,6 +2,13 @@ import { API_BASE, REVALIDATE_SECONDS } from "./config";
 import type { SportFilter } from "./types";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
+  activeRound,
+  fetchPostseasonGames,
+  roundDaysToFetch,
+  roundsFromSchedule,
+  type PostseasonRound,
+} from "./postseason";
+import {
   currentSlateDay,
   nextSlateDay,
   currentNflWeekAnchor,
@@ -322,6 +329,34 @@ const WEEK_TTL_SEC = 120;
 export async function fetchWeekStandings(
   slateDateIso: string,
 ): Promise<WeekStandings | null> {
+  // MLB postseason: the round replaces the calendar week. Any failure
+  // reading MLB's schedule falls back to the Mon-Sun week.
+  let round: PostseasonRound | null = null;
+  try {
+    const season = Number(slateDateIso.slice(0, 4));
+    round = activeRound(roundsFromSchedule(await fetchPostseasonGames(season)), slateDateIso);
+  } catch {
+    round = null;
+  }
+  if (round) {
+    const active = round;
+    const roundDays = roundDaysToFetch(active, currentSlateDay());
+    if (roundDays.length === 0) return null;
+    const key = `slate:round:v1:${active.gameType}:${active.start}:${active.end}:${roundDays.length}`;
+    return withKvCache<WeekStandings>(key, WEEK_TTL_SEC, async () => {
+      const responses = await Promise.all(roundDays.map((d) => fetchSlate(d)));
+      const rollup = sumWeekStandings(
+        responses.map((r) => ({
+          date: r.date,
+          day_summary: r.day_summary,
+          capper_summary: r.capper_summary ?? [],
+        })),
+        { monday: active.start, sunday: active.end },
+      );
+      return { ...rollup, label: active.label };
+    });
+  }
+
   const days = weekDaysToFetch(slateDateIso, currentSlateDay());
   if (days.length === 0) return null;
   const bounds = weekBoundsFor(slateDateIso);

@@ -40,7 +40,7 @@ export function StandingsSection({ daily, totalGraded, totalPending, week, dayLa
 
   const pills =
     dailyHasRows && weekHasRows ? (
-      <TogglePills tab={tab} onChange={switchTab} dayLabel={dayLabel} />
+      <TogglePills tab={tab} onChange={switchTab} dayLabel={dayLabel} weekLabel={week?.label ?? "This week"} />
     ) : undefined;
 
   if ((tab === "week" || !dailyHasRows) && week && weekHasRows) {
@@ -73,10 +73,12 @@ function TogglePills({
   tab,
   onChange,
   dayLabel,
+  weekLabel,
 }: {
   tab: Tab;
   onChange: (t: Tab) => void;
   dayLabel: string;
+  weekLabel: string;
 }) {
   const base =
     "px-2.5 py-1 rounded-full text-[11px] font-bold tracking-[0.02em] transition-colors";
@@ -101,7 +103,7 @@ function TogglePills({
   return (
     <span className="inline-flex items-center gap-0.5 rounded-full border border-[var(--color-border)] bg-[rgba(255,255,255,0.02)] p-0.5">
       {mk("day", dayLabel)}
-      {mk("week", "This week")}
+      {mk("week", weekLabel)}
     </span>
   );
 }

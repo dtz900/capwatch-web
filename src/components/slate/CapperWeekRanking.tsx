@@ -32,6 +32,7 @@ export function CapperWeekRanking({
   if (ranked.length === 0) return null;
 
   const range = `${fmtDay(week.week_start)} - ${fmtDay(week.week_end)}`;
+  const title = week.label ?? "This week";
   const s = week.summary;
   const subtitle =
     s.pending_count === 0
@@ -58,7 +59,7 @@ export function CapperWeekRanking({
             {/* The date range is dropped on mobile: "This week" already says
                 it, and the graded/pending counts matter more in that space. */}
             <span className="text-[10px] uppercase tracking-[0.06em] sm:tracking-[0.18em] text-[var(--color-text-muted)] font-bold truncate">
-              This week<span className="hidden sm:inline"> · {range}</span> · {subtitle}
+              {title}<span className="hidden sm:inline"> · {range}</span> · {subtitle}
             </span>
           </div>
           <span className="text-[11px] text-[var(--color-text-muted)] font-semibold shrink-0 flex items-center gap-1">
@@ -81,7 +82,7 @@ export function CapperWeekRanking({
     <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-5 sm:px-7 sm:py-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-[20px] sm:text-[22px] font-extrabold tracking-[-0.02em] leading-none">
-          This week
+          {title}
         </h2>
         <span className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold tabular-nums">
           {range} · {subtitle}
