@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { AWARD_CATEGORIES, getAward, type MonthlyAward } from "@/lib/awards";
+import { AWARD_CATEGORIES, awardHeadline, getAward, type MonthlyAward } from "@/lib/awards";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -356,7 +356,7 @@ function awardCard(
                   textTransform: "uppercase",
                 }}
               >
-                {`#${award.rank} ${category.headline}`}
+                {`#${award.rank} ${awardHeadline(award)}`}
               </div>
               <div
                 style={{
