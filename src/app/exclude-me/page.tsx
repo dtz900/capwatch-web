@@ -2,7 +2,7 @@ import { ExcludeMeClient } from "./ExcludeMeClient";
 
 export const metadata = {
   title: "Exclude Me",
-  description: "Toggle Vercel Analytics exclusion for this browser.",
+  description: "Toggle analytics exclusion (Vercel and PostHog) for this browser.",
   robots: { index: false, follow: false },
 };
 

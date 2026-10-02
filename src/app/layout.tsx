@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Cinzel, Black_Ops_One } from "next/font/google";
 import { Suspense } from "react";
 import { AnalyticsWithExclusion } from "@/components/analytics/AnalyticsWithExclusion";
+import { PostHogIdentify } from "@/components/analytics/PostHogIdentify";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { UsernameClaimProvider } from "@/components/auth/UsernameClaim";
 import { BrandFooter } from "@/components/nav/BrandFooter";
@@ -99,6 +100,7 @@ export default function RootLayout({
             <BrandFooter />
             <MobileTabBar />
             <AnalyticsWithExclusion />
+            <PostHogIdentify />
           </UsernameClaimProvider>
         </AuthProvider>
       </body>

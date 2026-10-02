@@ -1,6 +1,8 @@
 "use client";
 
+import posthog from "posthog-js";
 import { useSyncExternalStore } from "react";
+import { posthogKey } from "@/lib/analytics/posthog-config";
 
 const EXCLUDE_FLAG_KEY = "tailslips_exclude_analytics";
 const CHANGE_EVENT = "tailslips:exclude-flag-change";
@@ -36,8 +38,10 @@ export function ExcludeMeClient() {
     try {
       if (localStorage.getItem(EXCLUDE_FLAG_KEY) === "1") {
         localStorage.removeItem(EXCLUDE_FLAG_KEY);
+        if (posthogKey()) posthog.opt_in_capturing();
       } else {
         localStorage.setItem(EXCLUDE_FLAG_KEY, "1");
+        if (posthogKey()) posthog.opt_out_capturing();
       }
       // Same-tab localStorage writes don't fire the native storage event;
       // dispatch a custom event so the subscriber re-runs.
