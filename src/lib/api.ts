@@ -484,6 +484,28 @@ export interface RecapDiffLastRun {
   duration_ms: number;
 }
 
+/** One row in the ungraded-on-a-final-game backlog (platform PR #357).
+ * Auto-approved picks whose bound game has been final for 6+ hours with
+ * no grade row yet (backlog #60 / #7). */
+export interface UngradedFinalRow {
+  pick_id: number;
+  capper_handle: string | null;
+  selection: string | null;
+  stat_name: string | null;
+  sport: string;
+  game_id: string | null;
+  final_at: string;
+  reason: "unresolved_player" | "unknown_stat_name" | "unsupported_period_market" | "unknown";
+}
+
+/** Summary + rows for the ungraded-on-a-final-game backlog. Optional on
+ * the response: absent entirely on API builds before PR #357. */
+export interface UngradedFinalSummary {
+  rows: UngradedFinalRow[];
+  total: number;
+  by_reason: Record<string, number>;
+}
+
 export interface AuditResponse {
   summary: {
     total: number;
@@ -520,6 +542,9 @@ export interface AuditResponse {
   error?: { class: string; message: string };
   /** Nightly recap-diff job's last run, or null when it has never run. */
   recap_diff_last_run?: RecapDiffLastRun | null;
+  /** Ungraded-on-a-final-game backlog (platform PR #357). Absent on
+   * older API builds; treat as optional. */
+  ungraded_final?: UngradedFinalSummary | null;
 }
 
 /** Server-only. Requires CRON_SECRET in env to authenticate. */
