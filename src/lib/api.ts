@@ -476,6 +476,14 @@ export interface AuditProblem {
   settled?: boolean;
 }
 
+/** Outcome of the nightly recap-diff job, or null when it has never run. */
+export interface RecapDiffLastRun {
+  ran_at: string;
+  recaps_examined: number;
+  flagged_count: number;
+  duration_ms: number;
+}
+
 export interface AuditResponse {
   summary: {
     total: number;
@@ -510,6 +518,8 @@ export interface AuditResponse {
    * + first 240 chars of message so the admin operator can see what
    * actually broke without reading Railway logs. */
   error?: { class: string; message: string };
+  /** Nightly recap-diff job's last run, or null when it has never run. */
+  recap_diff_last_run?: RecapDiffLastRun | null;
 }
 
 /** Server-only. Requires CRON_SECRET in env to authenticate. */
