@@ -477,7 +477,11 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
           <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-3">
             Ungraded on a final game
           </div>
-          {!ungradedFinal || ungradedFinal.total === 0 ? (
+          {!ungradedFinal ? (
+            <div className="text-[12px] font-medium text-[var(--color-text-soft)]">
+              Ungraded check not available on this API build.
+            </div>
+          ) : ungradedFinal.total === 0 ? (
             <div className="text-[12px] font-medium text-[var(--color-text-soft)]">
               Nothing stuck.
             </div>
