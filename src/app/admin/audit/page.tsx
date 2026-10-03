@@ -40,6 +40,22 @@ const HIDDEN_REASON_CHIPS = new Set([
   "data_gap",
 ]);
 
+/* Resolved once on the server at request time, like the rest of the admin
+   pages (see PR #150: dates are formatted server-side and passed down as
+   strings so the client never re-derives them and risks a hydration
+   mismatch). A duration-since-now string carries no timezone, so there is
+   nothing Pacific-specific to resolve here, just the "now" to diff against. */
+function formatAgo(iso: string): string {
+  const sec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (sec < 60) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
 const REASON_LABEL: Record<string, string> = {
   market_unhandled: "Market not in grader",
   missing_player_id: "Player not resolved",
@@ -50,6 +66,15 @@ const REASON_LABEL: Record<string, string> = {
   player_did_not_play: "Player didn't play",
   data_gap: "Game data gap",
   ungradeable: "Grader gave up",
+};
+
+// Reasons for the ungraded-on-a-final-game backlog (platform PR #357),
+// distinct from the actionable-queue reasons above.
+const UNGRADED_FINAL_REASON_LABEL: Record<string, string> = {
+  unresolved_player: "Player not resolved",
+  unknown_stat_name: "Unknown stat name",
+  unsupported_period_market: "Period market unsupported",
+  unknown: "Unknown",
 };
 
 export default async function AdminAuditPage({ searchParams }: PageProps) {
@@ -83,6 +108,15 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
 
   const showingFrom = offset + 1;
   const showingTo = Math.min(offset + data.problems.length, data.total_problems);
+
+  const recapDiff = data.recap_diff_last_run ?? null;
+  const recapDiffLabel = recapDiff
+    ? `Recap diff last ran ${formatAgo(recapDiff.ran_at)} (${recapDiff.recaps_examined} recaps, ${recapDiff.flagged_count} flagged)`
+    : "Recap diff has not run yet";
+
+  // Absent on older API builds (pre PR #357); treat as optional.
+  const ungradedFinal = data.ungraded_final ?? null;
+  const ungradedFinalRows = ungradedFinal?.rows ?? [];
 
   const buildHref = (
     overrides: Partial<{
@@ -130,6 +164,9 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             {data.total_problems === 1 ? "" : "s"} need a decision. Settled
             book-rules voids and self-resolving pending picks are tucked into
             their own sections below.
+          </p>
+          <p className="text-[11px] text-[var(--color-text-muted)] font-medium mt-2">
+            {recapDiffLabel}
           </p>
         </header>
 
@@ -435,6 +472,88 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             </div>
           </details>
         )}
+
+        <section className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-3">
+            Ungraded on a final game
+          </div>
+          {!ungradedFinal ? (
+            <div className="text-[12px] font-medium text-[var(--color-text-soft)]">
+              Ungraded check not available on this API build.
+            </div>
+          ) : ungradedFinal.total === 0 ? (
+            <div className="text-[12px] font-medium text-[var(--color-text-soft)]">
+              Nothing stuck.
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="px-2.5 py-1 rounded-md text-[11px] font-bold border bg-[rgba(255,255,255,0.08)] border-[rgba(255,255,255,0.15)] text-[var(--color-text)]">
+                  Total ({ungradedFinal.total})
+                </span>
+                {Object.entries(ungradedFinal.by_reason)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([r, n]) => (
+                    <span
+                      key={r}
+                      className="px-2.5 py-1 rounded-md text-[11px] font-bold border border-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]"
+                    >
+                      {UNGRADED_FINAL_REASON_LABEL[r] ?? r} ({n})
+                    </span>
+                  ))}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px] border-collapse">
+                  <thead>
+                    <tr className="text-left text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold border-b border-[var(--color-border)]">
+                      <th className="py-2 pr-3 font-bold">Capper</th>
+                      <th className="py-2 pr-3 font-bold">Selection</th>
+                      <th className="py-2 pr-3 font-bold">Stat</th>
+                      <th className="py-2 pr-3 font-bold">Sport</th>
+                      <th className="py-2 pr-3 font-bold">Game</th>
+                      <th className="py-2 pr-3 font-bold">Final since</th>
+                      <th className="py-2 pr-3 font-bold">Reason</th>
+                      <th className="py-2 pr-3 font-bold text-right">Pick</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[rgba(255,255,255,0.03)]">
+                    {ungradedFinalRows.map((row) => (
+                      <tr key={row.pick_id}>
+                        <td className="py-2 pr-3">
+                          <Link
+                            href={row.capper_handle ? `/cappers/${row.capper_handle}` : "#"}
+                            className="font-semibold text-[var(--color-text)] hover:underline"
+                          >
+                            @{row.capper_handle ?? "—"}
+                          </Link>
+                        </td>
+                        <td className="py-2 pr-3 text-[var(--color-text)] truncate max-w-[280px]">
+                          {row.selection ?? "—"}
+                        </td>
+                        <td className="py-2 pr-3 text-[var(--color-text-soft)]">
+                          {row.stat_name ?? "—"}
+                        </td>
+                        <td className="py-2 pr-3 text-[var(--color-text-muted)]">{row.sport}</td>
+                        <td className="py-2 pr-3 text-[var(--color-text-muted)] tabular-nums">
+                          {row.game_id ?? "—"}
+                        </td>
+                        <td className="py-2 pr-3 text-[var(--color-text-muted)] tabular-nums">
+                          {formatAgo(row.final_at)}
+                        </td>
+                        <td className="py-2 pr-3 text-[10px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
+                          {UNGRADED_FINAL_REASON_LABEL[row.reason] ?? row.reason}
+                        </td>
+                        <td className="py-2 pr-3 text-right text-[var(--color-text-muted)] tabular-nums">
+                          pid={row.pick_id}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </section>
 
         <footer className="flex items-center justify-between py-7 pb-2 mt-6 text-xs text-[var(--color-text-muted)] font-medium">
           <div>Live data. No cache. Every refresh hits the audit endpoint.</div>
