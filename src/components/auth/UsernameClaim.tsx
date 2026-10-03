@@ -255,6 +255,9 @@ function UsernameModal({
       if (/reserved/i.test(error.message)) {
         setServerError("That name is reserved.");
         setAvailability("idle");
+      } else if (/not allowed/i.test(error.message)) {
+        setServerError("That name isn't allowed.");
+        setAvailability("idle");
       } else if (/30 days/i.test(error.message)) {
         setServerError("You can change your username once every 30 days.");
         setAvailability("idle");

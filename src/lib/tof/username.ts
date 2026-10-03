@@ -1,5 +1,8 @@
-/* Username rules, mirrored from the DB (migration 2026-09-22_tail_or_fade.sql).
-   The trigger is the authority; this is the friendly pre-check. */
+/* Username rules, mirrored from the DB (migrations 2026-09-22_tail_or_fade.sql
+   and 2026-10-03_tof_username_blocklist.sql). The trigger is the authority;
+   this is the friendly pre-check. */
+
+import { isBlockedUsername } from "./blocklist";
 
 export const USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
 export const USERNAME_CHANGE_DAYS = 30;
@@ -19,6 +22,10 @@ export function validateUsername(raw: string, reserved: Iterable<string> = []): 
   for (const r of reserved) {
     if (r.toLowerCase() === lower) return { ok: false, reason: "that name is reserved" };
   }
+  // Checked after reserved names, before the server round trip. A verified
+  // capper's own handle bypasses this entirely server-side (tof.claim), so
+  // there is nothing to mirror here for that path.
+  if (isBlockedUsername(name)) return { ok: false, reason: "that name isn't allowed" };
   return { ok: true };
 }
 
