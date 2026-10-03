@@ -66,9 +66,12 @@ export default function Privacy() {
             If you play Tail or Fade or tail a capper&apos;s pick, we record those swipes and tails
             against your account so we can show your activity back to you and determine game
             results and prize eligibility. If you play Tail or Fade before signing in, your swipes
-            are stored against a random identifier kept in your browser; when you later sign in
-            from that same browser, those earlier swipes are attached to your account so your
-            streak carries over. Clearing your browser&apos;s site data removes that identifier.
+            are stored on our side against a random identifier kept in your browser. When you
+            first sign in from that same browser, every swipe recorded under that identifier is
+            attached to your account; which of them still count toward the game depends on the
+            current slate and its rules. Clearing your browser&apos;s site data removes the
+            identifier from your browser only; swipes already recorded on our side are kept and
+            can be deleted on request as described below.
           </li>
           <li>
             <strong className="text-[var(--color-text)] font-bold">Saved bet slips.</strong>{" "}
