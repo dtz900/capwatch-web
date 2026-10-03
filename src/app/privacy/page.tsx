@@ -162,10 +162,10 @@ export default function Privacy() {
           You can request deletion of your account and the personal information associated with it
           by emailing{" "}
           <a
-            href="mailto:support@tailslips.com"
+            href="mailto:corrections@tailslips.com"
             className="underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]"
           >
-            support@tailslips.com
+            corrections@tailslips.com
           </a>{" "}
           from the email address on your account. We will verify the request and remove your
           account information within a reasonable time, subject to the retention exceptions above.
@@ -189,10 +189,10 @@ export default function Privacy() {
           rights. We do not sell or share personal information for cross-context behavioral
           advertising. You can exercise these rights by emailing{" "}
           <a
-            href="mailto:support@tailslips.com"
+            href="mailto:corrections@tailslips.com"
             className="underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]"
           >
-            support@tailslips.com
+            corrections@tailslips.com
           </a>
           .
         </p>
@@ -208,10 +208,10 @@ export default function Privacy() {
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Questions about this Privacy Policy, or requests regarding your data, can be sent to{" "}
           <a
-            href="mailto:support@tailslips.com"
+            href="mailto:corrections@tailslips.com"
             className="underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]"
           >
-            support@tailslips.com
+            corrections@tailslips.com
           </a>
           .
         </p>

@@ -204,10 +204,10 @@ export default function Terms() {
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Questions about these Terms can be sent to{" "}
           <a
-            href="mailto:support@tailslips.com"
+            href="mailto:corrections@tailslips.com"
             className="underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]"
           >
-            support@tailslips.com
+            corrections@tailslips.com
           </a>
           .
         </p>
