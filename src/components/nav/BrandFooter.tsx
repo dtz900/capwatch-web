@@ -34,6 +34,15 @@ export function BrandFooter() {
             </a>
             .
           </p>
+          <p>
+            <Link href="/terms" className="underline hover:text-[var(--color-text)]">
+              Terms of Service
+            </Link>{" "}
+            ·{" "}
+            <Link href="/privacy" className="underline hover:text-[var(--color-text)]">
+              Privacy Policy
+            </Link>
+          </p>
         </div>
         <Image
           src="/logo-stacked.png"
