@@ -65,7 +65,20 @@ export default function Privacy() {
             <strong className="text-[var(--color-text)] font-bold">Game and activity data.</strong>{" "}
             If you play Tail or Fade or tail a capper&apos;s pick, we record those swipes and tails
             against your account so we can show your activity back to you and determine game
-            results and prize eligibility.
+            results and prize eligibility. If you play Tail or Fade before signing in, your swipes
+            are stored on our side against a random identifier kept in your browser. When you
+            first sign in from that same browser, every swipe recorded under that identifier is
+            attached to your account; which of them still count toward the game depends on the
+            current slate and its rules. Clearing your browser&apos;s site data removes the
+            identifier from your browser only; swipes already recorded on our side are kept and
+            can be deleted on request as described below.
+          </li>
+          <li>
+            <strong className="text-[var(--color-text)] font-bold">Saved bet slips.</strong>{" "}
+            If you use the My Tails feature to save a pick or parlay to your slip, we store the
+            selection, stake, odds, line, and the time you saved it, so we can show your slip and
+            its results back to you. This is activity you enter on the Site; the Site never places
+            a wager for you.
           </li>
           <li>
             <strong className="text-[var(--color-text)] font-bold">Analytics data.</strong> We use
@@ -143,6 +156,12 @@ export default function Privacy() {
             you choose to link your X account, X provides us the identity information needed to
             verify that link.
           </li>
+          <li>
+            <strong className="text-[var(--color-text)] font-bold">Stripe.</strong> If and when
+            paid features are offered, Stripe processes the payment. We send Stripe your email
+            address and account identifier to create the checkout, and we store the Stripe customer
+            and subscription identifiers it returns. We never see or store your card number.
+          </li>
         </ul>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           We do not sell your personal information to third parties.
@@ -162,10 +181,10 @@ export default function Privacy() {
           You can request deletion of your account and the personal information associated with it
           by emailing{" "}
           <a
-            href="mailto:corrections@tailslips.com"
+            href="mailto:support@tailslips.com"
             className="underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]"
           >
-            corrections@tailslips.com
+            support@tailslips.com
           </a>{" "}
           from the email address on your account. We will verify the request and remove your
           account information within a reasonable time, subject to the retention exceptions above.
@@ -189,10 +208,10 @@ export default function Privacy() {
           rights. We do not sell or share personal information for cross-context behavioral
           advertising. You can exercise these rights by emailing{" "}
           <a
-            href="mailto:corrections@tailslips.com"
+            href="mailto:support@tailslips.com"
             className="underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]"
           >
-            corrections@tailslips.com
+            support@tailslips.com
           </a>
           .
         </p>
@@ -208,10 +227,10 @@ export default function Privacy() {
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Questions about this Privacy Policy, or requests regarding your data, can be sent to{" "}
           <a
-            href="mailto:corrections@tailslips.com"
+            href="mailto:support@tailslips.com"
             className="underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]"
           >
-            corrections@tailslips.com
+            support@tailslips.com
           </a>
           .
         </p>
