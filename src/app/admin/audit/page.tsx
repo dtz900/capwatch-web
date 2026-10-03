@@ -40,6 +40,22 @@ const HIDDEN_REASON_CHIPS = new Set([
   "data_gap",
 ]);
 
+/* Resolved once on the server at request time, like the rest of the admin
+   pages (see PR #150: dates are formatted server-side and passed down as
+   strings so the client never re-derives them and risks a hydration
+   mismatch). A duration-since-now string carries no timezone, so there is
+   nothing Pacific-specific to resolve here, just the "now" to diff against. */
+function formatAgo(iso: string): string {
+  const sec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (sec < 60) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
 const REASON_LABEL: Record<string, string> = {
   market_unhandled: "Market not in grader",
   missing_player_id: "Player not resolved",
@@ -83,6 +99,11 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
 
   const showingFrom = offset + 1;
   const showingTo = Math.min(offset + data.problems.length, data.total_problems);
+
+  const recapDiff = data.recap_diff_last_run ?? null;
+  const recapDiffLabel = recapDiff
+    ? `Recap diff last ran ${formatAgo(recapDiff.ran_at)} (${recapDiff.recaps_examined} recaps, ${recapDiff.flagged_count} flagged)`
+    : "Recap diff has not run yet";
 
   const buildHref = (
     overrides: Partial<{
@@ -130,6 +151,9 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             {data.total_problems === 1 ? "" : "s"} need a decision. Settled
             book-rules voids and self-resolving pending picks are tucked into
             their own sections below.
+          </p>
+          <p className="text-[11px] text-[var(--color-text-muted)] font-medium mt-2">
+            {recapDiffLabel}
           </p>
         </header>
 
