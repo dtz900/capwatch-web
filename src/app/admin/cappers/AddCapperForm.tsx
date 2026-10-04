@@ -17,6 +17,10 @@ const STATUS_TONE: Record<"added" | "reactivated" | "already_tracking", string> 
 
 const SPORT_OPTIONS = ["MLB", "NBA", "NFL", "NHL", "MLS", "UFC", "NCAAF", "NCAAB"] as const;
 
+// Day presets for the history backfill. 1..7 individually (a capper added
+// mid-week usually only needs the current week), then the longer windows.
+const BACKFILL_DAY_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 14, 30, 90] as const;
+
 const FIELD =
   "w-full rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[rgba(255,255,255,0.20)] disabled:opacity-50";
 
@@ -180,9 +184,11 @@ export function AddCapperForm() {
             className="rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-2 text-sm text-[var(--color-text)] outline-none"
           >
             <option value={0}>Skip</option>
-            <option value={7}>Last 7 days</option>
-            <option value={30}>Last 30 days</option>
-            <option value={90}>Last 90 days</option>
+            {BACKFILL_DAY_OPTIONS.map((d) => (
+              <option key={d} value={d}>
+                {d === 1 ? "Last 1 day" : `Last ${d} days`}
+              </option>
+            ))}
             <option value={365}>All season (since 3/27)</option>
           </select>
         </div>
