@@ -38,7 +38,8 @@ export function NavSearch() {
     try {
       const res = await fetch(
         // limit=500: search must see every tracked capper, not the top 100.
-        `${API_BASE}/api/public/cappers?window=all_time&sort=units_profit&bet_type=all&min_picks=0&active_only=false&limit=500`,
+        // sport=all: the API defaults to MLB, which showed an NFL-only capper as "3 picks".
+        `${API_BASE}/api/public/cappers?window=all_time&sort=units_profit&bet_type=all&sport=all&min_picks=0&active_only=false&limit=500`,
       );
       if (!res.ok) throw new Error(`status ${res.status}`);
       const data = (await res.json()) as LeaderboardResponse;
