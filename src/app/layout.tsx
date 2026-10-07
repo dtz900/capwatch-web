@@ -88,9 +88,13 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // overflow-x-clip on body: full-bleed sections (TofHero) size themselves with 50vw, and vw
+  // includes the vertical scrollbar, so they spill past the right edge by the scrollbar width
+  // and put a horizontal scrollbar on every page. clip (not hidden) keeps body from becoming a
+  // scroll container, so sticky headers keep working.
   return (
     <html lang="en" className={`${manrope.variable} ${cinzel.variable} ${display.variable}`}>
-      <body>
+      <body className="overflow-x-clip">
         <AuthProvider>
           <UsernameClaimProvider>
             <Suspense fallback={null}>
