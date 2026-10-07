@@ -485,7 +485,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "loading" | "no-hand" | "playable" | "spectator" = data === null ? "loading" : !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="mx-[calc(50%-50vw)] border-b border-[var(--color-border)] px-[max(16px,calc(50vw-620px))] pb-3 pt-3 transition-[padding] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
+    <section className="w-full border-b border-[var(--color-border)] px-[max(16px,calc(50%-620px))] pb-3 pt-3 transition-[padding] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
       <TofTitle open={unfolded} onToggle={toggleFold} />
 
       <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
