@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { probeKvGet } from "@/lib/kv-cache";
 import { fetchLeaderboard, minPicksForWindow, type LeaderboardFilters } from "@/lib/api";
+import { API_BASE } from "@/lib/config";
 
 /**
  * Temporary diagnostic (2026-10-09): the homepage TTFB never improved when
@@ -45,8 +46,8 @@ async function timed<T>(fn: () => Promise<T>): Promise<{ ms: number; ok: boolean
   }
 }
 
-// Unauthenticated, so bounded (Codex P1 on #187): one leaderboard fetch per
-// run, the same upstream cost as one homepage view, and at most one run per
+// Unauthenticated, so bounded (Codex P1 on #187): two upstream reads per
+// run (one direct, one through fetchLeaderboard), and at most one run per
 // instance every THROTTLE_MS. Throttled calls get a 429 without touching
 // Redis or Railway.
 const THROTTLE_MS = 10_000;
@@ -60,12 +61,26 @@ export async function GET() {
   lastRun = now;
   const key = keyFor(DEFAULT);
   const before = await probeKvGet(key);
+  // Railway on its own, so a stale-fallback success inside fetchLeaderboard
+  // (upstream failed, :lkg served, primary never written) cannot pass for a
+  // KV write failure (Codex P2 on #187): if upstream is not ok here, the
+  // after-probe miss means nothing.
+  const t = Date.now();
+  let upstream: { ms: number; status: number | null; error: string | null };
+  try {
+    const res = await fetch(`${API_BASE}/api/public/cappers?${key.slice("lb:v1:".length)}`, { cache: "no-store" });
+    await res.arrayBuffer();
+    upstream = { ms: Date.now() - t, status: res.status, error: null };
+  } catch (err) {
+    upstream = { ms: Date.now() - t, status: null, error: err instanceof Error ? err.message.slice(0, 300) : String(err) };
+  }
+  const lkgBefore = await probeKvGet(`${key}:lkg`);
   const fetchTiming = await timed(() => fetchLeaderboard(DEFAULT));
   // Fire-and-forget KV writes need a moment to land before the re-probe.
   await new Promise((r) => setTimeout(r, 1000));
   const after = await probeKvGet(key);
   return NextResponse.json(
-    { region: process.env.VERCEL_REGION ?? null, before, fetch: fetchTiming, after },
+    { region: process.env.VERCEL_REGION ?? null, before, lkgBefore, upstream, fetch: fetchTiming, after },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
