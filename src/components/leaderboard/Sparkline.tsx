@@ -31,8 +31,8 @@ export function Sparkline({ values, width = 84, height = 24, color }: Props) {
 
   // A sparkline can't show more than ~1 point per 2px, and trajectories run
   // to 500 points; every point is markup (twice per row, desktop + mobile)
-  // in both the HTML and the RSC payload. Evenly spaced samples that always
-  // keep the first and last point, so the line still ends on the real value.
+  // in both the HTML and the RSC payload. Shape-preserving: every bucket's
+  // min and max survive, and the line still ends on the real value.
   values = downsample(values, Math.max(2, Math.floor(width / 2)));
 
   const final = values[values.length - 1];
@@ -104,12 +104,33 @@ export function Sparkline({ values, width = 84, height = 24, color }: Props) {
   );
 }
 
-/** Evenly spaced subset of `values` with at most `max` points, always
- *  including the first and last. Returns the input when already small. */
+/**
+ * At most `max` points from `values`, preserving shape: the series is split
+ * into buckets and each keeps both its minimum and maximum (in time order),
+ * plus the first and last point overall. A short drawdown or spike can't be
+ * sampled away, which matters on a betting record (Codex on #193).
+ */
 export function downsample(values: number[], max: number): number[] {
   if (values.length <= max) return values;
-  const out: number[] = [];
-  const step = (values.length - 1) / (max - 1);
-  for (let i = 0; i < max; i++) out.push(values[Math.round(i * step)]);
+  const first = values[0];
+  const last = values[values.length - 1];
+  const inner = values.slice(1, -1);
+  const buckets = Math.max(1, Math.floor((max - 2) / 2));
+  const size = inner.length / buckets;
+  const out: number[] = [first];
+  for (let b = 0; b < buckets; b++) {
+    const start = Math.floor(b * size);
+    const end = Math.max(start + 1, Math.floor((b + 1) * size));
+    let lo = start;
+    let hi = start;
+    for (let i = start; i < end && i < inner.length; i++) {
+      if (inner[i] < inner[lo]) lo = i;
+      if (inner[i] > inner[hi]) hi = i;
+    }
+    if (lo === hi) out.push(inner[lo]);
+    else if (lo < hi) out.push(inner[lo], inner[hi]);
+    else out.push(inner[hi], inner[lo]);
+  }
+  out.push(last);
   return out;
 }
