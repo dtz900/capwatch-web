@@ -38,6 +38,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // /board is the internal target of the next.config rewrite for filtered
+  // leaderboard views (`/?sport=nfl`). Middleware runs before that rewrite
+  // and sees the original `/`, so a request that arrives here AS /board is
+  // a direct hit (typed, crawled, bookmarked): send it to the public URL.
+  if (req.nextUrl.pathname === "/board") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url, 308);
+  }
+
   if (req.nextUrl.pathname.startsWith("/admin")) {
     const user = process.env.ADMIN_USER;
     const pass = process.env.ADMIN_PASS;

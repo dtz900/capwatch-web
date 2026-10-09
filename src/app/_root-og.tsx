@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { fetchLeaderboard, minPicksForWindow } from "@/lib/api";
+import { fetchLeaderboard, minPicksForWindow, type FetchMode } from "@/lib/api";
 import type { BetTypeFilter, CapperRow, Sort, Window } from "@/lib/types";
 
 // Shared renderer for the homepage OG card. Used by both the file-convention
@@ -149,7 +149,10 @@ export async function renderRootOg(filters: RootOgFilters = DEFAULT_ROOT_OG_FILT
  * busts the cache. Date is included as a daily fallback in case the API
  * returns null stats (so X still re-scrapes at least once per day).
  */
-export async function buildRootOgFingerprint(filters: RootOgFilters = DEFAULT_ROOT_OG_FILTERS): Promise<{
+export async function buildRootOgFingerprint(
+  filters: RootOgFilters = DEFAULT_ROOT_OG_FILTERS,
+  mode?: FetchMode,
+): Promise<{
   ptDate: string;
   picks: number;
   cappers: number;
@@ -166,7 +169,7 @@ export async function buildRootOgFingerprint(filters: RootOgFilters = DEFAULT_RO
       min_picks: minPicksForWindow(filters.window, filters.sport),
       active_only: filters.active_only,
       sport: filters.sport,
-    });
+    }, mode);
     picks = data.platform_stats?.graded_picks_total ?? 0;
     cappers = data.platform_stats?.cappers_tracked ?? 0;
     contentHash = hashRootFingerprint(
