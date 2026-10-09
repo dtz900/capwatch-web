@@ -5,9 +5,10 @@ import { fetchLeaderboard, minPicksForWindow, type LeaderboardFilters } from "@/
 /**
  * Temporary diagnostic (2026-10-09): the homepage TTFB never improved when
  * the leaderboard KV TTL went 15s -> 300s, which suggests KV never hits in
- * production. This times the default board's KV key directly, then the full
- * fetchLeaderboard path twice. Returns timings and hit/miss only: no data,
- * no keys, no secrets, so it needs no auth. Remove once diagnosed.
+ * production. This times the default board's KV key directly, the full
+ * fetchLeaderboard path once, and the key again. Returns timings and hit/miss
+ * only: no data, keys or secrets. Throttled instead of authed (no web-side
+ * secret is available to the operator). Remove once diagnosed.
  */
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -44,16 +45,27 @@ async function timed<T>(fn: () => Promise<T>): Promise<{ ms: number; ok: boolean
   }
 }
 
+// Unauthenticated, so bounded (Codex P1 on #187): one leaderboard fetch per
+// run, the same upstream cost as one homepage view, and at most one run per
+// instance every THROTTLE_MS. Throttled calls get a 429 without touching
+// Redis or Railway.
+const THROTTLE_MS = 10_000;
+let lastRun = 0;
+
 export async function GET() {
+  const now = Date.now();
+  if (now - lastRun < THROTTLE_MS) {
+    return NextResponse.json({ error: "throttled" }, { status: 429, headers: { "Cache-Control": "no-store" } });
+  }
+  lastRun = now;
   const key = keyFor(DEFAULT);
   const before = await probeKvGet(key);
-  const first = await timed(() => fetchLeaderboard(DEFAULT));
+  const fetchTiming = await timed(() => fetchLeaderboard(DEFAULT));
   // Fire-and-forget KV writes need a moment to land before the re-probe.
-  await new Promise((r) => setTimeout(r, 1500));
+  await new Promise((r) => setTimeout(r, 1000));
   const after = await probeKvGet(key);
-  const second = await timed(() => fetchLeaderboard(DEFAULT));
   return NextResponse.json(
-    { region: process.env.VERCEL_REGION ?? null, before, first, after, second },
+    { region: process.env.VERCEL_REGION ?? null, before, fetch: fetchTiming, after },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
