@@ -10,9 +10,8 @@
  * Gated by the same CRON_SECRET bearer the rest of /api/admin uses.
  */
 import { NextResponse } from "next/server";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { purgeKvByPrefix } from "@/lib/kv-cache";
-import { LEADERBOARD_TAG, TOF_HAND_TAG } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -49,11 +48,6 @@ export async function POST(request: Request) {
       revalidated.push("/cappers/[handle]", "/cappers");
     }
     if (scope === "all" || scope === "leaderboard") {
-      // The prerendered / keeps its upstream JSON in the Data Cache under
-      // these tags; drop them with the page or the regeneration would read
-      // the pre-purge copy back (the 2026-08-13 poisoned-refill shape).
-      revalidateTag(LEADERBOARD_TAG, "max");
-      revalidateTag(TOF_HAND_TAG, "max");
       revalidatePath("/leaderboard");
       revalidatePath("/");
       revalidated.push("/leaderboard", "/");
