@@ -44,7 +44,13 @@ import type {
 // a still-cached 60s fetch entry, and the fresh caches got refilled with
 // PRE-PICK data for another cycle. Users saw "0 live picks", refreshed three
 // times, and only the third walked every layer forward (David, 2026-08-13).
-const LEADERBOARD_TTL_SEC = 15;
+// Leaderboard rows only change when the aggregates job runs (daily) or the
+// admin Refresh Aggregates button fires, and that button purges the `lb:`
+// prefix, so the TTL here is not what keeps the board current. The old 15s
+// meant nearly every visit missed KV and paid the full Railway round-trip
+// (3.8s TTFB measured 2026-10-08; the API alone was 1.6-5s). Live pick
+// counts seeded from this response are corrected by the 30s client poll.
+const LEADERBOARD_TTL_SEC = 300;
 const SLATE_TTL_SEC = 15;
 const PROFILE_TTL_SEC = 5;
 
