@@ -1,4 +1,5 @@
 import { inferMarketBucket, pickMlSide, pickTeamSide } from "@/lib/bet-format";
+import { displayName } from "@/lib/slate-players";
 import type { SlatePick, Sport } from "@/lib/types";
 
 // Organizes one game's picks for the slate card. NFL games carry dozens of
@@ -61,9 +62,11 @@ function playerTextKey(name: string): string {
   return `${parts[0][0]} ${parts.slice(1).join(" ")}`;
 }
 
-/** Longest name wins the label: "Jalen Hurts" over "J. Hurts". */
+/** Most common full spelling, so one capper's typo cannot title the row (#183). */
 function bestName(names: string[]): string {
-  return names.reduce((a, b) => (b.length > a.length ? b : a));
+  const counts = new Map<string, number>();
+  for (const n of names) counts.set(n, (counts.get(n) ?? 0) + 1);
+  return displayName(counts);
 }
 
 function totalStake(picks: SlatePick[]): number {
