@@ -60,10 +60,8 @@ describe("fetchSlate last-known-good across the slate-day rollover", () => {
     vi.setSystemTime(new Date("2026-09-14T20:00:00Z"));
 
     const day1Slate = sampleSlate("2026-09-14");
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => day1Slate,
-    } as unknown as Response);
+    // A real Response: the fetch helpers buffer the body inside their timeout.
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(new Response(JSON.stringify(day1Slate)));
 
     const { fetchSlate } = await import("@/lib/api");
 

@@ -10,9 +10,8 @@ describe("fetchLeaderboard", () => {
       window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true, bet_type: "all" as const,
       leaderboard: [],
     };
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
-      ok: true, json: async () => sample,
-    } as unknown as Response);
+    // A real Response: the fetch helpers buffer the body inside their timeout.
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response(JSON.stringify(sample)));
 
     const out = await fetchLeaderboard({
       window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true, bet_type: "all" as const,
@@ -27,7 +26,7 @@ describe("fetchLeaderboard", () => {
   });
 
   it("throws on non-2xx", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue({ ok: false, status: 500 } as unknown as Response);
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response(null, { status: 500 }));
     await expect(
       fetchLeaderboard({ window: "all_time", sort: "roi_pct", min_picks: 5, active_only: true, bet_type: "all" })
     ).rejects.toThrow();
