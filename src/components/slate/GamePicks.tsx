@@ -451,7 +451,7 @@ function CapperView({ picks, ctx }: { picks: SlatePick[]; ctx: Ctx }) {
     <div className="mt-6 max-w-[680px] mx-auto">
       <SectionHeader
         title="Cappers on this game"
-        right={`${plural(groups.length, "capper", "cappers")} · ${plural(picks.length, "pick", "picks")}`}
+        right={`${plural(groups.length, "capper", "cappers")} · ${plural(toBets(picks).length, "bet", "bets")}`}
       />
       <Capped
         cap={CAPPER_CAP}
