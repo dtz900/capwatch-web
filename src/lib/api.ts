@@ -1,4 +1,5 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
+import { warnFailed, warnIfSlow } from "./upstream-log";
 import type { SportFilter } from "./types";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
@@ -75,8 +76,10 @@ async function fetchWithRetry(
   for (let i = 0; i < attempts; i++) {
     const ctrl = new AbortController();
     const timeoutId = setTimeout(() => ctrl.abort(), perAttemptMs);
+    const started = Date.now();
     try {
       const res = await fetch(url, { ...init, signal: ctrl.signal });
+      warnIfSlow("fetchWithRetry", url, started, `attempt ${i + 1}/${attempts} status ${res.status}`);
       clearTimeout(timeoutId);
       // Only retry on server errors / proxy hiccups. Client errors are
       // legitimate (bad params, not found, etc.) and won't recover.
@@ -87,6 +90,7 @@ async function fetchWithRetry(
       }
       return res;
     } catch (err) {
+      warnFailed("fetchWithRetry", url, started, err, `attempt ${i + 1}/${attempts}`);
       clearTimeout(timeoutId);
       lastErr = err;
       if (i < attempts - 1) {
@@ -111,8 +115,14 @@ async function fetchWithTimeout(
 ): Promise<Response> {
   const ctrl = new AbortController();
   const timeoutId = setTimeout(() => ctrl.abort(), timeoutMs);
+  const started = Date.now();
   try {
-    return await fetch(url, { ...init, signal: ctrl.signal });
+    const res = await fetch(url, { ...init, signal: ctrl.signal });
+    warnIfSlow("fetchWithTimeout", url, started, `status ${res.status}`);
+    return res;
+  } catch (err) {
+    warnFailed("fetchWithTimeout", url, started, err);
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }
