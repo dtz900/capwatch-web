@@ -18,6 +18,8 @@ interface Props { rank: number; capper: CapperRow; window?: Window; sport?: Spor
 const DESKTOP_COLS =
   "hidden sm:grid grid-cols-[40px_minmax(180px,1fr)_minmax(220px,1.4fr)_64px_64px_70px_80px_92px_44px] items-center gap-3 px-[22px] min-h-[60px] border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
 
+const ROW_PICK_TILES = 4;
+
 const MOBILE_CARD =
   "sm:hidden block px-4 py-3.5 border-b border-[rgba(255,255,255,0.03)] last:border-0";
 
@@ -61,7 +63,11 @@ export function StandingsRow({ rank, capper, window, sport }: Props) {
           <div className="flex items-center gap-3 min-w-0">{handleNode}</div>
         )}
         <div className="min-w-0 relative">
-          <PickTiles picks={capper.last_picks} limit={4} />
+          {/* PickTiles is a client component: everything passed here ships in
+              the RSC payload. The API sends 10 recent picks per capper and the
+              tiles show 4, so pass 4 (the other 6 were ~60% of the board's
+              per-row payload). */}
+          <PickTiles picks={capper.last_picks.slice(0, ROW_PICK_TILES)} limit={ROW_PICK_TILES} />
         </div>
         <div className="text-right">{capper.picks_count}</div>
         <div className="text-right">{formatWinRate(capper.win_rate)}</div>

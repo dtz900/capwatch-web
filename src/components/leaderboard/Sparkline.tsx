@@ -29,6 +29,12 @@ export function Sparkline({ values, width = 84, height = 24, color }: Props) {
     );
   }
 
+  // A sparkline can't show more than ~1 point per 2px, and trajectories run
+  // to 500 points; every point is markup (twice per row, desktop + mobile)
+  // in both the HTML and the RSC payload. Evenly spaced samples that always
+  // keep the first and last point, so the line still ends on the real value.
+  values = downsample(values, Math.max(2, Math.floor(width / 2)));
+
   const final = values[values.length - 1];
   const positive = final >= 0;
   const lineColor = color ?? (positive ? "var(--color-pos)" : "var(--color-neg)");
@@ -96,4 +102,14 @@ export function Sparkline({ values, width = 84, height = 24, color }: Props) {
       />
     </svg>
   );
+}
+
+/** Evenly spaced subset of `values` with at most `max` points, always
+ *  including the first and last. Returns the input when already small. */
+export function downsample(values: number[], max: number): number[] {
+  if (values.length <= max) return values;
+  const out: number[] = [];
+  const step = (values.length - 1) / (max - 1);
+  for (let i = 0; i < max; i++) out.push(values[Math.round(i * step)]);
+  return out;
 }
