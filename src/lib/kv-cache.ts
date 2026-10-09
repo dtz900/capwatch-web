@@ -219,38 +219,3 @@ export async function kvRateLimit(
     return true;
   }
 }
-
-/**
- * Diagnostics only (see /api/debug/kv-timing): time one raw GET for `key`
- * and report whether it hit, how big the value was, and the error text if
- * Redis refused. Never returns the value itself.
- */
-export async function probeKvGet(key: string): Promise<{
-  configured: boolean;
-  ms: number | null;
-  hit: boolean;
-  bytes: number | null;
-  error: string | null;
-}> {
-  const client = getClient();
-  if (!client) return { configured: false, ms: null, hit: false, bytes: null, error: null };
-  const t = Date.now();
-  try {
-    const v = await client.get<unknown>(key);
-    return {
-      configured: true,
-      ms: Date.now() - t,
-      hit: v !== null && v !== undefined,
-      bytes: v == null ? null : JSON.stringify(v).length,
-      error: null,
-    };
-  } catch (err) {
-    return {
-      configured: true,
-      ms: Date.now() - t,
-      hit: false,
-      bytes: null,
-      error: err instanceof Error ? err.message.slice(0, 300) : String(err).slice(0, 300),
-    };
-  }
-}
