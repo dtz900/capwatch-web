@@ -79,7 +79,7 @@ async function fetchWithRetry(
     const started = Date.now();
     try {
       const res = await fetch(url, { ...init, signal: ctrl.signal });
-      warnIfSlow("fetchWithRetry", url, started, `attempt ${i + 1}/${attempts} status ${res.status}`);
+      warnIfSlow("fetchWithRetry", url, started, res.status, `attempt ${i + 1}/${attempts}`);
       clearTimeout(timeoutId);
       // Only retry on server errors / proxy hiccups. Client errors are
       // legitimate (bad params, not found, etc.) and won't recover.
@@ -118,7 +118,7 @@ async function fetchWithTimeout(
   const started = Date.now();
   try {
     const res = await fetch(url, { ...init, signal: ctrl.signal });
-    warnIfSlow("fetchWithTimeout", url, started, `status ${res.status}`);
+    warnIfSlow("fetchWithTimeout", url, started, res.status);
     return res;
   } catch (err) {
     warnFailed("fetchWithTimeout", url, started, err);

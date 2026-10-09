@@ -8,9 +8,14 @@ export function shortUrl(url: string): string {
   return url.replace(/^https?:\/\/[^/]+/, "").slice(0, 140);
 }
 
-export function warnIfSlow(label: string, url: string, started: number, detail = ""): void {
+/** Warn when a call that got a response was slow, or answered 5xx (fast
+ *  outages must show up too; 4xx such as a missing profile stay quiet). */
+export function warnIfSlow(label: string, url: string, started: number, status: number, detail = ""): void {
   const ms = Date.now() - started;
-  if (ms >= SLOW_UPSTREAM_MS) console.warn(`[upstream] ${label} slow ${ms}ms ${shortUrl(url)} ${detail}`.trim());
+  if (ms >= SLOW_UPSTREAM_MS || status >= 500) {
+    const what = status >= 500 ? `HTTP ${status}` : "slow";
+    console.warn(`[upstream] ${label} ${what} ${ms}ms ${shortUrl(url)} ${detail}`.trim());
+  }
 }
 
 export function warnFailed(label: string, url: string, started: number, err: unknown, detail = ""): void {

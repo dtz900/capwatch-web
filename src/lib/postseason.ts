@@ -88,7 +88,7 @@ export async function fetchPostseasonGames(season: number): Promise<ScheduleGame
   const started = Date.now();
   try {
     res = await fetch(url, { next: { revalidate: 900 }, signal: ctrl.signal });
-    warnIfSlow("mlb-schedule", url, started, `status ${res.status}`);
+    warnIfSlow("mlb-schedule", url, started, res.status);
   } catch (err) {
     warnFailed("mlb-schedule", url, started, err);
     throw err;
