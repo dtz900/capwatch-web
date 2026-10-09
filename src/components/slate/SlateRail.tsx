@@ -168,9 +168,10 @@ export function SlateRailStrip({ games }: { games: RailGame[] }) {
 }
 
 /**
- * DESKTOP (>= xl): one full-height rectangle divided into a row per matchup.
- * Rows flex to fill the viewport height with no scrollbar, so the rail is
- * responsive to the screen size. The active row is marked by a ribbon on the
+ * DESKTOP (>= xl): a rectangle divided into a row per matchup. Rows sit at
+ * 64px and the box hugs them, so a one-game day is one scoreboard row, not a
+ * viewport-tall cell (David, 2026-10-09). A crowded slate shrinks rows to fit
+ * the viewport, down to 40px, then the box scrolls. The active row is marked by a ribbon on the
  * left edge, not a full fill. Rendered as the left column of the two-column
  * flex so the board fills the remaining width.
  */
@@ -187,7 +188,7 @@ export function SlateRailColumn({ games }: { games: RailGame[] }) {
       <div className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold px-1 pb-2">
         On the board
       </div>
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden border border-[rgba(255,255,255,0.08)] divide-y divide-[rgba(255,255,255,0.08)]">
+      <div className="min-h-0 flex flex-col overflow-y-auto no-scrollbar border border-[rgba(255,255,255,0.08)] divide-y divide-[rgba(255,255,255,0.08)]">
         {games.map((g) => {
           const on = g.game_id === activeId;
           const quiet = g.sharp_count === 0;
@@ -202,7 +203,7 @@ export function SlateRailColumn({ games }: { games: RailGame[] }) {
               onClick={jump(g.game_id)}
               aria-current={on ? "true" : undefined}
               aria-label={`Jump to ${g.away_team ?? "away"} versus ${g.home_team ?? "home"}`}
-              className={`relative flex-1 min-h-0 overflow-hidden flex flex-col justify-center gap-0.5 px-3
+              className={`relative h-16 min-h-10 shrink overflow-hidden flex flex-col justify-center gap-0.5 px-3
                 transition-colors ${quiet ? "opacity-60" : ""} ${
                   on
                     ? "text-[var(--color-text)]"
