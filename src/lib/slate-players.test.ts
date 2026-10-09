@@ -47,6 +47,26 @@ describe("topBackedPlayers", () => {
     expect(mahomes.name).toBe("Patrick Mahomes");
   });
 
+  it("prefers the most common full spelling over a longer typo", () => {
+    const rows = [
+      row({ capper_id: 1, handle: "a", player_id: 4596472, player_name: "Jalon Daniels", selection: "Jalon Daniels 150+ Yards" }),
+      row({ capper_id: 2, handle: "b", player_id: 4596472, player_name: "Jalon Daniels", selection: "Jalon Daniels 125+ Passing YDS" }),
+      row({ capper_id: 3, handle: "c", player_id: 4596472, player_name: "Jayden Daniels", selection: "Jayden Daniels 150+ Yards" }),
+      row({ capper_id: 4, handle: "d", player_id: 4596472, player_name: "J.Daniels", selection: "J.Daniels 150+ Yards" }),
+      row({ capper_id: 5, handle: "e", player_id: 4596472, player_name: "J.Daniels", selection: "J.Daniels 175+ Yards" }),
+      row({ capper_id: 6, handle: "f", player_id: 4596472, player_name: "J.Daniels", selection: "J.Daniels 200+ Yards" }),
+    ];
+    expect(topBackedPlayers(rows, 1)[0].name).toBe("Jalon Daniels");
+  });
+
+  it("falls back to the longest form when every row is shorthand", () => {
+    const rows = [
+      row({ capper_id: 1, handle: "a", player_id: 9, player_name: "J.Daniels", selection: "J.Daniels 150+ Yards" }),
+      row({ capper_id: 2, handle: "b", player_id: 9, player_name: "J. Daniels", selection: "J. Daniels 150+ Yards" }),
+    ];
+    expect(topBackedPlayers(rows, 1)[0].name).toBe("J. Daniels");
+  });
+
   it("names handles in first-seen order and keeps suppressed handles anonymous", () => {
     const [mahomes] = topBackedPlayers(PICKS, 1);
     expect(mahomes.handles).toEqual(["b1g", "chalk"]);
