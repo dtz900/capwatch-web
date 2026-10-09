@@ -268,17 +268,26 @@ export async function fetchLeaderboard(
   if (filters.limit != null) params.set("limit", String(filters.limit));
   if (filters.sport) params.set("sport", filters.sport);
   const cacheKey = `lb:v1:${params.toString()}`;
+  const fetchFresh = async () => {
+    const res = await fetchWithRetry(
+      `${API_BASE}/api/public/cappers?${params}`,
+      modeInit(mode, STATIC_BOARD_REVALIDATE_SEC, LEADERBOARD_TAG),
+    );
+    if (!res.ok) {
+      throw new Error(`Leaderboard fetch failed: ${res.status}`);
+    }
+    return (await res.json()) as LeaderboardResponse;
+  };
+  // A prerendered route skips KV. Its Data Cache entry and the ISR page
+  // already hold this response, and the Upstash SDK issues its own HTTP
+  // calls with cache: "no-store" (@upstash/redis nodejs.js:
+  // `cache: configOrRequester.cache ?? "no-store"`), which bails the
+  // prerender exactly like a no-store Railway fetch would. That is why the
+  // static home board built as static locally (no KV client) and dynamic
+  // on Vercel (KV configured) on 2026-10-09.
+  if (mode?.prerender) return fetchFresh();
   return withStaleFallback(cacheKey, () =>
-    withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, async () => {
-      const res = await fetchWithRetry(
-        `${API_BASE}/api/public/cappers?${params}`,
-        modeInit(mode, STATIC_BOARD_REVALIDATE_SEC, LEADERBOARD_TAG),
-      );
-      if (!res.ok) {
-        throw new Error(`Leaderboard fetch failed: ${res.status}`);
-      }
-      return (await res.json()) as LeaderboardResponse;
-    }),
+    withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, fetchFresh),
   );
 }
 
