@@ -209,6 +209,22 @@ export function pickMlSide(
   return null;
 }
 
+/**
+ * Which team of this game a selection names, as "away" / "home", for any
+ * market (spreads, team totals). Null when it names neither.
+ */
+export function pickTeamSide(
+  selection: string | null | undefined,
+  awayTeam: string | null | undefined,
+  homeTeam: string | null | undefined,
+  sport: "MLB" | "NFL" = "MLB",
+): "away" | "home" | null {
+  const team = resolveTeam(selection ?? "", awayTeam, homeTeam, sport);
+  if (team && awayTeam && team === awayTeam) return "away";
+  if (team && homeTeam && team === homeTeam) return "home";
+  return null;
+}
+
 // NFL nicknames that are not the mascot in NFL_TEAM_NAMES. Only consulted
 // against the two teams of the game in hand, so the MLB/NFL collisions
 // (Giants, Cardinals) can never cross-resolve.
