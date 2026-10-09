@@ -177,6 +177,21 @@ export function SlateRailStrip({ games }: { games: RailGame[] }) {
  */
 export function SlateRailColumn({ games }: { games: RailGame[] }) {
   const { activeId, jump } = useSlateSpy(games);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const activeRowRef = useRef<HTMLAnchorElement | null>(null);
+
+  // When a crowded slate makes the box scroll, keep the active row in view.
+  // Scrolls only the box, never the page.
+  useEffect(() => {
+    const box = boxRef.current;
+    const row = activeRowRef.current;
+    if (!box || !row || box.scrollHeight <= box.clientHeight) return;
+    const top = row.offsetTop; // box is relative, so this is box-local
+    if (top < box.scrollTop || top + row.offsetHeight > box.scrollTop + box.clientHeight) {
+      box.scrollTo({ top: Math.max(0, top - box.clientHeight / 2 + row.offsetHeight / 2), behavior: "smooth" });
+    }
+  }, [activeId]);
+
   if (games.length === 0) return null;
 
   return (
@@ -188,7 +203,7 @@ export function SlateRailColumn({ games }: { games: RailGame[] }) {
       <div className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold px-1 pb-2">
         On the board
       </div>
-      <div className="min-h-0 flex flex-col overflow-y-auto no-scrollbar border border-[rgba(255,255,255,0.08)] divide-y divide-[rgba(255,255,255,0.08)]">
+      <div ref={boxRef} className="relative min-h-0 flex flex-col overflow-y-auto no-scrollbar border border-[rgba(255,255,255,0.08)] divide-y divide-[rgba(255,255,255,0.08)]">
         {games.map((g) => {
           const on = g.game_id === activeId;
           const quiet = g.sharp_count === 0;
@@ -199,6 +214,7 @@ export function SlateRailColumn({ games }: { games: RailGame[] }) {
           return (
             <a
               key={g.game_id}
+              ref={on ? activeRowRef : undefined}
               href={`#game-${g.game_id}`}
               onClick={jump(g.game_id)}
               aria-current={on ? "true" : undefined}
