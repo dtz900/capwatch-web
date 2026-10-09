@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupByCapper, groupByMarket, propPlayerName, propStat, propStatSummary } from "./slate-groups";
+import { groupByCapper, groupByMarket, propPlayerName, propStat, propStatSummary, toBets } from "./slate-groups";
 import type { SlatePick } from "./types";
 
 let seq = 0;
@@ -115,6 +115,40 @@ describe("propStat", () => {
     expect(s).toEqual([
       { stat: "Receptions", count: 2 },
       { stat: "Rec yds", count: 1 },
+    ]);
+  });
+});
+
+describe("player keys", () => {
+  it("joins spellings that share a player_id and splits same-initial players", () => {
+    const g = groupByMarket(
+      [
+        pick({ market: "player_prop", selection: "P.Mahomes 250+ Passing Yards", player_name: "P.Mahomes", player_id: 1 }),
+        pick({ market: "player_prop", selection: "Patrick Mahomes Anytime TD", player_name: "Patrick Mahomes", player_id: 1 }),
+        pick({ market: "player_prop", selection: "J. Williams 2+ Receptions", player_name: "Jameson Williams", player_id: 2 }),
+        pick({ market: "player_prop", selection: "J. Williams 50+ Rushing Yards", player_name: "Javonte Williams", player_id: 3 }),
+        pick({ market: "player_prop", selection: "P. Mahomes 1+ Pass TD" }),
+      ],
+      "KC",
+      "LV",
+      "NFL",
+    );
+    expect(g.players.map((x) => [x.name, x.picks.length])).toEqual([
+      ["Patrick Mahomes", 3],
+      ["Jameson Williams", 1],
+      ["Javonte Williams", 1],
+    ]);
+  });
+});
+
+describe("toBets", () => {
+  it("counts a parlay once and grades it off the ticket profit", () => {
+    const legA = pick({ capper_id: 50, kind: "parlay_leg", leg_count: 3, parlay_id: 9, outcome: "W", profit_units: -1 });
+    const legB = pick({ capper_id: 50, kind: "parlay_leg", leg_count: 3, parlay_id: 9, outcome: "L", profit_units: -1 });
+    const straight = pick({ capper_id: 50, outcome: "W", profit_units: 0.91 });
+    expect(toBets([legA, legB, straight])).toEqual([
+      { stake: 1, profit: -1, result: "L" },
+      { stake: 1, profit: 0.91, result: "W" },
     ]);
   });
 });

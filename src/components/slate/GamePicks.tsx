@@ -10,7 +10,7 @@ import { formatPickText } from "@/lib/bet-format";
 import { trimUnits } from "@/lib/formatters";
 import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
 import { teamColor } from "@/lib/teams";
-import { groupByCapper, groupByMarket, propStat, propStatSummary, type PlayerGroup } from "@/lib/slate-groups";
+import { groupByCapper, groupByMarket, propStat, propStatSummary, toBets, type PlayerGroup } from "@/lib/slate-groups";
 import type { SlatePick, Sport } from "@/lib/types";
 
 // Rows shown before a section folds the rest behind "N more".
@@ -52,15 +52,23 @@ function distinctCappers(picks: SlatePick[]): number {
   return new Set(picks.map((p) => p.capper_id)).size;
 }
 
-/** "3-1 · +2.10u" once anything is graded, else the stake on the line. */
+/**
+ * "3-1 · +2.10u" once anything is graded, else the stake on the line. Counts
+ * wagers, so two legs of one parlay are one result.
+ */
 function tally(picks: SlatePick[]): string {
-  const graded = picks.filter((p) => p.outcome && p.outcome !== "V");
-  if (graded.length === 0) return `${trimUnits(sumRisked(picks))}u`;
-  const w = graded.filter((p) => p.outcome === "W").length;
-  const l = graded.filter((p) => p.outcome === "L").length;
-  const push = graded.filter((p) => p.outcome === "P").length;
+  const bets = toBets(picks);
+  const graded = bets.filter((b) => b.result && b.result !== "V");
+  if (graded.length === 0) {
+    const risked = bets.filter((b) => b.result !== "V").reduce((acc, b) => acc + b.stake, 0);
+    return `${trimUnits(risked)}u`;
+  }
+  const w = graded.filter((b) => b.result === "W").length;
+  const l = graded.filter((b) => b.result === "L").length;
+  const push = graded.filter((b) => b.result === "P").length;
   const record = push ? `${w}-${l}-${push}` : `${w}-${l}`;
-  return `${record} · ${signedUnits(sumProfit(picks))}`;
+  const profit = bets.reduce((acc, b) => acc + (b.profit ?? 0), 0);
+  return `${record} · ${signedUnits(profit)}`;
 }
 
 function SectionHeader({ title, right }: { title: string; right?: string }) {
@@ -417,7 +425,7 @@ function CapperRow({ picks, ctx }: { picks: SlatePick[]; ctx: Ctx }) {
           <span className="truncate text-[11px] text-[var(--color-text-muted)] group-open:hidden">{preview}</span>
         </span>
         <span className="text-right text-[11px] tabular-nums font-bold text-[var(--color-text-muted)] whitespace-nowrap">
-          {plural(picks.length, "pick", "picks")} · {tally(picks)}
+          {plural(toBets(picks).length, "bet", "bets")} · {tally(picks)}
         </span>
       </summary>
       <div className="pl-[3.25rem] pb-2">

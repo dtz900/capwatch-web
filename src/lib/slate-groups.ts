@@ -54,10 +54,10 @@ function totalSide(selection: string | null): "over" | "under" | null {
   return m[1].toLowerCase().startsWith("o") ? "over" : "under";
 }
 
-function playerKey(pick: SlatePick, name: string): string {
-  // Last name + first initial merges "Jalen Hurts" with "J. Hurts".
-  const parts = name.toLowerCase().replace(/[.']/g, "").split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return parts[0] ?? `id:${pick.player_id}`;
+/** Fallback key for rows without a player_id: "Jalen Hurts", "J. Hurts" and "J.Hurts" -> "j hurts". */
+function playerTextKey(name: string): string {
+  const parts = name.toLowerCase().replace(/'/g, "").replace(/\./g, " ").split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return parts[0] ?? "";
   return `${parts[0][0]} ${parts.slice(1).join(" ")}`;
 }
 
@@ -83,7 +83,7 @@ export function groupByMarket(
     players: [],
     other: [],
   };
-  const players = new Map<string, { names: string[]; picks: SlatePick[] }>();
+  const propRows: { pick: SlatePick; name: string; textKey: string }[] = [];
 
   for (const p of picks) {
     // Same rule the card used before, so the moneyline tallies and the
@@ -114,16 +114,29 @@ export function groupByMarket(
     if (bucket === "Player prop" || p.player_id != null || p.player_name) {
       const name = propPlayerName(p);
       if (name) {
-        const key = playerKey(p, name);
-        const entry = players.get(key) ?? { names: [], picks: [] };
-        entry.names.push(name);
-        entry.picks.push(p);
-        players.set(key, entry);
+        propRows.push({ pick: p, name, textKey: playerTextKey(name) });
         continue;
       }
     }
 
     groups.other.push(p);
+  }
+
+  // The roster id is canonical: it splits two players who share an initial
+  // and surname, and joins spellings ("P.Mahomes", "Patrick Mahomes"). Rows
+  // without one join the id group their name matches, else group by name.
+  const idByText = new Map<string, number>();
+  for (const r of propRows) {
+    if (r.pick.player_id != null && !idByText.has(r.textKey)) idByText.set(r.textKey, r.pick.player_id);
+  }
+  const players = new Map<string, { names: string[]; picks: SlatePick[] }>();
+  for (const r of propRows) {
+    const id = r.pick.player_id ?? idByText.get(r.textKey);
+    const key = id != null ? `id:${id}` : `name:${r.textKey}`;
+    const entry = players.get(key) ?? { names: [], picks: [] };
+    entry.names.push(r.name);
+    entry.picks.push(r.pick);
+    players.set(key, entry);
   }
 
   groups.players = [...players.entries()]
@@ -197,4 +210,41 @@ export function propStatSummary(picks: Pick<SlatePick, "selection">[]): { stat: 
   return [...counts.entries()]
     .map(([stat, count]) => ({ stat, count }))
     .sort((a, b) => b.count - a.count || (a.stat === "Other" ? 1 : b.stat === "Other" ? -1 : a.stat.localeCompare(b.stat)));
+}
+
+/**
+ * A parlay is one wager however many of its legs land on this game. Legs of
+ * the same ticket share a key (same rule as slateBetCount).
+ */
+export function betKey(p: Pick<SlatePick, "kind" | "parlay_id" | "tweet_url" | "capper_id" | "posted_at">, i: number): string {
+  if (p.kind !== "parlay_leg") return `s:${i}`;
+  return p.parlay_id != null ? `id:${p.parlay_id}` : (p.tweet_url ?? `${p.capper_id}:${p.posted_at ?? ""}`);
+}
+
+export interface BetResult {
+  stake: number;
+  profit: number | null;
+  result: "W" | "L" | "P" | "V" | null;
+}
+
+/**
+ * One entry per wager. A parlay leg's outcome is the leg's own, but its
+ * profit_units is the ticket's, so a parlay grades off its profit.
+ */
+export function toBets(picks: SlatePick[]): BetResult[] {
+  const seen = new Set<string>();
+  const bets: BetResult[] = [];
+  picks.forEach((p, i) => {
+    const key = betKey(p, i);
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (p.kind !== "parlay_leg") {
+      bets.push({ stake: p.stake_units ?? 0, profit: p.profit_units, result: p.outcome });
+      return;
+    }
+    const profit = p.profit_units;
+    const result = profit == null ? null : profit > 0 ? "W" : profit < 0 ? "L" : p.outcome === "V" ? "V" : "P";
+    bets.push({ stake: p.stake_units ?? 0, profit, result });
+  });
+  return bets;
 }
