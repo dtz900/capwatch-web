@@ -66,20 +66,68 @@ function getClient(): Redis | null {
  * (a new slate day, a new NFL week) could be replayed after it under the
  * same literal key. Every other caller omits this and gets the default.
  */
+// Fail fast. A Redis that is down, suspended or slow must never cost a page
+// more than KV_READ_TIMEOUT_MS. On 2026-10-09 the Upstash DB was suspended
+// for its monthly bandwidth limit and every GET took ~1s to be rejected,
+// adding ~1s to each KV-wrapped fetch on every page while serving nothing.
+// A healthy same-region read returns in tens of ms, well inside the bound.
+export const KV_READ_TIMEOUT_MS = 250;
+// After any failed or timed-out read, skip KV entirely (reads AND writes)
+// for this long, so one dead Redis costs one bounded read per window per
+// instance instead of one per call.
+export const KV_BREAKER_MS = 60_000;
+let _breakerOpenUntil = 0;
+
+/** The client, or null while unconfigured or while the breaker is open. */
+function activeClient(): Redis | null {
+  if (Date.now() < _breakerOpenUntil) return null;
+  return getClient();
+}
+
+function tripBreaker(): void {
+  _breakerOpenUntil = Date.now() + KV_BREAKER_MS;
+}
+
+/** GET bounded by KV_READ_TIMEOUT_MS. Throws on error or timeout and trips
+ *  the breaker; callers treat a throw as a miss. */
+async function boundedGet<T>(client: Redis, key: string): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      client.get<T>(key),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("kv read timeout")), KV_READ_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (err) {
+    tripBreaker();
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/** Test hook: close the breaker between cases. */
+export function __resetKvBreakerForTests(): void {
+  _breakerOpenUntil = 0;
+}
+
 export async function withKvCache<T>(
   key: string,
   ttlSec: number,
   fetcher: () => Promise<T>,
   opts: { lkgKey?: string } = {},
 ): Promise<T> {
-  const client = getClient();
+  const client = activeClient();
   if (!client) return fetcher();
 
   try {
-    const cached = await client.get<T>(key);
+    const cached = await boundedGet<T>(client, key);
     if (cached !== null && cached !== undefined) return cached;
   } catch {
-    // Treat read failures as a miss; keep serving from upstream.
+    // Treat read failures as a miss; keep serving from upstream. The
+    // breaker is now open, so skip the writes below too.
+    return fetcher();
   }
 
   const fresh = await fetcher();
@@ -127,10 +175,10 @@ export async function readLastKnownGood<T>(
   key: string,
   opts: { lkgKey?: string } = {},
 ): Promise<T | null> {
-  const client = getClient();
+  const client = activeClient();
   if (!client) return null;
   try {
-    const stale = await client.get<T>(opts.lkgKey ?? lkgKey(key));
+    const stale = await boundedGet<T>(client, opts.lkgKey ?? lkgKey(key));
     return stale ?? null;
   } catch {
     return null;
@@ -207,7 +255,7 @@ export async function kvRateLimit(
   limit: number,
   windowSec: number,
 ): Promise<boolean> {
-  const client = getClient();
+  const client = activeClient();
   if (!client) return true;
   try {
     const bucket = `rl:${key}:${Math.floor(Date.now() / 1000 / windowSec)}`;
