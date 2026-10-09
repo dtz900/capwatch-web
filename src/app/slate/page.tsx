@@ -221,6 +221,24 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 }
 
 export const revalidate = 60;
+
+// Step timeline for the server render, logged only when it runs long. A
+// /slate render hung to the 30s function limit on 2026-10-09 with nothing in
+// the logs to say which step it was waiting on.
+const SLOW_RENDER_MS = 5_000;
+function renderTimer() {
+  const t0 = Date.now();
+  const steps: string[] = [];
+  return {
+    mark(name: string) {
+      steps.push(`${name}=${Date.now() - t0}ms`);
+    },
+    warnIfSlow(context: string) {
+      const total = Date.now() - t0;
+      if (total >= SLOW_RENDER_MS) console.warn(`[slate] slow render ${context} ${steps.join(" ")} total=${total}ms`);
+    },
+  };
+}
 export const maxDuration = 30;
 
 export default async function SlatePage({ searchParams }: PageProps) {
@@ -228,11 +246,13 @@ export default async function SlatePage({ searchParams }: PageProps) {
   const p = parseParams(sp);
   const { sport, dateParam } = p;
   const isNfl = sport === "nfl";
+  const timer = renderTimer();
 
   let data: SlateResponse | null = null;
   let fetchError: string | null = null;
   try {
     data = await fetchSlate(dateParam, sport, p.week);
+    timer.mark("slate");
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
     // Don't cache the failure render; next refresh re-fetches.
@@ -274,7 +294,9 @@ export default async function SlatePage({ searchParams }: PageProps) {
     } catch {
       week = null;
     }
+    timer.mark("week");
   }
+  timer.warnIfSlow(`sport=${sport} date=${dateParam}`);
 
   const allPicks = data.games.flatMap((g) => g.picks);
   const totalPicks = allPicks.length;

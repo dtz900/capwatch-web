@@ -1,4 +1,5 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
+import { warnFailed, warnIfSlow } from "./upstream-log";
 import type { SportFilter } from "./types";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
@@ -62,6 +63,21 @@ const PROFILE_TTL_SEC = 5;
 // which then got ISR-cached for 60s and stuck for every visitor in that
 // window. Two attempts with a backoff, with a per-attempt timeout, handles
 // the common transient case without exceeding Vercel's function ceiling.
+/**
+ * Buffer the response body while the caller's abort timer is still armed,
+ * and hand back an equivalent Response whose body is already in memory, so
+ * a later .json()/.text() cannot stall. The abort signal passed to fetch()
+ * also cancels the body stream, which is what bounds this read.
+ */
+export async function readBodyWithin(res: Response): Promise<Response> {
+  const buf = await res.arrayBuffer();
+  return new Response(buf.byteLength > 0 ? buf : null, {
+    status: res.status,
+    statusText: res.statusText,
+    headers: res.headers,
+  });
+}
+
 async function fetchWithRetry(
   url: string,
   init: RequestInit & { next?: { revalidate: number } } = {},
@@ -75,8 +91,14 @@ async function fetchWithRetry(
   for (let i = 0; i < attempts; i++) {
     const ctrl = new AbortController();
     const timeoutId = setTimeout(() => ctrl.abort(), perAttemptMs);
+    const started = Date.now();
     try {
-      const res = await fetch(url, { ...init, signal: ctrl.signal });
+      // The body is read inside the timed window: the timeout used to be
+      // cleared when the headers arrived, so an upstream that stalled while
+      // streaming a large body (the slate is up to ~600KB) left the caller's
+      // res.json() unbounded until the 30s function limit (Codex on #192).
+      const res = await readBodyWithin(await fetch(url, { ...init, signal: ctrl.signal }));
+      warnIfSlow("fetchWithRetry", url, started, res.status, `attempt ${i + 1}/${attempts}`);
       clearTimeout(timeoutId);
       // Only retry on server errors / proxy hiccups. Client errors are
       // legitimate (bad params, not found, etc.) and won't recover.
@@ -87,6 +109,7 @@ async function fetchWithRetry(
       }
       return res;
     } catch (err) {
+      warnFailed("fetchWithRetry", url, started, err, `attempt ${i + 1}/${attempts}`);
       clearTimeout(timeoutId);
       lastErr = err;
       if (i < attempts - 1) {
@@ -104,15 +127,22 @@ async function fetchWithRetry(
 // no timeout at all, so a stalled Railway request could ride all the way to
 // the Vercel function ceiling instead of failing fast. Same AbortController
 // pattern as fetchWithRetry, just without the retry loop.
-async function fetchWithTimeout(
+export async function fetchWithTimeout(
   url: string,
   init: RequestInit & { next?: { revalidate: number } } = {},
   timeoutMs: number = 10_000,
 ): Promise<Response> {
   const ctrl = new AbortController();
   const timeoutId = setTimeout(() => ctrl.abort(), timeoutMs);
+  const started = Date.now();
   try {
-    return await fetch(url, { ...init, signal: ctrl.signal });
+    // Body inside the timed window, same reason as fetchWithRetry.
+    const res = await readBodyWithin(await fetch(url, { ...init, signal: ctrl.signal }));
+    warnIfSlow("fetchWithTimeout", url, started, res.status);
+    return res;
+  } catch (err) {
+    warnFailed("fetchWithTimeout", url, started, err);
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }

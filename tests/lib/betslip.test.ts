@@ -144,9 +144,8 @@ describe("fetchPickOutcomes", () => {
       ],
       parlay_outcomes: [{ parlay_id: 501, outcome: "L", graded_at: null, market_odds: 646 }],
     };
-    const spy = vi.spyOn(global, "fetch").mockResolvedValue({
-      ok: true, json: async () => payload,
-    } as unknown as Response);
+    // A real Response: the fetch helpers buffer the body inside their timeout.
+    const spy = vi.spyOn(global, "fetch").mockImplementation(async () => new Response(JSON.stringify(payload)));
     const out = await fetchPickOutcomes([1, 2], [501]);
     expect(out.picks[1]).toEqual({
       outcome: "W", graded_at: "2026-07-09T05:00:00Z", market_odds: -145,

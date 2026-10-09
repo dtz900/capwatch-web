@@ -1,3 +1,4 @@
+import { warnFailed, warnIfSlow } from "./upstream-log";
 /**
  * MLB postseason rounds for the slate's standings rollup.
  *
@@ -84,12 +85,20 @@ export async function fetchPostseasonGames(season: number): Promise<ScheduleGame
   const ctrl = new AbortController();
   const timeoutId = setTimeout(() => ctrl.abort(), SCHEDULE_TIMEOUT_MS);
   let res: Response;
+  let text: string;
+  const started = Date.now();
   try {
     res = await fetch(url, { next: { revalidate: 900 }, signal: ctrl.signal });
+    // Read the body before clearing the timer so a stalled body is bounded too.
+    text = await res.text();
+    warnIfSlow("mlb-schedule", url, started, res.status);
+  } catch (err) {
+    warnFailed("mlb-schedule", url, started, err);
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }
   if (!res.ok) throw new Error(`postseason schedule ${res.status}`);
-  const body = (await res.json()) as { dates?: { games?: ScheduleGame[] }[] };
+  const body = JSON.parse(text) as { dates?: { games?: ScheduleGame[] }[] };
   return (body.dates ?? []).flatMap((d) => d.games ?? []);
 }
