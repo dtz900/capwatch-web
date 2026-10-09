@@ -163,7 +163,7 @@ export default async function Home({ searchParams }: PageProps) {
   }
 
   const top3 = rows.slice(0, 3);
-  const rest = rows.slice(3, 50);
+  const rest = rows.slice(3, 100);
   // Hero numbers come from platform_stats (cross-capper, all-time, no filter)
   // so the public "Records you can verify" promise tracks the admin truth and
   // doesn't shift when users toggle the leaderboard filters. Falls back to a
