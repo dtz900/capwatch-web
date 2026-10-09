@@ -31,7 +31,8 @@ const SUPPRESSED = new Set(["winwhenhot"]);
 type PlayerRow = Pick<SlatePick, "capper_id" | "handle" | "selection" | "player_id" | "player_name">;
 
 interface Bucket {
-  name: string;
+  /** Row count per stored spelling of the player's name. */
+  spellings: Map<string, number>;
   cappers: Set<number>;
   legs: number;
   handles: string[];
@@ -44,12 +45,10 @@ export function topBackedPlayers(picks: readonly PlayerRow[], n = 3): BackedPlay
     if (p.player_id == null || !p.player_name) continue;
     let e = byPlayer.get(p.player_id);
     if (!e) {
-      e = { name: p.player_name, cappers: new Set(), legs: 0, handles: [], labels: new Map() };
+      e = { spellings: new Map(), cappers: new Set(), legs: 0, handles: [], labels: new Map() };
       byPlayer.set(p.player_id, e);
     }
-    // Rows spell the same player differently ("P.Mahomes", "Patrick
-    // Mahomes"); the longest form is the most complete one.
-    if (p.player_name.length > e.name.length) e.name = p.player_name;
+    e.spellings.set(p.player_name, (e.spellings.get(p.player_name) ?? 0) + 1);
     e.legs += 1;
     const firstSeen = !e.cappers.has(p.capper_id);
     e.cappers.add(p.capper_id);
@@ -69,7 +68,7 @@ export function topBackedPlayers(picks: readonly PlayerRow[], n = 3): BackedPlay
       const sharps = e.cappers.size;
       return {
         playerId,
-        name: e.name,
+        name: displayName(e.spellings),
         sharps,
         legs: e.legs,
         handles: e.handles,
@@ -79,6 +78,23 @@ export function topBackedPlayers(picks: readonly PlayerRow[], n = 3): BackedPlay
     // Ties break on name so the card is stable between renders.
     .sort((a, b) => b.sharps - a.sharps || b.legs - a.legs || a.name.localeCompare(b.name))
     .slice(0, n);
+}
+
+// "J.Daniels", "J. Daniels", "J Daniels"; "T.J. Watt" is a full name.
+const INITIAL_FORM = /^[A-Za-z]\.(?![A-Za-z]\.)|^[A-Za-z]\s/;
+
+/**
+ * Rows keep the capper's spelling ("P.Mahomes", "Patrick Mahomes", and
+ * typos). The most common full-name spelling wins; length only breaks ties.
+ * Longest-wins put "Jayden Daniels" (one capper's typo) on the TB@DAL card
+ * over "Jalon Daniels" on 57 rows (David, 2026-10-08).
+ */
+function displayName(spellings: Map<string, number>): string {
+  const all = [...spellings.entries()];
+  const full = all.filter(([n]) => n.trim().includes(" ") && !INITIAL_FORM.test(n.trim()));
+  const pool = full.length > 0 ? full : all;
+  pool.sort((a, b) => b[1] - a[1] || b[0].length - a[0].length || a[0].localeCompare(b[0]));
+  return pool[0][0];
 }
 
 // Counted by distinct cappers, and stated against the tile's sharp count so
