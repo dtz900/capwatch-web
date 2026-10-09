@@ -137,3 +137,46 @@ describe("kvRateLimit", () => {
     expect(await kvRateLimit("ip-e", 1, 60)).toBe(true);
   });
 });
+
+describe("withKvCache fail-fast", () => {
+  async function load() {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://kv.test");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "t");
+    const mod = await import("./kv-cache");
+    mod.__resetKvBreakerForTests();
+    return mod;
+  }
+
+  it("a rejecting Redis falls through to upstream and is skipped for the breaker window", async () => {
+    const { withKvCache } = await load();
+    getSpy.mockImplementation(async () => {
+      throw new Error("ERR This database has reached current Fixed plan limits");
+    });
+    const fetcher = vi.fn(async () => ({ v: 1 }));
+    expect(await withKvCache("k", 60, fetcher)).toEqual({ v: 1 });
+    expect(await withKvCache("k", 60, fetcher)).toEqual({ v: 1 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(getSpy).toHaveBeenCalledTimes(1); // second call skipped KV
+    expect(setSpy).not.toHaveBeenCalled(); // no writes to a dead Redis
+  });
+
+  it("a hanging Redis read is abandoned after KV_READ_TIMEOUT_MS", async () => {
+    const { withKvCache, KV_READ_TIMEOUT_MS } = await load();
+    getSpy.mockImplementation(() => new Promise(() => {}));
+    const t = Date.now();
+    const out = await withKvCache("k", 60, async () => "fresh");
+    expect(out).toBe("fresh");
+    expect(Date.now() - t).toBeLessThan(KV_READ_TIMEOUT_MS + 200);
+  });
+
+  it("readLastKnownGood returns null without a Redis call while the breaker is open", async () => {
+    const { withKvCache, readLastKnownGood } = await load();
+    getSpy.mockImplementationOnce(async () => {
+      throw new Error("down");
+    });
+    await withKvCache("k", 60, async () => 1);
+    getSpy.mockClear();
+    expect(await readLastKnownGood("k")).toBeNull();
+    expect(getSpy).not.toHaveBeenCalled();
+  });
+});
