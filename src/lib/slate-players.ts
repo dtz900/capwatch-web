@@ -89,7 +89,7 @@ const INITIAL_FORM = /^[A-Za-z]\.(?![A-Za-z]\.)|^[A-Za-z]\s/;
  * Longest-wins put "Jayden Daniels" (one capper's typo) on the TB@DAL card
  * over "Jalon Daniels" on 57 rows (David, 2026-10-08).
  */
-function displayName(spellings: Map<string, number>): string {
+export function displayName(spellings: Map<string, number>): string {
   const all = [...spellings.entries()];
   const full = all.filter(([n]) => n.trim().includes(" ") && !INITIAL_FORM.test(n.trim()));
   const pool = full.length > 0 ? full : all;

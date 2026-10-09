@@ -152,3 +152,15 @@ describe("toBets", () => {
     ]);
   });
 });
+
+describe("player row label", () => {
+  it("uses the most common full spelling, not a longer typo (TB @ DAL, Week 5)", () => {
+    const rows = [
+      ...Array.from({ length: 5 }, () => pick({ market: "player_prop", selection: "Jalon Daniels Anytime TD", player_name: "Jalon Daniels", player_id: 4596472 })),
+      pick({ market: "player_prop", selection: "Jayden Daniels 200+ passing yards", player_name: "Jayden Daniels", player_id: 4596472 }),
+      pick({ market: "player_prop", selection: "Jalon Daniels 26+ Pass Attempts", player_name: "Jakob Daniel's", player_id: 4596472 }),
+      pick({ market: "player_prop", selection: "J.Daniels o43.5 Rush Yds", player_name: "J.Daniels", player_id: 4596472 }),
+    ];
+    expect(groupByMarket(rows, "TB", "DAL", "NFL").players[0].name).toBe("Jalon Daniels");
+  });
+});
