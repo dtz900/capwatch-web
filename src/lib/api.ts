@@ -1,5 +1,4 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
-import { unstable_rethrow } from "next/navigation";
 import type { SportFilter } from "./types";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
@@ -63,31 +62,9 @@ const PROFILE_TTL_SEC = 5;
 // which then got ISR-cached for 60s and stuck for every visitor in that
 // window. Two attempts with a backoff, with a per-attempt timeout, handles
 // the common transient case without exceeding Vercel's function ceiling.
-/**
- * Fetch options for a prerendered (ISR) route. The KV-wrapped fetchers use
- * cache: "no-store" by default, which is right for every per-request render
- * but is itself a request-time signal: one no-store fetch makes a route
- * dynamic (the static home board, 2026-10-09). A prerendered caller passes
- * { prerender: true } and the fetch lands in Next's Data Cache under the
- * route's revalidate window, tagged so the purge route can revalidateTag it
- * together with the page.
- */
-export interface FetchMode {
-  prerender?: boolean;
-}
-export const LEADERBOARD_TAG = "leaderboard";
-export const TOF_HAND_TAG = "tof-hand";
-export const STATIC_BOARD_REVALIDATE_SEC = 300;
-
-type FetchInit = RequestInit & { next?: { revalidate: number; tags?: string[] } };
-
-function modeInit(mode: FetchMode | undefined, revalidate: number, tag: string): FetchInit {
-  return mode?.prerender ? { next: { revalidate, tags: [tag] } } : { cache: "no-store" };
-}
-
 async function fetchWithRetry(
   url: string,
-  init: FetchInit = {},
+  init: RequestInit & { next?: { revalidate: number } } = {},
   opts: { attempts?: number; perAttemptMs?: number; backoffMs?: number } = {},
 ): Promise<Response> {
   const attempts = opts.attempts ?? 2;
@@ -111,11 +88,6 @@ async function fetchWithRetry(
       return res;
     } catch (err) {
       clearTimeout(timeoutId);
-      // Next signals prerender bailouts, redirects and notFound by throwing
-      // through fetch(); retrying or swallowing those stalls the render
-      // (the build's / prerender hung past its 60s budget doing exactly
-      // that). Let them through untouched.
-      unstable_rethrow(err);
       lastErr = err;
       if (i < attempts - 1) {
         await new Promise((r) => setTimeout(r, backoffMs * (i + 1)));
@@ -134,7 +106,7 @@ async function fetchWithRetry(
 // pattern as fetchWithRetry, just without the retry loop.
 async function fetchWithTimeout(
   url: string,
-  init: FetchInit = {},
+  init: RequestInit & { next?: { revalidate: number } } = {},
   timeoutMs: number = 10_000,
 ): Promise<Response> {
   const ctrl = new AbortController();
@@ -174,7 +146,6 @@ async function withStaleFallback<T>(
   try {
     return await run();
   } catch (err) {
-    unstable_rethrow(err);
     if (!isStaleWorthy(err)) throw err;
     const stale = await readLastKnownGood<T>(cacheKey, lkgKey ? { lkgKey } : undefined);
     if (stale !== null) {
@@ -254,10 +225,7 @@ export async function suggestCapper(input: { handle: string; reason?: string }):
   return body.status;
 }
 
-export async function fetchLeaderboard(
-  filters: LeaderboardFilters,
-  mode?: FetchMode,
-): Promise<LeaderboardResponse> {
+export async function fetchLeaderboard(filters: LeaderboardFilters): Promise<LeaderboardResponse> {
   const params = new URLSearchParams({
     window: filters.window,
     sort: filters.sort,
@@ -270,10 +238,9 @@ export async function fetchLeaderboard(
   const cacheKey = `lb:v1:${params.toString()}`;
   return withStaleFallback(cacheKey, () =>
     withKvCache<LeaderboardResponse>(cacheKey, LEADERBOARD_TTL_SEC, async () => {
-      const res = await fetchWithRetry(
-        `${API_BASE}/api/public/cappers?${params}`,
-        modeInit(mode, STATIC_BOARD_REVALIDATE_SEC, LEADERBOARD_TAG),
-      );
+      const res = await fetchWithRetry(`${API_BASE}/api/public/cappers?${params}`, {
+        cache: "no-store",
+      });
       if (!res.ok) {
         throw new Error(`Leaderboard fetch failed: ${res.status}`);
       }
@@ -1061,10 +1028,8 @@ export async function fetchPickOutcomes(
 /** Today's Tail or Fade hand. No data cache: the landing page is ISR at
  * 300s and the hero re-fetches client-side while any card is open. Throws on
  * a non-2xx so page.tsx can fall back to a null hand without caching it. */
-export async function fetchTofHand(mode?: FetchMode): Promise<TofHandResponse> {
-  // Prerendered callers get a 60s window; the hero re-fetches client-side
-  // every minute regardless.
-  const res = await fetchWithTimeout(`${API_BASE}/api/public/tof/hand`, modeInit(mode, 60, TOF_HAND_TAG));
+export async function fetchTofHand(): Promise<TofHandResponse> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/public/tof/hand`, { cache: "no-store" });
   if (!res.ok) throw new Error(`tof hand fetch failed: ${res.status}`);
   return res.json();
 }

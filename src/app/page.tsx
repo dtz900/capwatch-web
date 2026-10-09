@@ -1,36 +1,254 @@
 import type { Metadata } from "next";
-import {
-  DEFAULT_LEADERBOARD_FILTERS,
-  LeaderboardPage,
-  buildLeaderboardMetadata,
-} from "@/components/leaderboard/LeaderboardPage";
+import { Suspense } from "react";
+import { unstable_noStore as noStore } from "next/cache";
+import { TopNav } from "@/components/nav/TopNav";
+import { Hero } from "@/components/leaderboard/Hero";
+import { FilterBar } from "@/components/leaderboard/FilterBar";
+import { SportTabs } from "@/components/leaderboard/SportTabs";
+import { SportTint } from "@/components/ui/SportTint";
+import { Podium } from "@/components/leaderboard/Podium";
+import { StandingsTable } from "@/components/leaderboard/StandingsTable";
+import { SuggestCapperSection } from "@/components/leaderboard/SuggestCapperSection";
+import { EmptyBoard } from "@/components/leaderboard/EmptyBoard";
+import { PendingBoard } from "@/components/leaderboard/PendingBoard";
+import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
+import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPrefsRestorer";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { ShareLinkButton } from "@/components/share/ShareLinkButton";
+import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
+import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
+import { fetchLeaderboard, fetchTofHand, minPicksForWindow, type LeaderboardFilters } from "@/lib/api";
+import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
+import { tofEnabled } from "@/lib/flags";
+import { SITE_NAME } from "@/lib/seo";
+import type { Window, Sort, BetTypeFilter, SportFilter, TofHandResponse } from "@/lib/types";
+import { buildRootOgFingerprint, ROOT_OG_CARD_VERSION } from "./_root-og";
 
-// The default board, prerendered. This route must never read searchParams,
-// cookies or headers: any request-time API would make it dynamic again and
-// bring back the per-visit render (3.8s TTFB, 2026-10-08). Filtered views
-// (`/?sport=nfl`, `/?window=all_time`, ...) are rewritten to /board by
-// next.config and stay dynamic.
-//
-// ISR: render on first request, serve from edge cache for 5 minutes,
-// regenerate in background. Heavy aggregates only refresh once/day so 5 min
-// of staleness is invisible, and the platform purges this page
-// (revalidatePath("/")) after every aggregates refresh. The "N live"
-// indicator updates near-realtime via LivePicksProvider polling, separate
-// from this cache.
-export const revalidate = 300; // keep equal to STATIC_BOARD_REVALIDATE_SEC (must be a literal)
-export const maxDuration = 30;
-
-// The shared fetchers default to cache: "no-store" (right for /board and the
-// KV-wrapped pages, see the note in api.ts), and one no-store fetch is enough
-// to make a route dynamic; a segment-level fetchCache override does not undo
-// an explicit option. prerender mode puts the fetches in the Data Cache,
-// tagged, so the purge route revalidates them together with this page.
-const MODE = { prerender: true } as const;
-
-export async function generateMetadata(): Promise<Metadata> {
-  return buildLeaderboardMetadata(DEFAULT_LEADERBOARD_FILTERS, undefined, MODE);
+interface PageProps {
+  searchParams: Promise<{ window?: string; sort?: string; bet_type?: string; active_only?: string; sport?: string; v?: string }>;
 }
 
-export default async function Home() {
-  return <LeaderboardPage filters={DEFAULT_LEADERBOARD_FILTERS} mode={MODE} />;
+const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
+const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl"];
+// The board defaults to the combined record; MLB / NFL are one click away.
+const DEFAULT_SPORT: SportFilter = "all";
+function parseSport(raw: string | undefined): SportFilter {
+  return VALID_SPORTS.includes(raw as SportFilter) ? (raw as SportFilter) : DEFAULT_SPORT;
+}
+const VALID_SORTS: Sort[] = ["roi_pct", "units_profit", "win_rate", "picks_count"];
+const VALID_BET_TYPES: BetTypeFilter[] = ["all", "straights", "parlays"];
+
+// ISR: render on first request, serve from edge cache for 5 minutes,
+// regenerate in background. Heavy aggregates only refresh once/day so 5 min
+// of staleness is invisible. The "N live" indicator updates near-realtime
+// via LivePicksProvider polling, separate from this cache.
+export const revalidate = 300;
+export const maxDuration = 30;
+
+/**
+ * Override the layout's static OG image with a fingerprinted Route Handler
+ * URL. X caches OG bytes per share URL essentially forever and there's no
+ * manual invalidation path anymore (the cards-dev validator was retired),
+ * so the URL itself has to change whenever the leaderboard does. The
+ * fingerprint includes the platform's graded-picks counter (bumps on every
+ * grade event) and today's PT date (daily floor) so reposts of the same
+ * tailslips.com URL after data changes get scraped fresh.
+ */
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = await searchParams;
+  const win: Window = VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30";
+  const filters: LeaderboardFilters = {
+    window: win,
+    sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
+    bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
+    min_picks: minPicksForWindow(win, parseSport(sp.sport)),
+    active_only: sp.active_only !== "false",
+    sport: parseSport(sp.sport),
+  };
+  const fp = await buildRootOgFingerprint(filters);
+  const q = new URLSearchParams();
+  q.set("w", filters.window);
+  q.set("sort", filters.sort);
+  q.set("bt", filters.bet_type);
+  if (!filters.active_only) q.set("ao", "false");
+  if (filters.sport && filters.sport !== "mlb") q.set("sp", filters.sport);
+  q.set("d", fp.ptDate);
+  if (fp.picks > 0) q.set("p", String(fp.picks));
+  if (fp.cappers > 0) q.set("c", String(fp.cappers));
+  if (fp.contentHash) q.set("h", fp.contentHash);
+  q.set("v", ROOT_OG_CARD_VERSION);
+  if (sp.v && /^[0-9]{8,}$/.test(sp.v)) q.set("sv", sp.v);
+  const ogUrl = `/og/home?${q.toString()}`;
+  const title = `${windowTitle(filters.window)} ${sportTitle(filters.sport)} Twitter Capper Rankings · ${SITE_NAME}`;
+  return {
+    title,
+    openGraph: {
+      title,
+      images: [{ url: ogUrl, width: 1200, height: 630, alt: "TailSlips · MLB Capper Scoreboard" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      images: [{ url: ogUrl, alt: "TailSlips · MLB Capper Scoreboard" }],
+    },
+  };
+}
+
+function sportTitle(s: SportFilter | undefined): string {
+  if (s === "nfl") return "NFL";
+  if (s === "mlb") return "MLB";
+  return "MLB + NFL";
+}
+
+function windowTitle(w: Window): string {
+  if (w === "last_7") return "Last 7";
+  if (w === "season") return "Season";
+  if (w === "all_time") return "All-time";
+  return "Last 30";
+}
+
+export default async function Home({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const win: Window = VALID_WINDOWS.includes(sp.window as Window) ? (sp.window as Window) : "last_30";
+  const filters: LeaderboardFilters = {
+    window: win,
+    sort: VALID_SORTS.includes(sp.sort as Sort) ? (sp.sort as Sort) : "units_profit",
+    bet_type: VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter) ? (sp.bet_type as BetTypeFilter) : "all",
+    min_picks: minPicksForWindow(win, parseSport(sp.sport)),
+    active_only: sp.active_only !== "false",
+    sport: parseSport(sp.sport),
+  };
+
+  let rows: Awaited<ReturnType<typeof fetchLeaderboard>>["leaderboard"] = [];
+  let pendingOnly: NonNullable<Awaited<ReturnType<typeof fetchLeaderboard>>["pending_only"]> = [];
+  let platformStats: Awaited<ReturnType<typeof fetchLeaderboard>>["platform_stats"];
+  let fetchError: string | null = null;
+  try {
+    const data = await fetchLeaderboard(filters);
+    rows = data.leaderboard;
+    pendingOnly = data.pending_only ?? [];
+    platformStats = data.platform_stats;
+  } catch (err) {
+    fetchError = err instanceof Error ? err.message : String(err);
+    // Don't ISR-cache the failed render; let the next request retry.
+    noStore();
+  }
+
+  if (fetchError) {
+    return (
+      <>
+        <TopNav />
+        <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
+          <Hero />
+          <div className="text-center py-16 text-[13px] text-[var(--color-text-muted)]">
+            Leaderboard is temporarily unavailable. Refresh in a moment.
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  // Tail or Fade hand. A failed fetch renders the no-hand state and is not
+  // ISR-cached as a failure; the hero re-fetches client-side every minute.
+  // Fetched after the leaderboard's early return so a leaderboard outage
+  // does not also pay for a hand the page will never render.
+  let tofHand: TofHandResponse | null = null;
+  if (tofEnabled()) {
+    try {
+      tofHand = await fetchTofHand();
+    } catch (err) {
+      console.error("tof hand fetch failed:", err);
+      noStore();
+    }
+  }
+
+  const top3 = rows.slice(0, 3);
+  const rest = rows.slice(3, 50);
+  // Hero numbers come from platform_stats (cross-capper, all-time, no filter)
+  // so the public "Records you can verify" promise tracks the admin truth and
+  // doesn't shift when users toggle the leaderboard filters. Falls back to a
+  // window-scoped sum if the backend is on an older deploy.
+  const heroStats = platformStats
+    ? { totalPicks: platformStats.graded_picks_total, cappersCount: platformStats.cappers_tracked }
+    : {
+        totalPicks: rows.reduce((sum, r) => sum + (r.picks_count ?? 0), 0),
+        cappersCount: rows.length,
+      };
+
+  // Seed the live-picks context with the SSR-rendered counts so the first
+  // paint already has correct values. The provider polls every 30s after
+  // mount to keep the indicator fresh as cappers tweet new picks.
+  const liveInitial: Record<number, number> = {};
+  for (const r of rows) {
+    if (r.live_picks_count > 0) liveInitial[Number(r.capper_id)] = r.live_picks_count;
+  }
+  for (const r of pendingOnly) {
+    if (r.live_picks_count > 0) liveInitial[Number(r.capper_id)] = r.live_picks_count;
+  }
+
+  return (
+    <>
+      <JsonLd
+        data={[
+          organizationNode(),
+          websiteNode(),
+          breadcrumbNode([{ name: "Home", path: "/" }]),
+          leaderboardItemListNode(rows),
+        ]}
+      />
+      <Suspense fallback={null}>
+        <LeaderboardPrefsRestorer />
+      </Suspense>
+      <SportTint sport={filters.sport} />
+      <TopNav tofHand={tofHand} />
+      <LivePicksProvider initial={liveInitial} sport={filters.sport}>
+        <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
+          <Hero stats={heroStats} sport={filters.sport} />
+          <div className="mb-4">
+            <SportTabs current={filters.sport ?? "all"} />
+          </div>
+          <div className="mb-3">
+            <FilterBar filters={filters} />
+          </div>
+          <div className="mb-8 flex justify-end">
+            <ShareLinkButton
+              basePath="/"
+              queryParams={{
+                sport: filters.sport !== DEFAULT_SPORT ? filters.sport : undefined,
+                window: filters.window !== "last_30" ? filters.window : undefined,
+                sort: filters.sort !== "units_profit" ? filters.sort : undefined,
+                bet_type: filters.bet_type !== "all" ? filters.bet_type : undefined,
+                active_only: filters.active_only ? undefined : "false",
+              }}
+              label="Share this view"
+            />
+          </div>
+          {top3.length === 3 && <Podium rows={top3} window={filters.window} sport={filters.sport} />}
+          {rows.length > 0 && (
+            <div className="my-8 flex justify-center">
+              <SportsbookAd
+                creative={BETMGM_1940x500_FOOTBALL}
+                placement="home-inline"
+              />
+            </div>
+          )}
+          {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} sport={filters.sport} />}
+          <PendingBoard
+            rows={pendingOnly}
+            sport={filters.sport ?? "all"}
+            window={filters.window}
+            standalone={rows.length === 0}
+          />
+          {rows.length === 0 && pendingOnly.length === 0 && (
+            <EmptyBoard sport={filters.sport ?? "all"} window={filters.window} />
+          )}
+          <SuggestCapperSection />
+          <footer className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-7 pb-16 text-xs text-[var(--color-text-muted)] font-medium">
+            <div>Min {minPicksForWindow(filters.window, filters.sport)} graded picks · refreshed daily 6:00 AM PT.</div>
+            <div>Operated by FADE AI · The model entry is graded identically</div>
+          </footer>
+        </main>
+      </LivePicksProvider>
+    </>
+  );
 }
