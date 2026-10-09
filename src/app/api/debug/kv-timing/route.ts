@@ -68,7 +68,10 @@ export async function GET() {
   const t = Date.now();
   let upstream: { ms: number; status: number | null; error: string | null };
   try {
-    const res = await fetch(`${API_BASE}/api/public/cappers?${key.slice("lb:v1:".length)}`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}/api/public/cappers?${key.slice("lb:v1:".length)}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
     await res.arrayBuffer();
     upstream = { ms: Date.now() - t, status: res.status, error: null };
   } catch (err) {
