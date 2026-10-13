@@ -11,6 +11,7 @@
  */
 import nfl_2026_week_1 from "@/data/leaderboard-archives/nfl-2026-week-1.json";
 import nfl_2026_week_2 from "@/data/leaderboard-archives/nfl-2026-week-2.json";
+import nfl_2026_week_5 from "@/data/leaderboard-archives/nfl-2026-week-5.json";
 import nfl_2026_week_4 from "@/data/leaderboard-archives/nfl-2026-week-4.json";
 import nfl_2026_week_3 from "@/data/leaderboard-archives/nfl-2026-week-3.json";
 import mlb_2026_09_14 from "@/data/leaderboard-archives/mlb-2026-09-14.json";
@@ -70,6 +71,7 @@ export interface LeaderboardArchive {
 }
 
 export const LEADERBOARD_ARCHIVES: LeaderboardArchive[] = [
+  nfl_2026_week_5 as LeaderboardArchive,
   nfl_2026_week_4 as LeaderboardArchive,
   nfl_2026_week_3 as LeaderboardArchive,
   nfl_2026_week_2 as LeaderboardArchive,
