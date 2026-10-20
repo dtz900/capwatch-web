@@ -29,6 +29,10 @@ describe("matchRosterAthlete", () => {
     expect(matchRosterAthlete(R, "Brown")).toBeNull();
     expect(matchRosterAthlete(R, "J. Brown")?.id).toBe(1);
   });
+  it("refuses a wrong initial on a unique surname but still resolves the bare surname", () => {
+    expect(matchRosterAthlete(R, "K. Tatum")).toBeNull();
+    expect(matchRosterAthlete(R, "Tatum")?.id).toBe(4065648);
+  });
   it("ignores suffixes", () => expect(matchRosterAthlete(R, "Kelly Oubre")?.id).toBe(3));
   it("returns null for unknown names", () => expect(matchRosterAthlete(R, "Nobody Here")).toBeNull());
   it("normalizes names", () => expect(normalizePersonName("Kelly Oubre Jr.")).toBe("kelly oubre"));
