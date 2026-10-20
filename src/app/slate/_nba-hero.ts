@@ -6,7 +6,7 @@
 import { withDeadline } from "@/lib/api";
 import { fetchNbaRoster, resolveNbaAthlete, type RosterAthlete } from "@/lib/espn-nba-roster";
 import { espnHeadshotUrl, espnResizedUrl, fetchActionPhotoUrl } from "@/lib/espn-player-photo";
-import type { NbaBackedPlayer, NbaPanel } from "@/lib/nba-og-panel";
+import { displaySurname, type NbaBackedPlayer, type NbaPanel } from "@/lib/nba-og-panel";
 import { fetchRemoteImageAsDataUri } from "@/lib/remote-image";
 import type { SlateGame } from "@/lib/types";
 
@@ -61,11 +61,6 @@ async function identify(game: SlateGame, player: NbaBackedPlayer, deps: NbaHeroD
   return deps.resolve(player.name, teams);
 }
 
-function lastNameOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return parts[parts.length - 1] ?? "";
-}
-
 function teamSideOf(game: SlateGame, athlete: RosterAthlete): "away" | "home" | null {
   if (athlete.team === game.away_team) return "away";
   if (athlete.team === game.home_team) return "home";
@@ -87,7 +82,7 @@ async function heroChain(game: SlateGame, panel: NbaPanel, mode: PhotoMode, deps
     if (!athlete) continue;
     first ??= { player, athlete };
     if (mode !== "action") break;
-    const still = await deps.actionUrl(athlete.id, athlete.lastName || lastNameOf(player.name), PHOTO_TIMEOUT_MS, "NBA");
+    const still = await deps.actionUrl(athlete.id, athlete.lastName || displaySurname(player.name), PHOTO_TIMEOUT_MS, "NBA");
     const uri = still ? await deps.toDataUri(espnResizedUrl(still, PHOTO_W, PHOTO_H)) : null;
     if (uri) return build(player, athlete, uri, "action");
   }
@@ -121,13 +116,20 @@ export async function fetchNbaHero(
 const CAPTION_MAX_PX = 520;
 const SANS_EM = 0.56;
 const MONO_EM = 0.6;
+// Caption plate chrome: 14px side padding x2, the 8px team square, two 12px gaps.
+const CAPTION_CHROME_PX = 28 + 8 + 24;
+const CAPTION_MONO_PX = 13;
+const CAPTION_LETTER_SPACING_PX = 1;
 
-/** `N CAPPERS · <top bet>`, or just `N CAPPERS` when the name plus bet would pass ~520px. */
+/** `N CAPPERS · <top bet>`, or just `N CAPPERS` when the whole plate would pass ~520px. */
 export function nbaCaptionLine(name: string, sharps: number, topBet: string | null): string {
   const cappers = `${sharps} ${sharps === 1 ? "CAPPER" : "CAPPERS"}`;
   if (!topBet) return cappers;
   const full = `${cappers} · ${topBet}`;
-  const width = name.length * 24 * SANS_EM + full.length * 13 * SANS_EM;
+  const width =
+    CAPTION_CHROME_PX +
+    name.length * 24 * SANS_EM +
+    full.length * (CAPTION_MONO_PX * MONO_EM + CAPTION_LETTER_SPACING_PX);
   return width > CAPTION_MAX_PX ? cappers : full;
 }
 

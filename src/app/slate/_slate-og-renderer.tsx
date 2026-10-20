@@ -14,7 +14,7 @@ import { topBackedPlayers, type BackedPlayer } from "@/lib/slate-players";
 import { espnHeadshotUrl, espnResizedUrl, fetchActionPhotoUrl } from "@/lib/espn-player-photo";
 import { slateBetCount } from "@/lib/slate-bet-count";
 import { fetchRemoteImageAsDataUri } from "@/lib/remote-image";
-import { buildNbaPanel, type NbaPanel } from "@/lib/nba-og-panel";
+import { buildNbaPanel, displaySurname, type NbaPanel } from "@/lib/nba-og-panel";
 import { NBA_TEAM_NAMES } from "@/lib/nba-teams";
 import { fetchNbaHero, fitNbaChips, nbaCaptionLine, NBA_HERO_DEPS, type NbaHero, type PhotoMode } from "./_nba-hero";
 
@@ -183,14 +183,9 @@ async function fetchTeamLogosForGame(
 const TILE_PHOTO_W = 704;
 const TILE_PHOTO_H = 396;
 
-function lastNameOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return parts.length > 1 ? parts[parts.length - 1] : (parts[0] ?? "");
-}
-
 async function fetchPlayerTile(player: BackedPlayer, mode: PhotoMode): Promise<PlayerTile> {
   if (mode === "action") {
-    const action = await fetchActionPhotoUrl(player.playerId, lastNameOf(player.name));
+    const action = await fetchActionPhotoUrl(player.playerId, displaySurname(player.name));
     const actionUri = action
       ? await fetchRemoteImageAsDataUri(espnResizedUrl(action, TILE_PHOTO_W, TILE_PHOTO_H))
       : null;
@@ -1176,11 +1171,6 @@ function nbaSideColor(side: "away" | "home" | null, awayC: string, homeC: string
   return side === "away" ? awayC : side === "home" ? homeC : OFF;
 }
 
-function surnameUpper(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return (parts[parts.length - 1] ?? "").toUpperCase();
-}
-
 function signedLine(line: number): string {
   return line > 0 ? `+${line}` : line === 0 ? "PK" : `${line}`;
 }
@@ -1487,7 +1477,7 @@ function NbaGrid({
   const propsSub = truncate(
     panel.players
       .slice(0, 2)
-      .map((p) => `${surnameUpper(p.name)} ${p.legs}`)
+      .map((p) => `${displaySurname(p.name).toUpperCase()} ${p.legs}`)
       .join(" · "),
     30,
   );

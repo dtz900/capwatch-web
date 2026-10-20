@@ -98,6 +98,16 @@ function surnameOf(name: string): string {
   return tokens[tokens.length - 1] ?? "";
 }
 
+/**
+ * Display surname, case and accents kept, generational suffix dropped:
+ * "Jaren Jackson Jr." -> "Jackson", "Nikola Jokić" -> "Jokić", "Tatum" -> "Tatum".
+ */
+export function displaySurname(name: string): string {
+  const tokens = name.trim().split(/\s+/).filter(Boolean);
+  while (tokens.length > 1 && NAME_SUFFIXES.has(tokens[tokens.length - 1].toLowerCase().replace(/\./g, ""))) tokens.pop();
+  return tokens[tokens.length - 1] ?? "";
+}
+
 const isSingleToken = (name: string): boolean => name.trim().split(/\s+/).length === 1;
 
 /**

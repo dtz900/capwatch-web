@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildNbaPanel } from "./nba-og-panel";
+import { buildNbaPanel, displaySurname } from "./nba-og-panel";
 import { slateBetCount } from "./slate-bet-count";
 import type { SlateGame, SlatePick } from "./types";
 
@@ -128,5 +128,11 @@ describe("buildNbaPanel", () => {
       ],
     };
     expect(buildNbaPanel(g).players).toHaveLength(3);
+  });
+});
+
+describe("displaySurname", () => {
+  it("drops a generational suffix and keeps the display spelling", () => {
+    expect(["Jaren Jackson Jr.", "Gary Trent Jr", "Nikola Jokić", "Tatum"].map(displaySurname)).toEqual(["Jackson", "Trent", "Jokić", "Tatum"]);
   });
 });

@@ -172,6 +172,8 @@ describe("nbaCaptionLine", () => {
 
   it("drops the bet when name plus bet would pass 520px", () => {
     expect(nbaCaptionLine("Shai Gilgeous-Alexander", 12, "3+ PTS EACH QTR O/U 30.5")).toBe("12 CAPPERS");
+    // Mono line at 0.6em + 1px tracking plus the plate's 60px chrome pushes this one past 520.
+    expect(nbaCaptionLine("Giannis Antetokounmpo", 9, "o11.5 REB")).toBe("9 CAPPERS");
   });
 });
 
