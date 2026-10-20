@@ -398,10 +398,16 @@ async function renderScaledPng(node: ReactNode, fonts: OgFont[], scale: number):
   return new Uint8Array(resvg.render().asPng());
 }
 
+/** Whole-render budget for the NBA photo chain, measured from render start. */
+const NBA_HERO_BUDGET_MS = 3500;
+
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
+  const t0 = Date.now();
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
   const sportParam: SlateSport = opts.sport === "nfl" || opts.sport === "nba" ? opts.sport : "mlb";
-  // NBA reads like MLB: a day board with the moneyline scoreboard hero.
+  // NBA is a day board like MLB; its featured game gets the photo stage
+  // (action still or headshot plus the info panel), falling back to the
+  // moneyline Scoreboard when the photo chain comes back empty.
   const fallbackHeading =
     sportParam === "nfl"
       ? opts.week != null
@@ -428,14 +434,18 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   const featuredGame = requestedGame ?? pickMarqueeGame(games);
   const featuredLabel = requestedGame ? "Featured game" : "Most-bet game";
   const photoMode: PhotoMode = opts.photos === "headshot" ? "headshot" : "action";
-  // NBA: the panel is pure data; the hero photo chain overlaps the logo fetches
-  // under its own 3.5s deadline.
+  // NBA: the panel is pure data; the hero photo chain overlaps the logo fetches.
+  // Its 3.5s budget is measured from render start, so time spent on the slate
+  // fetch comes out of it rather than stacking on top.
   const nbaPanel = featuredGame?.sport === "NBA" ? buildNbaPanel(featuredGame) : null;
+  const nbaHeroBudgetMs = Math.max(0, NBA_HERO_BUDGET_MS - (Date.now() - t0));
   const [teamLogos, playerTiles, nbaHero] = featuredGame
     ? await Promise.all([
         fetchTeamLogosForGame(featuredGame.away_team, featuredGame.home_team, featuredGame.sport ?? "MLB"),
         fetchPlayerTiles(featuredGame, photoMode),
-        nbaPanel ? fetchNbaHero(featuredGame, nbaPanel, photoMode, NBA_HERO_DEPS) : Promise.resolve(null),
+        nbaPanel
+          ? fetchNbaHero(featuredGame, nbaPanel, photoMode, NBA_HERO_DEPS, nbaHeroBudgetMs)
+          : Promise.resolve(null),
       ])
     : [{ away: null, home: null }, [] as PlayerTile[], null];
   const nba = nbaPanel && nbaHero ? { panel: nbaPanel, hero: nbaHero } : null;
