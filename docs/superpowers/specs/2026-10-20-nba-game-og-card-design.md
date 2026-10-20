@@ -64,10 +64,11 @@ The panel must finish above y=510. The grid is the only row allowed to compress 
 - when the platform starts stamping `player_id` on NBA props, prefer it and skip the roster call. Keep that branch in from day one so the roster lookup is a fallback, not the design.
 
 **Photo.** `fetchActionPhotoUrl(id, lastName, 2500, "NBA")` already supports the NBA path (`ESPN_PATH.NBA`). Tag ranking stays as is (solo-tagged and named, then <=3 tags and named, then solo-tagged; league tag must be NBA). The NBA pool is different from NFL and the selector changes for it:
-- The NBA feed's game action lives in `Media` items hosted on `espnmedia-cdn.akamaized.net` (video thumbnails: "Jayson Tatum gets up for the beautiful slam", solo-tagged). The overview JSON reports them as 576x324 but the raw file is 1920x1080 (verified 2026-10-20 on the Tatum item). `pickActionPhoto` currently rejects that host and anything under 600px wide. For NBA: admit the akamaized host, fetch the raw URL (the combiner refuses off-CDN hosts, `espnResizedUrl` returns null for it), and skip the width check for that host.
-- Recency floor: published within the last 120 days. Older tier-0 articles are trade stories and pressers, not game action.
-- Preference within the window: tier first, then host (akamaized video frame over `a.espncdn.com/photo/` still, because the frames are the dunks and the stills are headshots at a podium), then newest. Video frames can carry a score bug or sponsor plate; the horizontal fade and the caption tag cover the bottom-left and the right third, which is where broadcast overlays usually sit. Open question for David, see below.
-- `a.espncdn.com/photo/` stills that win are requested at `w=1200&h=675` through the combiner, not the 704 the tiles use.
+- Stills only: `a.espncdn.com/photo/` images, as today. Video-frame thumbnails on `espnmedia-cdn.akamaized.net` stay excluded (David, 2026-10-20, after seeing the Tatum dunk frame at native pixels: broadcast capture, soft, face behind the ball; it does not read as a photo). The card does not need a dunk, it needs a solid game-action photo.
+- Recency: published within the last 365 days, newest wins within a tier. Early season this reaches last spring's playoff photos, which are real game action.
+- Skip the talking-head stories by headline: an article whose headline contains any of `trade`, `traded`, `contract`, `extension`, `opens up`, `calls`, `says`, `fashion`, `draft`, `forecast`, `rankings`, `odds`, `tips`, `DFS` is dropped before ranking. Keep the list in one exported constant with a unit test; it will grow.
+- Prefer the 16:9 rendition when the article offers several (`r…_1296x729_16-9.jpg` over `600x400_3-2`). Request through the combiner at `w=1200&h=675`, not the 704 the tiles use.
+- A photo is "solid" if it clears the above; there is no attempt to detect dunks or shot type. `?photos=headshot` remains the escape hatch when the editorial pick misses.
 - Fall-through order when the most-backed player has no qualifying photo: second most-backed player, then third; then the most-backed player's headshot cutout; then `Scoreboard`. Never a blank photo area.
 - `?photos=headshot` keeps working: the cutout (`espnHeadshotUrl(id, "NBA")`) sits right-aligned inside the photo area on a team-color wash at 0.34, the existing arena-wash alpha.
 
@@ -99,14 +100,11 @@ The panel must finish above y=510. The grid is the only row allowed to compress 
 - Whether the roster cache lives in the module or in `unstable_cache`.
 - Where the NBA bet-label folds live (extend `betLabel` with a sport argument, or a sibling `betLabelNba`).
 
-## Open for David
-
-- Video-frame thumbnails as the default photo. They are the only real action shots on ESPN's NBA feed (the dunk, the block), at 1920x1080, but some carry a score bug or a sponsor plate. The alternative is editorial stills, which for tonight's stars are months-old trade stories and pressers. Spec assumes frames win; flip the host preference if the overlays bother you.
-
 ## Calls I made (David can overrule)
 
 - Most-backed player picks the photo, not a star list.
 - Pre-game only in v1; live games reuse the card with the clock.
-- Stills preferred over video thumbnails.
+- Stills only, video frames never (David's call after seeing one).
+- 365-day window and the headline skip-list are mine; widen or trim as misses show up.
 - No-props NBA games keep the scoreboard rather than a photo of the ML favorite's best player.
 - Chips come from the ML favored side first.
