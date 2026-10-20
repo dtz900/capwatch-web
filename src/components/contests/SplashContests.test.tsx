@@ -1,10 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SplashContests, withPlacement } from "./SplashContests";
-import contestJson from "../../../public/splash-contest.json";
 
-const live = contestJson.contests.filter((c) => c.enabled && c.url);
+// A fixture rather than the real public/splash-contest.json: the live file is
+// empty between contests, and these tests are about the component, not the
+// day's data.
+const fixture = vi.hoisted(() => ({
+  enabled: true,
+  slate_date: "2026-10-20",
+  title: "Opening Night: NBA Tiers",
+  entry: "$25",
+  pays: "top 3",
+  lock_label: "Locks Tue at noon PT",
+  url: "https://app.splashsports.com/contest/abc/detail?utm_source=SplashWeb&utm_content=btn_invite",
+  contests: [
+    { enabled: true, sport: "NBA", slate_date: "2026-10-20", title: "Opening Night: NBA Tiers", entry: "$25", pays: "top 3", lock_label: "Locks Tue at noon PT", url: "https://app.splashsports.com/contest/abc/detail?utm_source=SplashWeb&utm_content=btn_invite" },
+    { enabled: true, sport: "NFL", slate_date: "2026-10-26", title: "Week 7 Pick 'em", entry: "$20", pays: "1st place", lock_label: "Closes 12 AM PT Oct 25", closes_at: "2026-10-25T00:00:00-07:00", url: "https://app.splashsports.com/contest/def/detail" },
+  ],
+}));
+vi.mock("../../../public/splash-contest.json", () => ({ default: fixture }));
+
+import { SplashContests, withPlacement } from "./SplashContests";
+
+const live = fixture.contests;
 const latest = live.map((c) => c.slate_date).sort().at(-1)!;
 
 describe("SplashContests", () => {

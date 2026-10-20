@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "slate_date": "2026-10-20",
   "title": "Opening Night: NBA Tiers",
   "entry": "$25",
@@ -9,7 +9,7 @@
   "image": "https://tailslips.com/contest/opening-night-2026-10-20.png",
   "contests": [
     {
-      "enabled": true,
+      "enabled": false,
       "sport": "NBA",
       "format": "Tiers",
       "slate_date": "2026-10-20",
