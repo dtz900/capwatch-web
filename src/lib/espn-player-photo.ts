@@ -53,6 +53,18 @@ export const PHOTO_POLICY: Record<PhotoSport, PhotoPolicy> = {
 
 const DAY_MS = 86_400_000;
 
+/**
+ * ESPN wire photos are filed as r<digits>_<size>.jpg ("r1655169_1296x729_16-9.jpg");
+ * slug-named images ("nba_lebron-knicks-preview_16x9.jpg") are editorial graphics
+ * and poster art. Under preferWide a wire still beats a graphic in the same tier.
+ */
+const WIRE_BASENAME = /^r\d+_/;
+
+function isWireStill(url: string): boolean {
+  const base = url.split("?")[0].split("/").pop() ?? "";
+  return WIRE_BASENAME.test(base);
+}
+
 export function espnOverviewUrl(playerId: number, sport: PhotoSport = "NFL"): string {
   return `https://site.web.api.espn.com/apis/common/v3/sports/${ESPN_PATH[sport].api}/athletes/${playerId}/overview`;
 }
@@ -74,7 +86,8 @@ export function espnResizedUrl(url: string, w: number, h: number): string | null
  * only tagged athlete, headline does not name him. Anything looser is a
  * crowd piece and is skipped. A headline naming the player is the stronger
  * signal that the hero image shows him; a bare solo tag on a roster
- * projection can be anyone. Newest wins a tier.
+ * projection can be anyone. Within a tier an NBA wire still beats a
+ * slug-named graphic, then newest wins.
  *
  * Articles carrying a league tag other than the pick's league are skipped outright: "Mets troll
  * Jayden Daniels over LSU NIL dispute" was solo-tagged, named him, and ran
@@ -90,7 +103,7 @@ export function pickActionPhoto(
   const policy = PHOTO_POLICY[sport];
   const league = ESPN_PATH[sport].league;
   const last = lastName.trim().toLowerCase();
-  const ranked: Array<{ tier: number; published: string; url: string }> = [];
+  const ranked: Array<{ tier: number; wire: number; published: string; url: string }> = [];
   for (const a of overview.news ?? []) {
     const cats = a.categories ?? [];
     const tags = cats.filter((c) => c?.type === "athlete").map((c) => c.athleteId);
@@ -113,9 +126,11 @@ export function pickActionPhoto(
     );
     const image = (policy.preferWide && qualifying.find((i) => i.url?.includes("_16-9"))) || qualifying[0];
     if (!image?.url) continue;
-    ranked.push({ tier, published: a.published ?? "", url: image.url });
+    // Graphics stay eligible as a last resort; NFL ranks every image alike.
+    const wire = policy.preferWide && !isWireStill(image.url) ? 1 : 0;
+    ranked.push({ tier, wire, published: a.published ?? "", url: image.url });
   }
-  ranked.sort((x, y) => x.tier - y.tier || y.published.localeCompare(x.published));
+  ranked.sort((x, y) => x.tier - y.tier || x.wire - y.wire || y.published.localeCompare(x.published));
   return ranked[0]?.url ?? null;
 }
 

@@ -197,6 +197,46 @@ describe("NBA photo policy", () => {
     expect(pickActionPhoto({ news: [video, trade, stale] }, TATUM, "Tatum", "NBA", NOW)).toBeNull();
   });
 
+  const DAY = 86_400_000;
+  const daysAgo = (n: number) => new Date(NOW.getTime() - n * DAY).toISOString();
+  const named = (published: string | undefined, url: string, width = 1296) => ({
+    headline: "Tatum drops 30",
+    published,
+    categories: nbaTags,
+    images: [img(url, width)],
+  });
+  const WIRE = "https://a.espncdn.com/photo/2026/1001/r1655169_1296x729_16-9.jpg";
+  const GRAPHIC = "https://a.espncdn.com/photo/2026/1015/nba_tatum-knicks-preview_16x9.jpg";
+
+  it("NBA: a wire still beats a newer slug-named graphic in the same tier", () => {
+    const o: EspnOverview = { news: [named(daysAgo(5), GRAPHIC), named(daysAgo(19), WIRE)] };
+    expect(pickActionPhoto(o, TATUM, "Tatum", "NBA", NOW)).toBe(WIRE);
+  });
+
+  it("NBA: a lone graphic still wins when it is the only candidate", () => {
+    expect(pickActionPhoto({ news: [named(daysAgo(5), GRAPHIC)] }, TATUM, "Tatum", "NBA", NOW)).toBe(GRAPHIC);
+  });
+
+  it("NFL keeps newest-first with no wire preference", () => {
+    const nfl = (published: string, url: string) => ({ ...named(published, url), categories: [...ath(TATUM), ...league("NFL")] });
+    const o: EspnOverview = { news: [nfl(daysAgo(19), WIRE), nfl(daysAgo(5), GRAPHIC)] };
+    expect(pickActionPhoto(o, TATUM, "Tatum", "NFL", NOW)).toBe(GRAPHIC);
+  });
+
+  it("NBA: drops an undated article", () => {
+    expect(pickActionPhoto({ news: [named(undefined, WIRE)] }, TATUM, "Tatum", "NBA", NOW)).toBeNull();
+  });
+
+  it("NBA: drops an article 366 days old and keeps one 364 days old", () => {
+    expect(pickActionPhoto({ news: [named(daysAgo(366), WIRE)] }, TATUM, "Tatum", "NBA", NOW)).toBeNull();
+    expect(pickActionPhoto({ news: [named(daysAgo(364), WIRE)] }, TATUM, "Tatum", "NBA", NOW)).toBe(WIRE);
+  });
+
+  it("NBA: uses a lone 600x400 3:2 rendition when it is the only qualifying image", () => {
+    const small = "https://a.espncdn.com/photo/2026/1001/r1655169_600x400_3-2.jpg";
+    expect(pickActionPhoto({ news: [named(daysAgo(5), small, 600)] }, TATUM, "Tatum", "NBA", NOW)).toBe(small);
+  });
+
   it("NFL policy is unchanged: no age cutoff, no headline skip, first qualifying image", () => {
     const o: EspnOverview = {
       news: [
