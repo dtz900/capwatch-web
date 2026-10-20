@@ -150,3 +150,107 @@ describe("NBA path", () => {
     expect(pickActionPhoto(o, TATUM, "Tatum", "NFL")).toBe("https://a.espncdn.com/photo/2026/1022/nfl_tatum_1296x729.jpg");
   });
 });
+
+describe("NBA photo policy", () => {
+  const TATUM = 4065648;
+  const NOW = new Date("2026-10-20");
+  const nbaTags = [...ath(TATUM), ...league("NBA")];
+  const video = {
+    headline: "Tatum highlights vs. Knicks",
+    published: "2026-10-11T02:00Z",
+    categories: nbaTags,
+    images: [img("https://espnmedia-cdn.akamaized.net/video/2026/1011/tatum_1296x729.jpg")],
+  };
+  const trade = {
+    headline: "Tatum 'comfortable' leading new-look Celtics post-Brown trade",
+    published: "2026-04-27T12:00Z",
+    categories: nbaTags,
+    images: [
+      img("https://a.espncdn.com/photo/2026/0427/r1649803_600x400_3-2.jpg", 600),
+      img("https://a.espncdn.com/photo/2026/0427/r1649803_1296x729_16-9.jpg"),
+    ],
+  };
+  const winner = {
+    headline: "Tatum drops 38 in Game 5",
+    published: "2026-05-14T03:00Z",
+    categories: nbaTags,
+    images: [
+      img("https://a.espncdn.com/photo/2026/0514/r1492811_600x400_3-2.jpg", 600),
+      img("https://a.espncdn.com/photo/2026/0514/r1492811_1296x729_16-9.jpg"),
+    ],
+  };
+  const stale = {
+    headline: "Tatum scores 40 against Heat",
+    published: "2024-11-02T03:00Z",
+    categories: nbaTags,
+    images: [img("https://a.espncdn.com/photo/2024/1102/r1_1296x729_16-9.jpg")],
+  };
+  const TATUM_FEED: EspnOverview = { news: [video, trade, winner, stale] };
+
+  it("NBA: skips video thumbnails, old articles and talking-head headlines, prefers the 16:9 still", () => {
+    expect(pickActionPhoto(TATUM_FEED, TATUM, "Tatum", "NBA", NOW)).toBe(
+      "https://a.espncdn.com/photo/2026/0514/r1492811_1296x729_16-9.jpg",
+    );
+  });
+
+  it("NBA: returns null when only skipped or stale items remain", () => {
+    expect(pickActionPhoto({ news: [video, trade, stale] }, TATUM, "Tatum", "NBA", NOW)).toBeNull();
+  });
+
+  const DAY = 86_400_000;
+  const daysAgo = (n: number) => new Date(NOW.getTime() - n * DAY).toISOString();
+  const named = (published: string | undefined, url: string, width = 1296) => ({
+    headline: "Tatum drops 30",
+    published,
+    categories: nbaTags,
+    images: [img(url, width)],
+  });
+  const WIRE = "https://a.espncdn.com/photo/2026/1001/r1655169_1296x729_16-9.jpg";
+  const GRAPHIC = "https://a.espncdn.com/photo/2026/1015/nba_tatum-knicks-preview_16x9.jpg";
+
+  it("NBA: a wire still beats a newer slug-named graphic in the same tier", () => {
+    const o: EspnOverview = { news: [named(daysAgo(5), GRAPHIC), named(daysAgo(19), WIRE)] };
+    expect(pickActionPhoto(o, TATUM, "Tatum", "NBA", NOW)).toBe(WIRE);
+  });
+
+  it("NBA: a lone graphic still wins when it is the only candidate", () => {
+    expect(pickActionPhoto({ news: [named(daysAgo(5), GRAPHIC)] }, TATUM, "Tatum", "NBA", NOW)).toBe(GRAPHIC);
+  });
+
+  it("NFL keeps newest-first with no wire preference", () => {
+    const nfl = (published: string, url: string) => ({ ...named(published, url), categories: [...ath(TATUM), ...league("NFL")] });
+    const o: EspnOverview = { news: [nfl(daysAgo(19), WIRE), nfl(daysAgo(5), GRAPHIC)] };
+    expect(pickActionPhoto(o, TATUM, "Tatum", "NFL", NOW)).toBe(GRAPHIC);
+  });
+
+  it("NBA: drops an undated article", () => {
+    expect(pickActionPhoto({ news: [named(undefined, WIRE)] }, TATUM, "Tatum", "NBA", NOW)).toBeNull();
+  });
+
+  it("NBA: drops an article 366 days old and keeps one 364 days old", () => {
+    expect(pickActionPhoto({ news: [named(daysAgo(366), WIRE)] }, TATUM, "Tatum", "NBA", NOW)).toBeNull();
+    expect(pickActionPhoto({ news: [named(daysAgo(364), WIRE)] }, TATUM, "Tatum", "NBA", NOW)).toBe(WIRE);
+  });
+
+  it("NBA: uses a lone 600x400 3:2 rendition when it is the only qualifying image", () => {
+    const small = "https://a.espncdn.com/photo/2026/1001/r1655169_600x400_3-2.jpg";
+    expect(pickActionPhoto({ news: [named(daysAgo(5), small, 600)] }, TATUM, "Tatum", "NBA", NOW)).toBe(small);
+  });
+
+  it("NFL policy is unchanged: no age cutoff, no headline skip, first qualifying image", () => {
+    const o: EspnOverview = {
+      news: [
+        {
+          headline: "Tatum trade rumors",
+          published: "2020-01-01T00:00Z",
+          categories: [...ath(TATUM), ...league("NFL")],
+          images: [
+            img("https://a.espncdn.com/photo/a_600x400_3-2.jpg", 600),
+            img("https://a.espncdn.com/photo/a_1296x729_16-9.jpg"),
+          ],
+        },
+      ],
+    };
+    expect(pickActionPhoto(o, TATUM, "Tatum", "NFL", NOW)).toBe("https://a.espncdn.com/photo/a_600x400_3-2.jpg");
+  });
+});

@@ -114,14 +114,12 @@ function escapeRe(s: string): string {
 }
 
 /**
- * The bet with the player's name removed: "Patrick Mahomes QB Under 224.5
- * Pass Yards" -> "Under 224.5 Pass Yards". Parser output is free text, so
- * this also folds the common spellings (u/o, Yds, Any Time Touchdown Scorer)
- * into one form so repeats count as one lean.
+ * Drops the leading player name from a selection, trying the full name,
+ * initial plus surname ("L. Doncic"), then surname alone. The end boundary
+ * is Unicode-aware because a word boundary treats accented letters as non-word.
  */
-export function betLabel(selection: string | null | undefined, playerName: string): string | null {
-  if (!selection) return null;
-  let s = selection.replace(/\s+/g, " ").trim();
+export function stripPlayerName(selection: string, playerName: string): string {
+  const s = selection.replace(/\s+/g, " ").trim();
   const parts = playerName.trim().split(/\s+/);
   const first = parts[0] ?? "";
   const last = parts.slice(1).join(" ");
@@ -130,12 +128,21 @@ export function betLabel(selection: string | null | undefined, playerName: strin
   const lastOnly = last ? escapeRe(last) : null;
   for (const pat of [full, shorthand, lastOnly]) {
     if (!pat) continue;
-    const re = new RegExp(`^${pat}\\b[\\s:,-]*`, "i");
-    if (re.test(s)) {
-      s = s.replace(re, "");
-      break;
-    }
+    const re = new RegExp(`^${pat}(?![\\p{L}\\p{N}_])[\\s:,-]*`, "iu");
+    if (re.test(s)) return s.replace(re, "");
   }
+  return s;
+}
+
+/**
+ * The bet with the player's name removed: "Patrick Mahomes QB Under 224.5
+ * Pass Yards" -> "Under 224.5 Pass Yards". Parser output is free text, so
+ * this also folds the common spellings (u/o, Yds, Any Time Touchdown Scorer)
+ * into one form so repeats count as one lean.
+ */
+export function betLabel(selection: string | null | undefined, playerName: string): string | null {
+  if (!selection) return null;
+  let s = stripPlayerName(selection, playerName);
   s = s.replace(POSITION_TAGS, "");
   s = s.replace(/^to (record|have|score)\s+/i, "");
   if (/any\s*time\s*(touchdown|td)/i.test(s)) return "Anytime TD";
