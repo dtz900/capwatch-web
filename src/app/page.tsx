@@ -16,8 +16,7 @@ import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { LeaderboardPrefsRestorer } from "@/components/leaderboard/LeaderboardPrefsRestorer";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
-import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
-import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
+import { SplashContests } from "@/components/contests/SplashContests";
 import { fetchLeaderboard, fetchTofHand, minPicksForWindow, withDeadline, type LeaderboardFilters } from "@/lib/api";
 import { breadcrumbNode, leaderboardItemListNode, organizationNode, websiteNode } from "@/lib/jsonld";
 import { tofEnabled } from "@/lib/flags";
@@ -262,10 +261,7 @@ async function HomeBoard({ board, filters }: { board: Promise<LeaderboardRespons
       {top3.length === 3 && <Podium rows={top3} window={filters.window} sport={filters.sport} />}
       {rows.length > 0 && (
         <div className="my-8 flex justify-center">
-          <SportsbookAd
-            creative={BETMGM_1940x500_FOOTBALL}
-            placement="home-inline"
-          />
+          <SplashContests placement="home" />
         </div>
       )}
       {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} sport={filters.sport} />}
