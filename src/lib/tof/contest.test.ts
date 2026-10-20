@@ -36,6 +36,17 @@ describe("activeContest", () => {
     expect(activeContest({ ...base, url: "" }, morningOfSlate)).toBeNull();
   });
 
+  it("hides from the moment entry closes when closes_at is set, before the slate ends", () => {
+    const weekly = { ...base, slate_date: "2026-10-26", closes_at: "2026-10-25T00:00:00-07:00" };
+    expect(activeContest(weekly, new Date("2026-10-24T23:59:00-07:00"))).toEqual(weekly);
+    expect(activeContest(weekly, new Date("2026-10-25T00:00:00-07:00"))).toBeNull();
+    expect(activeContest(weekly, new Date("2026-10-25T15:00:00-07:00"))).toBeNull();
+  });
+
+  it("treats an unparseable closes_at as closed rather than open forever", () => {
+    expect(activeContest({ ...base, closes_at: "saturday night" }, morningOfSlate)).toBeNull();
+  });
+
   it("only links to Splash", () => {
     expect(activeContest({ ...base, url: "https://evil.example/contest" }, morningOfSlate)).toBeNull();
   });

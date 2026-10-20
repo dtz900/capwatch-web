@@ -18,9 +18,13 @@ interface Props {
 }
 
 export function SplashContests({ placement, className = "" }: Props) {
-  // Client only: the show/hide decision is "today in PT", and an ISR page
-  // would otherwise bake in the build-time answer.
-  const [contests, setContests] = useState<SplashContest[]>([]);
+  // Computed during render so the server HTML already carries the module
+  // and the streamed board's slot never collapses before hydration (Codex on
+  // #206). The pages are ISR (60 to 300 s), so the baked answer can be a few
+  // minutes stale at a lock boundary; the effect re-checks on mount and every
+  // minute after, so a contest that closes while the tab is open disappears
+  // without a reload.
+  const [contests, setContests] = useState<SplashContest[]>(() => activeContests(contestJson as SplashContestFile));
   useEffect(() => {
     const tick = () => setContests(activeContests(contestJson as SplashContestFile));
     tick();

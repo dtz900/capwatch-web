@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { SplashContests, withPlacement } from "./SplashContests";
 import contestJson from "../../../public/splash-contest.json";
 
@@ -23,6 +24,13 @@ describe("SplashContests", () => {
     }
     expect(screen.getByText(live[0].title)).toBeInTheDocument();
     expect(screen.getByText(/commissioner rewards/i)).toBeInTheDocument();
+  });
+
+  it("ships the module in server HTML so the streamed slot never collapses before hydration", () => {
+    vi.setSystemTime(new Date(`${live[0].slate_date}T18:00:00Z`));
+    const html = renderToStaticMarkup(<SplashContests placement="home" />);
+    expect(html).toContain("TailSlips contests on Splash Sports");
+    expect(html).toContain(live[0].title);
   });
 
   it("renders nothing once every slate date has passed", () => {

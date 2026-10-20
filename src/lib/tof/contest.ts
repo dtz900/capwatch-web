@@ -17,6 +17,10 @@ export type SplashContest = {
   pays: string;
   lock_label: string;
   url: string;
+  /** ISO-8601 instant with offset when entry closes before the slate ends
+      (weekly pools lock Saturday night for a Sunday-Monday slate). The
+      contest hides from this moment on; slate_date remains the fallback. */
+  closes_at?: string;
   /** Short league tag shown as a chip: NBA, NFL, MLB. */
   sport?: string;
   /** Splash game type: Tiers, Pick 'em, Survivor. */
@@ -31,13 +35,18 @@ const PT_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angele
 const SPLASH_HOST = /^https:\/\/([a-z0-9-]+\.)*splashsports\.com\//i;
 
 /** The contest to show right now, or null. A contest shows from the moment
-    it is published until the end of its slate date in PT; a stale file can
-    never surface yesterday's link. Only Splash links are honored, so a bad
-    edit to the JSON cannot turn a card into an arbitrary redirect. */
+    it is published until entry closes (`closes_at`) or, failing that, the end
+    of its slate date in PT; a stale file can never surface yesterday's link.
+    Only Splash links are honored, so a bad edit to the JSON cannot turn a
+    card into an arbitrary redirect. */
 export function activeContest(cfg: SplashContest | null | undefined, now = new Date()): SplashContest | null {
   if (!cfg || !cfg.enabled || !cfg.url || !cfg.slate_date) return null;
   if (!SPLASH_HOST.test(cfg.url)) return null;
   if (PT_DATE.format(now) > cfg.slate_date) return null;
+  if (cfg.closes_at) {
+    const closes = Date.parse(cfg.closes_at);
+    if (Number.isNaN(closes) || now.getTime() >= closes) return null;
+  }
   return cfg;
 }
 
