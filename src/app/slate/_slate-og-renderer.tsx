@@ -12,6 +12,7 @@ import type { SlateGame, SlatePick } from "@/lib/types";
 import { feedsConsensusOdds, medianInt } from "@/lib/slate-consensus";
 import { topBackedPlayers, type BackedPlayer } from "@/lib/slate-players";
 import { espnHeadshotUrl, espnResizedUrl, fetchActionPhotoUrl } from "@/lib/espn-player-photo";
+import { slateBetCount } from "@/lib/slate-bet-count";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
 // a 2x canvas made the cold render heavier (Twitterbot timed out and cached a
@@ -333,30 +334,7 @@ export function resolveRequestedGame(games: SlateGame[], slug: string | undefine
   return null;
 }
 
-/**
- * Bets, not rows: the slate API emits every parlay LEG as its own pick row,
- * so raw row counts overstate what a human calls picks (2026-08-18 card
- * shipped "483 picks tracked" when the board carried 305 straights + 39
- * parlays = 344 bets). A parlay is one bet, keyed by its parlay_id (Codex
- * #96: two parlays in one tweet share a tweet_url and would merge). The
- * tweet_url fallback covers payloads from before the API exposed parlay_id.
- */
-export function slateBetCount(picks: SlatePick[]): number {
-  let straights = 0;
-  const parlays = new Set<string>();
-  for (const p of picks) {
-    if (p.kind === "parlay_leg") {
-      parlays.add(
-        p.parlay_id != null
-          ? `id:${p.parlay_id}`
-          : p.tweet_url ?? `${p.capper_id}:${p.posted_at ?? ""}`,
-      );
-    } else {
-      straights += 1;
-    }
-  }
-  return straights + parlays.size;
-}
+export { slateBetCount } from "@/lib/slate-bet-count";
 
 function buildMarqueeBlock(
   game: SlateGame,
