@@ -113,7 +113,9 @@ const ALL_ABBRS = new Set([
 const SPREAD_NUMBER_RE = /(?<![\d.])[+-]\d{1,2}(\.\d+)?(?![\d.])/;
 
 // Player-prop stat words — used to disambiguate over/under in totals vs props.
-const STAT_KEYWORDS = /\b(hit|hits|run|runs|rbi|rbis|strikeout|strikeouts|so|ks?|home\s*run|hrs?|tb|total\s*bases|walk|walks|bb|er|earned\s*runs?|outs?|po|pitches|pitch|stolen|sb)\b/i;
+// The tail group is basketball ("Jayson Tatum o27.5 Points", "SGA 30+ Pts"):
+// without it a market-null NBA prop read as a game total (Codex on #202).
+const STAT_KEYWORDS = /\b(hit|hits|run|runs|rbi|rbis|strikeout|strikeouts|so|ks?|home\s*run|hrs?|tb|total\s*bases|walk|walks|bb|er|earned\s*runs?|outs?|po|pitches|pitch|stolen|sb|points?|pts|rebounds?|rebs?|assists?|asts?|threes|3pt|3ptm|3\s*pointers?|steals?|blocks?|turnovers?|pra|double\s*double)\b/i;
 
 function fmtOdds(odds: number | null | undefined): string {
   if (odds == null) return "";

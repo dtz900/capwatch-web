@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchLeaderboard, minPicksForWindow } from "@/lib/api";
+import { leagueLabel } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Sort, SportFilter, Window } from "@/lib/types";
 
 // Shared renderer for the homepage OG card. Used by both the file-convention
@@ -233,9 +234,12 @@ function buildJsx({
   filters: RootOgFilters;
 }) {
   const hasRows = rows.length > 0;
+  // The board's league, not a hardcoded MLB: an NBA or NFL share must never
+  // card its rows as MLB (Codex on #202). No sport param means the MLB board.
+  const league = leagueLabel(filters.sport);
   const filterLine = [
     "Top Cappers",
-    "MLB",
+    league,
     windowLabel(filters.window),
     betTypeLabel(filters.bet_type),
     sortLabel(filters.sort),
@@ -439,7 +443,7 @@ function buildJsx({
             color: TEXT_SOFT,
           }}
         >
-          Verified MLB picks from tracked Twitter cappers.
+          Verified {league} picks from tracked Twitter cappers.
         </div>
       )}
 
@@ -538,7 +542,7 @@ function buildFallbackJsx(logoDataUri: string | null) {
             display: "flex",
           }}
         >
-          Verified MLB picks from tracked Twitter cappers.
+          Verified picks from tracked Twitter cappers.
         </div>
         <div
           style={{

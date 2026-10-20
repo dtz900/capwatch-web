@@ -219,3 +219,20 @@ describe("groupByMarket (NBA, PHI @ BOS shape)", () => {
     expect(h.ml.home).toEqual([]);
   });
 });
+
+describe("market-null NBA props (Codex on #202)", () => {
+  it("files a compact points prop under the player, not the game Over", () => {
+    const g = groupByMarket(
+      [
+        pick({ market: null, selection: "Jayson Tatum o27.5 Points", player_name: "Jayson Tatum" }),
+        pick({ market: null, selection: "Tyrese Maxey o6.5 Assists" }),
+        pick({ market: null, selection: "o221.5" }),
+      ],
+      "PHI",
+      "BOS",
+      "NBA",
+    );
+    expect(g.total.over.map((p) => p.selection)).toEqual(["o221.5"]);
+    expect(g.players.map((x) => x.name).sort()).toEqual(["Jayson Tatum", "Tyrese Maxey"]);
+  });
+});
