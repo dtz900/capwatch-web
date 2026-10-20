@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const VALID_WINDOWS = new Set<Window>(["last_7", "last_30", "season", "all_time"]);
 const VALID_BET_TYPES = new Set<BetTypeFilter>(["all", "straights", "parlays"]);
-const VALID_SPORTS = new Set<SportFilter>(["all", "mlb", "nfl"]);
+const VALID_SPORTS = new Set<SportFilter>(["all", "mlb", "nfl", "nba"]);
 
 export async function GET(
   request: Request,

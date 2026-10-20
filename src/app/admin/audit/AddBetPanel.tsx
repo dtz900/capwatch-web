@@ -106,7 +106,7 @@ export function AddBetPanel() {
   const [isLive, setIsLive] = useState(false);
   const [legs, setLegs] = useState<LegDraft[]>([{ ...EMPTY_LEG }]);
   const [gameDate, setGameDate] = useState(todayEt());
-  const [sport, setSport] = useState<"MLB" | "NFL">("MLB");
+  const [sport, setSport] = useState<"MLB" | "NFL" | "NBA">("MLB");
   // Guards the in-flight game search against a sport toggle racing it
   // (Codex P2, PR #110): a lookup resolves only if its sport still matches.
   const sportRef = useRef(sport);
@@ -222,7 +222,7 @@ export function AddBetPanel() {
 
       <div className="flex flex-wrap gap-2 items-center border-t border-[rgba(255,255,255,0.06)] pt-3">
         <span className={labelCls}>Games</span>
-        {(["MLB", "NFL"] as const).map((sp) => (
+        {(["MLB", "NFL", "NBA"] as const).map((sp) => (
           <button
             key={sp}
             type="button"

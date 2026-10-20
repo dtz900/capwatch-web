@@ -9,6 +9,7 @@ const CHIPS: LeagueChip[] = [
   { value: "all", label: "All", league: "all" },
   { value: "mlb", label: "MLB", league: "mlb" },
   { value: "nfl", label: "NFL", league: "nfl" },
+  { value: "nba", label: "NBA", league: "nba" },
 ];
 
 /**

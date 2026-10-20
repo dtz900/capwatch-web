@@ -23,19 +23,19 @@ import type { CapperRow } from "@/lib/types";
 export const metadata = {
   title: "Cappers · Verified Records & Leaderboard",
   description:
-    "Track every MLB and NFL Twitter capper's verified record, units profit, ROI, and full graded pick history. A daily-updated ledger of public picks, win or lose.",
+    "Track every MLB, NFL and NBA Twitter capper's verified record, units profit, ROI, and full graded pick history. A daily-updated ledger of public picks, win or lose.",
   alternates: { canonical: "/cappers" },
   openGraph: {
     title: "Cappers · Verified Records & Leaderboard · TailSlips",
     description:
-      "Track every MLB and NFL Twitter capper's verified record, units, ROI, and full graded pick history on TailSlips. A daily-updated ledger of public picks.",
+      "Track every MLB, NFL and NBA Twitter capper's verified record, units, ROI, and full graded pick history on TailSlips. A daily-updated ledger of public picks.",
     url: "/cappers",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Cappers · Verified Records & Leaderboard · TailSlips",
-    description: "Every tracked MLB and NFL Twitter capper, with verified records and full graded pick history.",
+    description: "Every tracked MLB, NFL and NBA Twitter capper, with verified records and full graded pick history.",
   },
 };
 

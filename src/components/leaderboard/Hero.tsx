@@ -11,9 +11,9 @@ interface HeroProps {
 
 const COPY: Record<SportFilter, { kicker: string; title: string; lead: string }> = {
   all: {
-    kicker: "MLB + NFL · 2026",
+    kicker: "MLB + NFL + NBA · 2026",
     title: "Capper Rankings",
-    lead: "Every public MLB and NFL pick from a tracked X account, graded against the final outcome.",
+    lead: "Every public MLB, NFL and NBA pick from a tracked X account, graded against the final outcome.",
   },
   mlb: {
     kicker: "MLB · 2026 Season",
@@ -24,6 +24,11 @@ const COPY: Record<SportFilter, { kicker: string; title: string; lead: string }>
     kicker: "NFL · 2026 Season",
     title: "NFL Capper Rankings",
     lead: "Every public NFL pick from a tracked X account, graded against the final outcome.",
+  },
+  nba: {
+    kicker: "NBA · 2026-27 Season",
+    title: "NBA Capper Rankings",
+    lead: "Every public NBA pick from a tracked X account, graded against the final outcome.",
   },
 };
 

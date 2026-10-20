@@ -14,7 +14,7 @@ interface PageProps {
     pick_id?: string;
     offset?: string;
     sort?: "oldest" | "newest" | "sport";
-    sport?: "MLB" | "NFL";
+    sport?: "MLB" | "NFL" | "NBA";
     show_acked?: string;
   }>;
 }
@@ -89,7 +89,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   // set, so the freshest un-triaged problems are what matter.
   const sort: "oldest" | "newest" | "sport" =
     sp.sort === "oldest" || sp.sort === "sport" ? sp.sort : "newest";
-  const sport = sp.sport === "MLB" || sp.sport === "NFL" ? sp.sport : undefined;
+  const sport = sp.sport === "MLB" || sp.sport === "NFL" || sp.sport === "NBA" ? sp.sport : undefined;
   const showAcked = sp.show_acked === "true";
 
   const pickShapedFlags = await fetchPickShapedFlags();
@@ -283,7 +283,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
               Sport
             </span>
-            {(["", "MLB", "NFL"] as const).map((s) => {
+            {(["", "MLB", "NFL", "NBA"] as const).map((s) => {
               const n = s ? (data.by_sport?.[s] ?? 0) : null;
               return (
                 <Link

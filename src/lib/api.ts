@@ -235,8 +235,14 @@ export const DEFAULT_MIN_PICKS = 10;
 // "all" view keeps the MLB floor.
 export const NFL_WINDOW_MIN_PICKS: Partial<Record<Window, number>> = {};
 export const NFL_DEFAULT_MIN_PICKS = 1;
+// NBA opens its season with every capper at zero graded picks, so it ranks
+// like the NFL: one graded pick in any window. Mirrors the platform's NBA
+// floor; "all" (MLB + NFL + NBA) keeps the MLB floor.
+export const NBA_WINDOW_MIN_PICKS: Partial<Record<Window, number>> = {};
+export const NBA_DEFAULT_MIN_PICKS = 1;
 export function minPicksForWindow(window: Window, sport?: SportFilter): number {
   if (sport === "nfl") return NFL_WINDOW_MIN_PICKS[window] ?? NFL_DEFAULT_MIN_PICKS;
+  if (sport === "nba") return NBA_WINDOW_MIN_PICKS[window] ?? NBA_DEFAULT_MIN_PICKS;
   return WINDOW_MIN_PICKS[window] ?? DEFAULT_MIN_PICKS;
 }
 
@@ -291,12 +297,13 @@ export async function fetchLivePicksCounts(sport: SportFilter = "mlb"): Promise<
   return res.json() as Promise<LivePicksCountsResponse>;
 }
 
-export type SlateSport = "mlb" | "nfl";
+export type SlateSport = "mlb" | "nfl" | "nba";
 
 /**
- * MLB: a day ("today" | "tomorrow" | YYYY-MM-DD). NFL: the current week, or
- * an explicit regular-season week. The MLB cache key is unchanged so the
- * `slate:` purge prefix and the weekly rollup keys keep working.
+ * MLB and NBA: a day ("today" | "tomorrow" | YYYY-MM-DD). NFL: the current
+ * week, or an explicit regular-season week. The MLB cache key is unchanged so
+ * the `slate:` purge prefix and the weekly rollup keys keep working; NBA days
+ * live under `slate:v1:nba:` so they never collide with the MLB day keys.
  */
 /**
  * The literal cache key for a slate fetch is stable ("slate:v1:today",
@@ -332,7 +339,11 @@ export async function fetchSlate(
   week?: number,
 ): Promise<SlateResponse> {
   const cacheKey =
-    sport === "nfl" ? `slate:v1:nfl:${week ?? "current"}` : `slate:v1:${date}`;
+    sport === "nfl"
+      ? `slate:v1:nfl:${week ?? "current"}`
+      : sport === "nba"
+        ? `slate:v1:nba:${date}`
+        : `slate:v1:${date}`;
   const lkgKey = resolveSlateLkgKey(cacheKey, date, sport, week);
   const qs = new URLSearchParams({ date });
   if (sport !== "mlb") qs.set("sport", sport);
@@ -471,7 +482,7 @@ export interface AuditFilters {
   /** "sport" groups the queue MLB-first, newest within each block. */
   sort?: "oldest" | "newest" | "sport";
   /** Filter the whole queue (actionable + pending + settled) to one sport. */
-  sport?: "MLB" | "NFL";
+  sport?: "MLB" | "NFL" | "NBA";
   show_acked?: boolean;
   limit?: number;
   offset?: number;
@@ -480,7 +491,7 @@ export interface AuditFilters {
 export interface AuditProblem {
   pick_id: number;
   capper_id: number;
-  /** "MLB" | "NFL" (server defaults missing values to MLB). */
+  /** "MLB" | "NFL" | "NBA" (server defaults missing values to MLB). */
   sport?: string;
   capper_handle: string | null;
   capper_display_name: string | null;
@@ -633,7 +644,7 @@ export interface ReviewQueueItem {
   player_name: string | null;
   was_image_parsed: boolean | null;
   parlay_id: number | null;
-  /** "MLB" | "NFL". Drives which roster/schedule the bind panel searches;
+  /** "MLB" | "NFL" | "NBA". Drives which roster/schedule the bind panel searches;
    * without it the panel was hardwired to MLB and an NFL player prop
    * could not be bound by hand at all (David 2026-09-10: searching
    * "hunter" for Hunter Henry returned six MLB pitchers). */

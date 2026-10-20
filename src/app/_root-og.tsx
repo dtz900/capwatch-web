@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchLeaderboard, minPicksForWindow } from "@/lib/api";
-import type { BetTypeFilter, CapperRow, Sort, Window } from "@/lib/types";
+import type { BetTypeFilter, CapperRow, Sort, SportFilter, Window } from "@/lib/types";
 
 // Shared renderer for the homepage OG card. Used by both the file-convention
 // route (app/opengraph-image.tsx) and the explicit Route Handler at
@@ -34,7 +34,7 @@ export interface RootOgFilters {
   sort: Sort;
   bet_type: BetTypeFilter;
   active_only: boolean;
-  sport?: "all" | "mlb" | "nfl";
+  sport?: SportFilter;
 }
 
 export const DEFAULT_ROOT_OG_FILTERS: RootOgFilters = {

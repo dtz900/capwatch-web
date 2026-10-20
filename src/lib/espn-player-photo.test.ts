@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { espnHeadshotUrl, espnResizedUrl, pickActionPhoto, type EspnOverview } from "./espn-player-photo";
+import { espnHeadshotUrl, espnOverviewUrl, espnResizedUrl, pickActionPhoto, type EspnOverview } from "./espn-player-photo";
 
 const img = (url: string, width = 1296) => ({ url, width, height: Math.round((width * 9) / 16) });
 const ath = (...ids: number[]) => ids.map((athleteId) => ({ type: "athlete", athleteId }));
@@ -109,5 +109,44 @@ describe("url helpers", () => {
       "https://a.espncdn.com/combiner/i?img=/photo/2026/0914/r1716323_1296x729_16-9.jpg&w=640&h=360",
     );
     expect(espnResizedUrl("https://elsewhere.example/x.jpg", 640, 360)).toBeNull();
+  });
+});
+
+describe("NBA path", () => {
+  const TATUM = 4065648;
+
+  it("builds the basketball overview and headshot urls", () => {
+    expect(espnOverviewUrl(TATUM, "NBA")).toBe(
+      "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/4065648/overview",
+    );
+    expect(espnHeadshotUrl(TATUM, "NBA")).toBe("https://a.espncdn.com/i/headshots/nba/players/full/4065648.png");
+  });
+
+  it("keeps the NFL urls as the default", () => {
+    expect(espnOverviewUrl(MAHOMES)).toBe(
+      "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/overview",
+    );
+  });
+
+  it("filters by the pick's league: NBA articles pass, NFL-tagged ones are skipped", () => {
+    const o: EspnOverview = {
+      news: [
+        {
+          headline: "Tatum and the Celtics roll the Sixers",
+          published: "2026-10-21T03:00Z",
+          categories: [...ath(TATUM), ...league("NBA")],
+          images: [img("https://a.espncdn.com/photo/2026/1021/nba_tatum_1296x729.jpg")],
+        },
+        {
+          headline: "Tatum courtside at Patriots game",
+          published: "2026-10-22T03:00Z",
+          categories: [...ath(TATUM), ...league("NFL")],
+          images: [img("https://a.espncdn.com/photo/2026/1022/nfl_tatum_1296x729.jpg")],
+        },
+      ],
+    };
+    expect(pickActionPhoto(o, TATUM, "Tatum", "NBA")).toBe("https://a.espncdn.com/photo/2026/1021/nba_tatum_1296x729.jpg");
+    // The same feed read as NFL drops the NBA-tagged story.
+    expect(pickActionPhoto(o, TATUM, "Tatum", "NFL")).toBe("https://a.espncdn.com/photo/2026/1022/nfl_tatum_1296x729.jpg");
   });
 });

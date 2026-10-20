@@ -29,8 +29,8 @@ interface PageProps {
 }
 
 const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
-const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl"];
-// The board defaults to the combined record; MLB / NFL are one click away.
+const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl", "nba"];
+// The board defaults to the combined record; MLB / NFL / NBA are one click away.
 const DEFAULT_SPORT: SportFilter = "all";
 function parseSport(raw: string | undefined): SportFilter {
   return VALID_SPORTS.includes(raw as SportFilter) ? (raw as SportFilter) : DEFAULT_SPORT;
@@ -97,7 +97,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 function sportTitle(s: SportFilter | undefined): string {
   if (s === "nfl") return "NFL";
   if (s === "mlb") return "MLB";
-  return "MLB + NFL";
+  if (s === "nba") return "NBA";
+  return "MLB, NFL and NBA";
 }
 
 function windowTitle(w: Window): string {

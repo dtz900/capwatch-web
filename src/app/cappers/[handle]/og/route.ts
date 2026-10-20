@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 const VALID_WINDOWS: ReadonlyArray<Window> = ["all_time", "season", "last_30", "last_7"];
 const VALID_BET_TYPES: ReadonlyArray<BetTypeFilter> = ["all", "straights", "parlays"];
-const VALID_SPORTS: ReadonlyArray<SportFilter> = ["all", "mlb", "nfl"];
+const VALID_SPORTS: ReadonlyArray<SportFilter> = ["all", "mlb", "nfl", "nba"];
 
 export async function GET(
   request: Request,

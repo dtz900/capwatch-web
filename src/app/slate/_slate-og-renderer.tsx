@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Resvg } from "@resvg/resvg-js";
 import { ImageResponse } from "next/og";
 import satori from "satori";
-import { fetchLeaderboard, fetchSlate, withDeadline } from "@/lib/api";
+import { fetchLeaderboard, fetchSlate, withDeadline, type SlateSport } from "@/lib/api";
 import { pickMlSide } from "@/lib/bet-format";
 import { teamColor, teamLogoUrl } from "@/lib/teams";
 import type { Sport } from "@/lib/types";
@@ -286,6 +286,14 @@ const SLUG_ABBR_ALIASES: Record<string, string> = {
   TBR: "TB",
   KCR: "KC",
   KCROYALS: "KC",
+  // NBA: the common three-letter forms map to ESPN's slate abbrs.
+  GSW: "GS",
+  NYK: "NY",
+  NOP: "NO",
+  SAS: "SA",
+  UTA: "UTAH",
+  PHO: "PHX",
+  BRK: "BKN",
 };
 
 function normalizeSlugAbbr(token: string): string {
@@ -404,7 +412,7 @@ function formatAmericanOdds(n: number): string {
 
 export interface RenderSlateOpts {
   dateParam?: "today" | "tomorrow";
-  sport?: "mlb" | "nfl";
+  sport?: SlateSport;
   /** NFL only: the week the share URL opens to, so the card matches it. */
   week?: number;
   gameSlug?: string;
@@ -435,13 +443,16 @@ async function renderScaledPng(node: ReactNode, fonts: OgFont[], scale: number):
 
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
-  const sportParam = opts.sport === "nfl" ? "nfl" : "mlb";
+  const sportParam: SlateSport = opts.sport === "nfl" || opts.sport === "nba" ? opts.sport : "mlb";
+  // NBA reads like MLB: a day board with the moneyline scoreboard hero.
   const fallbackHeading =
     sportParam === "nfl"
       ? opts.week != null
         ? `Week ${opts.week} NFL slate.`
         : "This week's NFL slate."
-      : "Tonight's MLB slate.";
+      : sportParam === "nba"
+        ? "Tonight's NBA slate."
+        : "Tonight's MLB slate.";
   const scale = opts.scale === 2 ? 2 : 1;
   const [slateResult, logoDataUri] = await Promise.allSettled([
     fetchSlate(dateParam, sportParam, sportParam === "nfl" ? opts.week : undefined),
@@ -536,7 +547,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
  */
 export async function buildSlateOgFingerprint(
   dateParam: "today" | "tomorrow",
-  sport: "mlb" | "nfl" = "mlb",
+  sport: SlateSport = "mlb",
   week?: number,
 ): Promise<{ etDay: string; picks: number; sharps: number; seasonPicks: number; contentHash: string }> {
   let picks = 0;

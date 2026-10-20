@@ -164,3 +164,58 @@ describe("player row label", () => {
     expect(groupByMarket(rows, "TB", "DAL", "NFL").players[0].name).toBe("Jalon Daniels");
   });
 });
+
+describe("groupByMarket (NBA, PHI @ BOS shape)", () => {
+  const picks = [
+    pick({ market: "ml", selection: "Celtics ML" }),
+    pick({ market: "ml", selection: "Sixers ML" }),
+    pick({ market: "spread", selection: "Sixers +2.5", line: 2.5 }),
+    pick({ market: "spread", selection: "Celts -2.5", line: -2.5 }),
+    pick({ market: "spread", selection: "BOS -2.5", line: -2.5 }),
+    pick({ market: "total", selection: "Over 221.5", line: 221.5 }),
+    pick({ market: "total", selection: "u221.5", line: 221.5 }),
+    pick({ market: "player_prop", selection: "Jayson Tatum o27.5 Points", player_name: "Jayson Tatum" }),
+  ];
+  const g = groupByMarket(picks, "PHI", "BOS", "NBA");
+
+  it("resolves mascots and capper nicknames to the right side", () => {
+    expect(g.ml.away.map((p) => p.selection)).toEqual(["Sixers ML"]);
+    expect(g.ml.home.map((p) => p.selection)).toEqual(["Celtics ML"]);
+    expect(g.spread.away.map((p) => p.selection)).toEqual(["Sixers +2.5"]);
+    expect(g.spread.home.map((p) => p.selection)).toEqual(["Celts -2.5", "BOS -2.5"]);
+  });
+
+  it("splits three-digit basketball totals", () => {
+    expect(g.total.over.map((p) => p.selection)).toEqual(["Over 221.5"]);
+    expect(g.total.under.map((p) => p.selection)).toEqual(["u221.5"]);
+  });
+
+  it("folds player props under the player", () => {
+    expect(g.players.map((x) => [x.name, x.picks.length])).toEqual([["Jayson Tatum", 1]]);
+  });
+
+  it("resolves ESPN short abbrs and multi-word mascots (GS, POR)", () => {
+    const h = groupByMarket(
+      [
+        pick({ market: "ml", selection: "Trail Blazers ML" }),
+        pick({ market: "ml", selection: "Dubs ML" }),
+        pick({ market: "spread", selection: "Blazers +6.5", line: 6.5 }),
+        pick({ market: "spread", selection: "GS -6.5", line: -6.5 }),
+      ],
+      "POR",
+      "GS",
+      "NBA",
+    );
+    expect(h.ml.away.map((p) => p.selection)).toEqual(["Trail Blazers ML"]);
+    expect(h.ml.home.map((p) => p.selection)).toEqual(["Dubs ML"]);
+    expect(h.spread.away.map((p) => p.selection)).toEqual(["Blazers +6.5"]);
+    expect(h.spread.home.map((p) => p.selection)).toEqual(["GS -6.5"]);
+  });
+
+  it("never reads an NFL mascot on an NBA game that shares the abbr", () => {
+    // ATL and CHI exist in both leagues; "Falcons" must not bind on the Hawks game.
+    const h = groupByMarket([pick({ market: "ml", selection: "Falcons ML" })], "ATL", "CHI", "NBA");
+    expect(h.ml.away).toEqual([]);
+    expect(h.ml.home).toEqual([]);
+  });
+});

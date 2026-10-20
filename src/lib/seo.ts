@@ -1,4 +1,4 @@
-import type { CapperProfile, Window } from "./types";
+import type { CapperProfile, SportFilter, Window } from "./types";
 
 export const SITE_URL = "https://tailslips.com";
 export const SITE_NAME = "TailSlips";
@@ -48,16 +48,17 @@ export function formatWinRateForTitle(rate: number): string {
 }
 
 /** League word for copy: the profile's selected sport (Codex on #113). */
-export function leagueLabel(sport?: "all" | "mlb" | "nfl" | null): string {
+export function leagueLabel(sport?: SportFilter | null): string {
   if (sport === "nfl") return "NFL";
-  if (sport === "all") return "MLB and NFL";
+  if (sport === "nba") return "NBA";
+  if (sport === "all") return "MLB, NFL and NBA";
   return "MLB";
 }
 
 interface CapperMetaInputs {
   handle: string;
   displayName: string | null;
-  sport?: "all" | "mlb" | "nfl" | null;
+  sport?: SportFilter | null;
   windowAgg: CapperProfile["aggregates"][Window];
   allTimeAgg: CapperProfile["aggregates"][Window];
   trackedSince?: string | null;
@@ -134,7 +135,7 @@ function formatTrackedSince(iso: string): string {
 interface FaqInputs {
   handle: string;
   displayName: string | null;
-  sport?: "all" | "mlb" | "nfl" | null;
+  sport?: SportFilter | null;
   allTimeAgg: import("./types").CapperAggregate | undefined;
   trackedSince: string | null;
 }

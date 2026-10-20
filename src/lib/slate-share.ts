@@ -50,7 +50,7 @@ export function slateGameShareLink(
   const isNfl = view.sport === "nfl";
   return {
     queryParams: {
-      sport: isNfl ? "nfl" : undefined,
+      sport: view.sport === "mlb" ? undefined : view.sport,
       week: isNfl && view.week != null ? String(view.week) : undefined,
       date: !isNfl && view.dateParam !== "today" ? view.dateParam : undefined,
       game: slug,

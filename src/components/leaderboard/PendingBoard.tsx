@@ -23,7 +23,8 @@ interface Props {
  */
 export function PendingBoard({ rows, sport, window, standalone }: Props) {
   if (rows.length === 0) return null;
-  const title = sport === "nfl" ? "Picks in this week" : sport === "mlb" ? "Action tonight" : "Action in";
+  const title =
+    sport === "nfl" ? "Picks in this week" : sport === "mlb" || sport === "nba" ? "Action tonight" : "Action in";
   const sub = standalone
     ? "Ranked once enough of their picks grade. Live counts update as the games settle."
     : "Not yet ranked in this window.";

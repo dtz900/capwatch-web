@@ -11,23 +11,26 @@ const WINDOW_LABEL: Record<Window, string> = {
 
 /**
  * The board has no ranked cappers for this sport + window. Two honest
- * reasons: the sport has not settled a graded pick yet (NFL before Week 1;
- * preseason is tracked but never counted), or nobody clears the window's
+ * reasons: the sport has not settled a graded pick yet (NFL before Week 1,
+ * NBA before opening night settles; preseason is tracked but never counted),
+ * or nobody clears the window's
  * minimum. Say which, instead of rendering a blank page.
  */
 export function EmptyBoard({ sport, window }: { sport: SportFilter; window: Window }) {
-  const nfl = sport === "nfl";
+  const league = sport === "nfl" ? "NFL" : sport === "nba" ? "NBA" : null;
   return (
     <section
       data-testid="empty-board"
       className="my-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-10 text-center"
     >
       <h2 className="text-[20px] font-extrabold tracking-[-0.015em] mb-2">
-        {nfl ? "No graded NFL picks yet" : "No cappers on the board"}
+        {league ? `No graded ${league} picks yet` : "No cappers on the board"}
       </h2>
       <p className="mx-auto max-w-lg text-[13px] leading-relaxed text-[var(--color-text-muted)]">
-        {nfl
-          ? "Records post as the week's games settle."
+        {league
+          ? sport === "nfl"
+            ? "Records post as the week's games settle."
+            : "Records post as tonight's games settle."
           : `Nobody clears the minimum graded picks for ${WINDOW_LABEL[window] ?? "this window"}. Try a wider window.`}
       </p>
     </section>

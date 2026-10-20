@@ -6,18 +6,20 @@ import type { SlateSport } from "@/lib/api";
 import { LeagueChips, type LeagueChip } from "@/components/ui/LeagueChips";
 
 /**
- * The league chips at the top of the slate. Drive `?sport=nfl` the same way
- * DateToggle drives `?date=`; switching leagues drops the date/week params
- * because MLB is a daily board and the NFL board is a week.
+ * The league chips at the top of the slate. Drive `?sport=nfl|nba` the same
+ * way DateToggle drives `?date=`; switching leagues drops the date/week params
+ * because MLB and NBA are daily boards and the NFL board is a week.
  */
 export function SportToggle({
   current,
   mlbCaption,
   nflCaption,
+  nbaCaption,
 }: {
   current: SlateSport;
   mlbCaption: string;
   nflCaption: string;
+  nbaCaption: string;
 }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -26,6 +28,7 @@ export function SportToggle({
   const chips: LeagueChip[] = [
     { value: "mlb", label: "MLB", league: "mlb", caption: mlbCaption },
     { value: "nfl", label: "NFL", league: "nfl", caption: nflCaption },
+    { value: "nba", label: "NBA", league: "nba", caption: nbaCaption },
   ];
 
   const onSelect = (value: string) => {
