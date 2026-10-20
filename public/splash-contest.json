@@ -25,12 +25,20 @@
       "sport": "NFL",
       "format": "Pick 'em",
       "slate_date": "2026-10-26",
-      "title": "Week 7 Pick 'em: winner take all",
+      "title": "Week 7 Pick 'em",
       "entry": "$20",
       "pays": "1st place",
-      "lock_label": "Closes 12 AM PT Oct 25",
+      "lock_label": "Closes Oct 25, 12 AM PT",
       "closes_at": "2026-10-25T00:00:00-07:00",
-      "url": ""
+      "url": "",
+      "headline": "Week 7 Pick 'em",
+      "tagline": "Winner takes the whole pot.",
+      "facts": [
+        "$20 entry",
+        "Winner take all",
+        "13 games, no TNF",
+        "Closes Oct 25, 12 AM PT"
+      ]
     }
   ]
 }

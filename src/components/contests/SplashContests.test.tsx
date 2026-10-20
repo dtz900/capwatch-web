@@ -41,7 +41,7 @@ describe("SplashContests", () => {
       expect(link.getAttribute("href")).toContain("utm_content=tailslips-home");
     }
     expect(screen.getByText(live[0].title)).toBeInTheDocument();
-    expect(screen.getByText(/commissioner rewards/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/commissioner rewards/i)).toHaveLength(live.length);
   });
 
   it("ships the module in server HTML so the streamed slot never collapses before hydration", () => {

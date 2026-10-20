@@ -18,7 +18,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 export function BannerSkeleton() {
   return (
     <div data-testid="banner-skeleton" className="w-full">
-      <Skeleton className="w-full max-w-[720px] mx-auto h-[150px] rounded-xl" />
+      <Skeleton className="w-full h-[150px] rounded-lg" />
     </div>
   );
 }
