@@ -16,7 +16,15 @@ import { slateBetCount } from "@/lib/slate-bet-count";
 import { fetchRemoteImageAsDataUri } from "@/lib/remote-image";
 import { buildNbaPanel, displaySurname, type NbaPanel } from "@/lib/nba-og-panel";
 import { NBA_TEAM_NAMES } from "@/lib/nba-teams";
-import { fetchNbaHero, fitNbaChips, nbaCaptionLine, NBA_HERO_DEPS, type NbaHero, type PhotoMode } from "./_nba-hero";
+import {
+  fetchNbaHero,
+  fitNbaChips,
+  nbaCaptionLine,
+  nbaDegraded,
+  NBA_HERO_DEPS,
+  type NbaHero,
+  type PhotoMode,
+} from "./_nba-hero";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
 // a 2x canvas made the cold render heavier (Twitterbot timed out and cached a
@@ -482,10 +490,7 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   // and heal on the next request. An NBA game with props whose photo chain
   // missed or timed out (scoreboard), or fell back to a headshot without
   // ?photos=headshot asking for one, is degraded too.
-  const nbaPhotoMissed =
-    nbaPanel != null &&
-    nbaPanel.propCount > 0 &&
-    (nbaHero == null || (nbaHero.photoKind === "headshot" && photoMode !== "headshot"));
+  const nbaPhotoMissed = nbaDegraded(nbaPanel, nbaHero, photoMode);
   const degraded =
     slateResult.status !== "fulfilled" ||
     (featuredGame != null && (teamLogos.away == null || teamLogos.home == null)) ||
@@ -1267,7 +1272,7 @@ function NbaBackdrop({
       >
         <div style={{ width: px(8), height: px(8), background: teamC, display: "flex" }} />
         <div style={{ display: "flex", fontSize: px(24), fontWeight: 800, color: OFF, whiteSpace: "nowrap" }}>
-          {hero.player.name}
+          {hero.athleteName}
         </div>
         <div
           style={{
@@ -1280,7 +1285,7 @@ function NbaBackdrop({
             whiteSpace: "nowrap",
           }}
         >
-          {nbaCaptionLine(hero.player.name, hero.player.sharps, hero.player.topBet)}
+          {nbaCaptionLine(hero.athleteName, hero.player.sharps, hero.player.topBet)}
         </div>
       </div>
     </div>

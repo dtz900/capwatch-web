@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildNbaPanel } from "@/lib/nba-og-panel";
-import type { RosterAthlete } from "@/lib/espn-nba-roster";
+import { matchRosterAthlete, type RosterAthlete } from "@/lib/espn-nba-roster";
 import type { SlateGame, SlatePick } from "@/lib/types";
-import { fetchNbaHero, fitNbaChips, nbaCaptionLine, type NbaHeroDeps } from "./_nba-hero";
+import { fetchNbaHero, fitNbaChips, nbaCaptionLine, nbaDegraded, type NbaHero, type NbaHeroDeps } from "./_nba-hero";
 
 // BOS @ DET, 2026-10-20: the slate payload shape (trimmed), names only (NBA props carry no player_id yet).
 const row = (o: Partial<SlatePick> & { capper_id: number }): SlatePick =>
@@ -161,6 +161,56 @@ describe("fetchNbaHero", () => {
     expect(hero2?.athleteId).toBe(4432166);
     expect(viaName.resolve).toHaveBeenCalledWith("Cade Cunningham", ["BOS", "DET"]);
     expect(viaName.actionUrl).not.toHaveBeenCalledWith(999, expect.anything(), expect.anything(), expect.anything());
+  });
+});
+
+describe("fetchNbaHero athlete name and failures", () => {
+  it("carries the roster full name when every row is surname-only", async () => {
+    const okc: SlateGame = {
+      ...base,
+      away_team: "OKC",
+      home_team: "SA",
+      picks: [...ml, prop(1, "Hartenstein", "10+ REB"), prop(2, "Hartenstein", "10+ REB")],
+    };
+    const hart: RosterAthlete[] = [
+      { id: 4222252, fullName: "Isaiah Hartenstein", lastName: "Hartenstein", team: "OKC" },
+      { id: 4065648, fullName: "Jayson Tatum", lastName: "Tatum", team: "BOS" },
+    ];
+    const { deps } = makeDeps();
+    const surnameDeps: NbaHeroDeps = { ...deps, resolve: async (name: string) => matchRosterAthlete(hart, name) };
+    const hero = await fetchNbaHero(okc, buildNbaPanel(okc), "action", surnameDeps);
+    expect(hero?.player.name).toBe("Hartenstein");
+    expect(hero?.athleteName).toBe("Isaiah Hartenstein");
+  });
+
+  it("warns and returns null when the chain throws", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { deps } = makeDeps();
+    const boom: NbaHeroDeps = { ...deps, resolve: async () => Promise.reject(new Error("boom")) };
+    expect(await fetchNbaHero(game, panel, "action", boom)).toBeNull();
+    expect(warn).toHaveBeenCalledWith("[nba-hero] chain failed", expect.any(Error));
+    warn.mockRestore();
+  });
+});
+
+describe("nbaDegraded", () => {
+  const hero = (photoKind: NbaHero["photoKind"]): NbaHero => ({
+    player: panel.players[0],
+    athleteId: 4432166,
+    athleteName: "Cade Cunningham",
+    photoDataUri: "data:image/png;base64,x",
+    photoKind,
+    teamSide: "home",
+  });
+  it("props present and no hero is degraded", () => expect(nbaDegraded(panel, null, "action")).toBe(true));
+  it("action mode that fell back to a headshot is degraded", () =>
+    expect(nbaDegraded(panel, hero("headshot"), "action")).toBe(true));
+  it("headshot mode with a headshot hero is not degraded", () =>
+    expect(nbaDegraded(panel, hero("headshot"), "headshot")).toBe(false));
+  it("an action hero is not degraded", () => expect(nbaDegraded(panel, hero("action"), "action")).toBe(false));
+  it("a game with no props is not degraded", () => {
+    expect(nbaDegraded(buildNbaPanel(noProps), null, "action")).toBe(false);
+    expect(nbaDegraded(null, null, "action")).toBe(false);
   });
 });
 

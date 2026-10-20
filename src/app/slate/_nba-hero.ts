@@ -15,6 +15,8 @@ export type PhotoMode = "action" | "headshot";
 export interface NbaHero {
   player: NbaBackedPlayer;
   athleteId: number;
+  /** The roster athlete's full name: the caption never prints a capper's surname-only spelling. */
+  athleteName: string;
   photoDataUri: string;
   photoKind: "action" | "headshot";
   teamSide: "away" | "home" | null;
@@ -71,6 +73,7 @@ async function heroChain(game: SlateGame, panel: NbaPanel, mode: PhotoMode, deps
   const build = (player: NbaBackedPlayer, athlete: RosterAthlete, uri: string, kind: NbaHero["photoKind"]): NbaHero => ({
     player,
     athleteId: athlete.id,
+    athleteName: athlete.fullName,
     photoDataUri: uri,
     photoKind: kind,
     teamSide: teamSideOf(game, athlete),
@@ -105,10 +108,24 @@ export async function fetchNbaHero(
 ): Promise<NbaHero | null> {
   if (panel.players.length === 0) return null;
   return withDeadline(
-    heroChain(game, panel, mode, deps).catch(() => null),
+    heroChain(game, panel, mode, deps).catch((err) => {
+      console.warn("[nba-hero] chain failed", err);
+      return null;
+    }),
     deadlineMs,
     null,
   );
+}
+
+/**
+ * Whether an NBA card should take the short fallback cache: a game with props
+ * whose photo chain missed or timed out (the Scoreboard fallback), or that fell
+ * back to a headshot when action mode asked for a still.
+ */
+export function nbaDegraded(panel: NbaPanel | null, hero: NbaHero | null, mode: PhotoMode): boolean {
+  if (panel == null || panel.propCount === 0) return false;
+  if (hero == null) return true;
+  return hero.photoKind === "headshot" && mode !== "headshot";
 }
 
 // Width estimates for the caption plate and chip row, 0.56em per character
