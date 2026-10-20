@@ -47,13 +47,11 @@ export function matchRosterAthlete(athletes: RosterAthlete[], name: string): Ros
   if (tokens.length === 2 && tokens[0].length === 1) {
     const initial = tokens[0];
     const hits = bySurname.filter((a) => normalizePersonName(a.fullName).startsWith(initial));
-    if (hits.length === 1) return hits[0];
-    if (hits.length > 1) return null;
+    // A given initial must narrow to exactly one athlete; a wrong initial is never a surname fallback.
+    return hits.length === 1 ? hits[0] : null;
   }
 
-  if (tokens.length === 1 || tokens[0].length === 1) {
-    return bySurname.length === 1 ? bySurname[0] : null;
-  }
+  if (tokens.length === 1) return bySurname.length === 1 ? bySurname[0] : null;
   return null;
 }
 
