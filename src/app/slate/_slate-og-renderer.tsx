@@ -785,7 +785,8 @@ function buildJsx(inputs: RenderInputs) {
               />
               Pre-game
             </div>
-            {timeLabel ? (
+            {/* NBA prints the time in its matchup row; once is enough. */}
+            {timeLabel && !marquee?.nba ? (
               <div
                 style={{
                   display: "flex",
@@ -1163,6 +1164,8 @@ function PlayersStage({
 const NBA_PHOTO_W = 792;
 const NBA_PANEL_W = 470;
 const NBA_CELL_GAP = 24;
+// Grid sub-line budget: cell width over the 12px mono advance (0.6em + 1px tracking).
+const NBA_SUB_MAX_CHARS = Math.floor((NBA_PANEL_W - NBA_CELL_GAP) / 2 / (12 * 0.6 + 1));
 const NBA_TRACK = "#222222";
 const NBA_RULE = "rgba(247, 243, 233, 0.18)";
 const NBA_MUTED = "rgba(247, 243, 233, 0.60)";
@@ -1237,7 +1240,7 @@ function NbaBackdrop({
           bottom: 0,
           display: "flex",
           backgroundImage:
-            "linear-gradient(180deg, rgba(10,10,12,0.35) 0%, rgba(10,10,12,0) 22%, rgba(10,10,12,0) 60%, rgba(10,10,12,0.92) 100%)",
+            "linear-gradient(180deg, rgba(10,10,12,0.6) 0%, rgba(10,10,12,0) 22%, rgba(10,10,12,0) 60%, rgba(10,10,12,0.92) 100%)",
         }}
       />
       <div
@@ -1474,13 +1477,11 @@ function NbaGrid({
     ? [total.side.toUpperCase(), total.line != null ? `${total.line}` : ""].filter(Boolean).join(" ")
     : "NO LEAN";
   const sharpsOf = (l: NbaPanel["spread"]): string => (l ? `${l.count} OF ${l.of} SHARPS` : "0 SHARPS");
-  const propsSub = truncate(
-    panel.players
-      .slice(0, 2)
-      .map((p) => `${displaySurname(p.name).toUpperCase()} ${p.legs}`)
-      .join(" · "),
-    30,
-  );
+  // Top two players; the second drops whole (never half a surname) when the
+  // pair would run into the CAPPERS column.
+  const propNames = panel.players.slice(0, 2).map((p) => `${displaySurname(p.name).toUpperCase()} ${p.legs}`);
+  const propPair = propNames.join(" · ");
+  const propsSub = truncate(propPair.length <= NBA_SUB_MAX_CHARS ? propPair : (propNames[0] ?? ""), NBA_SUB_MAX_CHARS);
   return (
     <div
       style={{
