@@ -1,4 +1,6 @@
 import { NFL_TEAM_NAMES } from "@/lib/nfl-teams";
+import { NBA_TEAM_NAMES, NBA_EXTRA_ALIASES } from "@/lib/nba-teams";
+import type { Sport } from "@/lib/types";
 
 /**
  * Canonical bet-line formatter for the slate page.
@@ -111,7 +113,9 @@ const ALL_ABBRS = new Set([
 const SPREAD_NUMBER_RE = /(?<![\d.])[+-]\d{1,2}(\.\d+)?(?![\d.])/;
 
 // Player-prop stat words — used to disambiguate over/under in totals vs props.
-const STAT_KEYWORDS = /\b(hit|hits|run|runs|rbi|rbis|strikeout|strikeouts|so|ks?|home\s*run|hrs?|tb|total\s*bases|walk|walks|bb|er|earned\s*runs?|outs?|po|pitches|pitch|stolen|sb)\b/i;
+// The tail group is basketball ("Jayson Tatum o27.5 Points", "SGA 30+ Pts"):
+// without it a market-null NBA prop read as a game total (Codex on #202).
+const STAT_KEYWORDS = /\b(hit|hits|run|runs|rbi|rbis|strikeout|strikeouts|so|ks?|home\s*run|hrs?|tb|total\s*bases|walk|walks|bb|er|earned\s*runs?|outs?|po|pitches|pitch|stolen|sb|points?|pts|rebounds?|rebs?|assists?|asts?|threes|3pt|3ptm|3\s*pointers?|steals?|blocks?|turnovers?|pra|double\s*double)\b/i;
 
 function fmtOdds(odds: number | null | undefined): string {
   if (odds == null) return "";
@@ -200,7 +204,7 @@ export function pickMlSide(
   pick: PickInput,
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
-  sport: "MLB" | "NFL" = "MLB",
+  sport: Sport = "MLB",
 ): "away" | "home" | null {
   if (inferMarketBucket(pick.market, pick.selection) !== "Moneyline") return null;
   const team = resolveTeam(pick.selection ?? "", awayTeam, homeTeam, sport);
@@ -217,7 +221,7 @@ export function pickTeamSide(
   selection: string | null | undefined,
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
-  sport: "MLB" | "NFL" = "MLB",
+  sport: Sport = "MLB",
 ): "away" | "home" | null {
   const team = resolveTeam(selection ?? "", awayTeam, homeTeam, sport);
   if (team && awayTeam && team === awayTeam) return "away";
@@ -241,15 +245,17 @@ const NFL_EXTRA_ALIASES: Record<string, string[]> = {
   LAR: ["la rams"],
 };
 
-function resolveNflTeamInGame(
+function resolveMascotInGame(
   selection: string,
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
+  mascots: Record<string, string>,
+  aliases: Record<string, string[]>,
 ): string | null {
   const lower = ` ${selection.toLowerCase()} `;
   for (const abbr of [awayTeam, homeTeam]) {
     if (!abbr) continue;
-    const names = [NFL_TEAM_NAMES[abbr], ...(NFL_EXTRA_ALIASES[abbr] ?? [])]
+    const names = [mascots[abbr], ...(aliases[abbr] ?? [])]
       .filter((n): n is string => !!n)
       .map((n) => n.toLowerCase());
     for (const n of names) {
@@ -263,7 +269,7 @@ function resolveTeam(
   selection: string,
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
-  sport: "MLB" | "NFL" = "MLB",
+  sport: Sport = "MLB",
 ): string | null {
   // Match the game's known abbrs first.
   for (const abbr of [awayTeam, homeTeam]) {
@@ -278,7 +284,13 @@ function resolveTeam(
   // slate rows never pass one: the match is scoped to the two abbrs of the
   // game in hand, so an MLB game can only hit if its tweet literally names
   // an NFL mascot sharing that abbr (it never does).
-  const nflTeam = resolveNflTeamInGame(selection, awayTeam, homeTeam);
+  // NBA: same idea against the NBA mascot table ("Celtics ML", "Sixers -2.5").
+  // NBA abbrs overlap NFL ones (ATL, CHI, DAL, ...), so an NBA game skips the
+  // NFL and MLB tables entirely.
+  if (sport === "NBA") {
+    return resolveMascotInGame(selection, awayTeam, homeTeam, NBA_TEAM_NAMES, NBA_EXTRA_ALIASES);
+  }
+  const nflTeam = resolveMascotInGame(selection, awayTeam, homeTeam, NFL_TEAM_NAMES, NFL_EXTRA_ALIASES);
   if (nflTeam) return nflTeam;
   if (sport === "NFL") return null;
 

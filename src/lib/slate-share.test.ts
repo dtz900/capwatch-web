@@ -52,4 +52,14 @@ describe("slateGameShareLink", () => {
     expect(link.queryParams.week).toBe("4");
     expect(link.queryParams.date).toBeUndefined();
   });
+  it("keeps NBA on its day board: sport always, date only for tomorrow", () => {
+    const g = game(401810001, "PHI", "BOS");
+    const today = slateGameShareLink(g, [g], { sport: "nba", dateParam: "today", week: undefined }).queryParams;
+    expect(today.sport).toBe("nba");
+    expect(today.date).toBeUndefined();
+    expect(today.week).toBeUndefined();
+    expect(today.game).toBe("PHI-BOS");
+    const tmrw = slateGameShareLink(g, [g], { sport: "nba", dateParam: "tomorrow", week: undefined }).queryParams;
+    expect(tmrw.date).toBe("tomorrow");
+  });
 });

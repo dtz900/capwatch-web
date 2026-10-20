@@ -15,3 +15,12 @@ describe("ranking floor per sport", () => {
     expect(minPicksForWindow("season", "nfl")).toBe(1);
   });
 });
+
+describe("NBA ranking floor", () => {
+  it("ranks every capper with a graded NBA pick in every window", () => {
+    expect(minPicksForWindow("last_7", "nba")).toBe(1);
+    expect(minPicksForWindow("last_30", "nba")).toBe(1);
+    expect(minPicksForWindow("season", "nba")).toBe(1);
+    expect(minPicksForWindow("all_time", "nba")).toBe(1);
+  });
+});

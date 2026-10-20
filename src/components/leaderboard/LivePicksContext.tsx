@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { API_BASE } from "@/lib/config";
+import type { SportFilter } from "@/lib/types";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -18,7 +19,7 @@ interface ProviderProps {
   initial: LivePicksMap;
   /** Leaderboard selector; the poll must match the board or an MLB view
    *  would overwrite its counts with MLB+NFL pending picks. */
-  sport?: "all" | "mlb" | "nfl";
+  sport?: SportFilter;
   children: ReactNode;
 }
 

@@ -13,6 +13,7 @@ import { renderStandingsCard, type StandingsCardRow } from "../_standings-card";
  *                                     date, summed exactly the way the
  *                                     site's week toggle sums it
  *   /og/standings?sport=nfl&week=N -> the NFL week
+ *   /og/standings?sport=nba&date=ISO -> an NBA day (no weekly rollup)
  *
  * The drawing lives in ../_standings-card.tsx, shared with the archive card
  * at /leaderboards/<slug>/og.
@@ -23,12 +24,17 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || "today";
-  const sport = url.searchParams.get("sport") === "nfl" ? "nfl" : "mlb";
+  const rawSport = url.searchParams.get("sport");
+  const sport = rawSport === "nfl" || rawSport === "nba" ? rawSport : "mlb";
   // MLB: `week=1` is a flag for the Mon-Sun rollup around `date`.
   // NFL: `week=N` is the league week number; the API serves the whole week
   // as one slate, so no per-day summing is needed.
   const nflWeek = sport === "nfl" ? Number(url.searchParams.get("week")) : NaN;
-  const week = sport === "nfl" ? Number.isInteger(nflWeek) && nflWeek >= 1 : url.searchParams.get("week") === "1";
+  // NBA is a day board with no weekly rollup, so it ignores `week`.
+  const week =
+    sport === "nfl"
+      ? Number.isInteger(nflWeek) && nflWeek >= 1
+      : sport === "mlb" && url.searchParams.get("week") === "1";
 
   const fmt = (iso: string) =>
     new Date(`${iso}T12:00:00Z`)
@@ -61,10 +67,10 @@ export async function GET(request: Request): Promise<Response> {
         : `WEEK OF ${fmt(wk.week_start)}`;
       roundLabel = wk.label ?? null;
     } else {
-      const slate = await fetchSlate(date);
+      const slate = await fetchSlate(date, sport);
       summary = slate.capper_summary ?? [];
       graded = slate.day_summary?.graded_count ?? 0;
-      dateLabel = fmt(slate.date);
+      dateLabel = sport === "nba" ? `NBA · ${fmt(slate.date)}` : fmt(slate.date);
     }
     rows = summary
       .filter((c) => c.graded_count > 0)

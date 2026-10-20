@@ -74,3 +74,15 @@ describe("formatPickText: MLB behaviour unchanged", () => {
     expect(text).toBe("LAD ML -140");
   });
 });
+
+describe("inferMarketBucket with basketball stat words", () => {
+  it("reads market-null NBA props as player props", () => {
+    expect(inferMarketBucket(null, "Jayson Tatum o27.5 Points")).toBe("Player prop");
+    expect(inferMarketBucket(null, "Shai Gilgeous-Alexander 30+ Pts")).toBe("Player prop");
+    expect(inferMarketBucket(null, "Nikola Jokic over 12.5 Rebounds")).toBe("Player prop");
+  });
+  it("keeps compact game totals as totals", () => {
+    expect(inferMarketBucket(null, "o221.5")).toBe("Total");
+    expect(inferMarketBucket(null, "STL o8.5")).toBe("Total");
+  });
+});

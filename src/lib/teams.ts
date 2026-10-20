@@ -6,11 +6,16 @@
 import type { Sport } from "./types";
 import { teamLogoUrl as mlbTeamLogoUrl, teamColor as mlbTeamColor } from "./mlb-teams";
 import { nflTeamLogoUrl, nflTeamColor } from "./nfl-teams";
+import { nbaTeamLogoUrl, nbaTeamColor } from "./nba-teams";
 
 export function teamLogoUrl(abbr: string | null, sport: Sport = "MLB"): string | null {
-  return sport === "NFL" ? nflTeamLogoUrl(abbr) : mlbTeamLogoUrl(abbr);
+  if (sport === "NFL") return nflTeamLogoUrl(abbr);
+  if (sport === "NBA") return nbaTeamLogoUrl(abbr);
+  return mlbTeamLogoUrl(abbr);
 }
 
 export function teamColor(abbr: string | null, sport: Sport = "MLB", fallback = "#3b3b3b"): string {
-  return sport === "NFL" ? nflTeamColor(abbr, fallback) : mlbTeamColor(abbr, fallback);
+  if (sport === "NFL") return nflTeamColor(abbr, fallback);
+  if (sport === "NBA") return nbaTeamColor(abbr, fallback);
+  return mlbTeamColor(abbr, fallback);
 }

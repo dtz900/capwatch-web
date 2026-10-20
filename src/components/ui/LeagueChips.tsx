@@ -9,17 +9,20 @@
 export type LeagueChip = {
   value: string;
   label: string;
-  /** "mlb" | "nfl" draw that league's mark; "all" is text only. */
-  league: "mlb" | "nfl" | "all";
+  /** "mlb" | "nfl" | "nba" draw that league's mark; "all" is text only. */
+  league: League | "all";
   caption?: string;
 };
 
-const MARK: Record<"mlb" | "nfl", string> = {
+type League = "mlb" | "nfl" | "nba";
+
+const MARK: Record<League, string> = {
   mlb: "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png",
   nfl: "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png",
+  nba: "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
 };
 
-function Mark({ league, h, muted }: { league: "mlb" | "nfl"; h: number; muted: boolean }) {
+function Mark({ league, h, sizeClass, muted }: { league: League; h: number; sizeClass: string; muted: boolean }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -27,8 +30,8 @@ function Mark({ league, h, muted }: { league: "mlb" | "nfl"; h: number; muted: b
       alt=""
       aria-hidden
       height={h}
-      style={{ height: h, width: "auto" }}
-      className={`shrink-0 object-contain transition-[filter,opacity] duration-200 ${
+      style={{ width: "auto" }}
+      className={`shrink-0 object-contain transition-[filter,opacity] duration-200 ${sizeClass} ${
         muted ? "grayscale opacity-55" : "opacity-100"
       }`}
     />
@@ -52,12 +55,15 @@ export function LeagueChips({
 }) {
   const lg = size === "lg";
   const markH = lg ? 32 : 24;
+  // Three large chips have to fit a 375px phone inside the 16px gutters, so
+  // the lg size steps down below sm and returns to the full treatment above.
+  const markClass = lg ? "h-[26px] sm:h-[32px]" : "h-[24px]";
   return (
     <div
       role="radiogroup"
       aria-label={ariaLabel}
       aria-busy={busy}
-      className={`flex items-stretch ${lg ? "gap-3" : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
+      className={`flex items-stretch ${lg ? "gap-2 sm:gap-3" : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
     >
       {chips.map((c) => {
         const active = c.value === value;
@@ -69,18 +75,18 @@ export function LeagueChips({
             aria-checked={active}
             onClick={() => onChange(c.value)}
             className={`group flex flex-col items-center justify-center rounded-lg select-none
-                        ${lg ? "px-5 py-3 min-w-[120px] sm:min-w-[140px]" : "px-3.5 py-2"}
+                        ${lg ? "px-2 sm:px-5 py-3 min-w-[96px] sm:min-w-[140px]" : "px-3.5 py-2"}
                         transition-colors duration-150 ${
               active
                 ? "bg-[#f7f3e9] text-black shadow-[0_6px_18px_-8px_rgba(247,243,233,0.55)]"
                 : "bg-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
-            <span className={`flex items-center ${lg ? "gap-3" : "gap-2"}`}>
-              {c.league !== "all" && <Mark league={c.league} h={markH} muted={!active} />}
+            <span className={`flex items-center ${lg ? "gap-2 sm:gap-3" : "gap-2"}`}>
+              {c.league !== "all" && <Mark league={c.league} h={markH} sizeClass={markClass} muted={!active} />}
               <span
                 className={`font-extrabold tracking-[-0.01em] leading-none ${
-                  lg ? "text-[20px] sm:text-[22px]" : "text-[13px] sm:text-[14px]"
+                  lg ? "text-[18px] sm:text-[22px]" : "text-[13px] sm:text-[14px]"
                 }`}
               >
                 {c.label}
@@ -88,7 +94,9 @@ export function LeagueChips({
             </span>
             {c.caption && (
               <span
-                className={`mt-1.5 text-[10px] uppercase tracking-[0.18em] font-bold leading-none ${
+                className={`mt-1.5 uppercase font-bold leading-none whitespace-nowrap ${
+                  lg ? "text-[9px] tracking-[0.12em] sm:text-[10px] sm:tracking-[0.18em]" : "text-[10px] tracking-[0.18em]"
+                } ${
                   active ? "text-black/60" : "text-[var(--color-text-muted)] opacity-80"
                 }`}
               >

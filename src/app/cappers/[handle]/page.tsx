@@ -55,7 +55,7 @@ interface PageProps {
   }>;
 }
 
-const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl"];
+const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl", "nba"];
 function parseSport(raw: string | undefined): SportFilter {
   return VALID_SPORTS.includes(raw as SportFilter) ? (raw as SportFilter) : "all";
 }
@@ -468,7 +468,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <CapperHeroLive />
 
           {/* League switch: its own row above the per-view filters, the same
-              control as the leaderboard so MLB and NFL records read apart. */}
+              control as the leaderboard so MLB, NFL and NBA records read apart. */}
           <div className="mb-4">
             <SportTabs current={sport} basePath={`/cappers/${encodeURIComponent(handle)}`} />
           </div>

@@ -45,15 +45,17 @@ describe("capperRecordPill", () => {
   it("names the selected league", () => {
     expect(capperRecordPill("nfl")).toBe("NFL CAPPER RECORD");
     expect(capperRecordPill("mlb")).toBe("MLB CAPPER RECORD");
+    expect(capperRecordPill("nba")).toBe("NBA CAPPER RECORD");
   });
   it("never labels the all-league record as MLB only", () => {
-    expect(capperRecordPill("all")).toBe("MLB + NFL CAPPER RECORD");
+    expect(capperRecordPill("all")).toBe("MLB + NFL + NBA CAPPER RECORD");
   });
 });
 
 describe("leagueScopedLabel", () => {
   it("leads with the league when one is selected", () => {
     expect(leagueScopedLabel("nfl", "Season")).toBe("NFL · Season");
+    expect(leagueScopedLabel("nba", "Last 7")).toBe("NBA · Last 7");
     expect(leagueScopedLabel("mlb", "Straights · Last 30")).toBe("MLB · Straights · Last 30");
   });
   it("leaves the label alone across all leagues", () => {

@@ -507,7 +507,9 @@ function PlayerFinder({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && search()}
-          placeholder={sport === "NFL" ? "e.g. Smith-Njigba, JSN, Monty" : "e.g. Framber Valdez"}
+          placeholder={
+            sport === "NFL" ? "e.g. Smith-Njigba, JSN, Monty" : sport === "NBA" ? "e.g. Tatum, SGA, Brunson" : "e.g. Framber Valdez"
+          }
           className="flex-1 px-2.5 py-1.5 text-[12px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
         />
         <button

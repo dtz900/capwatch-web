@@ -27,12 +27,21 @@ const ESPN_CDN = "https://a.espncdn.com";
 // 1x and the combiner upsamples cleanly enough for 2x.
 const MIN_WIDTH = 600;
 
-export function espnOverviewUrl(playerId: number): string {
-  return `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${playerId}/overview`;
+/** Leagues with an ESPN athlete feed. NBA props carry player_id null today,
+ *  so the NBA path only lights up once the parser stamps ESPN ids. */
+export type PhotoSport = "NFL" | "NBA";
+
+const ESPN_PATH: Record<PhotoSport, { api: string; cdn: string; league: string }> = {
+  NFL: { api: "football/nfl", cdn: "nfl", league: "nfl" },
+  NBA: { api: "basketball/nba", cdn: "nba", league: "nba" },
+};
+
+export function espnOverviewUrl(playerId: number, sport: PhotoSport = "NFL"): string {
+  return `https://site.web.api.espn.com/apis/common/v3/sports/${ESPN_PATH[sport].api}/athletes/${playerId}/overview`;
 }
 
-export function espnHeadshotUrl(playerId: number): string {
-  return `${ESPN_CDN}/i/headshots/nfl/players/full/${playerId}.png`;
+export function espnHeadshotUrl(playerId: number, sport: PhotoSport = "NFL"): string {
+  return `${ESPN_CDN}/i/headshots/${ESPN_PATH[sport].cdn}/players/full/${playerId}.png`;
 }
 
 /** ESPN's image combiner resizes anything on its own CDN; other hosts return null. */
@@ -50,11 +59,17 @@ export function espnResizedUrl(url: string, w: number, h: number): string | null
  * signal that the hero image shows him; a bare solo tag on a roster
  * projection can be anyone. Newest wins a tier.
  *
- * Articles carrying a non-NFL league tag are skipped outright: "Mets troll
+ * Articles carrying a league tag other than the pick's league are skipped outright: "Mets troll
  * Jayden Daniels over LSU NIL dispute" was solo-tagged, named him, and ran
  * a photo of two Mets (2026-09-19 WSH@DAL card).
  */
-export function pickActionPhoto(overview: EspnOverview, playerId: number, lastName: string): string | null {
+export function pickActionPhoto(
+  overview: EspnOverview,
+  playerId: number,
+  lastName: string,
+  sport: PhotoSport = "NFL",
+): string | null {
+  const league = ESPN_PATH[sport].league;
   const last = lastName.trim().toLowerCase();
   const ranked: Array<{ tier: number; published: string; url: string }> = [];
   for (const a of overview.news ?? []) {
@@ -62,7 +77,7 @@ export function pickActionPhoto(overview: EspnOverview, playerId: number, lastNa
     const tags = cats.filter((c) => c?.type === "athlete").map((c) => c.athleteId);
     if (!tags.includes(playerId)) continue;
     const leagues = cats.filter((c) => c?.type === "league").map((c) => (c.description ?? "").toLowerCase());
-    if (leagues.some((l) => !l.includes("nfl"))) continue;
+    if (leagues.some((l) => !l.includes(league))) continue;
     const named = last.length > 0 && (a.headline ?? "").toLowerCase().includes(last);
     let tier: number;
     if (tags.length === 1 && named) tier = 0;
@@ -80,18 +95,23 @@ export function pickActionPhoto(overview: EspnOverview, playerId: number, lastNa
 }
 
 /** Network half: overview JSON -> best action photo URL, null on any failure. */
-export async function fetchActionPhotoUrl(playerId: number, lastName: string, timeoutMs = 2500): Promise<string | null> {
+export async function fetchActionPhotoUrl(
+  playerId: number,
+  lastName: string,
+  timeoutMs = 2500,
+  sport: PhotoSport = "NFL",
+): Promise<string | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(espnOverviewUrl(playerId), {
+    const res = await fetch(espnOverviewUrl(playerId, sport), {
       signal: controller.signal,
       // ESPN's site API 403s bare bot agents; the overview endpoint answers a browser-shaped UA.
       headers: { "User-Agent": "Mozilla/5.0 (compatible; TailSlipsBot/1.0; +https://tailslips.com)" },
     });
     if (!res.ok) return null;
     const json = (await res.json()) as EspnOverview;
-    return pickActionPhoto(json, playerId, lastName);
+    return pickActionPhoto(json, playerId, lastName, sport);
   } catch {
     return null;
   } finally {

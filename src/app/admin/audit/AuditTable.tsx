@@ -358,7 +358,7 @@ function ProblemRow({
             {p.sport && (
               <span
                 className={`inline-block align-[1px] mr-1.5 px-1.5 py-px rounded border text-[8px] font-extrabold uppercase tracking-[0.12em] ${
-                  p.sport === "NFL"
+                  p.sport === "NFL" || p.sport === "NBA"
                     ? "border-[rgba(255,255,255,0.22)] text-[var(--color-text-soft)]"
                     : "border-[rgba(255,255,255,0.08)] text-[var(--color-text-muted)]"
                 }`}

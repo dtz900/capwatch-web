@@ -146,9 +146,9 @@ export type GameState = "scheduled" | "in_progress" | "final";
 export type InningHalf = "top" | "bot" | "mid" | "end";
 
 /** League code as stored on picks / games. */
-export type Sport = "MLB" | "NFL";
-/** Leaderboard + profile selector; "all" is the combined record. */
-export type SportFilter = "all" | "mlb" | "nfl";
+export type Sport = "MLB" | "NFL" | "NBA";
+/** Leaderboard + profile selector; "all" is the combined record (MLB + NFL + NBA). */
+export type SportFilter = "all" | "mlb" | "nfl" | "nba";
 
 /** The NFL slate is a week, not a day; the API describes which one. */
 export interface NflWeekMeta {
@@ -178,7 +178,7 @@ export interface SlateGame {
 
   /** Stamped by the API since the NFL launch; older cached payloads omit it. */
   sport?: Sport;
-  /** Football clock (NFL rows only). */
+  /** Game clock (NFL and NBA rows): period is the quarter (5+ = OT on NBA). */
   period?: number | null;
   clock?: string | null;
   status_name?: string | null;

@@ -106,7 +106,10 @@ export function groupByMarket(
       }
     }
 
-    if (bucket === "Total" && (p.market ?? "").toLowerCase() !== "team_total") {
+    // A row the parser tied to a player is a prop even when its text reads
+    // like a total ("Tatum o27.5"), so it never lands in the game's Over.
+    const namesPlayer = p.player_id != null || !!p.player_name;
+    if (bucket === "Total" && !namesPlayer && (p.market ?? "").toLowerCase() !== "team_total") {
       const side = totalSide(p.selection);
       if (side) {
         groups.total[side].push(p);

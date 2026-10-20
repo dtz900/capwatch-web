@@ -39,7 +39,7 @@ type SlateParams = {
 };
 
 function parseParams(sp: Awaited<PageProps["searchParams"]>): SlateParams {
-  const sport: SlateSport = sp.sport === "nfl" ? "nfl" : "mlb";
+  const sport: SlateSport = sp.sport === "nfl" || sp.sport === "nba" ? sp.sport : "mlb";
   const dateParam: "today" | "tomorrow" = sp.date === "tomorrow" ? "tomorrow" : "today";
   const rawWeek = Number(sp.week);
   const week = sport === "nfl" && Number.isInteger(rawWeek) && rawWeek >= 1 && rawWeek <= 22 ? rawWeek : undefined;
@@ -51,8 +51,9 @@ function canonicalFor(p: SlateParams): string {
   if (p.sport === "nfl") {
     q.set("sport", "nfl");
     if (p.week != null) q.set("week", String(p.week));
-  } else if (p.dateParam !== "today") {
-    q.set("date", p.dateParam);
+  } else {
+    if (p.sport === "nba") q.set("sport", "nba");
+    if (p.dateParam !== "today") q.set("date", p.dateParam);
   }
   const qs = q.toString();
   return qs ? `/slate?${qs}` : "/slate";
@@ -66,6 +67,11 @@ function weekLabel(data: SlateResponse | null, fallbackWeek: number | undefined)
   if (w?.season_type === "pre") return `Preseason Week ${n}`;
   if (w?.season_type === "post") return `Playoffs Week ${n}`;
   return `Week ${n}`;
+}
+
+/** Day boards (MLB, NBA) read "Tonight's MLB slate"; this is the league word. */
+function dayLeague(sport: SlateSport): string {
+  return sport === "nba" ? "NBA" : "MLB";
 }
 
 function fmtDay(iso: string | null | undefined, opts: Intl.DateTimeFormatOptions): string | null {
@@ -111,11 +117,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const canonical = canonicalFor(p);
   const isNfl = p.sport === "nfl";
   const dayLabel = p.dateParam === "today" ? "Tonight's" : "Tomorrow's";
+  const league = dayLeague(p.sport);
 
-  let title = isNfl ? "This week's NFL slate" : `${dayLabel} MLB slate`;
+  let title = isNfl ? "This week's NFL slate" : `${dayLabel} ${league} slate`;
   let description = isNfl
     ? "This week's NFL slate. What every tracked sharp is betting, ranked by leaderboard, grouped by game."
-    : `${dayLabel} MLB slate. What every tracked sharp is betting, ranked by leaderboard, grouped by game.`;
+    : `${dayLabel} ${league} slate. What every tracked sharp is betting, ranked by leaderboard, grouped by game.`;
 
   // Deadline, not just try/catch: Twitterbot caches "no card" for any URL
   // whose HTML takes longer than its ~4-5s scrape budget, and a cold slate
@@ -131,7 +138,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       null,
     );
     if (data) {
-      const lead = isNfl ? `${weekLabel(data, p.week)} NFL slate` : `${dayLabel} MLB slate`;
+      const lead = isNfl ? `${weekLabel(data, p.week)} NFL slate` : `${dayLabel} ${league} slate`;
       // Bets, not rows: parlay legs are separate rows in the slate payload
       // and would overstate the count (see slateBetCount).
       const totalPicks = slateBetCount(data.games.flatMap((g) => g.picks));
@@ -171,7 +178,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const fp = await fpPromise;
   const ogQs = new URLSearchParams();
   ogQs.set("date", p.dateParam);
-  if (isNfl) ogQs.set("sport", "nfl");
+  if (p.sport !== "mlb") ogQs.set("sport", p.sport);
   // A shared /slate?sport=nfl&week=N must card the same week it opens to
   // (Codex on #113).
   if (isNfl && p.week != null) ogQs.set("week", String(p.week));
@@ -189,7 +196,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   ogQs.set("v", OG_CARD_VERSION);
   if (sp.v && /^[0-9]{8,}$/.test(sp.v)) ogQs.set("sv", sp.v);
   const ogUrl = `/og/slate?${ogQs.toString()}`;
-  const ogAlt = isNfl ? `This week's NFL slate on ${SITE_NAME}` : `${dayLabel} MLB slate on ${SITE_NAME}`;
+  const ogAlt = isNfl ? `This week's NFL slate on ${SITE_NAME}` : `${dayLabel} ${league} slate on ${SITE_NAME}`;
 
   return {
     title,
@@ -268,10 +275,11 @@ export default async function SlatePage({ searchParams }: PageProps) {
   if (fetchError || !data) {
     return (
       <>
+        <SportTint sport={sport} />
         <TopNav />
         <main className="max-w-[920px] mx-auto px-4 sm:px-7 pb-24">
           <div className="pt-8">
-            <SportToggle current={sport} mlbCaption="Daily board" nflCaption="Weekly board" />
+            <SportToggle current={sport} mlbCaption="Daily board" nflCaption="Weekly board" nbaCaption="Daily board" />
           </div>
           <header className="pt-8 pb-3">
             <h1 className="text-[44px] font-extrabold tracking-[-0.03em] leading-[1]">{heading}</h1>
@@ -286,9 +294,10 @@ export default async function SlatePage({ searchParams }: PageProps) {
 
   // Weekly (Mon-Sun) standings rollup for the MLB standings toggle. Null on
   // any failure: the card then renders daily-only, exactly as before the
-  // toggle. The NFL board IS a week, so it has no separate rollup.
+  // toggle. The NFL board IS a week, so it has no separate rollup, and the
+  // rollup sums MLB day slates, so the NBA board renders daily-only too.
   let week: Awaited<ReturnType<typeof fetchWeekStandings>> = null;
-  if (!isNfl) {
+  if (sport === "mlb") {
     try {
       week = await fetchWeekStandings(data.date);
     } catch {
@@ -330,9 +339,13 @@ export default async function SlatePage({ searchParams }: PageProps) {
   const range = isNfl ? weekRange(data) : null;
   const rankCopy = isNfl
     ? "Sharps are ranked by their NFL season straight-pick performance (units profit, min 10 graded picks)."
-    : "Sharps are ranked by their season straight-pick performance (units profit, min 10 graded picks).";
+    : sport === "nba"
+      ? "Sharps are ranked by their NBA season straight-pick performance (units profit, min 10 graded picks)."
+      : "Sharps are ranked by their season straight-pick performance (units profit, min 10 graded picks).";
+  const dayCaption = dateParam === "today" ? "Tonight" : "Tomorrow";
   const nflCaption = isNfl ? weekLabel(data, p.week) : "Weekly board";
-  const mlbCaption = isNfl ? "Daily board" : dateParam === "today" ? "Tonight" : "Tomorrow";
+  const mlbCaption = sport === "mlb" ? dayCaption : "Daily board";
+  const nbaCaption = sport === "nba" ? dayCaption : "Daily board";
 
   // NFL links pin the regular-season week the API actually served, so a card
   // shared from the current-week board still opens that week after it rolls.
@@ -371,7 +384,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
           <SlateRailColumn games={railGames} />
           <div className="min-w-0 flex-1">
             <div className="pt-8 sm:pt-10 max-w-[520px]">
-              <SportToggle current={sport} mlbCaption={mlbCaption} nflCaption={nflCaption} />
+              <SportToggle current={sport} mlbCaption={mlbCaption} nflCaption={nflCaption} nbaCaption={nbaCaption} />
             </div>
             <header className="pt-8 pb-3 flex items-end justify-between gap-4 flex-wrap">
               <div>
@@ -396,7 +409,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
                 <ShareLinkButton
                   basePath="/slate"
                   queryParams={{
-                    sport: isNfl ? "nfl" : undefined,
+                    sport: sport === "mlb" ? undefined : sport,
                     week: isNfl && p.week != null ? String(p.week) : undefined,
                     date: !isNfl && dateParam !== "today" ? dateParam : undefined,
                   }}
@@ -407,7 +420,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
             {data.games.length === 0 ? (
               <div className="mt-12 text-center">
                 <div className="text-[14px] font-semibold text-[var(--color-text-soft)] mb-1">
-                  {isNfl ? "No NFL games on the slate." : "No MLB games on the slate."}
+                  {isNfl ? "No NFL games on the slate." : `No ${dayLeague(sport)} games on the slate.`}
                 </div>
                 <div className="text-[12px] text-[var(--color-text-muted)]">
                   Check back when games are scheduled.

@@ -413,6 +413,7 @@ function BindPicker({ item, onDone, onError }: BindPickerProps) {
   // six MLB pitchers, David 2026-09-10).
   const sport = item.sport ?? "MLB";
   const isNfl = sport.toUpperCase() === "NFL";
+  const isNba = sport.toUpperCase() === "NBA";
 
   function onSearchGames() {
     onError(""); // clear
@@ -469,7 +470,9 @@ function BindPicker({ item, onDone, onError }: BindPickerProps) {
               placeholder={
                 isNfl
                   ? "search by name (Hunter Henry, ...)"
-                  : "search by name (Chase Petty, ...)"
+                  : isNba
+                    ? "search by name (Jayson Tatum, ...)"
+                    : "search by name (Chase Petty, ...)"
               }
               className="rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none w-72"
             />
@@ -541,7 +544,7 @@ function BindPicker({ item, onDone, onError }: BindPickerProps) {
             type="text"
             value={team}
             onChange={(e) => setTeam(e.target.value.toUpperCase())}
-            placeholder={isNfl ? "SF, LAR, ..." : "NYY, LAD, ..."}
+            placeholder={isNfl ? "SF, LAR, ..." : isNba ? "BOS, GS, ..." : "NYY, LAD, ..."}
             className="rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none w-32"
           />
         </label>
