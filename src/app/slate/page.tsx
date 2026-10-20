@@ -275,6 +275,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
   if (fetchError || !data) {
     return (
       <>
+        <SportTint sport={sport} />
         <TopNav />
         <main className="max-w-[920px] mx-auto px-4 sm:px-7 pb-24">
           <div className="pt-8">

@@ -75,7 +75,7 @@ export function LeagueChips({
             aria-checked={active}
             onClick={() => onChange(c.value)}
             className={`group flex flex-col items-center justify-center rounded-lg select-none
-                        ${lg ? "px-3 sm:px-5 py-3 min-w-[96px] sm:min-w-[140px]" : "px-3.5 py-2"}
+                        ${lg ? "px-2 sm:px-5 py-3 min-w-[96px] sm:min-w-[140px]" : "px-3.5 py-2"}
                         transition-colors duration-150 ${
               active
                 ? "bg-[#f7f3e9] text-black shadow-[0_6px_18px_-8px_rgba(247,243,233,0.55)]"
@@ -94,7 +94,9 @@ export function LeagueChips({
             </span>
             {c.caption && (
               <span
-                className={`mt-1.5 text-[10px] uppercase tracking-[0.18em] font-bold leading-none ${
+                className={`mt-1.5 uppercase font-bold leading-none whitespace-nowrap ${
+                  lg ? "text-[9px] tracking-[0.12em] sm:text-[10px] sm:tracking-[0.18em]" : "text-[10px] tracking-[0.18em]"
+                } ${
                   active ? "text-black/60" : "text-[var(--color-text-muted)] opacity-80"
                 }`}
               >

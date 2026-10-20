@@ -138,9 +138,13 @@ export default async function Home({ searchParams }: PageProps) {
   if (fetchError) {
     return (
       <>
+        <SportTint sport={filters.sport} />
         <TopNav />
         <main className="max-w-[1240px] mx-auto px-4 sm:px-7">
-          <Hero />
+          <Hero sport={filters.sport} />
+          <div className="mb-4">
+            <SportTabs current={filters.sport ?? "all"} />
+          </div>
           <div className="text-center py-16 text-[13px] text-[var(--color-text-muted)]">
             Leaderboard is temporarily unavailable. Refresh in a moment.
           </div>
