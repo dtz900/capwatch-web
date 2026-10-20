@@ -38,10 +38,10 @@ describe("slateGameShareLink", () => {
     const tbd = game(824010, null, "ATL");
     expect(slateGameShareLink(tbd, [tbd], mlbToday).queryParams.game).toBe("824010");
   });
-  it("keeps today's MLB link clean and marks tomorrow", () => {
+  it("names MLB explicitly now that NBA is the default board, and marks tomorrow", () => {
     const today = slateGameShareLink(PHI_ATL, [PHI_ATL], mlbToday).queryParams;
     expect(today.date).toBeUndefined();
-    expect(today.sport).toBeUndefined();
+    expect(today.sport).toBe("mlb");
     const tomorrow = slateGameShareLink(PHI_ATL, [PHI_ATL], { ...mlbToday, dateParam: "tomorrow" });
     expect(tomorrow.queryParams.date).toBe("tomorrow");
   });
@@ -52,10 +52,10 @@ describe("slateGameShareLink", () => {
     expect(link.queryParams.week).toBe("4");
     expect(link.queryParams.date).toBeUndefined();
   });
-  it("keeps NBA on its day board: sport always, date only for tomorrow", () => {
+  it("keeps an NBA link clean (the default board): no sport, date only for tomorrow", () => {
     const g = game(401810001, "PHI", "BOS");
     const today = slateGameShareLink(g, [g], { sport: "nba", dateParam: "today", week: undefined }).queryParams;
-    expect(today.sport).toBe("nba");
+    expect(today.sport).toBeUndefined();
     expect(today.date).toBeUndefined();
     expect(today.week).toBeUndefined();
     expect(today.game).toBe("PHI-BOS");
