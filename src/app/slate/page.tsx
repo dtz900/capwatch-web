@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
+import { SlateSkeleton } from "@/components/slate/SlateSkeleton";
 import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
 import { DateToggle } from "@/components/slate/DateToggle";
@@ -248,9 +250,53 @@ function renderTimer() {
 }
 export const maxDuration = 30;
 
+/** "Tonight's slate" / "Week 7 slate". `data` null = what the URL alone says, used by the streamed shell. */
+function slateHeading(p: SlateParams, data: SlateResponse | null): string {
+  if (p.sport === "nfl") return `${weekLabel(data, p.week)} slate`;
+  return p.dateParam === "today" ? "Tonight's slate" : "Tomorrow's slate";
+}
+
 export default async function SlatePage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const p = parseParams(sp);
+  const { sport, dateParam } = p;
+  const isNfl = sport === "nfl";
+  const dayCaption = dateParam === "today" ? "Tonight" : "Tomorrow";
+
+  // The shell (nav, league chips, heading) streams at once; the board, which
+  // waits on the slate API, lands inside the Suspense boundary. The skeleton
+  // renders the heading and captions the URL alone determines, so the swap to
+  // the real board is a fill-in, not a reflow.
+  return (
+    <>
+      <JsonLd
+        data={breadcrumbNode([
+          { name: "Home", path: "/" },
+          { name: "Slate", path: "/slate" },
+        ])}
+      />
+      <SportTint sport={sport} />
+      <TopNav />
+      <Suspense
+        fallback={
+          <SlateSkeleton
+            sport={sport}
+            heading={slateHeading(p, null)}
+            mlbCaption={sport === "mlb" ? dayCaption : "Daily board"}
+            nflCaption={isNfl ? weekLabel(null, p.week) : "Weekly board"}
+            nbaCaption={sport === "nba" ? dayCaption : "Daily board"}
+            dateParam={isNfl ? null : dateParam}
+          />
+        }
+      >
+        <SlateBoard p={p} />
+      </Suspense>
+    </>
+  );
+}
+
+/** Everything below the nav. Streams in behind SlateSkeleton once the slate API answers. */
+async function SlateBoard({ p }: { p: SlateParams }) {
   const { sport, dateParam } = p;
   const isNfl = sport === "nfl";
   const timer = renderTimer();
@@ -266,29 +312,21 @@ export default async function SlatePage({ searchParams }: PageProps) {
     noStore();
   }
 
-  const heading = isNfl
-    ? `${weekLabel(data, p.week)} slate`
-    : dateParam === "today"
-      ? "Tonight's slate"
-      : "Tomorrow's slate";
+  const heading = slateHeading(p, data);
 
   if (fetchError || !data) {
     return (
-      <>
-        <SportTint sport={sport} />
-        <TopNav />
-        <main className="max-w-[920px] mx-auto px-4 sm:px-7 pb-24">
-          <div className="pt-8">
-            <SportToggle current={sport} mlbCaption="Daily board" nflCaption="Weekly board" nbaCaption="Daily board" />
-          </div>
-          <header className="pt-8 pb-3">
-            <h1 className="text-[44px] font-extrabold tracking-[-0.03em] leading-[1]">{heading}</h1>
-          </header>
-          <div className="text-center py-16 text-[13px] text-[var(--color-text-muted)]">
-            Slate is temporarily unavailable. Refresh in a moment.
-          </div>
-        </main>
-      </>
+      <main className="max-w-[920px] mx-auto px-4 sm:px-7 pb-24">
+        <div className="pt-8">
+          <SportToggle current={sport} mlbCaption="Daily board" nflCaption="Weekly board" nbaCaption="Daily board" />
+        </div>
+        <header className="pt-8 pb-3">
+          <h1 className="text-[44px] font-extrabold tracking-[-0.03em] leading-[1]">{heading}</h1>
+        </header>
+        <div className="text-center py-16 text-[13px] text-[var(--color-text-muted)]">
+          Slate is temporarily unavailable. Refresh in a moment.
+        </div>
+      </main>
     );
   }
 
@@ -365,14 +403,6 @@ export default async function SlatePage({ searchParams }: PageProps) {
 
   return (
     <>
-      <JsonLd
-        data={breadcrumbNode([
-          { name: "Home", path: "/" },
-          { name: "Slate", path: "/slate" },
-        ])}
-      />
-      <SportTint sport={sport} />
-      <TopNav />
       {/* Mobile strip is a full-width sibling of <main> so it spans the
           viewport and stays aligned with the board. It self-hides at xl. */}
       <SlateRailStrip games={railGames} />

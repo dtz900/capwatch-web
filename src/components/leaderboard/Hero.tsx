@@ -1,11 +1,17 @@
+import type { ReactNode } from "react";
 import { LiveBadge } from "./LiveBadge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { SportFilter } from "@/lib/types";
 
+interface HeroStatsValue {
+  totalPicks: number;
+  cappersCount: number;
+}
+
 interface HeroProps {
-  stats?: {
-    totalPicks: number;
-    cappersCount: number;
-  };
+  stats?: HeroStatsValue;
+  /** Streamed stat row (a Suspense boundary). Takes precedence over `stats`. */
+  statsSlot?: ReactNode;
   sport?: SportFilter;
 }
 
@@ -32,7 +38,7 @@ const COPY: Record<SportFilter, { kicker: string; title: string; lead: string }>
   },
 };
 
-export function Hero({ stats, sport = "all" }: HeroProps) {
+export function Hero({ stats, statsSlot, sport = "all" }: HeroProps) {
   const copy = COPY[sport] ?? COPY.all;
   return (
     <header className="pt-8 pb-6 sm:pt-14 sm:pb-8">
@@ -52,13 +58,38 @@ export function Hero({ stats, sport = "all" }: HeroProps) {
         {copy.lead}{" "}
         <span className="text-[var(--color-pos)] font-bold">Records you can verify.</span>
       </p>
-      {stats && stats.cappersCount > 0 && (
-        <div className="mt-6 sm:mt-7 flex items-baseline gap-7 sm:gap-12 flex-wrap">
-          <Stat value={stats.totalPicks.toLocaleString()} label="Picks graded" />
-          <Stat value={stats.cappersCount.toString()} label="Cappers tracked" />
-        </div>
-      )}
+      {statsSlot ?? (stats && <HeroStats stats={stats} />)}
     </header>
+  );
+}
+
+/** The "Picks graded / Cappers tracked" row. Renders nothing until a capper is tracked. */
+export function HeroStats({ stats }: { stats: HeroStatsValue }) {
+  if (stats.cappersCount <= 0) return null;
+  return (
+    <div className="mt-6 sm:mt-7 flex items-baseline gap-7 sm:gap-12 flex-wrap">
+      <Stat value={stats.totalPicks.toLocaleString()} label="Picks graded" />
+      <Stat value={stats.cappersCount.toString()} label="Cappers tracked" />
+    </div>
+  );
+}
+
+/** Same footprint as HeroStats, so the streamed numbers land without moving the filters below. */
+export function HeroStatsSkeleton() {
+  return (
+    <div className="mt-6 sm:mt-7 flex items-baseline gap-7 sm:gap-12 flex-wrap">
+      <StatSkeleton />
+      <StatSkeleton />
+    </div>
+  );
+}
+
+function StatSkeleton() {
+  return (
+    <div className="leading-none">
+      <Skeleton className="h-[26px] sm:h-[32px] w-[96px]" />
+      <Skeleton className="h-[10px] w-[84px] mt-2" />
+    </div>
   );
 }
 
