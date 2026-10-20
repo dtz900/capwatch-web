@@ -13,6 +13,8 @@ import { SlateRailStrip, SlateRailColumn } from "@/components/slate/SlateRail";
 import { buildRailGames } from "@/lib/rail";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchSlate, fetchWeekStandings, withDeadline, type SlateSport } from "@/lib/api";
+import { fetchTonightCounts } from "@/lib/slate-tonight-fetch";
+import type { TonightCounts } from "@/lib/slate-tonight";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
@@ -301,6 +303,10 @@ async function SlateBoard({ p }: { p: SlateParams }) {
   const isNfl = sport === "nfl";
   const timer = renderTimer();
 
+  // The picker's "N tonight" signal for the other leagues rides along with
+  // the slate fetch; it is deadline-bounded inside fetchTonightCounts and
+  // falls back to no signal, so it never holds the board.
+  const tonightPromise: Promise<TonightCounts> = fetchTonightCounts();
   let data: SlateResponse | null = null;
   let fetchError: string | null = null;
   try {
@@ -343,6 +349,8 @@ async function SlateBoard({ p }: { p: SlateParams }) {
     }
     timer.mark("week");
   }
+  const tonight = await tonightPromise;
+  timer.mark("tonight");
   timer.warnIfSlow(`sport=${sport} date=${dateParam}`);
 
   const allPicks = data.games.flatMap((g) => g.picks);
@@ -414,7 +422,13 @@ async function SlateBoard({ p }: { p: SlateParams }) {
           <SlateRailColumn games={railGames} />
           <div className="min-w-0 flex-1">
             <div className="pt-8 sm:pt-10 max-w-[520px]">
-              <SportToggle current={sport} mlbCaption={mlbCaption} nflCaption={nflCaption} nbaCaption={nbaCaption} />
+              <SportToggle
+                current={sport}
+                mlbCaption={mlbCaption}
+                nflCaption={nflCaption}
+                nbaCaption={nbaCaption}
+                tonight={tonight}
+              />
             </div>
             <header className="pt-8 pb-3 flex items-end justify-between gap-4 flex-wrap">
               <div>
