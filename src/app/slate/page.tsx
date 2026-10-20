@@ -472,9 +472,7 @@ async function SlateBoard({ p }: { p: SlateParams }) {
             ) : (
               <>
                 {gamesWithPicks.length > 0 && (
-                  <div className="mt-2 mb-5 flex justify-center">
-                    <SplashContests placement="slate" />
-                  </div>
+                  <SplashContests placement="slate" className="mt-2 mb-5" />
                 )}
                 {showStandings && (
                   <div className="mb-5">

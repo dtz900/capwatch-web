@@ -527,9 +527,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           )}
 
           {hasPicks && (
-            <div className="mb-8 flex justify-center">
-              <SplashContests placement="capper" />
-            </div>
+            <SplashContests placement="capper" className="mb-8" />
           )}
 
           <section>

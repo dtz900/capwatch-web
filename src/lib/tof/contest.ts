@@ -23,6 +23,13 @@ export type SplashContest = {
   closes_at?: string;
   /** Short league tag shown as a chip: NBA, NFL, MLB. */
   sport?: string;
+  /** Promo copy. headline replaces title on the card (title stays the plain
+      name the emails use); tagline is the one-line hook; facts are the pill
+      row. All optional, each falls back to the
+      plain fields. */
+  headline?: string;
+  tagline?: string;
+  facts?: string[];
   /** Splash game type: Tiers, Pick 'em, Survivor. */
   format?: string;
   image?: string;

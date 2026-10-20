@@ -1,3 +1,6 @@
+import contestJson from "../../../public/splash-contest.json";
+import { activeContests, type SplashContestFile } from "@/lib/tof/contest";
+
 /**
  * Pulsing placeholder block for streamed Suspense fallbacks.
  *
@@ -10,15 +13,21 @@ export function Skeleton({ className = "" }: { className?: string }) {
 }
 
 /**
- * Footprint of the inline SplashContests module (a 720px-wide card with a
- * header row, one or two contest rows and a disclosure line). Boards insert
- * it between sections once rows exist, so the fallback has to hold that slot
- * or the streamed board pushes everything below it down (Codex on #204).
+ * Footprint of the inline SplashContests module: one full-width promo card
+ * per open contest (about 219px on desktop, 360px on a phone where the pills
+ * stack), or nothing at all when no contest is open. Boards insert it between
+ * sections once rows exist, so the fallback has to hold exactly that slot or
+ * the streamed board pushes everything below it (Codex on #204 and #209).
+ * The count comes from the same contest file the module reads, evaluated at
+ * render, so the fallback and the real thing agree.
  */
-export function BannerSkeleton() {
+export function BannerSkeleton({ className = "" }: { className?: string }) {
+  const count = activeContests(contestJson as SplashContestFile).length;
   return (
-    <div data-testid="banner-skeleton" className="w-full">
-      <Skeleton className="w-full max-w-[720px] mx-auto h-[150px] rounded-xl" />
+    <div data-testid="banner-skeleton" className={count > 0 ? `flex w-full flex-col gap-4 ${className}` : "hidden"} aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} className="w-full h-[360px] sm:h-[219px] rounded-lg" />
+      ))}
     </div>
   );
 }

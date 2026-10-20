@@ -260,9 +260,7 @@ async function HomeBoard({ board, filters }: { board: Promise<LeaderboardRespons
       <JsonLd data={leaderboardItemListNode(rows)} />
       {top3.length === 3 && <Podium rows={top3} window={filters.window} sport={filters.sport} />}
       {rows.length > 0 && (
-        <div className="my-8 flex justify-center">
-          <SplashContests placement="home" />
-        </div>
+        <SplashContests placement="home" className="my-8" />
       )}
       {rest.length > 0 && <StandingsTable rows={rest} startRank={4} window={filters.window} sport={filters.sport} />}
       <PendingBoard
