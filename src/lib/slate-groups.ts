@@ -173,7 +173,25 @@ export function groupByCapper(picks: SlatePick[]): CapperGroup[] {
 }
 
 // First match wins, so the specific stats sit above the generic ones.
+// NBA rules lead: "to score 20+ points" must read as Points, not as the NFL
+// touchdown rule's "to score" (opening night 2026-10-20 filed every NBA
+// scorer prop under TD).
 const STAT_RULES: [RegExp, string][] = [
+  [/\bpra\b|\bp\s*\+\s*r\s*\+\s*a\b|\bpts\s*\+\s*rebs?\s*\+\s*asts?\b|\bpoints,?\s*rebounds,?\s*(and|&|\+)?\s*assists\b|\bpts\s*,?\s*rebs?\s*,?\s*(and|&|\+)?\s*asts?\b/i, "PRA"],
+  [/\bpts\s*\+\s*rebs?\b|\bpoints\s*(\+|and|&)\s*rebounds\b|\bp\s*\+\s*r\b/i, "Pts+reb"],
+  [/\bpts\s*\+\s*asts?\b|\bpoints\s*(\+|and|&)\s*assists\b|\bp\s*\+\s*a\b/i, "Pts+ast"],
+  [/\brebs?\s*\+\s*asts?\b|\brebounds\s*(\+|and|&)\s*assists\b|\br\s*\+\s*a\b/i, "Reb+ast"],
+  [/\bstl\s*\+\s*blk\b|\bsteals\s*(\+|and|&)\s*blocks\b|\bstocks\b/i, "Stl+blk"],
+  [/\bfirst\s+(basket|bucket|fg|field\s+goal)\b|\bfirst\s+to\s+score\b/i, "First basket"],
+  [/\bdouble[\s-]?doubles?\b|\bdd\b/i, "Double-double"],
+  [/\btriple[\s-]?doubles?\b/i, "Triple-double"],
+  [/\b(threes?|3pt|3pm|3-pt|three[\s-]?pointers?|3[\s-]?pointers?|3s)\b|\bmade\s+threes\b/i, "Threes"],
+  [/\b(points?|pts)\b/i, "Points"],
+  [/\b(rebounds?|rebs?|boards)\b/i, "Rebounds"],
+  [/\b(assists?|asts?|dimes)\b/i, "Assists"],
+  [/\b(steals?|stl)\b/i, "Steals"],
+  [/\b(blocks?|blk)\b/i, "Blocks"],
+  [/\b(turnovers?|tov)\b/i, "Turnovers"],
   [/\brush(ing)?\s*(\+|and|&)\s*rec/i, "Rush+rec yds"],
   [/\blongest\b/i, "Longest"],
   [/\brec(eiving)?\.?\s*(yards|yds|yd)\b/i, "Rec yds"],
