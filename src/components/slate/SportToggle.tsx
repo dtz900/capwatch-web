@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import type { SlateSport } from "@/lib/api";
 import { tonightCaption, type TonightCounts } from "@/lib/slate-tonight";
+import { slateSportParam } from "@/lib/slate-sport";
 import { LeagueChips, type LeagueChip } from "@/components/ui/LeagueChips";
 
 /**
@@ -49,8 +50,9 @@ export function SportToggle({
     const params = new URLSearchParams(sp?.toString() ?? "");
     params.delete("date");
     params.delete("week");
-    if (value === "mlb") params.delete("sport");
-    else params.set("sport", value);
+    const sportParam = slateSportParam(value as SlateSport);
+    if (sportParam) params.set("sport", sportParam);
+    else params.delete("sport");
     const qs = params.toString();
     startTransition(() => {
       router.push(qs ? `/slate?${qs}` : "/slate");

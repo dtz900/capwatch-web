@@ -1,4 +1,5 @@
 import type { SlateSport } from "./api";
+import { slateSportParam } from "./slate-sport";
 
 /** The slate view a game card is rendered in. */
 export interface SlateShareView {
@@ -50,7 +51,7 @@ export function slateGameShareLink(
   const isNfl = view.sport === "nfl";
   return {
     queryParams: {
-      sport: view.sport === "mlb" ? undefined : view.sport,
+      sport: slateSportParam(view.sport),
       week: isNfl && view.week != null ? String(view.week) : undefined,
       date: !isNfl && view.dateParam !== "today" ? view.dateParam : undefined,
       game: slug,

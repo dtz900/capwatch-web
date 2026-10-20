@@ -15,6 +15,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { fetchSlate, fetchWeekStandings, withDeadline, type SlateSport } from "@/lib/api";
 import { fetchTonightCounts } from "@/lib/slate-tonight-fetch";
 import type { TonightCounts } from "@/lib/slate-tonight";
+import { parseSlateSport, slateSportParam } from "@/lib/slate-sport";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
@@ -42,7 +43,7 @@ type SlateParams = {
 };
 
 function parseParams(sp: Awaited<PageProps["searchParams"]>): SlateParams {
-  const sport: SlateSport = sp.sport === "nfl" || sp.sport === "nba" ? sp.sport : "mlb";
+  const sport: SlateSport = parseSlateSport(sp.sport);
   const dateParam: "today" | "tomorrow" = sp.date === "tomorrow" ? "tomorrow" : "today";
   const rawWeek = Number(sp.week);
   const week = sport === "nfl" && Number.isInteger(rawWeek) && rawWeek >= 1 && rawWeek <= 22 ? rawWeek : undefined;
@@ -51,12 +52,12 @@ function parseParams(sp: Awaited<PageProps["searchParams"]>): SlateParams {
 
 function canonicalFor(p: SlateParams): string {
   const q = new URLSearchParams();
+  const sportParam = slateSportParam(p.sport);
+  if (sportParam) q.set("sport", sportParam);
   if (p.sport === "nfl") {
-    q.set("sport", "nfl");
     if (p.week != null) q.set("week", String(p.week));
-  } else {
-    if (p.sport === "nba") q.set("sport", "nba");
-    if (p.dateParam !== "today") q.set("date", p.dateParam);
+  } else if (p.dateParam !== "today") {
+    q.set("date", p.dateParam);
   }
   const qs = q.toString();
   return qs ? `/slate?${qs}` : "/slate";
@@ -181,7 +182,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const fp = await fpPromise;
   const ogQs = new URLSearchParams();
   ogQs.set("date", p.dateParam);
-  if (p.sport !== "mlb") ogQs.set("sport", p.sport);
+  // Always explicit: the /og/slate route has its own default league.
+  ogQs.set("sport", p.sport);
   // A shared /slate?sport=nfl&week=N must card the same week it opens to
   // (Codex on #113).
   if (isNfl && p.week != null) ogQs.set("week", String(p.week));
@@ -452,7 +454,7 @@ async function SlateBoard({ p }: { p: SlateParams }) {
                 <ShareLinkButton
                   basePath="/slate"
                   queryParams={{
-                    sport: sport === "mlb" ? undefined : sport,
+                    sport: slateSportParam(sport),
                     week: isNfl && p.week != null ? String(p.week) : undefined,
                     date: !isNfl && dateParam !== "today" ? dateParam : undefined,
                   }}
