@@ -8,3 +8,18 @@
 export function Skeleton({ className = "" }: { className?: string }) {
   return <div aria-hidden="true" className={`animate-pulse rounded-md bg-[rgba(255,255,255,0.05)] ${className}`} />;
 }
+
+/**
+ * Footprint of the inline SportsbookAd (a 1940x500 creative scaled to the
+ * content width, plus its one-line disclosure). Boards insert the banner
+ * between sections once rows exist, so the fallback has to hold that slot
+ * or the streamed board pushes everything below it down (Codex on #204).
+ */
+export function BannerSkeleton() {
+  return (
+    <div data-testid="banner-skeleton" className="w-full">
+      <Skeleton className="w-full aspect-[1940/500]" />
+      <Skeleton className="h-[15px] w-[260px] max-w-full mx-auto mt-1.5" />
+    </div>
+  );
+}

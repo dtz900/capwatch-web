@@ -38,10 +38,13 @@ describe("SlateSkeleton", () => {
     expect(screen.queryByText("Today")).not.toBeInTheDocument();
   });
 
-  it("renders three game placeholders", () => {
+  it("renders the banner slot ahead of three game placeholders", () => {
     render(
       <SlateSkeleton sport="mlb" heading="Tonight's slate" mlbCaption="Tonight" nflCaption="Weekly board" nbaCaption="Daily board" dateParam="today" />,
     );
-    expect(screen.getAllByTestId("game-skeleton")).toHaveLength(3);
+    const games = screen.getAllByTestId("game-skeleton");
+    expect(games).toHaveLength(3);
+    const banner = screen.getByTestId("banner-skeleton");
+    expect(banner.compareDocumentPosition(games[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/Skeleton";
+import { BannerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { SportToggle } from "./SportToggle";
 import { DateToggle } from "./DateToggle";
 import type { SlateSport } from "@/lib/api";
@@ -62,6 +62,9 @@ export function SlateSkeleton({ sport, heading, mlbCaption, nflCaption, nbaCapti
                 <Skeleton className="h-9 w-[120px] rounded-full" />
               </div>
             </header>
+            <div className="mt-2 mb-5">
+              <BannerSkeleton />
+            </div>
             <div className="flex flex-col gap-5 mt-2">
               {Array.from({ length: GAME_COUNT }, (_, i) => (
                 <GameBlockSkeleton key={i} />
