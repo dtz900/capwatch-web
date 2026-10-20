@@ -16,13 +16,17 @@ const SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv"]);
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const cache = new Map<string, { at: number; athletes: RosterAthlete[] }>();
 
-/** Lowercase, accents stripped, dots and apostrophes dropped, generational suffixes removed. */
+/**
+ * Lowercase, accents stripped, dots and apostrophes dropped, hyphens turned
+ * into spaces ("Karl-Anthony" reads as "Karl Anthony"), generational suffixes removed.
+ */
 export function normalizePersonName(s: string): string {
   return s
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[.'\u2019]/g, "")
+    .replace(/-/g, " ")
     .split(/\s+/)
     .filter((t) => t.length > 0 && !SUFFIXES.has(t))
     .join(" ");
@@ -44,15 +48,19 @@ export function matchRosterAthlete(athletes: RosterAthlete[], name: string): Ros
   const surname = surnameOf(target);
   const bySurname = athletes.filter((a) => surnameOf(normalizePersonName(a.fullName)) === surname);
 
-  if (tokens.length === 2 && tokens[0].length === 1) {
-    const initial = tokens[0];
-    const hits = bySurname.filter((a) => normalizePersonName(a.fullName).startsWith(initial));
-    // A given initial must narrow to exactly one athlete; a wrong initial is never a surname fallback.
-    return hits.length === 1 ? hits[0] : null;
-  }
-
   if (tokens.length === 1) return bySurname.length === 1 ? bySurname[0] : null;
-  return null;
+
+  // A hyphenated surname written alone ("Gilgeous-Alexander") is two tokens
+  // after normalizing: let it match the trailing tokens of one athlete.
+  const trailing = athletes.filter((a) => normalizePersonName(a.fullName).endsWith(` ${target}`));
+  if (trailing.length === 1) return trailing[0];
+
+  // Initial plus surname: "J. Brown", and a nickname or short first name
+  // ("Nic Claxton", "Herb Jones") through its first letter. The initial must
+  // narrow to exactly one athlete; zero or several hits never guess.
+  const initial = tokens[0][0];
+  const hits = bySurname.filter((a) => normalizePersonName(a.fullName).startsWith(initial));
+  return hits.length === 1 ? hits[0] : null;
 }
 
 export function espnNbaRosterUrl(abbr: string): string | null {

@@ -38,6 +38,32 @@ describe("matchRosterAthlete", () => {
   it("normalizes names", () => expect(normalizePersonName("Kelly Oubre Jr.")).toBe("kelly oubre"));
 });
 
+describe("matchRosterAthlete multi-token fallback", () => {
+  const M: RosterAthlete[] = [
+    { id: 11, fullName: "Nicolas Claxton", lastName: "Claxton", team: "BKN" },
+    { id: 12, fullName: "Herbert Jones", lastName: "Jones", team: "NO" },
+    { id: 13, fullName: "Tre Jones", lastName: "Jones", team: "CHI" },
+    { id: 14, fullName: "Karl-Anthony Towns", lastName: "Towns", team: "NY" },
+    { id: 15, fullName: "Shai Gilgeous-Alexander", lastName: "Gilgeous-Alexander", team: "OKC" },
+    { id: 16, fullName: "Jalen Williams", lastName: "Williams", team: "OKC" },
+    { id: 17, fullName: "Jaylin Williams", lastName: "Williams", team: "OKC" },
+  ];
+  it("resolves a short first name through its initial", () => {
+    expect(matchRosterAthlete(M, "Nic Claxton")?.id).toBe(11);
+    expect(matchRosterAthlete(M, "Herb Jones")?.id).toBe(12);
+  });
+  it("treats hyphens as spaces on both sides", () => {
+    expect(matchRosterAthlete(M, "Karl Anthony Towns")?.id).toBe(14);
+    expect(matchRosterAthlete(M, "Shai Gilgeous Alexander")?.id).toBe(15);
+    expect(matchRosterAthlete(M, "Gilgeous-Alexander")?.id).toBe(15);
+    expect(normalizePersonName("Karl-Anthony Towns")).toBe("karl anthony towns");
+  });
+  it("prefers the exact full name and refuses an ambiguous initial", () => {
+    expect(matchRosterAthlete(M, "Jalen Williams")?.id).toBe(16);
+    expect(matchRosterAthlete(M, "J. Williams")).toBeNull();
+  });
+});
+
 describe("espnNbaRosterUrl", () => {
   it("builds the web host roster url", () => {
     expect(espnNbaRosterUrl("BOS")).toBe("https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams/2/roster");
