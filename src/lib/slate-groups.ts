@@ -177,12 +177,14 @@ export function groupByCapper(picks: SlatePick[]): CapperGroup[] {
 // touchdown rule's "to score" (opening night 2026-10-20 filed every NBA
 // scorer prop under TD).
 const STAT_RULES: [RegExp, string][] = [
-  [/\bpra\b|\bp\s*\+\s*r\s*\+\s*a\b|\bpts\s*\+\s*rebs?\s*\+\s*asts?\b|\bpoints,?\s*rebounds,?\s*(and|&|\+)?\s*assists\b|\bpts\s*,?\s*rebs?\s*,?\s*(and|&|\+)?\s*asts?\b/i, "PRA"],
+  [/\bpra\b|\bp\s*\+\s*r\s*\+\s*a\b|\b(pts|points)\s*(,|\+|and|&)?\s*(rebs?|rebounds)\s*(,|\+|and|&)?\s*(asts?|assists)\b/i, "PRA"],
   [/\bpts\s*\+\s*rebs?\b|\bpoints\s*(\+|and|&)\s*rebounds\b|\bp\s*\+\s*r\b/i, "Pts+reb"],
   [/\bpts\s*\+\s*asts?\b|\bpoints\s*(\+|and|&)\s*assists\b|\bp\s*\+\s*a\b/i, "Pts+ast"],
   [/\brebs?\s*\+\s*asts?\b|\brebounds\s*(\+|and|&)\s*assists\b|\br\s*\+\s*a\b/i, "Reb+ast"],
   [/\bstl\s*\+\s*blk\b|\bsteals\s*(\+|and|&)\s*blocks\b|\bstocks\b/i, "Stl+blk"],
-  [/\bfirst\s+(basket|bucket|fg|field\s+goal)\b|\bfirst\s+to\s+score\b/i, "First basket"],
+  // Basket-specific wording only: "first to score" / "first FG" belong to
+  // football's first-touchdown rules below (Codex on #211).
+  [/\bfirst\s+(basket|bucket)\b/i, "First basket"],
   [/\bdouble[\s-]?doubles?\b|\bdd\b/i, "Double-double"],
   [/\btriple[\s-]?doubles?\b/i, "Triple-double"],
   [/\b(threes?|3pt|3pm|3-pt|three[\s-]?pointers?|3[\s-]?pointers?|3s)\b|\bmade\s+threes\b/i, "Threes"],
