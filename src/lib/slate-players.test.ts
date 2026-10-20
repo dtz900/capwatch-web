@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { betLabel, topBackedPlayers, type BackedPlayer } from "./slate-players";
+import { betLabel, stripPlayerName, topBackedPlayers, type BackedPlayer } from "./slate-players";
 
 // IND @ KC, Week 2 2026: the player rows the slate API emits (trimmed).
 type Row = Parameters<typeof topBackedPlayers>[0][number];
@@ -116,5 +116,14 @@ describe("betLabel", () => {
     );
     expect(betLabel("Saquon Barkley", "Saquon Barkley")).toBeNull();
     expect(betLabel(null, "Saquon Barkley")).toBeNull();
+  });
+});
+
+describe("stripPlayerName", () => {
+  it("strips an accented full name", () => {
+    expect(stripPlayerName("Luka Dončić O7.5", "Luka Dončić")).toBe("O7.5");
+  });
+  it("strips a name carrying a Jr. suffix", () => {
+    expect(stripPlayerName("Brian Robinson Jr. Anytime TD", "Brian Robinson Jr.")).toBe("Anytime TD");
   });
 });

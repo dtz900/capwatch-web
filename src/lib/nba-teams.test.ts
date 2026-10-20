@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NBA_EXTRA_ALIASES, NBA_TEAM_COLORS, NBA_TEAM_NAMES, nbaTeamColor, nbaTeamLogoUrl } from "./nba-teams";
+import { NBA_ESPN_TEAM_IDS, NBA_EXTRA_ALIASES, NBA_TEAM_COLORS, NBA_TEAM_NAMES, nbaTeamColor, nbaTeamLogoUrl } from "./nba-teams";
 import { teamColor, teamLogoUrl } from "./teams";
 
 // The ESPN abbreviations the platform's NBA slate emits.
@@ -28,6 +28,12 @@ describe("NBA team tables", () => {
     expect(NBA_TEAM_NAMES.UTAH).toBe("Jazz");
     expect(NBA_TEAM_NAMES.POR).toBe("Trail Blazers");
     expect(NBA_TEAM_NAMES.MIN).toBe("Timberwolves");
+  });
+
+  it("has an ESPN team id for every NBA abbr", () => {
+    expect(Object.keys(NBA_ESPN_TEAM_IDS).sort()).toEqual(Object.keys(NBA_TEAM_COLORS).sort());
+    expect(NBA_ESPN_TEAM_IDS.BOS).toBe(2);
+    expect(NBA_ESPN_TEAM_IDS.DET).toBe(8);
   });
 
   it("only aliases real teams", () => {

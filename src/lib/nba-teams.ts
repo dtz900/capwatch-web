@@ -42,6 +42,13 @@ export const NBA_TEAM_COLORS: Record<string, string> = {
   WSH: "#002b5c",
 };
 
+/** ESPN numeric team ids, keyed by ESPN abbr (roster endpoint path segment). */
+export const NBA_ESPN_TEAM_IDS: Record<string, number> = {
+  ATL: 1, BOS: 2, BKN: 17, CHA: 30, CHI: 4, CLE: 5, DAL: 6, DEN: 7, DET: 8, GS: 9,
+  HOU: 10, IND: 11, LAC: 12, LAL: 13, MEM: 29, MIA: 14, MIL: 15, MIN: 16, NO: 3, NY: 18,
+  OKC: 25, ORL: 19, PHI: 20, PHX: 21, POR: 22, SAC: 23, SA: 24, TOR: 28, UTAH: 26, WSH: 27,
+};
+
 export function nbaTeamColor(abbr: string | null, fallback = "#3b3b3b"): string {
   if (!abbr) return fallback;
   return NBA_TEAM_COLORS[abbr] ?? fallback;

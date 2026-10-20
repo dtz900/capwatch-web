@@ -12,6 +12,19 @@ import type { SlateGame, SlatePick } from "@/lib/types";
 import { feedsConsensusOdds, medianInt } from "@/lib/slate-consensus";
 import { topBackedPlayers, type BackedPlayer } from "@/lib/slate-players";
 import { espnHeadshotUrl, espnResizedUrl, fetchActionPhotoUrl } from "@/lib/espn-player-photo";
+import { slateBetCount } from "@/lib/slate-bet-count";
+import { fetchRemoteImageAsDataUri } from "@/lib/remote-image";
+import { buildNbaPanel, displaySurname, type NbaPanel } from "@/lib/nba-og-panel";
+import { NBA_TEAM_NAMES } from "@/lib/nba-teams";
+import {
+  fetchNbaHero,
+  fitNbaChips,
+  nbaCaptionLine,
+  nbaDegraded,
+  NBA_HERO_DEPS,
+  type NbaHero,
+  type PhotoMode,
+} from "./_nba-hero";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
 // a 2x canvas made the cold render heavier (Twitterbot timed out and cached a
@@ -81,6 +94,8 @@ interface MarqueeBlock {
   players: PlayerTile[];
   /** Rows carrying a player (props), for the stage's tally line. */
   propCount: number;
+  /** NBA only: panel numbers plus the hero photo. null => the scoreboard renders. */
+  nba: { panel: NbaPanel; hero: NbaHero } | null;
 }
 
 interface RenderInputs {
@@ -159,28 +174,6 @@ async function loadCardFonts(): Promise<OgFont[]> {
   return out;
 }
 
-async function fetchRemoteImageAsDataUri(url: string | null): Promise<string | null> {
-  if (!url) return null;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 2500);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: { "User-Agent": "TailSlipsBot/1.0 (+https://tailslips.com)" },
-    });
-    if (!res.ok) return null;
-    const ct = res.headers.get("content-type") ?? "";
-    if (!ct.startsWith("image/")) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.byteLength === 0 || buf.byteLength > 1_500_000) return null;
-    return `data:${ct};base64,${buf.toString("base64")}`;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 async function fetchTeamLogosForGame(
   awayTeam: string | null,
   homeTeam: string | null,
@@ -198,16 +191,9 @@ async function fetchTeamLogosForGame(
 const TILE_PHOTO_W = 704;
 const TILE_PHOTO_H = 396;
 
-function lastNameOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return parts.length > 1 ? parts[parts.length - 1] : (parts[0] ?? "");
-}
-
-export type PhotoMode = "action" | "headshot";
-
 async function fetchPlayerTile(player: BackedPlayer, mode: PhotoMode): Promise<PlayerTile> {
   if (mode === "action") {
-    const action = await fetchActionPhotoUrl(player.playerId, lastNameOf(player.name));
+    const action = await fetchActionPhotoUrl(player.playerId, displaySurname(player.name));
     const actionUri = action
       ? await fetchRemoteImageAsDataUri(espnResizedUrl(action, TILE_PHOTO_W, TILE_PHOTO_H))
       : null;
@@ -333,30 +319,7 @@ export function resolveRequestedGame(games: SlateGame[], slug: string | undefine
   return null;
 }
 
-/**
- * Bets, not rows: the slate API emits every parlay LEG as its own pick row,
- * so raw row counts overstate what a human calls picks (2026-08-18 card
- * shipped "483 picks tracked" when the board carried 305 straights + 39
- * parlays = 344 bets). A parlay is one bet, keyed by its parlay_id (Codex
- * #96: two parlays in one tweet share a tweet_url and would merge). The
- * tweet_url fallback covers payloads from before the API exposed parlay_id.
- */
-export function slateBetCount(picks: SlatePick[]): number {
-  let straights = 0;
-  const parlays = new Set<string>();
-  for (const p of picks) {
-    if (p.kind === "parlay_leg") {
-      parlays.add(
-        p.parlay_id != null
-          ? `id:${p.parlay_id}`
-          : p.tweet_url ?? `${p.capper_id}:${p.posted_at ?? ""}`,
-      );
-    } else {
-      straights += 1;
-    }
-  }
-  return straights + parlays.size;
-}
+export { slateBetCount } from "@/lib/slate-bet-count";
 
 function buildMarqueeBlock(
   game: SlateGame,
@@ -364,6 +327,7 @@ function buildMarqueeBlock(
   homeLogoDataUri: string | null,
   featuredLabel: string,
   players: PlayerTile[] = [],
+  nba: MarqueeBlock["nba"] = null,
 ): MarqueeBlock {
   const awayHandles: string[] = [];
   const homeHandles: string[] = [];
@@ -403,6 +367,7 @@ function buildMarqueeBlock(
     home: { team: game.home_team, count: homeCount, handles: homeHandles, medianOdds: medianInt(homeOdds) },
     players,
     propCount: game.picks.filter((p) => p.player_id != null).length,
+    nba,
   };
 }
 
@@ -423,7 +388,7 @@ export interface RenderSlateOpts {
   // dimension declaration, so 2x there is safe, and X's in-feed recompression
   // is what made the 1200px upload look fuzzy.
   scale?: 1 | 2;
-  /** NFL only: editorial action photos (default) or ESPN headshot cutouts. */
+  /** NFL and NBA: editorial action photos (default) or ESPN headshot cutouts. */
   photos?: PhotoMode;
 }
 
@@ -441,10 +406,16 @@ async function renderScaledPng(node: ReactNode, fonts: OgFont[], scale: number):
   return new Uint8Array(resvg.render().asPng());
 }
 
+/** Whole-render budget for the NBA photo chain, measured from render start. */
+const NBA_HERO_BUDGET_MS = 3500;
+
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
+  const t0 = Date.now();
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
   const sportParam: SlateSport = opts.sport === "nfl" || opts.sport === "nba" ? opts.sport : "mlb";
-  // NBA reads like MLB: a day board with the moneyline scoreboard hero.
+  // NBA is a day board like MLB; its featured game gets the photo stage
+  // (action still or headshot plus the info panel), falling back to the
+  // moneyline Scoreboard when the photo chain comes back empty.
   const fallbackHeading =
     sportParam === "nfl"
       ? opts.week != null
@@ -470,14 +441,24 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   const requestedGame = resolveRequestedGame(games, opts.gameSlug);
   const featuredGame = requestedGame ?? pickMarqueeGame(games);
   const featuredLabel = requestedGame ? "Featured game" : "Most-bet game";
-  const [teamLogos, playerTiles] = featuredGame
+  const photoMode: PhotoMode = opts.photos === "headshot" ? "headshot" : "action";
+  // NBA: the panel is pure data; the hero photo chain overlaps the logo fetches.
+  // Its 3.5s budget is measured from render start, so time spent on the slate
+  // fetch comes out of it rather than stacking on top.
+  const nbaPanel = featuredGame?.sport === "NBA" ? buildNbaPanel(featuredGame) : null;
+  const nbaHeroBudgetMs = Math.max(0, NBA_HERO_BUDGET_MS - (Date.now() - t0));
+  const [teamLogos, playerTiles, nbaHero] = featuredGame
     ? await Promise.all([
         fetchTeamLogosForGame(featuredGame.away_team, featuredGame.home_team, featuredGame.sport ?? "MLB"),
-        fetchPlayerTiles(featuredGame, opts.photos === "headshot" ? "headshot" : "action"),
+        fetchPlayerTiles(featuredGame, photoMode),
+        nbaPanel
+          ? fetchNbaHero(featuredGame, nbaPanel, photoMode, NBA_HERO_DEPS, nbaHeroBudgetMs)
+          : Promise.resolve(null),
       ])
-    : [{ away: null, home: null }, [] as PlayerTile[]];
+    : [{ away: null, home: null }, [] as PlayerTile[], null];
+  const nba = nbaPanel && nbaHero ? { panel: nbaPanel, hero: nbaHero } : null;
   const marquee = featuredGame
-    ? buildMarqueeBlock(featuredGame, teamLogos.away, teamLogos.home, featuredLabel, playerTiles)
+    ? buildMarqueeBlock(featuredGame, teamLogos.away, teamLogos.home, featuredLabel, playerTiles, nba)
     : null;
 
   const inputs: RenderInputs = {
@@ -506,11 +487,15 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   // "no picks" state that isn't real) or a featured game whose team logos
   // failed to download. The long primary cache would pin that for the
   // fingerprint's lifetime; degraded renders take the short fallback cache
-  // and heal on the next request.
+  // and heal on the next request. An NBA game with props whose photo chain
+  // missed or timed out (scoreboard), or fell back to a headshot without
+  // ?photos=headshot asking for one, is degraded too.
+  const nbaPhotoMissed = nbaDegraded(nbaPanel, nbaHero, photoMode);
   const degraded =
     slateResult.status !== "fulfilled" ||
     (featuredGame != null && (teamLogos.away == null || teamLogos.home == null)) ||
-    playerTiles.some((t) => t.photoKind === "none");
+    playerTiles.some((t) => t.photoKind === "none") ||
+    nbaPhotoMissed;
   const cacheControl = degraded ? FALLBACK_CACHE : PRIMARY_CACHE;
 
   try {
@@ -715,8 +700,9 @@ function buildJsx(inputs: RenderInputs) {
         overflow: "hidden",
       }}
     >
-      {/* Team-color arena washes pouring in from each side. */}
-      {marquee ? (
+      {/* Team-color arena washes pouring in from each side. The NBA stage
+          carries the colors in its ML bar instead. */}
+      {marquee && !marquee.nba ? (
         <div
           style={{
             position: "absolute",
@@ -729,34 +715,42 @@ function buildJsx(inputs: RenderInputs) {
           }}
         />
       ) : null}
-      {/* Floor shadow so the lower third stays legible under the washes. */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: "flex",
-          backgroundImage:
-            "linear-gradient(180deg, rgba(10,10,12,0) 46%, rgba(10,10,12,0.55) 74%, rgba(10,10,12,0.85) 100%)",
-        }}
-      />
+      {/* Floor shadow so the lower third stays legible under the washes. The
+          NBA backdrop brings its own vertical fade. */}
+      {marquee?.nba ? null : (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            backgroundImage:
+              "linear-gradient(180deg, rgba(10,10,12,0) 46%, rgba(10,10,12,0.55) 74%, rgba(10,10,12,0.85) 100%)",
+          }}
+        />
+      )}
 
-      {/* Split team-color rule across the very top. */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: px(5),
-          display: "flex",
-          background: marquee
-            ? `linear-gradient(90deg, ${awayC} 0%, ${awayC} 50%, ${homeC} 50%, ${homeC} 100%)`
-            : OFF,
-        }}
-      />
+      {/* NBA: photo and its fades sit under everything, caption tag over them. */}
+      {marquee?.nba ? <NbaBackdrop nba={marquee.nba} awayC={awayC} homeC={homeC} /> : null}
+
+      {/* Split team-color rule across the very top. Off on the NBA stage. */}
+      {marquee?.nba ? null : (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: px(5),
+            display: "flex",
+            background: marquee
+              ? `linear-gradient(90deg, ${awayC} 0%, ${awayC} 50%, ${homeC} 50%, ${homeC} 100%)`
+              : OFF,
+          }}
+        />
+      )}
 
       {/* Content column. */}
       <div
@@ -806,7 +800,8 @@ function buildJsx(inputs: RenderInputs) {
               />
               Pre-game
             </div>
-            {timeLabel ? (
+            {/* NBA prints the time in its matchup row; once is enough. */}
+            {timeLabel && !marquee?.nba ? (
               <div
                 style={{
                   display: "flex",
@@ -824,7 +819,9 @@ function buildJsx(inputs: RenderInputs) {
           </div>
         </div>
 
-        {marquee && marquee.players.length > 0 ? (
+        {marquee?.nba ? (
+          <NbaStage marquee={marquee} awayC={awayC} homeC={homeC} />
+        ) : marquee && marquee.players.length > 0 ? (
           <PlayersStage marquee={marquee} awayC={awayC} homeC={homeC} />
         ) : marquee ? (
           <Scoreboard marquee={marquee} awayC={awayC} homeC={homeC} />
@@ -1172,6 +1169,389 @@ function PlayersStage({
       </div>
 
       <div style={{ display: "flex", flex: 1 }} />
+    </div>
+  );
+}
+
+// --- NBA stage -------------------------------------------------------------
+// One player photo on the left 66%, an info panel on the right. Square
+// corners throughout, no glow, no text shadow.
+const NBA_PHOTO_W = 792;
+const NBA_PANEL_W = 470;
+const NBA_CELL_GAP = 24;
+// Grid sub-line budget: cell width over the 12px mono advance (0.6em + 1px tracking).
+const NBA_SUB_MAX_CHARS = Math.floor((NBA_PANEL_W - NBA_CELL_GAP) / 2 / (12 * 0.6 + 1));
+const NBA_TRACK = "#222222";
+const NBA_RULE = "rgba(247, 243, 233, 0.18)";
+const NBA_MUTED = "rgba(247, 243, 233, 0.60)";
+
+function nbaSideColor(side: "away" | "home" | null, awayC: string, homeC: string): string {
+  return side === "away" ? awayC : side === "home" ? homeC : OFF;
+}
+
+function signedLine(line: number): string {
+  return line > 0 ? `+${line}` : line === 0 ? "PK" : `${line}`;
+}
+
+// Photo, its two fades and the caption tag. Rendered at the frame root so the
+// photo bleeds under the header from the card's top-left corner.
+function NbaBackdrop({
+  nba,
+  awayC,
+  homeC,
+}: {
+  nba: NonNullable<MarqueeBlock["nba"]>;
+  awayC: string;
+  homeC: string;
+}) {
+  const { hero } = nba;
+  const teamC = nbaSideColor(hero.teamSide, awayC, homeC);
+  const isAction = hero.photoKind === "action";
+  return (
+    <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex" }}>
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: px(NBA_PHOTO_W),
+          height: px(630),
+          display: "flex",
+          overflow: "hidden",
+          // The headshot cutout sits on a team-color wash at the arena-wash alpha.
+          background: isAction ? BG : hexWithAlpha(teamC, 0.34),
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={hero.photoDataUri}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: isAction ? "cover" : "contain",
+            objectPosition: isAction ? "50% 25%" : "100% 100%",
+          }}
+        />
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          backgroundImage:
+            "linear-gradient(90deg, rgba(10,10,12,0) 30%, rgba(10,10,12,0.55) 52%, rgba(10,10,12,0.96) 64%, #0a0a0c 100%)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          backgroundImage:
+            "linear-gradient(180deg, rgba(10,10,12,0.6) 0%, rgba(10,10,12,0) 22%, rgba(10,10,12,0) 60%, rgba(10,10,12,0.92) 100%)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: px(48),
+          bottom: px(140),
+          display: "flex",
+          alignItems: "center",
+          gap: px(12),
+          padding: `${px(10)}px ${px(14)}px`,
+          background: "rgba(10, 10, 12, 0.85)",
+        }}
+      >
+        <div style={{ width: px(8), height: px(8), background: teamC, display: "flex" }} />
+        <div style={{ display: "flex", fontSize: px(24), fontWeight: 800, color: OFF, whiteSpace: "nowrap" }}>
+          {hero.athleteName}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontFamily: MONO,
+            fontWeight: 500,
+            fontSize: px(13),
+            letterSpacing: px(1),
+            color: "rgba(247, 243, 233, 0.80)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {nbaCaptionLine(hero.athleteName, hero.player.sharps, hero.player.topBet)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// The right-hand panel. Sits in the content column under the shared header
+// (an absolute top:36 would collide with the pill), right-aligned at the
+// spec's 48px inset.
+function NbaStage({
+  marquee,
+  awayC,
+  homeC,
+}: {
+  marquee: MarqueeBlock;
+  awayC: string;
+  homeC: string;
+}) {
+  const nba = marquee.nba;
+  if (!nba) return null;
+  const { panel } = nba;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      {/* The content column pads 52px; the panel's inset is 48px. */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignSelf: "flex-end",
+          width: px(NBA_PANEL_W),
+          marginRight: px(-4),
+          marginTop: px(18),
+          gap: px(22),
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: px(12) }}>
+          <div
+            style={{
+              display: "flex",
+              fontFamily: MONO,
+              fontWeight: 700,
+              fontSize: px(11),
+              letterSpacing: px(3),
+              textTransform: "uppercase",
+              color: "rgba(247, 243, 233, 0.50)",
+            }}
+          >
+            {marquee.featuredLabel}
+          </div>
+          <NbaMatchupRow marquee={marquee} awayC={awayC} homeC={homeC} />
+        </div>
+        <NbaMlBar ml={panel.ml} awayTeam={marquee.awayTeam} homeTeam={marquee.homeTeam} awayC={awayC} homeC={homeC} />
+        <NbaGrid panel={panel} awayTeam={marquee.awayTeam} homeTeam={marquee.homeTeam} awayC={awayC} homeC={homeC} />
+        <NbaChips chips={panel.chips} />
+      </div>
+      <div style={{ display: "flex", flex: 1 }} />
+    </div>
+  );
+}
+
+function NbaMatchupRow({ marquee, awayC, homeC }: { marquee: MarqueeBlock; awayC: string; homeC: string }) {
+  const timeLabel = formatGameTime(marquee.gameTime);
+  const abbr = (team: string | null, color: string) => (
+    <div style={{ display: "flex", fontSize: px(44), fontWeight: 800, lineHeight: 1, color }}>{team ?? "?"}</div>
+  );
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: px(10) }}>
+        <TeamLogo src={marquee.awayLogoDataUri} size={56} />
+        {abbr(marquee.awayTeam, awayC)}
+      </div>
+      {timeLabel ? (
+        <div
+          style={{
+            display: "flex",
+            fontFamily: MONO,
+            fontWeight: 500,
+            fontSize: px(14),
+            letterSpacing: px(1),
+            textTransform: "uppercase",
+            color: NBA_MUTED,
+          }}
+        >
+          {timeLabel}
+        </div>
+      ) : null}
+      <div style={{ display: "flex", alignItems: "center", gap: px(10) }}>
+        {abbr(marquee.homeTeam, homeC)}
+        <TeamLogo src={marquee.homeLogoDataUri} size={56} />
+      </div>
+    </div>
+  );
+}
+
+// ML split bar. Zero ML picks renders the empty track with an honest label;
+// a tie shows both percents with no ML callout.
+function NbaMlBar({
+  ml,
+  awayTeam,
+  homeTeam,
+  awayC,
+  homeC,
+}: {
+  ml: NbaPanel["ml"];
+  awayTeam: string | null;
+  homeTeam: string | null;
+  awayC: string;
+  homeC: string;
+}) {
+  const sharps = ml.away + ml.home;
+  const mono = { display: "flex", fontFamily: MONO, fontWeight: 700, fontSize: px(14), letterSpacing: px(1) } as const;
+  const mascot = (team: string | null): string => (team ? (NBA_TEAM_NAMES[team] ?? team) : "").toUpperCase();
+  const sideLabel = (side: "away" | "home", pct: number | null): string =>
+    ml.favored === side ? `${pct}% ${mascot(side === "away" ? awayTeam : homeTeam)} ML` : `${pct}%`;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: px(10) }}>
+      <div style={{ display: "flex", height: px(10), background: NBA_TRACK }}>
+        {sharps > 0 ? <div style={{ display: "flex", width: `${ml.awayPct}%`, background: awayC }} /> : null}
+        {sharps > 0 ? <div style={{ display: "flex", flex: 1, background: homeC }} /> : null}
+      </div>
+      {sharps > 0 ? (
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div style={{ ...mono, color: awayC }}>{sideLabel("away", ml.awayPct)}</div>
+          <div style={{ ...mono, fontWeight: 500, color: NBA_MUTED }}>
+            {`${sharps} ML ${sharps === 1 ? "SHARP" : "SHARPS"}`}
+          </div>
+          <div style={{ ...mono, color: homeC }}>{sideLabel("home", ml.homePct)}</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <div style={{ ...mono, fontWeight: 500, color: NBA_MUTED }}>NO ML PICKS YET</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NbaCell({ label, value, valueColor, sub }: { label: string; value: string; valueColor: string; sub: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", width: px((NBA_PANEL_W - NBA_CELL_GAP) / 2), gap: px(2) }}>
+      <div
+        style={{
+          display: "flex",
+          fontFamily: MONO,
+          fontWeight: 500,
+          fontSize: px(14),
+          letterSpacing: px(2),
+          textTransform: "uppercase",
+          color: OFF_DIM,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          fontSize: px(30),
+          fontWeight: 800,
+          lineHeight: 1.15,
+          color: valueColor,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {value}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          fontFamily: MONO,
+          fontWeight: 500,
+          fontSize: px(12),
+          letterSpacing: px(1),
+          color: "rgba(247, 243, 233, 0.55)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {sub}
+      </div>
+    </div>
+  );
+}
+
+function NbaGrid({
+  panel,
+  awayTeam,
+  homeTeam,
+  awayC,
+  homeC,
+}: {
+  panel: NbaPanel;
+  awayTeam: string | null;
+  homeTeam: string | null;
+  awayC: string;
+  homeC: string;
+}) {
+  const { spread, total } = panel;
+  const spreadSide = spread?.side === "away" || spread?.side === "home" ? spread.side : null;
+  const spreadTeam = spreadSide === "away" ? awayTeam : spreadSide === "home" ? homeTeam : null;
+  const spreadValue =
+    spread && spreadSide
+      ? [spreadTeam ?? "", spread.line != null ? signedLine(spread.line) : ""].filter(Boolean).join(" ")
+      : "NO LEAN";
+  const totalValue = total
+    ? [total.side.toUpperCase(), total.line != null ? `${total.line}` : ""].filter(Boolean).join(" ")
+    : "NO LEAN";
+  const sharpsOf = (l: NbaPanel["spread"]): string => (l ? `${l.count} OF ${l.of} SHARPS` : "0 SHARPS");
+  // Top two players; the second drops whole (never half a surname) when the
+  // pair would run into the CAPPERS column.
+  const propNames = panel.players.slice(0, 2).map((p) => `${displaySurname(p.name).toUpperCase()} ${p.bets}`);
+  const propPair = propNames.join(" · ");
+  const propsSub = truncate(propPair.length <= NBA_SUB_MAX_CHARS ? propPair : (propNames[0] ?? ""), NBA_SUB_MAX_CHARS);
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        rowGap: px(16),
+        columnGap: px(NBA_CELL_GAP),
+        borderTop: `${px(1)}px solid ${NBA_RULE}`,
+        paddingTop: px(18),
+      }}
+    >
+      <NbaCell
+        label="Spread"
+        value={spreadValue}
+        valueColor={nbaSideColor(spreadSide, awayC, homeC)}
+        sub={sharpsOf(spread)}
+      />
+      <NbaCell label="Total" value={totalValue} valueColor={OFF} sub={sharpsOf(total)} />
+      <NbaCell label="Props" value={`${panel.propCount}`} valueColor={OFF} sub={propsSub} />
+      <NbaCell
+        label="Cappers"
+        value={`${panel.capperCount}`}
+        valueColor={OFF}
+        sub={`${panel.betCount} ${panel.betCount === 1 ? "PICK" : "PICKS"}`}
+      />
+    </div>
+  );
+}
+
+function NbaChips({ chips }: { chips: NbaPanel["chips"] }) {
+  const fit = fitNbaChips(chips.handles, chips.more, NBA_PANEL_W);
+  const labels = [...fit.handles.map((h) => `@${h}`), ...(fit.more > 0 ? [`+${fit.more}`] : [])];
+  if (labels.length === 0) return null;
+  return (
+    <div style={{ display: "flex", gap: px(8) }}>
+      {labels.map((label) => (
+        <div
+          key={label}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            height: px(30),
+            padding: `0 ${px(12)}px`,
+            border: `${px(1)}px solid ${CHIP_BORDER}`,
+            background: CHIP_BG,
+            fontFamily: MONO,
+            fontWeight: 500,
+            fontSize: px(15),
+            color: OFF,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {label}
+        </div>
+      ))}
     </div>
   );
 }
