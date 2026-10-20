@@ -36,6 +36,23 @@ const ESPN_PATH: Record<PhotoSport, { api: string; cdn: string; league: string }
   NBA: { api: "basketball/nba", cdn: "nba", league: "nba" },
 };
 
+/** Headlines that signal a talking-head or off-court piece whose hero image is rarely game action. */
+export const NBA_SKIP_HEADLINE = /\b(trade|traded|contract|extension|opens up|calls|says|fashion|draft|forecast|rankings|odds|tips|dfs)\b/i;
+
+export interface PhotoPolicy {
+  maxAgeDays: number;
+  skipHeadline: RegExp | null;
+  preferWide: boolean;
+}
+
+/** NFL stays exactly as it was (no age cutoff, no headline filter, first qualifying image). */
+export const PHOTO_POLICY: Record<PhotoSport, PhotoPolicy> = {
+  NFL: { maxAgeDays: Infinity, skipHeadline: null, preferWide: false },
+  NBA: { maxAgeDays: 365, skipHeadline: NBA_SKIP_HEADLINE, preferWide: true },
+};
+
+const DAY_MS = 86_400_000;
+
 export function espnOverviewUrl(playerId: number, sport: PhotoSport = "NFL"): string {
   return `https://site.web.api.espn.com/apis/common/v3/sports/${ESPN_PATH[sport].api}/athletes/${playerId}/overview`;
 }
@@ -68,7 +85,9 @@ export function pickActionPhoto(
   playerId: number,
   lastName: string,
   sport: PhotoSport = "NFL",
+  now: Date = new Date(),
 ): string | null {
+  const policy = PHOTO_POLICY[sport];
   const league = ESPN_PATH[sport].league;
   const last = lastName.trim().toLowerCase();
   const ranked: Array<{ tier: number; published: string; url: string }> = [];
@@ -78,15 +97,21 @@ export function pickActionPhoto(
     if (!tags.includes(playerId)) continue;
     const leagues = cats.filter((c) => c?.type === "league").map((c) => (c.description ?? "").toLowerCase());
     if (leagues.some((l) => !l.includes(league))) continue;
+    if (policy.skipHeadline && policy.skipHeadline.test(a.headline ?? "")) continue;
+    if (Number.isFinite(policy.maxAgeDays)) {
+      const t = Date.parse(a.published ?? "");
+      if (!Number.isFinite(t) || now.getTime() - t > policy.maxAgeDays * DAY_MS) continue;
+    }
     const named = last.length > 0 && (a.headline ?? "").toLowerCase().includes(last);
     let tier: number;
     if (tags.length === 1 && named) tier = 0;
     else if (tags.length <= 3 && named) tier = 1;
     else if (tags.length === 1) tier = 2;
     else continue;
-    const image = (a.images ?? []).find(
+    const qualifying = (a.images ?? []).filter(
       (i) => typeof i?.url === "string" && i.url.startsWith(`${ESPN_CDN}/`) && (i.width ?? 0) >= MIN_WIDTH,
     );
+    const image = (policy.preferWide && qualifying.find((i) => i.url?.includes("_16-9"))) || qualifying[0];
     if (!image?.url) continue;
     ranked.push({ tier, published: a.published ?? "", url: image.url });
   }
