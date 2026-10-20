@@ -118,6 +118,20 @@ describe("buildNbaPanel", () => {
     expect(buildNbaPanel(withVariants).players[0]).toMatchObject({ name: "Jayson Tatum", sharps: 5 });
     expect(buildNbaPanel(withVariants).players).toHaveLength(2);
   });
+  it("PROPS counts a parlay once, per player and in total", () => {
+    const g: SlateGame = {
+      ...game,
+      picks: [
+        row({ capper_id: 1, ...TATUM, kind: "parlay_leg", parlay_id: 77, selection: "Jayson Tatum 20+ PTS" }),
+        row({ capper_id: 1, ...TATUM, kind: "parlay_leg", parlay_id: 77, selection: "Jayson Tatum 8+ REB" }),
+        row({ capper_id: 2, ...TATUM, selection: "Jayson Tatum 4+ AST" }),
+      ],
+    };
+    const p = buildNbaPanel(g);
+    expect(p.propCount).toBe(2);
+    expect(p.players[0]).toMatchObject({ name: "Jayson Tatum", bets: 2, legs: 3 });
+    expect(p.propCount).toBeLessThanOrEqual(p.betCount);
+  });
   it("leaves a surname that matches two players as its own row", () => {
     const g: SlateGame = {
       ...game,

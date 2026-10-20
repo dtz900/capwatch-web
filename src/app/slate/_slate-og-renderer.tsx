@@ -1479,7 +1479,7 @@ function NbaGrid({
   const sharpsOf = (l: NbaPanel["spread"]): string => (l ? `${l.count} OF ${l.of} SHARPS` : "0 SHARPS");
   // Top two players; the second drops whole (never half a surname) when the
   // pair would run into the CAPPERS column.
-  const propNames = panel.players.slice(0, 2).map((p) => `${displaySurname(p.name).toUpperCase()} ${p.legs}`);
+  const propNames = panel.players.slice(0, 2).map((p) => `${displaySurname(p.name).toUpperCase()} ${p.bets}`);
   const propPair = propNames.join(" · ");
   const propsSub = truncate(propPair.length <= NBA_SUB_MAX_CHARS ? propPair : (propNames[0] ?? ""), NBA_SUB_MAX_CHARS);
   return (

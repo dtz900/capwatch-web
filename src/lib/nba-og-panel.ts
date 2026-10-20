@@ -22,7 +22,10 @@ export interface NbaBackedPlayer {
   key: string;
   name: string;
   sharps: number;
+  /** Raw rows, parlay legs counted one by one. */
   legs: number;
+  /** Bets: a parlay counts once, the same rule as betCount. */
+  bets: number;
   topBet: string | null;
   team: "away" | "home" | null;
 }
@@ -159,6 +162,7 @@ function toBackedPlayers(groups: PlayerGroup[]): NbaBackedPlayer[] {
       name: g.name,
       sharps: sharpCount(g.picks),
       legs: g.picks.length,
+      bets: slateBetCount(g.picks),
       topBet: topBetOf(g),
       team: null as "away" | "home" | null,
     }))
@@ -209,7 +213,7 @@ export function buildNbaPanel(game: SlateGame): NbaPanel {
       { side: "under", picks: g.total.under },
       (side) => (side === "under" ? "low" : "high"),
     ),
-    propCount: players.reduce((n, p) => n + p.picks.length, 0),
+    propCount: slateBetCount(players.flatMap((p) => p.picks)),
     players: toBackedPlayers(players),
     capperCount: sharpCount(game.picks),
     betCount: slateBetCount(game.picks),
