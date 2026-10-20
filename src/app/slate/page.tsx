@@ -18,8 +18,7 @@ import type { TonightCounts } from "@/lib/slate-tonight";
 import { breadcrumbNode } from "@/lib/jsonld";
 import { SITE_NAME } from "@/lib/seo";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
-import { SportsbookAd } from "@/components/affiliate/SportsbookAd";
-import { BETMGM_1940x500_FOOTBALL } from "@/lib/affiliates";
+import { SplashContests } from "@/components/contests/SplashContests";
 import type { SlateGame, SlateResponse } from "@/lib/types";
 import { pinnedNflWeek, slateGameShareLink, type SlateShareView } from "@/lib/slate-share";
 import { buildSlateOgFingerprint, resolveRequestedGame, slateBetCount } from "./_slate-og-renderer";
@@ -473,12 +472,8 @@ async function SlateBoard({ p }: { p: SlateParams }) {
             ) : (
               <>
                 {gamesWithPicks.length > 0 && (
-                  <div className="mt-2 mb-5">
-                    <SportsbookAd
-                      creative={BETMGM_1940x500_FOOTBALL}
-                      placement="slate-inline"
-                      className="w-full"
-                    />
+                  <div className="mt-2 mb-5 flex justify-center">
+                    <SplashContests placement="slate" />
                   </div>
                 )}
                 {showStandings && (

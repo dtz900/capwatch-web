@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeContest, type SplashContest } from "./contest";
+import { activeContest, activeContests, type SplashContest } from "./contest";
 
 const base: SplashContest = {
   enabled: true,
@@ -36,7 +36,47 @@ describe("activeContest", () => {
     expect(activeContest({ ...base, url: "" }, morningOfSlate)).toBeNull();
   });
 
+  it("hides from the moment entry closes when closes_at is set, before the slate ends", () => {
+    const weekly = { ...base, slate_date: "2026-10-26", closes_at: "2026-10-25T00:00:00-07:00" };
+    expect(activeContest(weekly, new Date("2026-10-24T23:59:00-07:00"))).toEqual(weekly);
+    expect(activeContest(weekly, new Date("2026-10-25T00:00:00-07:00"))).toBeNull();
+    expect(activeContest(weekly, new Date("2026-10-25T15:00:00-07:00"))).toBeNull();
+  });
+
+  it("treats an unparseable closes_at as closed rather than open forever", () => {
+    expect(activeContest({ ...base, closes_at: "saturday night" }, morningOfSlate)).toBeNull();
+  });
+
   it("only links to Splash", () => {
     expect(activeContest({ ...base, url: "https://evil.example/contest" }, morningOfSlate)).toBeNull();
+  });
+});
+
+describe("activeContests", () => {
+  const nfl: SplashContest = {
+    enabled: true,
+    sport: "NFL",
+    slate_date: "2026-10-26",
+    title: "Week 7 Pick 'em",
+    entry: "$20",
+    pays: "1st place",
+    lock_label: "Closes 12 AM PT Oct 25",
+    url: "https://app.splashsports.com/contest/def/detail",
+  };
+
+  it("lists every open contest from the contests array, soonest slate first", () => {
+    const file = { ...base, contests: [nfl, base] };
+    expect(activeContests(file, morningOfSlate)).toEqual([base, nfl]);
+  });
+
+  it("drops closed, disabled and unlinked contests but keeps the rest", () => {
+    const file = { ...base, contests: [base, { ...nfl, url: "" }, { ...nfl, enabled: false }, nfl] };
+    expect(activeContests(file, dayAfterSlate)).toEqual([nfl]);
+  });
+
+  it("falls back to the legacy single contest when the file has no list", () => {
+    expect(activeContests(base, morningOfSlate)).toEqual([base]);
+    expect(activeContests(base, dayAfterSlate)).toEqual([]);
+    expect(activeContests(null, morningOfSlate)).toEqual([]);
   });
 });

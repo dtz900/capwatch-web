@@ -11,7 +11,6 @@ import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, re
 import type { TofBoardRow, TofCard, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
-import { SplashContestPill } from "@/components/tof/SplashContestPill";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
@@ -488,7 +487,6 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   return (
     <section className="w-full border-b border-[var(--color-border)] px-[max(16px,calc(50%-620px))] pb-3 pt-3 transition-[padding] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
       <TofTitle open={unfolded} onToggle={toggleFold} />
-      <SplashContestPill />
 
       <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
       <div>
