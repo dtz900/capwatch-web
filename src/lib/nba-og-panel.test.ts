@@ -145,6 +145,33 @@ describe("buildNbaPanel", () => {
   });
 });
 
+describe("player merging and ranking", () => {
+  const prop = (capper_id: number, player_name: string, extra: Partial<SlatePick> = {}) =>
+    row({ capper_id, player_name, market: "player_prop", selection: `${player_name} 20+ PTS`, ...extra });
+  const panelOf = (ps: SlatePick[]) => buildNbaPanel({ ...game, picks: ps });
+
+  it("merges accent and initial spellings into one group named by the most common spelling", () => {
+    const p = panelOf([prop(1, "Luka Doncic"), prop(2, "Luka Doncic"), prop(3, "L. Dončić")]);
+    expect(p.players).toHaveLength(1);
+    expect(p.players[0]).toMatchObject({ name: "Luka Doncic", sharps: 3, legs: 3 });
+  });
+  it("merges a generational suffix spelling", () => {
+    const p = panelOf([prop(1, "Kelly Oubre"), prop(2, "Kelly Oubre Jr.")]);
+    expect(p.players).toHaveLength(1);
+    expect(p.players[0].sharps).toBe(2);
+  });
+  it("keeps different surnames apart", () => {
+    expect(panelOf([prop(1, "Luka Doncic"), prop(2, "Lonzo Ball")]).players).toHaveLength(2);
+  });
+  it("ties on cappers and rows go to the earlier first post, not the name", () => {
+    const p = panelOf([
+      prop(1, "Aaron Zed", { posted_at: "2026-10-20T20:00:00Z" }),
+      prop(2, "Zach Early", { posted_at: "2026-10-20T15:00:00Z" }),
+    ]);
+    expect(p.players.map((x) => x.name)).toEqual(["Zach Early", "Aaron Zed"]);
+  });
+});
+
 describe("displaySurname", () => {
   it("drops a generational suffix and keeps the display spelling", () => {
     expect(["Jaren Jackson Jr.", "Gary Trent Jr", "Nikola Jokić", "Tatum"].map(displaySurname)).toEqual(["Jackson", "Trent", "Jokić", "Tatum"]);

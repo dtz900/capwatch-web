@@ -1,4 +1,5 @@
-import { groupByMarket, type PlayerGroup } from "@/lib/slate-groups";
+import { groupByMarket, propPlayerName, type PlayerGroup } from "@/lib/slate-groups";
+import { normalizePersonName } from "@/lib/espn-nba-roster";
 import { nbaBetLabel } from "@/lib/nba-bet-label";
 import { feedsConsensusOdds, medianInt } from "@/lib/slate-consensus";
 import { slateBetCount } from "@/lib/slate-bet-count";
@@ -134,6 +135,60 @@ function mergeSurnameGroups(groups: PlayerGroup[]): PlayerGroup[] {
   return [...merged.values()];
 }
 
+/** "Luka Doncic" and "L. Dončić" -> "l doncic"; null for a single-token name. */
+function initialSurnameKey(name: string): string | null {
+  const tokens = normalizePersonName(name).split(" ").filter(Boolean);
+  if (tokens.length < 2) return null;
+  return `${tokens[0][0]} ${tokens[tokens.length - 1]}`;
+}
+
+function mostCommonName(picks: SlatePick[], fallback: string): string {
+  const counts = new Map<string, number>();
+  for (const p of picks) {
+    const n = propPlayerName(p) ?? fallback;
+    counts.set(n, (counts.get(n) ?? 0) + 1);
+  }
+  let best = fallback;
+  let bestN = 0;
+  for (const [n, c] of counts) {
+    if (c > bestN) {
+      best = n;
+      bestN = c;
+    }
+  }
+  return best;
+}
+
+/**
+ * groupByMarket keeps accents and suffixes in its key, so "Luka Doncic" and
+ * "L. Dončić" (or "Kelly Oubre" and "Kelly Oubre Jr.") land apart. Merge groups
+ * whose normalized initial + surname match. Two roster-id groups never merge
+ * (they are different players who share an initial and surname).
+ */
+function mergeNormalizedGroups(groups: PlayerGroup[]): PlayerGroup[] {
+  const buckets = new Map<string, PlayerGroup[]>();
+  const out: PlayerGroup[] = [];
+  for (const g of groups) {
+    const k = initialSurnameKey(g.name);
+    if (k === null) {
+      out.push(g);
+      continue;
+    }
+    buckets.set(k, [...(buckets.get(k) ?? []), g]);
+  }
+  for (const members of buckets.values()) {
+    const idGroups = members.filter((m) => m.key.startsWith("id:"));
+    if (members.length === 1 || idGroups.length > 1) {
+      out.push(...members);
+      continue;
+    }
+    const picks = members.flatMap((m) => m.picks);
+    const head = idGroups[0] ?? members[0];
+    out.push({ key: head.key, name: mostCommonName(picks, head.name), picks });
+  }
+  return out;
+}
+
 function topBetOf(group: PlayerGroup): string | null {
   const byLabel = new Map<string, { cappers: Set<number>; rows: number }>();
   for (const p of group.picks) {
@@ -155,18 +210,35 @@ function topBetOf(group: PlayerGroup): string | null {
   return best;
 }
 
+/** Earliest post time in ms; a missing or unparseable time counts as latest. */
+function earliestPostedMs(picks: SlatePick[]): number {
+  let best = Infinity;
+  for (const p of picks) {
+    const t = p.posted_at ? Date.parse(p.posted_at) : NaN;
+    if (!Number.isNaN(t) && t < best) best = t;
+  }
+  return best;
+}
+
 function toBackedPlayers(groups: PlayerGroup[]): NbaBackedPlayer[] {
   return groups
     .map((g) => ({
-      key: g.key,
-      name: g.name,
-      sharps: sharpCount(g.picks),
-      legs: g.picks.length,
-      bets: slateBetCount(g.picks),
-      topBet: topBetOf(g),
-      team: null as "away" | "home" | null,
+      player: {
+        key: g.key,
+        name: g.name,
+        sharps: sharpCount(g.picks),
+        legs: g.picks.length,
+        bets: slateBetCount(g.picks),
+        topBet: topBetOf(g),
+        team: null as "away" | "home" | null,
+      },
+      first: earliestPostedMs(g.picks),
     }))
-    .sort((a, b) => b.sharps - a.sharps || b.legs - a.legs || a.name.localeCompare(b.name));
+    .sort((a, b) => {
+      const byFirst = a.first === b.first ? 0 : a.first < b.first ? -1 : 1;
+      return b.player.sharps - a.player.sharps || b.player.legs - a.player.legs || byFirst || a.player.name.localeCompare(b.player.name);
+    })
+    .map((x) => x.player);
 }
 
 function buildChips(orderedPicks: SlatePick[]): { handles: string[]; more: number } {
@@ -191,7 +263,7 @@ export function buildNbaPanel(game: SlateGame): NbaPanel {
   const favored = away === home ? null : away > home ? "away" : "home";
   const favoredPicks = favored ? g.ml[favored] : [];
 
-  const players = mergeSurnameGroups(g.players);
+  const players = mergeSurnameGroups(mergeNormalizedGroups(g.players));
   const other = favored ? (favored === "away" ? "home" : "away") : null;
   const rest = new Set<SlatePick>([...g.ml.away, ...g.ml.home]);
   const ordered = favored
