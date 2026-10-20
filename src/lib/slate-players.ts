@@ -116,7 +116,7 @@ function escapeRe(s: string): string {
 /**
  * Drops the leading player name from a selection, trying the full name,
  * initial plus surname ("L. Doncic"), then surname alone. The end boundary
- * is Unicode-aware because  treats accented letters as non-word.
+ * is Unicode-aware because a word boundary treats accented letters as non-word.
  */
 export function stripPlayerName(selection: string, playerName: string): string {
   const s = selection.replace(/\s+/g, " ").trim();
