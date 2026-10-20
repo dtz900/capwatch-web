@@ -12,6 +12,8 @@ export type LeagueChip = {
   /** "mlb" | "nfl" | "nba" draw that league's mark; "all" is text only. */
   league: League | "all";
   caption?: string;
+  /** Pulse a dot by the caption: this board has something to look at right now. */
+  signal?: boolean;
 };
 
 type League = "mlb" | "nfl" | "nba";
@@ -94,12 +96,23 @@ export function LeagueChips({
             </span>
             {c.caption && (
               <span
-                className={`mt-1.5 uppercase font-bold leading-none whitespace-nowrap ${
+                className={`mt-1.5 flex items-center gap-1.5 uppercase font-bold leading-none whitespace-nowrap ${
                   lg ? "text-[9px] tracking-[0.12em] sm:text-[10px] sm:tracking-[0.18em]" : "text-[10px] tracking-[0.18em]"
                 } ${
-                  active ? "text-black/60" : "text-[var(--color-text-muted)] opacity-80"
+                  active
+                    ? "text-black/60"
+                    : c.signal
+                      ? "text-[var(--color-text)] opacity-90"
+                      : "text-[var(--color-text-muted)] opacity-80"
                 }`}
               >
+                {c.signal && !active && (
+                  <span
+                    data-signal
+                    aria-hidden
+                    className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-pos)] shadow-[0_0_0_3px_var(--color-pos-soft)] animate-pulse motion-reduce:animate-none"
+                  />
+                )}
                 {c.caption}
               </span>
             )}
