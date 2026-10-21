@@ -53,6 +53,8 @@ export interface StandingsCardOptions {
   footer: string;
   /** Already ranked; the first row is the hero, at most ten are drawn. */
   rows: StandingsCardRow[];
+  /** League accent (NBA yellow): marquee, rule, hero ring and a faint top wash. Default is the plain off-white card. */
+  accent?: string;
   cacheControl?: string;
 }
 
@@ -105,6 +107,12 @@ function record(c: StandingsCardRow): string {
 function units(v: number): string {
   const one = Math.abs(v * 10 - Math.round(v * 10)) < 1e-9;
   return `${v >= 0 ? "+" : ""}${v.toFixed(one ? 1 : 2)}u`;
+}
+
+function hexAlpha(hex: string, alpha: number): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return hex;
+  return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`;
 }
 
 function unitColor(v: number): string {
@@ -163,7 +171,9 @@ export async function renderStandingsCard(opts: StandingsCardOptions): Promise<R
           height: CARD_H,
           display: "flex",
           flexDirection: "column",
-          background: BG,
+          background: opts.accent
+            ? `radial-gradient(900px 420px at 50% -10%, ${hexAlpha(opts.accent, 0.16)}, rgba(0,0,0,0) 70%), ${BG}`
+            : BG,
           color: OFF,
           padding: "30px 48px 20px",
           fontFamily: "Manrope, Arial, sans-serif",
@@ -171,10 +181,10 @@ export async function renderStandingsCard(opts: StandingsCardOptions): Promise<R
       >
         {/* Marquee */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: 5, color: OFF }}>{opts.marquee}</span>
+          <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: 5, color: opts.accent ?? OFF }}>{opts.marquee}</span>
           <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: 3, color: OFF_FAINT }}>{opts.strip}</span>
         </div>
-        <div style={{ display: "flex", height: 2, background: HAIR, marginTop: 14 }} />
+        <div style={{ display: "flex", height: 2, background: opts.accent ? hexAlpha(opts.accent, 0.7) : HAIR, marginTop: 14 }} />
         <div style={{ display: "flex", height: 1, background: HAIR, marginTop: 3 }} />
 
         {!hero ? (
@@ -195,7 +205,7 @@ export async function renderStandingsCard(opts: StandingsCardOptions): Promise<R
               }}
             >
               <div style={{ display: "flex", position: "relative" }}>
-                {circle(heroAvatar, hero.handle, 210, `4px solid ${unitColor(hero.netUnits)}`)}
+                {circle(heroAvatar, hero.handle, 210, `4px solid ${opts.accent ?? unitColor(hero.netUnits)}`)}
                 {crown3d && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={crown3d} alt="" width={122} style={{ position: "absolute", top: -56, right: -6 }} />
