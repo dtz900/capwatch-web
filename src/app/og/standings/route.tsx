@@ -104,7 +104,7 @@ export async function GET(request: Request): Promise<Response> {
             : `FINAL STANDINGS · ${dateLabel}`,
     strip: `${graded} PICKS · ${sharps} SHARPS`,
     heroLabel: roundLabel ? "SHARP OF THE SERIES" : week ? "SHARP OF THE WEEK" : "TONIGHT'S TOP SHARP",
-    footer: sport === "nba" ? "tailslips.com/slate?sport=nba" : "tailslips.com/slate",
+    footer: sport === "nba" ? "tailslips.com" : "tailslips.com/slate",
     rows: cardRows,
     // NBA gets the league's yellow (same hue as the site wash); MLB and NFL keep the plain card.
     accent: sport === "nba" ? "#eab308" : undefined,
