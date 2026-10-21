@@ -1,6 +1,7 @@
 /**
  * A faint league wash behind the whole page: blue when MLB is selected, red
- * for NFL, warm orange for NBA, nothing on the combined view. Fixed and non-interactive, painted
+ * for NFL, yellow for NBA (orange read as the NFL red on opening night,
+ * David 2026-10-20), nothing on the combined view. Fixed and non-interactive, painted
  * between the page background and the content (negative z-index against
  * the root canvas), so nothing else on the page has to know about it.
  */
@@ -12,8 +13,8 @@ const WASH: Record<"mlb" | "nfl" | "nba", string> = {
     "radial-gradient(1400px 720px at 50% -12%, rgba(220, 38, 38, 0.24), rgba(220, 38, 38, 0) 62%)," +
     " linear-gradient(180deg, rgba(153, 27, 27, 0.10) 0%, rgba(153, 27, 27, 0) 42%)",
   nba:
-    "radial-gradient(1400px 720px at 50% -12%, rgba(234, 88, 12, 0.24), rgba(234, 88, 12, 0) 62%)," +
-    " linear-gradient(180deg, rgba(154, 52, 18, 0.10) 0%, rgba(154, 52, 18, 0) 42%)",
+    "radial-gradient(1400px 720px at 50% -12%, rgba(234, 179, 8, 0.22), rgba(234, 179, 8, 0) 62%)," +
+    " linear-gradient(180deg, rgba(161, 98, 7, 0.10) 0%, rgba(161, 98, 7, 0) 42%)",
 };
 
 export function SportTint({ sport }: { sport: string | null | undefined }) {
