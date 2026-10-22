@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { LiveEntryBadge } from "./LiveEntryBadge";
 import { SlatePickRow } from "@/components/slate/SlatePickRow";
 import { VersusPickRow } from "@/components/slate/VersusPickRow";
+import { GamePicks } from "@/components/slate/GamePicks";
 import { PendingBlock } from "@/components/capper/PendingBlock";
 import { HistoryRow } from "@/components/capper/HistoryRow";
 import type { HistoryPick, SlatePick } from "@/lib/types";
@@ -98,5 +99,17 @@ describe("LIVE badge on pick rows", () => {
       />,
     );
     expect(screen.getAllByText("Live").length).toBeGreaterThan(0);
+  });
+
+  it("by-capper slate view renders it on the live pick (Codex P2 on #216)", () => {
+    const picks: SlatePick[] = [
+      { ...slatePick, capper_id: 1, handle: "a", selection: "Yankees ML", is_live: true },
+      { ...slatePick, capper_id: 1, handle: "a", selection: "Yankees -1.5", market: "spread", line: -1.5 },
+      { ...slatePick, capper_id: 2, handle: "b", selection: "Red Sox ML" },
+      { ...slatePick, capper_id: 2, handle: "b", selection: "Over 8.5", market: "total", line: 8.5 },
+    ];
+    render(<GamePicks picks={picks} sport="MLB" awayTeam="BOS" homeTeam="NYY" showPnl={false} />);
+    fireEvent.click(screen.getByRole("tab", { name: "By capper" }));
+    expect(screen.getAllByText("Live")).toHaveLength(1);
   });
 });
