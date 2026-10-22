@@ -493,6 +493,9 @@ export interface TodayPickEntry {
   /** Present on parlay rows once the feed serves it (fadeai-platform #87).
       Ordered by leg_index ascending; the card expands these on click. */
   legs?: HistoryPickLeg[] | null;
+  /** Posted after the game started (live entry); on a parlay, any leg.
+      Optional: payloads before fadeai-platform #414 omit it. */
+  is_live?: boolean;
 }
 
 export interface TodayPicksResponse {
