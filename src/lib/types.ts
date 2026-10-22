@@ -33,6 +33,9 @@ export interface LastPick {
   profit_units: number | null;
   leg_count: number | null;
   tweet_url: string | null;
+  /** Posted after the game started (live entry); on a parlay, any leg.
+   * Optional: snapshots built before fadeai-platform #414 omit it. */
+  is_live?: boolean;
 }
 
 export interface CapperRow {

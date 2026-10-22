@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { LastPick } from "@/lib/types";
+import { LiveEntryBadge } from "@/components/common/LiveEntryBadge";
 import { formatMarketLabel, normalizeMarket } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import { XIcon } from "@/components/icons/XIcon";
@@ -167,8 +168,11 @@ function PickDetails({ pick }: { pick: LastPick }) {
   return (
     <div className="flex flex-col">
       <div className="flex items-center justify-between gap-2 mb-3">
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
-          {formatMarketLabel(pick)}
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+            {formatMarketLabel(pick)}
+          </span>
+          {pick.is_live && <LiveEntryBadge />}
         </span>
         <span className={`text-[10px] font-extrabold uppercase tracking-[0.10em] px-2 py-[3px] rounded ${outcomeBg}`}>
           {pick.outcome === "W" ? "Win" : pick.outcome === "L" ? "Loss" : "Push"}
