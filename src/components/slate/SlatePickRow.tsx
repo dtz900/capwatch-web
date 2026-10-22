@@ -3,6 +3,7 @@ import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { XIcon } from "@/components/icons/XIcon";
 import { SignalsIcon } from "@/components/icons/SignalsIcon";
 import { OutcomeBadge } from "./OutcomeBadge";
+import { LiveEntryBadge } from "@/components/common/LiveEntryBadge";
 import { formatPickText } from "@/lib/bet-format";
 import { trimUnits } from "@/lib/formatters";
 import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
@@ -105,6 +106,7 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
         </div>
 
         <div className="shrink-0 text-right flex items-center justify-end gap-1.5">
+          {pick.is_live && <LiveEntryBadge />}
           {pick.outcome ? (
             <OutcomeBadge outcome={pick.outcome} profitUnits={pick.profit_units} />
           ) : (
@@ -162,6 +164,7 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
             {betText}
           </span>
           <span className="shrink-0 text-[11px] tabular-nums flex items-center gap-1.5">
+            {pick.is_live && <LiveEntryBadge />}
             {pick.outcome ? (
               <OutcomeBadge outcome={pick.outcome} profitUnits={pick.profit_units} />
             ) : (

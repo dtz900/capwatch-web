@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { XIcon } from "@/components/icons/XIcon";
+import { LiveEntryBadge } from "@/components/common/LiveEntryBadge";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart, displayUnits } from "@/lib/formatters";
 import type { HistoryPick } from "@/lib/types";
@@ -176,17 +177,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
               Ladder{pick.ladder_day ? ` · D${pick.ladder_day}` : ""}
             </span>
           )}
-          {pick.is_live && (
-            <span
-              className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
-                         text-[9px] uppercase tracking-[0.12em] font-bold
-                         bg-[rgba(25,245,124,0.10)] border border-[rgba(25,245,124,0.45)]
-                         text-[var(--color-pos)]"
-              title="Live entry: posted after first pitch at in-game odds."
-            >
-              Live
-            </span>
-          )}
+          {pick.is_live && <LiveEntryBadge />}
           {pick.deleted_after_game_start && (
             <span
               className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded
@@ -344,17 +335,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
                 Ladder{pick.ladder_day ? ` · D${pick.ladder_day}` : ""}
               </span>
             )}
-            {pick.is_live && (
-              <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded
-                           text-[9px] uppercase tracking-[0.12em] font-bold
-                           bg-[rgba(25,245,124,0.10)] border border-[rgba(25,245,124,0.45)]
-                           text-[var(--color-pos)]"
-                title="Live entry: posted after first pitch at in-game odds."
-              >
-                Live
-              </span>
-            )}
+            {pick.is_live && <LiveEntryBadge />}
             {pick.deleted_after_game_start ? (
               <span
                 className="inline-flex items-center px-1.5 py-0.5 rounded
