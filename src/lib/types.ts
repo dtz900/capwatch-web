@@ -33,6 +33,9 @@ export interface LastPick {
   profit_units: number | null;
   leg_count: number | null;
   tweet_url: string | null;
+  /** Posted after the game started (live entry); on a parlay, any leg.
+   * Optional: snapshots built before fadeai-platform #414 omit it. */
+  is_live?: boolean;
 }
 
 export interface CapperRow {
@@ -130,6 +133,9 @@ export interface SlatePick {
   source: string | null;
   outcome: Outcome | null;
   profit_units: number | null;
+  /** Posted after the bound game started (live entry): LIVE badge.
+   * Optional: payloads before 2026-10-22 omit it. */
+  is_live?: boolean;
 }
 
 export interface DaySummary {
@@ -243,6 +249,8 @@ export interface HistoryPickLeg {
    * settles on the surviving legs. */
   outcome: "W" | "L" | "P" | "V" | null;
   game_label: string | null;
+  /** This leg was posted after its game started (live entry). */
+  is_live?: boolean;
 }
 
 export interface HistoryPick {
@@ -276,9 +284,10 @@ export interface HistoryPick {
    * brand-killer pattern (capper pulling the receipt after the bet
    * went bad). Always false for multi-leg parlays. */
   deleted_after_game_start?: boolean;
-  /** Posted after the bound game's first pitch: a live entry at in-game
-   * odds. The badge tells followers what they're tailing; live prices
-   * have no meaningful close comparison so CLV math excludes them. */
+  /** Posted after the bound game started: a live entry at in-game odds.
+   * The badge tells followers what they're tailing. Live prices have no
+   * pregame close to compare, so their CLV is stamped 0 (owner decision
+   * 2026-10-22). On a parlay row: true when any leg is live. */
   is_live?: boolean;
   /** Bankroll-challenge rung: the capper rolls one bank forward day by day
    * ("$100 into $178", then "$178 into $352"). The stake comes from the
@@ -487,6 +496,9 @@ export interface TodayPickEntry {
   /** Present on parlay rows once the feed serves it (fadeai-platform #87).
       Ordered by leg_index ascending; the card expands these on click. */
   legs?: HistoryPickLeg[] | null;
+  /** Posted after the game started (live entry); on a parlay, any leg.
+      Optional: payloads before fadeai-platform #414 omit it. */
+  is_live?: boolean;
 }
 
 export interface TodayPicksResponse {

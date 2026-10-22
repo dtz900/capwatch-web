@@ -7,6 +7,7 @@ import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { Sparkline } from "@/components/leaderboard/Sparkline";
 import { MomentumStrip } from "@/components/leaderboard/MomentumStrip";
 import { StatusPill } from "@/components/my-tails/StatusPill";
+import { LiveEntryBadge } from "@/components/common/LiveEntryBadge";
 import { formatUnits, formatUnitsSmart, trimUnits } from "@/lib/formatters";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 
@@ -360,6 +361,7 @@ export function StableCard({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {p.is_live && <LiveEntryBadge />}
                     {p.units != null && (
                       <span
                         className="text-[10px] font-bold tabular-nums text-[var(--color-text-muted)]"

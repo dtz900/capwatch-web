@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { XIcon } from "@/components/icons/XIcon";
+import { LiveEntryBadge } from "@/components/common/LiveEntryBadge";
 import { AffiliatePicker } from "@/components/affiliate/AffiliatePicker";
 import { AffiliateDisclaimer } from "@/components/affiliate/AffiliateDisclaimer";
 import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
@@ -111,6 +112,7 @@ function PendingRow({
           <div className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
             {stake && <span>{stake}</span>}
             {posted && <span className="opacity-80">{posted}</span>}
+            {pick.is_live && <LiveEntryBadge />}
             {isDeleted && !deletedPostStart && (
               <span
                 className="inline-flex items-center px-1.5 py-0.5 rounded

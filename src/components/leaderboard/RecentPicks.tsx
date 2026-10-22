@@ -1,6 +1,7 @@
 import type { LastPick } from "@/lib/types";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
+import { LiveEntryBadge } from "@/components/common/LiveEntryBadge";
 
 interface Props {
   picks: LastPick[];
@@ -56,6 +57,7 @@ export function RecentPicks({ picks, limit = 5 }: Props) {
             <span className="flex-1 min-w-0 truncate text-[11px] font-semibold text-[var(--color-text)]">
               {formatBetDescriptor(pick)}
             </span>
+            {pick.is_live && <LiveEntryBadge />}
             {pick.outcome === "P" ? (
               <span className="shrink-0 text-[10px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
                 Push

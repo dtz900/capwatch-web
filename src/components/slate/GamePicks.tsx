@@ -5,6 +5,7 @@ import { XIcon } from "@/components/icons/XIcon";
 import { SlatePickRow } from "./SlatePickRow";
 import { VersusPickRow } from "./VersusPickRow";
 import { OutcomeBadge } from "./OutcomeBadge";
+import { LiveEntryBadge } from "@/components/common/LiveEntryBadge";
 import { PicksViewToggle } from "./PicksViewToggle";
 import { formatPickText } from "@/lib/bet-format";
 import { trimUnits } from "@/lib/formatters";
@@ -353,6 +354,7 @@ function CompactPickLine({ pick, ctx }: { pick: SlatePick; ctx: Ctx }) {
         {formatPickText({ pick, awayTeam: ctx.awayTeam, homeTeam: ctx.homeTeam })}
       </span>
       <span className="flex items-center justify-end gap-1.5 text-[11px] tabular-nums">
+        {pick.is_live && <LiveEntryBadge />}
         {pick.outcome ? (
           <OutcomeBadge outcome={pick.outcome} profitUnits={pick.profit_units} />
         ) : (

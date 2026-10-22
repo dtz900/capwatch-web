@@ -156,3 +156,14 @@ it("provider-less renders show no affordance", () => {
   render(<StableCard capper={sample} onUntail={() => {}} todayPicks={[straightPick]} />);
   expect(screen.queryByLabelText(/to bet slip/)).not.toBeInTheDocument();
 });
+
+it("today pick rows show the LIVE badge for live entries only", () => {
+  render(
+    <StableCard
+      capper={sample}
+      onUntail={() => {}}
+      todayPicks={[{ ...straightPick, is_live: true }, { ...straightPick, pick_id: 9002, selection: "BOS" }]}
+    />
+  );
+  expect(screen.getAllByText("Live")).toHaveLength(1);
+});
