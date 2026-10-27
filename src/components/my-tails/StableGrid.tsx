@@ -8,11 +8,14 @@ import { useAuth } from "@/components/auth/AuthProvider";
 export function StableGrid({
   initial,
   todayByCapper = {},
+  todayDate = null,
   scopesByCapper = {},
   statsByCapper = {},
 }: {
   initial: CapperRow[];
   todayByCapper?: Record<string, TodayPickEntry[]>;
+  /** The feed's slate date; picks on later dates file under UPCOMING. */
+  todayDate?: string | null;
   scopesByCapper?: Record<string, string[]>;
   statsByCapper?: Record<string, ScopeStat[]>;
 }) {
@@ -82,6 +85,7 @@ export function StableGrid({
           capper={c}
           onUntail={() => untail(String(c.capper_id))}
           todayPicks={todayByCapper[String(c.capper_id)] ?? []}
+          todayDate={todayDate}
           scopes={scopes[String(c.capper_id)] ?? []}
           scopeStats={statsByCapper[String(c.capper_id)] ?? []}
           onUntailMarket={(m) => untailMarket(String(c.capper_id), m)}
