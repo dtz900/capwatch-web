@@ -197,7 +197,7 @@ export function BetSlipProvider({
         market: (payload.market as string | null) ?? null,
         selection: p.selection,
         line: (payload.line as number | null) ?? null,
-        game_date: todayDate,
+        game_date: (payload.game_date as string | null) ?? todayDate,
         created_at: new Date().toISOString(),
         outcome: null,
       };
@@ -410,13 +410,15 @@ export function BetSlipProvider({
     [entries, todayDate, resetAt]
   );
 
-  // The slip renders as a daily card: only today's entries show. History
+  // The slip renders as a daily card: today's entries show, plus tails on
+  // upcoming games (an NFL spread tailed on Tuesday for Sunday) so a tail
+  // placed from the UPCOMING strip does not vanish until game day. History
   // stays in user_bet_slips (it feeds the all-time total and the future
   // bet-log surface); yesterday's graded bets roll off at the date flip.
   const todayEntries = useMemo(() => {
     if (entries === null) return null;
     if (!todayDate) return entries;
-    return entries.filter((e) => e.game_date === todayDate);
+    return entries.filter((e) => e.game_date != null && e.game_date >= todayDate);
   }, [entries, todayDate]);
 
   const value = useMemo(
