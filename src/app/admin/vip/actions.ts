@@ -39,24 +39,33 @@ async function readError(
   method: "POST" | "DELETE",
 ): Promise<string> {
   if (res.status === 404) {
-    let detail: unknown = null;
+    let detail: unknown;
+    let parsed = false;
     try {
       detail = ((await res.json()) as { detail?: unknown }).detail;
+      parsed = true;
     } catch {
-      // Non-JSON 404 falls through to the generic mapping below.
+      // Non-JSON 404 falls through to the generic message below.
     }
     if (typeof detail === "string" && NOT_FOUND_MESSAGES[detail]) {
       return NOT_FOUND_MESSAGES[detail];
     }
-    if (method === "DELETE") return "No subscription to revoke";
+    if (parsed && method === "DELETE") return "No subscription to revoke";
   }
   return `Request failed (${res.status})`;
+}
+
+const DAYS_ERROR = "Days must be a whole number from 1 to 3650";
+
+function validDays(days: number): boolean {
+  return Number.isInteger(days) && days >= 1 && days <= 3650;
 }
 
 async function call(
   method: "POST" | "DELETE",
   input: VipGrantInput,
 ): Promise<VipGrantResult> {
+  if (!validDays(input.days)) return { ok: false, error: DAYS_ERROR };
   try {
     const res = await fetch(`${API_BASE}/api/admin/vip/subscriptions`, {
       method,

@@ -10,6 +10,7 @@ vi.mock("./actions", () => ({
 }));
 
 import { VipGrantForm } from "./VipGrantForm";
+import { grantVipSubscriptionAction } from "./actions";
 
 describe("VipGrantForm", () => {
   it("grant shows result line", async () => {
@@ -24,7 +25,40 @@ describe("VipGrantForm", () => {
 
   it("revoke shows error", async () => {
     render(<VipGrantForm />);
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText(/capper/i), { target: { value: "swampy" } });
     fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
     await waitFor(() => expect(screen.getByText("No subscription to revoke")).toBeTruthy());
+  });
+
+  it("grant without period end omits until clause", async () => {
+    vi.mocked(grantVipSubscriptionAction).mockResolvedValueOnce({
+      ok: true,
+      row: { capper_id: 1, user_id: "u", status: "active", current_period_end: null },
+    });
+    render(<VipGrantForm />);
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText(/capper/i), { target: { value: "swampy" } });
+    fireEvent.click(screen.getByRole("button", { name: "Grant" }));
+    await waitFor(() => expect(screen.getByText("Granted: @swampy for a@b.com")).toBeTruthy());
+  });
+
+  it("rejects out-of-range days without calling the action", async () => {
+    vi.mocked(grantVipSubscriptionAction).mockClear();
+    render(<VipGrantForm />);
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText(/capper/i), { target: { value: "swampy" } });
+    fireEvent.change(screen.getByLabelText(/days/i), { target: { value: "99999" } });
+    fireEvent.click(screen.getByRole("button", { name: "Grant" }));
+    await waitFor(() =>
+      expect(screen.getByText("Days must be a whole number from 1 to 3650")).toBeTruthy(),
+    );
+    expect(grantVipSubscriptionAction).not.toHaveBeenCalled();
+  });
+
+  it("requires email and capper", async () => {
+    render(<VipGrantForm />);
+    fireEvent.click(screen.getByRole("button", { name: "Grant" }));
+    await waitFor(() => expect(screen.getByText("Email and capper are required")).toBeTruthy());
   });
 });

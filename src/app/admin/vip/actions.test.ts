@@ -47,4 +47,25 @@ describe("vip admin actions", () => {
     mockFetch(500, {});
     expect(await grantVipSubscriptionAction(input)).toEqual({ ok: false, error: "Request failed (500)" });
   });
+
+  it("non-JSON 404 falls through to generic error", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => {
+        throw new Error("not json");
+      },
+    }) as unknown as typeof fetch;
+    expect(await revokeVipSubscriptionAction(input)).toEqual({ ok: false, error: "Request failed (404)" });
+  });
+
+  it("action rejects days out of range", async () => {
+    const fn = mockFetch(200, row);
+    for (const days of [0, 1.5, -5, 99999, NaN]) {
+      const err = { ok: false, error: "Days must be a whole number from 1 to 3650" };
+      expect(await grantVipSubscriptionAction({ ...input, days })).toEqual(err);
+      expect(await revokeVipSubscriptionAction({ ...input, days })).toEqual(err);
+    }
+    expect(fn).not.toHaveBeenCalled();
+  });
 });

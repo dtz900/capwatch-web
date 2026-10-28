@@ -22,6 +22,14 @@ export function VipGrantForm() {
   function submit(kind: "grant" | "revoke") {
     const handle = capper.trim().replace(/^@/, "");
     const userEmail = email.trim();
+    if (!userEmail || !handle) {
+      setLine("Email and capper are required");
+      return;
+    }
+    if (!Number.isInteger(days) || days < 1 || days > 3650) {
+      setLine("Days must be a whole number from 1 to 3650");
+      return;
+    }
     const input = { user_email: userEmail, capper: handle, days };
     startTransition(async () => {
       let result: VipGrantResult;
@@ -36,8 +44,9 @@ export function VipGrantForm() {
       if (!result.ok) {
         setLine(result.error);
       } else if (kind === "grant") {
-        const until = (result.row.current_period_end ?? "").slice(0, 10);
-        setLine(`Granted: @${handle} for ${userEmail} until ${until}`);
+        const end = result.row.current_period_end;
+        const until = end ? ` until ${end.slice(0, 10)}` : "";
+        setLine(`Granted: @${handle} for ${userEmail}${until}`);
       } else {
         setLine(`Revoked: @${handle} for ${userEmail}`);
       }
