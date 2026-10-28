@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
-export type EmailPrefColumn = "email_tail_alerts" | "email_tof_deals";
+export type EmailPrefColumn = "email_tail_alerts" | "email_tof_deals" | "email_vip_picks";
 
 /* One boolean email preference on ts_profiles. RLS row policy plus a
  * column-scoped grant restrict the write to exactly this column on the

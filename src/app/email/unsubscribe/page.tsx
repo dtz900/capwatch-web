@@ -6,7 +6,7 @@ import { unsubKind, unsubPayload } from "./kinds";
 
 export const dynamic = "force-dynamic";
 
-/* Signed one-click unsubscribe for tail email alerts. Token scheme must
+/* Signed one-click unsubscribe (tail alerts, k=tof, k=vip). Token scheme must
  * stay in sync with the backend's core/email_unsub.py: hex
  * HMAC-SHA256(EMAIL_UNSUB_SECRET, user_id). The service client bypasses
  * RLS, so a verified token is the only thing authorizing the write. */
