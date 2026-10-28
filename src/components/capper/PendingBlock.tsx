@@ -11,7 +11,7 @@ import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
 
-function formatPostedAt(iso: string | null): string | null {
+export function formatPostedAt(iso: string | null): string | null {
   if (!iso) return null;
   const posted = new Date(iso).getTime();
   const diffMin = Math.floor((Date.now() - posted) / 60_000);

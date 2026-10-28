@@ -36,7 +36,8 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Window, SportFilter } from "@/lib/types";
-import { vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { capperVipEnabled, vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { CapperVipSection } from "@/components/vip/CapperVipSection";
 import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
 
 interface PageProps {
@@ -490,6 +491,15 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <div className="mb-6">
             <StatBandLive />
           </div>
+
+          {capperVipEnabled() && (
+            <div className="mb-6">
+              <CapperVipSection
+                capperId={profile.capper.id}
+                handle={profile.capper.handle ?? ""}
+              />
+            </div>
+          )}
 
           {/* Dossier is paid-tier inventory, held back from the free launch
               (decisions/log.md 2026-07-11). */}
