@@ -103,7 +103,7 @@ describe("VipPickComposer", () => {
   it("composer maps 422 to the bounds message", async () => {
     await postExpecting(
       new client.VipApiError(422, "Unprocessable Entity"),
-      "Check units (0.1 to 10) and odds (100 to 10000 either side).",
+      "Check units, odds, and lines: units 0.1 to 10, odds 100 to 10000 either side, lines as numbers.",
     );
   });
 
@@ -163,7 +163,7 @@ describe("VipPickComposer", () => {
     expect(body.legs.map((l: { odds: number | null }) => l.odds)).toEqual([null, null]);
   });
 
-  const BOUNDS = "Check units (0.1 to 10) and odds (100 to 10000 either side).";
+  const BOUNDS = "Check units, odds, and lines: units 0.1 to 10, odds 100 to 10000 either side, lines as numbers.";
 
   async function twoLegParlay() {
     await fillOneLeg();

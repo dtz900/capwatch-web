@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
 import { TailButton } from "@/components/auth/TailButton";
 import { EligibilityBadges } from "@/components/vip/EligibilityBadges";
+import { formatPrice } from "@/components/vip/format";
 import { fetchCapperProfile } from "@/lib/api";
 import { API_BASE } from "@/lib/config";
 import { capperVipEnabled } from "@/lib/flags";
@@ -31,11 +32,6 @@ async function fetchStatus(capperId: number): Promise<VipCapperStatus | null> {
   } catch {
     return null;
   }
-}
-
-function formatPrice(cents: number): string {
-  const dollars = cents / 100;
-  return `$${Number.isInteger(dollars) ? dollars : dollars.toFixed(2)}/mo`;
 }
 
 export default async function SubscribePage({ params }: PageProps) {
@@ -89,7 +85,7 @@ export default async function SubscribePage({ params }: PageProps) {
         </div>
         {seller ? (
           <div className="text-[20px] font-extrabold mb-3 text-[var(--color-gold)]">
-            {formatPrice(seller.price_cents)}
+            ${formatPrice(seller.price_cents)}/mo
           </div>
         ) : null}
         {status ? (

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { LockedPicks } from "./LockedPicks";
 import type { VipCapperStatus, VipLockedPick } from "@/lib/vip/types";
@@ -36,6 +36,12 @@ const pick: VipLockedPick = {
 };
 
 describe("LockedPicks", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-27T16:00:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
+
   it("locked anonymous shows reveal time not selection", () => {
     render(
       <LockedPicks

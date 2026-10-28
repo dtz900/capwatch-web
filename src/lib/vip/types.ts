@@ -37,9 +37,11 @@ export interface VipLockedPick {
   game_id: string | null;
   parlay_id: number | null;
   parlay_leg_index: number | null;
-  stat_name: string | null;
-  direction: string | null;
-  player_name: string | null;
+  /* Not in the platform's _full_pick today; optional so a later addition is
+     picked up without a type change. */
+  stat_name?: string | null;
+  direction?: string | null;
+  player_name?: string | null;
 }
 
 export function isLockedPick(

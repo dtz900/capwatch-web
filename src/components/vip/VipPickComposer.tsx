@@ -16,7 +16,8 @@ import { goldBtnCls } from "./SellerSetupCard";
 
 const POSTED_MESSAGE = "Posted. Locked to subscribers until the game starts.";
 const POSTED_MS = 5000;
-const BOUNDS_MESSAGE = "Check units (0.1 to 10) and odds (100 to 10000 either side).";
+const BOUNDS_MESSAGE =
+  "Check units, odds, and lines: units 0.1 to 10, odds 100 to 10000 either side, lines as numbers.";
 
 export function composerError(err: unknown): string {
   if (err instanceof VipApiError) {
@@ -206,10 +207,20 @@ export function VipPickComposer({ me, onPosted }: { me: VipMe; onPosted: (ids: n
           Post VIP pick
         </button>
         {!fieldsOk && (
-          <span className="text-[11px] text-[#f87171] font-semibold">{BOUNDS_MESSAGE}</span>
+          <span role="status" className="text-[11px] text-[#f87171] font-semibold">
+            {BOUNDS_MESSAGE}
+          </span>
         )}
-        {error && <span className="text-[11px] text-[#f87171] font-semibold">{error}</span>}
-        {posted && <span className="text-[11px] text-[#4ade80] font-semibold">{POSTED_MESSAGE}</span>}
+        {error && (
+          <span role="status" className="text-[11px] text-[#f87171] font-semibold">
+            {error}
+          </span>
+        )}
+        {posted && (
+          <span role="status" className="text-[11px] text-[#4ade80] font-semibold">
+            {POSTED_MESSAGE}
+          </span>
+        )}
       </div>
     </div>
   );

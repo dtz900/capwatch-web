@@ -49,8 +49,8 @@ export default function VipRules() {
           stretch by moving losses into one bucket.
         </p>
         <p className={P}>
-          Eligibility is recomputed every night. If a capper is negative two nights in a row,
-          selling switches off. It switches back on the first night they are positive again. The
+          Eligibility is recomputed every night. If a capper fails the test two nights in a row,
+          selling switches off. It switches back on the first night they pass it again. The
           floor can rise over time, and if it does, this page will say so.
         </p>
 

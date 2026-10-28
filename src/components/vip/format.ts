@@ -20,12 +20,20 @@ export function formatPrice(cents: number): string {
   return Number.isInteger(dollars) ? String(dollars) : dollars.toFixed(2);
 }
 
-/** Wall-clock reveal time in Eastern, e.g. "7:05 PM ET". */
-export function formatRevealTime(iso: string): string {
-  const t = new Date(iso).toLocaleTimeString("en-US", {
+function etDay(d: Date): string {
+  return d.toLocaleDateString("en-US", { timeZone: "America/New_York" });
+}
+
+/** Wall-clock reveal time in Eastern, e.g. "7:05 PM ET"; a reveal on another
+ *  ET day than `now` leads with the weekday, e.g. "Wed 7:05 PM ET". */
+export function formatRevealTime(iso: string, now: Date = new Date()): string {
+  const at = new Date(iso);
+  const t = at.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     timeZone: "America/New_York",
   });
-  return `${t} ET`;
+  if (etDay(at) === etDay(now)) return `${t} ET`;
+  const wd = at.toLocaleDateString("en-US", { weekday: "short", timeZone: "America/New_York" });
+  return `${wd} ${t} ET`;
 }

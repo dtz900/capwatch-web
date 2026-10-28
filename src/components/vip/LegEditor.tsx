@@ -97,6 +97,7 @@ export function LegEditor({ sport, legs, onChange, token, legOddsDisabled = fals
           onChange={(e) => setGameDate(e.target.value)}
         />
         <input
+          aria-label="Team filter"
           className={`${inputCls} w-32`}
           placeholder="team (optional)"
           value={team}
@@ -153,6 +154,7 @@ export function LegEditor({ sport, legs, onChange, token, legOddsDisabled = fals
               ))}
             </select>
             <input
+              aria-label={`Leg ${idx + 1} selection`}
               className={`${inputCls} flex-1 min-w-[160px]`}
               placeholder='selection text, e.g. "Yankees ML"'
               value={leg.selection}
@@ -190,6 +192,7 @@ export function LegEditor({ sport, legs, onChange, token, legOddsDisabled = fals
             <div className="flex flex-wrap gap-2 items-center">
               {leg.type === "custom" && (
                 <input
+                  aria-label={`Leg ${idx + 1} custom stat`}
                   className={`${inputCls} w-40`}
                   placeholder="stat, e.g. first_half_total"
                   value={leg.statName}
