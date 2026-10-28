@@ -29,6 +29,15 @@ export function composerError(err: unknown): string {
     if (err.status === 400 && err.detail === "leg_missing_game") {
       return "Every leg needs a game from the list.";
     }
+    if (err.status === 400 && err.detail === "unknown_stat_name") {
+      return "That market is not gradeable yet. Pick a standard market.";
+    }
+    if (err.status === 400 && err.detail === "selection_not_in_game") {
+      return "The selection must name one of the two teams in the game you picked.";
+    }
+    if (err.status === 409 && err.detail === "duplicate_pick") {
+      return "You already posted this pick a few minutes ago.";
+    }
     if (err.status === 422) return BOUNDS_MESSAGE;
   }
   return "Could not post the pick. Try again.";
@@ -133,7 +142,7 @@ export function VipPickComposer({
     setError(null);
     setPosted(false);
     try {
-      const inputs = legs.map(legToInput).map((l) => (useCombined ? { ...l, odds: null } : l));
+      const inputs = legs.map((l) => legToInput(l, activeSport)).map((l) => (useCombined ? { ...l, odds: null } : l));
       const res = await postVipPick(
         {
           sport: activeSport,

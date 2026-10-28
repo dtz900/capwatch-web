@@ -93,6 +93,27 @@ describe("VipPickComposer", () => {
     );
   });
 
+  it("composer maps 400 unknown_stat_name", async () => {
+    await postExpecting(
+      new client.VipApiError(400, "unknown_stat_name"),
+      "That market is not gradeable yet. Pick a standard market.",
+    );
+  });
+
+  it("composer maps 400 selection_not_in_game", async () => {
+    await postExpecting(
+      new client.VipApiError(400, "selection_not_in_game"),
+      "The selection must name one of the two teams in the game you picked.",
+    );
+  });
+
+  it("composer maps 409 duplicate_pick", async () => {
+    await postExpecting(
+      new client.VipApiError(409, "duplicate_pick"),
+      "You already posted this pick a few minutes ago.",
+    );
+  });
+
   it("composer maps 400 leg_missing_game", async () => {
     await postExpecting(
       new client.VipApiError(400, "leg_missing_game"),

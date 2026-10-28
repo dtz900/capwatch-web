@@ -19,6 +19,14 @@ describe("legDraft", () => {
     expect(out).toEqual({ selection: "Yankees ML", game_id: "401", odds: -120, stat_name: "win" });
   });
 
+  it("legToInput team_runs yields team_points for NBA and team_runs for MLB", () => {
+    const leg = { ...EMPTY_LEG, type: "team_runs" as const, selection: "BOS over 112.5", direction: "over" as const, line: "112.5" };
+    expect(legToInput(leg, "NBA")).toMatchObject({ stat_name: "team_points", direction: "over", line: 112.5 });
+    expect(legToInput(leg, "NFL")).toMatchObject({ stat_name: "team_points" });
+    expect(legToInput(leg, "MLB")).toMatchObject({ stat_name: "team_runs" });
+    expect(legToInput(leg)).toMatchObject({ stat_name: "team_runs" });
+  });
+
   it("legToInput spread carries the line, nrfi defaults under 0.5", () => {
     expect(legToInput({ ...EMPTY_LEG, type: "spread", selection: "NYY -1.5", line: "-1.5" })).toEqual({
       selection: "NYY -1.5",

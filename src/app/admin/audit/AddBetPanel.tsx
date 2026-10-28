@@ -90,7 +90,7 @@ export function AddBetPanel() {
       setResult(null);
       const res = await addManualBetAction({
         capper: capper.trim(),
-        legs: legs.map(legToInput),
+        legs: legs.map((l) => legToInput(l)),
         units: units.trim() === "" ? null : Number(units),
         combined_odds: combinedOdds.trim() === "" ? null : Number(combinedOdds),
         tweet_url: tweetUrl.trim() || null,

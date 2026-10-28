@@ -143,7 +143,9 @@ export const VIP_ERRORS = {
     "leg_missing_game",
     "unknown_sport",
     "bad_date",
+    "unknown_stat_name",
+    "selection_not_in_game",
   ],
-  409: ["no_eligible_sport", "game_started", "game_start_unknown"],
+  409: ["no_eligible_sport", "game_started", "game_start_unknown", "duplicate_pick"],
   404: ["capper_not_found", "seller_not_found"],
 } as const;

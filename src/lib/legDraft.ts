@@ -64,7 +64,10 @@ export const LEG_TYPE_LABEL: Record<LegType, string> = {
   custom: "Custom",
 };
 
-export function legToInput(leg: LegDraft): LegInputShape {
+/** `sport` picks the team-total stat: MLB grades `team_runs`, NFL and NBA
+ *  grade `team_points` (the platform 400s unknown_stat_name otherwise).
+ *  Defaults to MLB so the admin panel is unchanged. */
+export function legToInput(leg: LegDraft, sport: string = "MLB"): LegInputShape {
   const line = leg.line.trim() === "" ? null : Number(leg.line);
   const odds = leg.odds.trim() === "" ? null : Number(leg.odds);
   const base: LegInputShape = {
@@ -80,7 +83,12 @@ export function legToInput(leg: LegDraft): LegInputShape {
     case "total":
       return { ...base, stat_name: "total", direction: leg.direction || null, line };
     case "team_runs":
-      return { ...base, stat_name: "team_runs", direction: leg.direction || null, line };
+      return {
+        ...base,
+        stat_name: sport.toUpperCase() === "MLB" ? "team_runs" : "team_points",
+        direction: leg.direction || null,
+        line,
+      };
     case "nrfi":
       return { ...base, stat_name: "nrfi", direction: leg.direction || "under", line: 0.5 };
     case "player":
