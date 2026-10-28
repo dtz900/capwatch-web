@@ -97,6 +97,22 @@ export function legToInput(leg: LegDraft): LegInputShape {
   }
 }
 
+/** American odds text: empty -> null, a finite integer -> that number, else "invalid". */
+export function parseOddsField(s: string): number | null | "invalid" {
+  const t = s.trim();
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) && Number.isInteger(n) ? n : "invalid";
+}
+
+/** Line text: empty -> null, a finite number -> that number, else "invalid". */
+export function parseLineField(s: string): number | null | "invalid" {
+  const t = s.trim();
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : "invalid";
+}
+
 /** Today's date in Eastern as YYYY-MM-DD (the slate date the game pickers default to). */
 export function todayEt(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());

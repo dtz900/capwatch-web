@@ -196,4 +196,13 @@ describe("CapperVipSection", () => {
     expect(await screen.findByRole("button", { name: "Start selling" })).toBeDisabled();
     expect(screen.queryByText("Capper VIP")).toBeNull();
   });
+
+  it("section hides the owner panel from a different signed-in capper", async () => {
+    auth.value = { session: { access_token: "tok" }, capper: { id: 99, handle: "someoneelse" } };
+    client.getVipCapperStatus.mockResolvedValue(status);
+    render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await screen.findByText("Capper VIP");
+    expect(screen.queryByText("Your VIP")).toBeNull();
+    expect(client.getVipMe).not.toHaveBeenCalled();
+  });
 });

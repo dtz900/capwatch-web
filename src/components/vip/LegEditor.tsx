@@ -19,7 +19,8 @@ export const labelCls =
 // Native <option> rows paint the OS white otherwise (same fix as the admin panel).
 export const optionCls = "bg-[#0e0e12] text-[var(--color-text)]";
 
-const VIP_LEG_TYPES: LegType[] = ["ml", "spread", "total", "team_runs", "nrfi", "custom"];
+// Every market the shared label map knows, minus player props (v1).
+const VIP_LEG_TYPES = (Object.keys(LEG_TYPE_LABEL) as LegType[]).filter((t) => t !== "player");
 
 function legTypeOptions(sport: VipSport): Array<[LegType, string]> {
   return VIP_LEG_TYPES.filter((t) => t !== "nrfi" || sport === "MLB").map((t) => [

@@ -162,4 +162,90 @@ describe("VipPickComposer", () => {
     expect(body.combined_odds).toBe(260);
     expect(body.legs.map((l: { odds: number | null }) => l.odds)).toEqual([null, null]);
   });
+
+  const BOUNDS = "Check units (0.1 to 10) and odds (100 to 10000 either side).";
+
+  async function twoLegParlay() {
+    await fillOneLeg();
+    fireEvent.click(screen.getByRole("button", { name: "+ Add leg" }));
+    fireEvent.click(screen.getByRole("button", { name: "NYY @ BOS" }));
+    fireEvent.change(screen.getAllByPlaceholderText(/selection/i)[1], {
+      target: { value: "Yankees ML again" },
+    });
+  }
+
+  it('"abc" in Combined odds keeps the button disabled', async () => {
+    render(<VipPickComposer me={me} onPosted={() => {}} />);
+    await twoLegParlay();
+    const button = screen.getByRole("button", { name: "Post VIP pick" });
+    expect(button).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("Combined odds"), { target: { value: "abc" } });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(BOUNDS)).toBeInTheDocument();
+  });
+
+  it("+50 leg odds keeps the button disabled", async () => {
+    render(<VipPickComposer me={me} onPosted={() => {}} />);
+    await fillOneLeg();
+    const button = screen.getByRole("button", { name: "Post VIP pick" });
+    fireEvent.change(screen.getByLabelText("Leg 1 odds"), { target: { value: "+50" } });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(BOUNDS)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Leg 1 odds"), { target: { value: "-110.5" } });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Leg 1 odds"), { target: { value: "+150" } });
+    expect(button).toBeEnabled();
+    expect(screen.queryByText(BOUNDS)).toBeNull();
+  });
+
+  it("units 10.5 keeps the button disabled", async () => {
+    render(<VipPickComposer me={me} onPosted={() => {}} />);
+    await fillOneLeg();
+    const button = screen.getByRole("button", { name: "Post VIP pick" });
+    const units = screen.getByLabelText("Units");
+    expect(units).toHaveAttribute("step", "any");
+    expect(units).not.toHaveAttribute("min");
+    expect(units).not.toHaveAttribute("max");
+    fireEvent.change(units, { target: { value: "10.5" } });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(BOUNDS)).toBeInTheDocument();
+    fireEvent.change(units, { target: { value: "1.1" } });
+    expect(button).toBeEnabled();
+  });
+
+  it("composer requires direction and line for a total, and a numeric line", async () => {
+    render(<VipPickComposer me={me} onPosted={() => {}} />);
+    await fillOneLeg();
+    const button = screen.getByRole("button", { name: "Post VIP pick" });
+    fireEvent.change(screen.getByLabelText("Leg 1 market"), { target: { value: "total" } });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Leg 1 direction"), { target: { value: "over" } });
+    fireEvent.change(screen.getByLabelText("Leg 1 line"), { target: { value: "8.5x" } });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(BOUNDS)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Leg 1 line"), { target: { value: "8.5" } });
+    expect(button).toBeEnabled();
+  });
+
+  it("composer renders nothing without a session token", () => {
+    auth.value = { session: null };
+    const { container } = render(<VipPickComposer me={me} onPosted={() => {}} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("composer clears game chips and team filter after a post", async () => {
+    client.postVipPick.mockResolvedValue({
+      ok: true,
+      created_pick_ids: [91],
+      parlay_id: null,
+      reveal_at: "2026-10-27T23:05:00Z",
+    });
+    render(<VipPickComposer me={me} onPosted={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText("team (optional)"), { target: { value: "NYY" } });
+    await fillOneLeg();
+    fireEvent.click(screen.getByRole("button", { name: "Post VIP pick" }));
+    await screen.findByText("Posted. Locked to subscribers until the game starts.");
+    expect(screen.queryByRole("button", { name: "NYY @ BOS" })).toBeNull();
+    expect(screen.getByPlaceholderText("team (optional)")).toHaveValue("");
+  });
 });

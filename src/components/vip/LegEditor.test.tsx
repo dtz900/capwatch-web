@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { EMPTY_LEG, legToInput } from "@/lib/legDraft";
+import { EMPTY_LEG, legToInput, parseLineField, parseOddsField } from "@/lib/legDraft";
 
 const client = vi.hoisted(() => ({ searchVipGames: vi.fn() }));
 vi.mock("@/lib/vip/client", () => client);
@@ -32,6 +32,22 @@ describe("legDraft", () => {
       direction: "under",
       line: 0.5,
     });
+  });
+});
+
+describe("legDraft field parsers", () => {
+  it("parseOddsField: empty null, integer number, else invalid", () => {
+    expect(parseOddsField("  ")).toBeNull();
+    expect(parseOddsField("+150")).toBe(150);
+    expect(parseOddsField("-110")).toBe(-110);
+    expect(parseOddsField("abc")).toBe("invalid");
+    expect(parseOddsField("-110.5")).toBe("invalid");
+  });
+
+  it("parseLineField: empty null, finite number, else invalid", () => {
+    expect(parseLineField("")).toBeNull();
+    expect(parseLineField("-1.5")).toBe(-1.5);
+    expect(parseLineField("8.5x")).toBe("invalid");
   });
 });
 
