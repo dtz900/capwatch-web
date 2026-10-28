@@ -52,7 +52,7 @@ describe("CapperVipSection", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true");
     vi.stubEnv("NEXT_PUBLIC_CAPPER_VIP_ENABLED", "true");
-    auth.value = { session: { access_token: "tok" } };
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } } };
     client.getVipCapperStatus.mockReset();
     client.getVipMe.mockReset();
     client.patchVipSeller.mockReset();
@@ -106,7 +106,7 @@ describe("CapperVipSection", () => {
     err.mockRestore();
   });
 
-  it("section clears the previous payload when the token changes", async () => {
+  it("user change refetches and clears the previous payload", async () => {
     client.getVipCapperStatus.mockResolvedValueOnce(status);
     const { rerender } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByText("Capper VIP");
@@ -116,7 +116,7 @@ describe("CapperVipSection", () => {
         resolveAnon = r;
       }),
     );
-    auth.value = { session: null };
+    auth.value = { authReady: true, session: null };
     rerender(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     expect(screen.queryByText("Capper VIP")).toBeNull();
     resolveAnon(status);
@@ -139,7 +139,7 @@ describe("CapperVipSection", () => {
   });
 
   it("section passes null token when anonymous", async () => {
-    auth.value = { session: null };
+    auth.value = { authReady: true, session: null };
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByText("Capper VIP");
@@ -155,7 +155,7 @@ describe("CapperVipSection", () => {
   });
 
   it("section owner panel shows the price line and saves a new price", async () => {
-    auth.value = { session: { access_token: "tok" }, capper: { id: 7, handle: "moneyplayzz" } };
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "moneyplayzz" } };
     client.getVipCapperStatus.mockResolvedValue(status);
     client.getVipMe.mockResolvedValue({
       capper: { id: 7, handle: "moneyplayzz" },
@@ -178,7 +178,7 @@ describe("CapperVipSection", () => {
   });
 
   it("section owner with nothing public yet still sees start selling", async () => {
-    auth.value = { session: { access_token: "tok" }, capper: { id: 7, handle: "moneyplayzz" } };
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "moneyplayzz" } };
     client.getVipCapperStatus.mockResolvedValue({
       ...status,
       seller: null,
@@ -198,11 +198,53 @@ describe("CapperVipSection", () => {
   });
 
   it("section hides the owner panel from a different signed-in capper", async () => {
-    auth.value = { session: { access_token: "tok" }, capper: { id: 99, handle: "someoneelse" } };
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 99, handle: "someoneelse" } };
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByText("Capper VIP");
     expect(screen.queryByText("Your VIP")).toBeNull();
     expect(client.getVipMe).not.toHaveBeenCalled();
+  });
+
+  it("waits for authReady before fetching", async () => {
+    auth.value = { authReady: false, session: null };
+    client.getVipCapperStatus.mockResolvedValue(status);
+    render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await Promise.resolve();
+    expect(client.getVipCapperStatus).not.toHaveBeenCalled();
+  });
+
+  it("token refresh does not refetch or remount", async () => {
+    const owner = (token: string) => ({
+      authReady: true,
+      session: { access_token: token, user: { id: "u1" } },
+      capper: { id: 7, handle: "moneyplayzz" },
+    });
+    auth.value = owner("tok");
+    client.getVipCapperStatus.mockResolvedValue(status);
+    client.getVipMe.mockResolvedValue({
+      capper: { id: 7, handle: "moneyplayzz" },
+      seller: status.seller,
+      eligibility: [{ sport: "MLB", eligible: true, eligible_since: "2026-10-01", fail_streak: 0 }],
+      can_post_sports: ["MLB"],
+    });
+    const { rerender } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await screen.findByText("Capper VIP");
+    const units = await screen.findByLabelText("Units");
+    fireEvent.change(units, { target: { value: "2.5" } });
+    fireEvent.change(screen.getByPlaceholderText('selection text, e.g. "Yankees ML"'), {
+      target: { value: "Draft text" },
+    });
+
+    auth.value = owner("tok-refreshed");
+    rerender(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await Promise.resolve();
+
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+    expect(client.getVipMe).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Capper VIP")).toBeInTheDocument();
+    expect(screen.getByLabelText("Units")).toBe(units);
+    expect(screen.getByLabelText("Units")).toHaveValue(2.5);
+    expect(screen.getByDisplayValue("Draft text")).toBeInTheDocument();
   });
 });

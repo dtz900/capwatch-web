@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { LockedHeader, LockedTicketList, groupLockedTickets } from "@/components/vip/LockedPicks";
@@ -43,12 +43,14 @@ function SubscriptionCard({ sub }: { sub: VipSubscription }) {
       ? "No picks while paused."
       : sub.status === "canceled"
         ? "No picks after cancel."
-        : null;
+        : sub.locked.length === 0
+          ? "No locked picks right now."
+          : null;
   const tickets = groupLockedTickets(sub.locked);
   return (
     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
       <div className="flex items-start justify-between gap-3">
-        <Link href={`/cappers/${capper.handle}`} className="block min-w-0">
+        <Link href={`/cappers/${encodeURIComponent(capper.handle)}`} className="block min-w-0">
           <div className="flex items-center gap-3">
             <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={44} />
             <div className="min-w-0">
@@ -76,33 +78,9 @@ function SubscriptionCard({ sub }: { sub: VipSubscription }) {
   );
 }
 
-export function VipTab() {
-  const { session } = useAuth();
-  const token = session?.access_token ?? null;
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
-
-  useEffect(() => {
-    let cancelled = false;
-    getVipSubscriptions(token)
-      .then((res) => {
-        if (!cancelled) setState({ kind: "ready", subscriptions: res.subscriptions });
-      })
-      .catch((err) => {
-        console.error("my-tails vip subscriptions failed:", err);
-        if (!cancelled) setState({ kind: "error" });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
-  if (state.kind === "loading") return null;
-  if (state.kind === "error") {
-    return (
-      <p className="text-sm text-[var(--color-text-soft)]">Could not load your subscriptions.</p>
-    );
-  }
-  if (state.subscriptions.length === 0) {
+/** Presentational card list; the fixtures page renders it with mock data. */
+export function VipSubscriptionCards({ subscriptions }: { subscriptions: VipSubscription[] }) {
+  if (subscriptions.length === 0) {
     return (
       <p className="text-sm text-[var(--color-text-soft)]">
         You are not subscribed to any capper yet.
@@ -111,9 +89,53 @@ export function VipTab() {
   }
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {state.subscriptions.map((s) => (
-        <SubscriptionCard key={s.capper.handle} sub={s} />
+      {subscriptions.map((s) => (
+        <SubscriptionCard key={s.capper.id} sub={s} />
       ))}
     </div>
   );
+}
+
+export function VipTab() {
+  const { session, authReady } = useAuth();
+  const token = session?.access_token ?? null;
+  const userId = session?.user?.id ?? null;
+  // Tagged with the user it loaded for: a user change shows loading until
+  // the new list lands; a token refresh (same user) changes nothing.
+  const [state, setState] = useState<{ userId: string; load: LoadState } | null>(null);
+  const tokenRef = useRef<string | null>(token);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
+
+  useEffect(() => {
+    if (!authReady || !userId) return;
+    let cancelled = false;
+    getVipSubscriptions(tokenRef.current)
+      .then((res) => {
+        if (!cancelled) setState({ userId, load: { kind: "ready", subscriptions: res.subscriptions } });
+      })
+      .catch((err) => {
+        console.error("my-tails vip subscriptions failed:", err);
+        if (!cancelled) setState({ userId, load: { kind: "error" } });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, userId]);
+
+  if (!authReady) return null;
+  if (!userId) {
+    return (
+      <p className="text-sm text-[var(--color-text-soft)]">Sign in to see your VIP subscriptions.</p>
+    );
+  }
+  const load: LoadState = state?.userId === userId ? state.load : { kind: "loading" };
+  if (load.kind === "loading") return null;
+  if (load.kind === "error") {
+    return (
+      <p className="text-sm text-[var(--color-text-soft)]">Could not load your subscriptions.</p>
+    );
+  }
+  return <VipSubscriptionCards subscriptions={load.subscriptions} />;
 }

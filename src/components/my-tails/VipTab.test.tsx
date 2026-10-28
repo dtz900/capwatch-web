@@ -7,9 +7,12 @@ const getVipSubscriptions = vi.fn();
 vi.mock("@/lib/vip/client", () => ({
   getVipSubscriptions: (...a: unknown[]) => getVipSubscriptions(...a),
 }));
-vi.mock("@/components/auth/AuthProvider", () => ({
-  useAuth: () => ({ session: { access_token: "tok" } }),
-}));
+const auth = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => auth.value }));
+
+function signedIn(userId: string, token: string) {
+  return { authReady: true, session: { access_token: token, user: { id: userId } } };
+}
 
 function pick(id: number) {
   return {
@@ -47,6 +50,7 @@ function sub(over: Partial<VipSubscription> & { handle: string }): VipSubscripti
 
 beforeEach(() => {
   getVipSubscriptions.mockReset();
+  auth.value = signedIn("u1", "tok");
 });
 
 describe("VipTab", () => {
@@ -81,6 +85,7 @@ describe("VipTab", () => {
     expect(screen.getByText("Canceled")).toBeInTheDocument();
     expect(screen.getAllByText("No picks while paused.")).toHaveLength(2);
     expect(screen.getByText("No picks after cancel.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /cold1/ })).toHaveAttribute("href", "/cappers/cold1");
     expect(screen.queryByText(/locked/)).not.toBeInTheDocument();
   });
 
@@ -116,5 +121,52 @@ describe("VipTab", () => {
     await waitFor(() =>
       expect(screen.getByText("Could not load your subscriptions.")).toBeInTheDocument(),
     );
+  });
+
+  it("active with zero locked says so", async () => {
+    getVipSubscriptions.mockResolvedValue({ subscriptions: [sub({ handle: "alpha" })] });
+    render(<VipTab />);
+    expect(await screen.findByText("No locked picks right now.")).toBeInTheDocument();
+    expect(screen.queryByText(/locked$/)).not.toBeInTheDocument();
+  });
+
+  it("signed out shows the sign-in line and never calls the client", async () => {
+    auth.value = { authReady: true, session: null };
+    render(<VipTab />);
+    expect(screen.getByText("Sign in to see your VIP subscriptions.")).toBeInTheDocument();
+    await Promise.resolve();
+    expect(getVipSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it("waits for authReady before loading", async () => {
+    auth.value = { authReady: false, session: null };
+    const { container } = render(<VipTab />);
+    expect(container).toBeEmptyDOMElement();
+    expect(getVipSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it("token refresh does not refetch", async () => {
+    getVipSubscriptions.mockResolvedValue({ subscriptions: [sub({ handle: "alpha", locked: [pick(1)] })] });
+    const { rerender } = render(<VipTab />);
+    await screen.findByText("@alpha");
+    auth.value = signedIn("u1", "tok2");
+    rerender(<VipTab />);
+    expect(screen.getByText("@alpha")).toBeInTheDocument();
+    await Promise.resolve();
+    expect(getVipSubscriptions).toHaveBeenCalledTimes(1);
+  });
+
+  it("user change refetches and clears the previous cards", async () => {
+    getVipSubscriptions.mockResolvedValueOnce({ subscriptions: [sub({ handle: "alpha", locked: [pick(1)] })] });
+    const { rerender } = render(<VipTab />);
+    await screen.findByText("@alpha");
+    let resolve: (v: { subscriptions: VipSubscription[] }) => void = () => {};
+    getVipSubscriptions.mockReturnValueOnce(new Promise((r) => (resolve = r)));
+    auth.value = signedIn("u2", "tokB");
+    rerender(<VipTab />);
+    expect(screen.queryByText("@alpha")).not.toBeInTheDocument();
+    resolve({ subscriptions: [sub({ handle: "bravo", locked: [pick(2)] })] });
+    expect(await screen.findByText("@bravo")).toBeInTheDocument();
+    expect(getVipSubscriptions).toHaveBeenLastCalledWith("tokB");
   });
 });

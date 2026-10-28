@@ -20,26 +20,37 @@ function isEmpty(s: VipCapperStatus): boolean {
 }
 
 export function CapperVipSection({ capperId, handle }: { capperId: number; handle: string }) {
-  const { session, capper } = useAuth();
+  const { session, capper, authReady } = useAuth();
   const token = session?.access_token ?? null;
+  const userId = session?.user?.id ?? null;
   const isOwner = capper?.id === capperId;
   const [status, setStatus] = useState<VipCapperStatus | null>(null);
   // Bumped by the owner panel after a post or seller change.
   const [reload, setReload] = useState(0);
   const refetch = useCallback(() => setReload((n) => n + 1), []);
   const viewerKey = useRef<string | null>(null);
+  // Read at request time so a token refresh (same user, new access_token)
+  // neither refetches nor resets the section. Declared before the fetch
+  // effect so it is current when that effect runs.
+  const tokenRef = useRef<string | null>(token);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
 
   useEffect(() => {
+    // Before the first getSession() lands every viewer looks anonymous;
+    // wait so a subscriber is not served the locked summary first.
+    if (!authReady) return;
     let cancelled = false;
     // Drop the previous viewer's payload (e.g. a subscriber who just signed
-    // out) while the refetch for the new token is in flight. An owner-panel
+    // out) while the refetch for the new user is in flight. An owner-panel
     // reload keeps the current payload on screen until the new one lands.
-    const key = `${capperId}:${token ?? ""}`;
+    const key = `${capperId}:${userId ?? ""}`;
     if (viewerKey.current !== key) {
       viewerKey.current = key;
       setStatus(null);
     }
-    getVipCapperStatus(capperId, token)
+    getVipCapperStatus(capperId, tokenRef.current)
       .then((s) => {
         if (!cancelled) setStatus(s);
       })
@@ -54,7 +65,7 @@ export function CapperVipSection({ capperId, handle }: { capperId: number; handl
     return () => {
       cancelled = true;
     };
-  }, [capperId, token, reload]);
+  }, [capperId, userId, authReady, reload]);
 
   const ownerPanel = isOwner ? <OwnerPanel onChanged={refetch} /> : null;
   if (!status || isEmpty(status)) {

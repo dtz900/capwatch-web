@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getVipMe, patchVipSeller } from "@/lib/vip/client";
 import type { VipMe, VipSeller } from "@/lib/vip/types";
@@ -79,9 +79,16 @@ function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void
 export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
   const { session } = useAuth();
   const token = session?.access_token ?? null;
-  // Tagged with the token it was fetched for, so a sign-out or account
+  const userId = session?.user?.id ?? null;
+  // Read at request time: a token refresh for the same user must not
+  // refetch or unmount the panel (and with it the composer draft).
+  const tokenRef = useRef<string | null>(token);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
+  // Tagged with the user it was fetched for, so a sign-out or account
   // switch never shows the previous owner's panel.
-  const [loaded, setLoaded] = useState<{ token: string; me: VipMe | null } | null>(null);
+  const [loaded, setLoaded] = useState<{ userId: string; me: VipMe | null } | null>(null);
   const [tick, setTick] = useState(0);
   // Re-read /me (seller row, eligibility) and tell the section to refetch
   // the public status so the door and locked block match.
@@ -91,23 +98,23 @@ export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
   }, [onChanged]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!userId) return;
     let cancelled = false;
-    getVipMe(token)
+    getVipMe(tokenRef.current)
       .then((m) => {
-        if (!cancelled) setLoaded({ token, me: m });
+        if (!cancelled) setLoaded({ userId, me: m });
       })
       .catch((err: unknown) => {
         // The owner panel must never break the public profile: log and hide.
         console.error("VIP me failed", err);
-        if (!cancelled) setLoaded({ token, me: null });
+        if (!cancelled) setLoaded({ userId, me: null });
       });
     return () => {
       cancelled = true;
     };
-  }, [token, tick]);
+  }, [userId, tick]);
 
-  const me = token && loaded?.token === token ? loaded.me : null;
+  const me = userId && loaded?.userId === userId ? loaded.me : null;
   if (!me || !me.capper) return null;
 
   return (

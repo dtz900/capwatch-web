@@ -21,16 +21,17 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "My Tails | TailSlips" };
 
 /* Stable always; Market Masters under the tier flag; VIP under the capper VIP
- * flag. A lone stable renders bare (no tab strip). A requested tab that is
+ * flag, signed-in only (subscriptions are per account). A lone stable renders bare (no tab strip). A requested tab that is
  * not present falls back to the stable. */
 function renderMyTailsSections(
   requestedTab: MyTailsTab | null,
   stable: ReactNode,
-  board: ReactNode
+  board: ReactNode,
+  signedIn: boolean
 ) {
   const tabs: MyTailsTabSpec[] = [{ key: "stable", label: "Stable", content: stable }];
   if (vipTierEnabled()) tabs.push({ key: "board", label: "Market Masters", content: board });
-  if (capperVipEnabled()) tabs.push({ key: "vip", label: "VIP", content: <VipTab /> });
+  if (signedIn && capperVipEnabled()) tabs.push({ key: "vip", label: "VIP", content: <VipTab /> });
   if (tabs.length === 1) return stable;
   const initialTab = tabs.some((t) => t.key === requestedTab) ? (requestedTab as MyTailsTab) : "stable";
   return <MyTailsTabs initialTab={initialTab} tabs={tabs} />;
@@ -79,7 +80,8 @@ export default async function MyTailsPage({
             {renderMyTailsSections(
               requestedTab,
               <EmptyStable suggestions={top3} />,
-              <MarketRankings rows={[]} vip={false} />
+              <MarketRankings rows={[]} vip={false} />,
+              false
             )}
           </div>
         </main>
@@ -243,7 +245,8 @@ export default async function MyTailsPage({
           return renderMyTailsSections(
             requestedTab,
             stableView,
-            <MarketRankings rows={rankingRows} vip={isVip} />
+            <MarketRankings rows={rankingRows} vip={isVip} />,
+            true
           );
         })()}
       </main>
