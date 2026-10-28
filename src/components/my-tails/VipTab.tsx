@@ -1,0 +1,127 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { LockedPickRow } from "@/components/vip/LockedPicks";
+import { getVipSubscriptions } from "@/lib/vip/client";
+import type { VipSubscription } from "@/lib/vip/types";
+
+type LoadState =
+  | { kind: "loading" }
+  | { kind: "error" }
+  | { kind: "ready"; subscriptions: VipSubscription[] };
+
+function pillLabel(sub: VipSubscription): string {
+  if (sub.status === "active") return "Active";
+  if (sub.status === "canceled") return "Canceled";
+  if (sub.pause_reason === "cold") return "Paused: cold";
+  if (sub.pause_reason === "silent") return "Paused: quiet";
+  return "Paused";
+}
+
+/* Same geometry as the My Tails StatusPill. */
+function SubStatusPill({ sub }: { sub: VipSubscription }) {
+  const tone =
+    sub.status === "active"
+      ? "bg-[var(--color-pos)]/15 text-[var(--color-pos)] border-[var(--color-pos)]/40"
+      : sub.status === "canceled"
+        ? "text-[var(--color-text-muted)] border-[var(--color-border-h)]"
+        : "border-dashed border-[var(--color-border-h)] text-[var(--color-text-soft)]";
+  return (
+    <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold tracking-wider ${tone}`}>
+      {pillLabel(sub)}
+    </span>
+  );
+}
+
+function SubscriptionCard({ sub }: { sub: VipSubscription }) {
+  const { capper } = sub;
+  const emptyNote =
+    sub.status === "paused"
+      ? "No picks while paused."
+      : sub.status === "canceled"
+        ? "No picks after cancel."
+        : null;
+  return (
+    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
+      <div className="flex items-start justify-between gap-3">
+        <Link href={`/cappers/${capper.handle}`} className="block min-w-0">
+          <div className="flex items-center gap-3">
+            <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={44} />
+            <div className="min-w-0">
+              <div className="font-bold text-[var(--color-text)] truncate">
+                {capper.display_name ?? capper.handle}
+              </div>
+              <span className="text-xs text-[var(--color-text-muted)]">@{capper.handle}</span>
+            </div>
+          </div>
+        </Link>
+        <SubStatusPill sub={sub} />
+      </div>
+
+      <div className="mt-4">
+        {emptyNote ? (
+          <p className="text-[12px] text-[var(--color-text-muted)]">{emptyNote}</p>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex w-1.5 h-1.5 rounded-full bg-[var(--color-gold)]" />
+              <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
+                VIP · {sub.locked.length} locked
+              </span>
+            </div>
+            <div className="flex flex-col">
+              {sub.locked.map((p) => (
+                <LockedPickRow key={p.id} pick={p} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function VipTab() {
+  const { session } = useAuth();
+  const token = session?.access_token ?? null;
+  const [state, setState] = useState<LoadState>({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    getVipSubscriptions(token)
+      .then((res) => {
+        if (!cancelled) setState({ kind: "ready", subscriptions: res.subscriptions });
+      })
+      .catch((err) => {
+        console.error("my-tails vip subscriptions failed:", err);
+        if (!cancelled) setState({ kind: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  if (state.kind === "loading") return null;
+  if (state.kind === "error") {
+    return (
+      <p className="text-sm text-[var(--color-text-soft)]">Could not load your subscriptions.</p>
+    );
+  }
+  if (state.subscriptions.length === 0) {
+    return (
+      <p className="text-sm text-[var(--color-text-soft)]">
+        You are not subscribed to any capper yet.
+      </p>
+    );
+  }
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {state.subscriptions.map((s) => (
+        <SubscriptionCard key={s.capper.handle} sub={s} />
+      ))}
+    </div>
+  );
+}

@@ -2,38 +2,40 @@
 
 import { useRef, useState, type ReactNode } from "react";
 
-export type MyTailsTab = "stable" | "board";
+export type MyTailsTab = "stable" | "board" | "vip";
 
-const TABS: { key: MyTailsTab; label: string }[] = [
-  { key: "stable", label: "Stable" },
-  { key: "board", label: "Market Masters" },
-];
+export interface MyTailsTabSpec {
+  key: MyTailsTab;
+  label: string;
+  content: ReactNode;
+}
 
 const SWIPE_MIN_X = 48;
 const SWIPE_MAX_SLOPE = 0.65;
 
-/* Sub-page switcher for My Tails: the stable and the Title Board each own a
- * panel instead of stacking. Tabs on every viewport, horizontal swipe on
- * touch. Tab state mirrors into ?tab=board via replaceState so a board link
- * is shareable without a server round trip. */
+/* Sub-page switcher for My Tails: each tab owns a panel instead of stacking.
+ * Tabs on every viewport, horizontal swipe on touch (moves through the tabs
+ * in display order). Tab state mirrors into ?tab={key} via replaceState so a
+ * link is shareable without a server round trip; the first tab is the bare
+ * pathname. */
 export function MyTailsTabs({
   initialTab,
-  stable,
-  board,
+  tabs,
 }: {
   initialTab: MyTailsTab;
-  stable: ReactNode;
-  board: ReactNode;
+  tabs: MyTailsTabSpec[];
 }) {
   const [tab, setTab] = useState<MyTailsTab>(initialTab);
   const [slide, setSlide] = useState<"left" | "right" | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
+  const keys = tabs.map((t) => t.key);
+
   function select(next: MyTailsTab) {
     if (next === tab) return;
-    setSlide(next === "board" ? "right" : "left");
+    setSlide(keys.indexOf(next) > keys.indexOf(tab) ? "right" : "left");
     setTab(next);
-    const url = next === "board" ? "?tab=board" : window.location.pathname;
+    const url = next === keys[0] ? window.location.pathname : `?tab=${next}`;
     window.history.replaceState(null, "", url);
   }
 
@@ -51,7 +53,8 @@ export function MyTailsTabs({
     const dy = t.clientY - start.y;
     if (Math.abs(dx) < SWIPE_MIN_X) return;
     if (Math.abs(dy) / Math.abs(dx) > SWIPE_MAX_SLOPE) return;
-    select(dx < 0 ? "board" : "stable");
+    const target = keys[keys.indexOf(tab) + (dx < 0 ? 1 : -1)];
+    if (target) select(target);
   }
 
   return (
@@ -61,7 +64,7 @@ export function MyTailsTabs({
         aria-label="My Tails sections"
         className="flex gap-6 border-b border-[var(--color-border)]"
       >
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const active = t.key === tab;
           return (
             <button
@@ -91,7 +94,7 @@ export function MyTailsTabs({
         onTouchEnd={onTouchEnd}
         className={`pt-6 ${slide === "right" ? "subpage-in-right" : slide === "left" ? "subpage-in-left" : ""}`}
       >
-        {tab === "stable" ? stable : board}
+        {(tabs.find((t) => t.key === tab) ?? tabs[0]).content}
       </div>
     </div>
   );

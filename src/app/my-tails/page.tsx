@@ -1,15 +1,17 @@
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { fetchLeaderboard, fetchTodayPicks } from "@/lib/api";
-import { vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { capperVipEnabled, vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
 import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
 import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import { MarketRankings } from "@/components/my-tails/MarketRankings";
-import { MyTailsTabs, type MyTailsTab } from "@/components/my-tails/MyTailsTabs";
+import { MyTailsTabs, type MyTailsTab, type MyTailsTabSpec } from "@/components/my-tails/MyTailsTabs";
+import { VipTab } from "@/components/my-tails/VipTab";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import type { EdgeRow } from "@/lib/edges";
@@ -17,6 +19,22 @@ import type { RankedEdgeRow } from "@/lib/marketRankings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Tails | TailSlips" };
+
+/* Stable always; Market Masters under the tier flag; VIP under the capper VIP
+ * flag. A lone stable renders bare (no tab strip). A requested tab that is
+ * not present falls back to the stable. */
+function renderMyTailsSections(
+  requestedTab: MyTailsTab | null,
+  stable: ReactNode,
+  board: ReactNode
+) {
+  const tabs: MyTailsTabSpec[] = [{ key: "stable", label: "Stable", content: stable }];
+  if (vipTierEnabled()) tabs.push({ key: "board", label: "Market Masters", content: board });
+  if (capperVipEnabled()) tabs.push({ key: "vip", label: "VIP", content: <VipTab /> });
+  if (tabs.length === 1) return stable;
+  const initialTab = tabs.some((t) => t.key === requestedTab) ? (requestedTab as MyTailsTab) : "stable";
+  return <MyTailsTabs initialTab={initialTab} tabs={tabs} />;
+}
 
 export default async function MyTailsPage({
   searchParams,
@@ -26,7 +44,8 @@ export default async function MyTailsPage({
   if (!vipEnabled()) notFound();
 
   const { tab } = await searchParams;
-  const initialTab: MyTailsTab = tab === "board" ? "board" : "stable";
+  const requestedTab: MyTailsTab | null =
+    tab === "board" || tab === "vip" ? tab : null;
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -57,14 +76,10 @@ export default async function MyTailsPage({
             your stable here.
           </p>
           <div className="mt-8">
-            {vipTierEnabled() ? (
-              <MyTailsTabs
-                initialTab={initialTab}
-                stable={<EmptyStable suggestions={top3} />}
-                board={<MarketRankings rows={[]} vip={false} />}
-              />
-            ) : (
-              <EmptyStable suggestions={top3} />
+            {renderMyTailsSections(
+              requestedTab,
+              <EmptyStable suggestions={top3} />,
+              <MarketRankings rows={[]} vip={false} />
             )}
           </div>
         </main>
@@ -223,16 +238,12 @@ export default async function MyTailsPage({
                 statsByCapper={statsByCapper}
               />
             );
-          // Tabs exist for the Market Masters sub-page, which is paid-tier
-          // inventory; the free launch is the stable alone.
-          return vipTierEnabled() ? (
-            <MyTailsTabs
-              initialTab={initialTab}
-              stable={stableView}
-              board={<MarketRankings rows={rankingRows} vip={isVip} />}
-            />
-          ) : (
-            stableView
+          // Tabs exist for the Market Masters (paid-tier) and VIP sub-pages;
+          // with neither flag on, the launch is the stable alone.
+          return renderMyTailsSections(
+            requestedTab,
+            stableView,
+            <MarketRankings rows={rankingRows} vip={isVip} />
           );
         })()}
       </main>
