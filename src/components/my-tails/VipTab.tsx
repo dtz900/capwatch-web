@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { LockedPickRow } from "@/components/vip/LockedPicks";
+import { LockedHeader, LockedTicketList, groupLockedTickets } from "@/components/vip/LockedPicks";
 import { getVipSubscriptions } from "@/lib/vip/client";
 import type { VipSubscription } from "@/lib/vip/types";
 
@@ -44,6 +44,7 @@ function SubscriptionCard({ sub }: { sub: VipSubscription }) {
       : sub.status === "canceled"
         ? "No picks after cancel."
         : null;
+  const tickets = groupLockedTickets(sub.locked);
   return (
     <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
       <div className="flex items-start justify-between gap-3">
@@ -66,17 +67,8 @@ function SubscriptionCard({ sub }: { sub: VipSubscription }) {
           <p className="text-[12px] text-[var(--color-text-muted)]">{emptyNote}</p>
         ) : (
           <>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex w-1.5 h-1.5 rounded-full bg-[var(--color-gold)]" />
-              <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
-                VIP · {sub.locked.length} locked
-              </span>
-            </div>
-            <div className="flex flex-col">
-              {sub.locked.map((p) => (
-                <LockedPickRow key={p.id} pick={p} />
-              ))}
-            </div>
+            <LockedHeader count={tickets.length} className="mb-2" />
+            <LockedTicketList tickets={tickets} />
           </>
         )}
       </div>

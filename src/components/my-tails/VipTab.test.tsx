@@ -84,6 +84,25 @@ describe("VipTab", () => {
     expect(screen.queryByText(/locked/)).not.toBeInTheDocument();
   });
 
+  it("groups a locked parlay into one ticket", async () => {
+    getVipSubscriptions.mockResolvedValue({
+      subscriptions: [
+        sub({
+          handle: "alpha",
+          locked: [
+            { ...pick(1), parlay_id: 9, parlay_leg_index: 0, odds_taken: 450, units: 1 },
+            { ...pick(2), parlay_id: 9, parlay_leg_index: 1, odds_taken: null, units: null },
+            { ...pick(3), parlay_id: 9, parlay_leg_index: 2, odds_taken: null, units: null },
+          ],
+        }),
+      ],
+    });
+    render(<VipTab />);
+    expect(await screen.findByText("VIP · 1 locked")).toBeInTheDocument();
+    expect(screen.getByText("3-leg parlay +450 · 1u")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
+
   it("empty state copy", async () => {
     getVipSubscriptions.mockResolvedValue({ subscriptions: [] });
     render(<VipTab />);

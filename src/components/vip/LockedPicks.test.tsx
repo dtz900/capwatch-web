@@ -62,17 +62,66 @@ describe("LockedPicks", () => {
     expect(screen.queryByText(/Reveals at/)).toBeNull();
   });
 
-  it("locked subscriber parlay leg renders the leg, not a parlay label", () => {
+  it("subscriber sees a 3-leg parlay as one row with ticket odds and units", () => {
+    const leg = (i: number, selection: string): VipLockedPick => ({
+      ...pick,
+      id: 20 + i,
+      parlay_id: 99,
+      parlay_leg_index: i,
+      selection,
+      odds_taken: i === 0 ? 600 : null,
+      units: i === 0 ? 1 : null,
+    });
+    render(
+      <LockedPicks
+        status={base({
+          viewer: { subscribed: true, is_owner: false },
+          // Out of order on purpose: legs sort by parlay_leg_index.
+          locked: [leg(2, "Rangers"), pick, leg(0, "Yankees ML"), leg(1, "Dodgers")],
+        })}
+      />,
+    );
+    expect(screen.getByText("VIP · 2 locked")).toBeInTheDocument();
+    expect(screen.getByText("3-leg parlay +600 · 1u")).toBeInTheDocument();
+    const legs = screen.getAllByRole("listitem").map((li) => li.textContent);
+    expect(legs).toEqual(["Yankees ML", "Dodgers", "Rangers"]);
+    expect(screen.getByText("Yankees -135")).toBeInTheDocument();
+  });
+
+  it("parlay legs keep their own odds when there is no combined price", () => {
     render(
       <LockedPicks
         status={base({
           viewer: { subscribed: false, is_owner: true },
-          locked: [{ ...pick, id: 12, parlay_id: 99, parlay_leg_index: 0, market: "spread", selection: "Rangers +1.5", line: 1.5, odds_taken: 120 }],
+          locked: [
+            { ...pick, id: 30, parlay_id: 5, parlay_leg_index: 0, selection: "Mets", odds_taken: -120, units: 2 },
+            { ...pick, id: 31, parlay_id: 5, parlay_leg_index: 1, selection: "Cubs", odds_taken: 110, units: null },
+          ],
         })}
       />,
     );
-    expect(screen.getByText("Rangers +1.5 +120")).toBeInTheDocument();
-    expect(screen.getByText("Spread")).toBeInTheDocument();
+    expect(screen.getByText("2-leg parlay · 2u")).toBeInTheDocument();
+    expect(screen.getByText("Mets -120")).toBeInTheDocument();
+    expect(screen.getByText("Cubs +110")).toBeInTheDocument();
+  });
+
+  it("anonymous header counts tickets not legs", () => {
+    const posted = "2026-10-27T18:00:00.120Z";
+    const sameSecond = "2026-10-27T18:00:00.870Z";
+    render(
+      <LockedPicks
+        status={base({
+          locked: [
+            { pick_id: 1, sport: "MLB", reveal_at: REVEAL, posted_at: posted },
+            { pick_id: 2, sport: "MLB", reveal_at: REVEAL, posted_at: sameSecond },
+            { pick_id: 3, sport: "MLB", reveal_at: REVEAL, posted_at: posted },
+            { pick_id: 4, sport: "MLB", reveal_at: REVEAL, posted_at: "2026-10-27T18:05:00Z" },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("VIP · 2 locked")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Locked")).toHaveLength(2);
   });
 
   it("renders nothing with no locked picks", () => {
