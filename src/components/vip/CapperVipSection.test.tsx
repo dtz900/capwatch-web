@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { VipCapperStatus } from "@/lib/vip/types";
 
 const auth = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
@@ -15,7 +15,15 @@ const client = vi.hoisted(() => {
       this.detail = detail;
     }
   }
-  return { getVipCapperStatus: vi.fn(), VipApiError };
+  return {
+    getVipCapperStatus: vi.fn(),
+    getVipMe: vi.fn(),
+    patchVipSeller: vi.fn(),
+    postVipSeller: vi.fn(),
+    postVipPick: vi.fn(),
+    searchVipGames: vi.fn(),
+    VipApiError,
+  };
 });
 vi.mock("@/lib/vip/client", () => client);
 
@@ -46,6 +54,8 @@ describe("CapperVipSection", () => {
     vi.stubEnv("NEXT_PUBLIC_CAPPER_VIP_ENABLED", "true");
     auth.value = { session: { access_token: "tok" } };
     client.getVipCapperStatus.mockReset();
+    client.getVipMe.mockReset();
+    client.patchVipSeller.mockReset();
   });
   afterEach(() => vi.unstubAllEnvs());
 
@@ -134,5 +144,56 @@ describe("CapperVipSection", () => {
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByText("Capper VIP");
     expect(client.getVipCapperStatus).toHaveBeenCalledWith(7, null);
+  });
+
+  it("section shows the owner panel only to the claimed capper", async () => {
+    client.getVipCapperStatus.mockResolvedValue(status);
+    render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await screen.findByText("Capper VIP");
+    expect(screen.queryByText("Your VIP")).toBeNull();
+    expect(client.getVipMe).not.toHaveBeenCalled();
+  });
+
+  it("section owner panel shows the price line and saves a new price", async () => {
+    auth.value = { session: { access_token: "tok" }, capper: { id: 7, handle: "moneyplayzz" } };
+    client.getVipCapperStatus.mockResolvedValue(status);
+    client.getVipMe.mockResolvedValue({
+      capper: { id: 7, handle: "moneyplayzz" },
+      seller: status.seller,
+      eligibility: [],
+      can_post_sports: ["MLB"],
+    });
+    client.patchVipSeller.mockResolvedValue({ ...status.seller, price_cents: 3000 });
+    render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    expect(await screen.findByText("Your VIP")).toBeInTheDocument();
+    expect(screen.getByText(/Selling at \$25\/mo ·/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(client.patchVipSeller).toHaveBeenCalledWith({ price_cents: 3000 }, "tok"),
+    );
+    await waitFor(() => expect(client.getVipMe).toHaveBeenCalledTimes(2));
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it("section owner with nothing public yet still sees start selling", async () => {
+    auth.value = { session: { access_token: "tok" }, capper: { id: 7, handle: "moneyplayzz" } };
+    client.getVipCapperStatus.mockResolvedValue({
+      ...status,
+      seller: null,
+      eligibility: [],
+      locked: [],
+      door_open: false,
+    });
+    client.getVipMe.mockResolvedValue({
+      capper: { id: 7, handle: "moneyplayzz" },
+      seller: null,
+      eligibility: [],
+      can_post_sports: [],
+    });
+    render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    expect(await screen.findByRole("button", { name: "Start selling" })).toBeDisabled();
+    expect(screen.queryByText("Capper VIP")).toBeNull();
   });
 });

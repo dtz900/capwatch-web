@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, getVipCapperStatus } from "@/lib/vip/client";
 import type { VipCapperStatus } from "@/lib/vip/types";
 import { EligibilityBadges } from "./EligibilityBadges";
 import { LockedPicks } from "./LockedPicks";
+import { OwnerPanel } from "./OwnerPanel";
 import { SubscribeDoor } from "./SubscribeDoor";
 import { signedUnits } from "./format";
 
@@ -19,15 +20,25 @@ function isEmpty(s: VipCapperStatus): boolean {
 }
 
 export function CapperVipSection({ capperId, handle }: { capperId: number; handle: string }) {
-  const { session } = useAuth();
+  const { session, capper } = useAuth();
   const token = session?.access_token ?? null;
+  const isOwner = capper?.id === capperId;
   const [status, setStatus] = useState<VipCapperStatus | null>(null);
+  // Bumped by the owner panel after a post or seller change.
+  const [reload, setReload] = useState(0);
+  const refetch = useCallback(() => setReload((n) => n + 1), []);
+  const viewerKey = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     // Drop the previous viewer's payload (e.g. a subscriber who just signed
-    // out) while the refetch for the new token is in flight.
-    setStatus(null);
+    // out) while the refetch for the new token is in flight. An owner-panel
+    // reload keeps the current payload on screen until the new one lands.
+    const key = `${capperId}:${token ?? ""}`;
+    if (viewerKey.current !== key) {
+      viewerKey.current = key;
+      setStatus(null);
+    }
     getVipCapperStatus(capperId, token)
       .then((s) => {
         if (!cancelled) setStatus(s);
@@ -43,9 +54,12 @@ export function CapperVipSection({ capperId, handle }: { capperId: number; handl
     return () => {
       cancelled = true;
     };
-  }, [capperId, token]);
+  }, [capperId, token, reload]);
 
-  if (!status || isEmpty(status)) return null;
+  const ownerPanel = isOwner ? <OwnerPanel onChanged={refetch} /> : null;
+  if (!status || isEmpty(status)) {
+    return ownerPanel ? <div className="flex flex-col gap-3">{ownerPanel}</div> : null;
+  }
 
   // With the door closed, SubscribeDoor already shows the closed pills in its
   // slot, so the badge row keeps only the eligible sports.
@@ -55,6 +69,7 @@ export function CapperVipSection({ capperId, handle }: { capperId: number; handl
 
   return (
     <div className="flex flex-col gap-3">
+      {ownerPanel}
       {showCard && (
         <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-4">
           <div className="flex items-start justify-between gap-3 flex-wrap">
