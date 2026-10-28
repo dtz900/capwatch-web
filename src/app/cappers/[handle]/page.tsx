@@ -496,7 +496,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
             <div className="mb-6">
               <CapperVipSection
                 capperId={profile.capper.id}
-                handle={profile.capper.handle ?? ""}
+                handle={handle}
               />
             </div>
           )}

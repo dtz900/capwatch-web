@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { EligibilityBadges } from "./EligibilityBadges";
 import type { VipEligibility } from "@/lib/vip/types";
@@ -15,20 +15,6 @@ function row(over: Partial<VipEligibility>): VipEligibility {
     ...over,
   };
 }
-
-// Tooltip reads (hover: none) on mount; jsdom has no matchMedia.
-beforeAll(() => {
-  window.matchMedia ??= ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  })) as typeof window.matchMedia;
-});
 
 describe("EligibilityBadges", () => {
   it("renders exact eligible copy", () => {

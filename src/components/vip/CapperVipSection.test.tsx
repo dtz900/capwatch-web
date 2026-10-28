@@ -1,11 +1,22 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { VipCapperStatus } from "@/lib/vip/types";
 
 const auth = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
 vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => auth.value }));
 
-const client = vi.hoisted(() => ({ getVipCapperStatus: vi.fn() }));
+const client = vi.hoisted(() => {
+  class VipApiError extends Error {
+    readonly status: number;
+    readonly detail: string;
+    constructor(status: number, detail: string) {
+      super(`vip_${status}`);
+      this.status = status;
+      this.detail = detail;
+    }
+  }
+  return { getVipCapperStatus: vi.fn(), VipApiError };
+});
 vi.mock("@/lib/vip/client", () => client);
 
 import { CapperVipSection } from "./CapperVipSection";
@@ -28,20 +39,6 @@ const status: VipCapperStatus = {
   vip_record: { n: 10, wins: 6, losses: 3, pushes: 1, units: 2.44 },
   locked: [],
 };
-
-// Tooltip reads (hover: none) on mount; jsdom has no matchMedia.
-beforeAll(() => {
-  window.matchMedia ??= ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  })) as typeof window.matchMedia;
-});
 
 describe("CapperVipSection", () => {
   beforeEach(() => {
@@ -81,11 +78,40 @@ describe("CapperVipSection", () => {
 
   it("section renders nothing and logs when the status call fails", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    client.getVipCapperStatus.mockRejectedValue(new Error("vip_404"));
+    client.getVipCapperStatus.mockRejectedValue(new client.VipApiError(500, "boom"));
     const { container } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await waitFor(() => expect(err).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
     err.mockRestore();
+  });
+
+  it("section treats 404 as quiet: renders nothing, no console.error", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    client.getVipCapperStatus.mockRejectedValue(new client.VipApiError(404, "Not Found"));
+    const { container } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await waitFor(() => expect(client.getVipCapperStatus).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(err).not.toHaveBeenCalled();
+    expect(container).toBeEmptyDOMElement();
+    err.mockRestore();
+  });
+
+  it("section clears the previous payload when the token changes", async () => {
+    client.getVipCapperStatus.mockResolvedValueOnce(status);
+    const { rerender } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await screen.findByText("Capper VIP");
+    let resolveAnon: (s: VipCapperStatus) => void = () => {};
+    client.getVipCapperStatus.mockReturnValueOnce(
+      new Promise<VipCapperStatus>((r) => {
+        resolveAnon = r;
+      }),
+    );
+    auth.value = { session: null };
+    rerender(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    expect(screen.queryByText("Capper VIP")).toBeNull();
+    resolveAnon(status);
+    expect(await screen.findByText("Capper VIP")).toBeInTheDocument();
+    expect(client.getVipCapperStatus).toHaveBeenLastCalledWith(7, null);
   });
 
   it("section renders nothing when there is nothing to show", async () => {

@@ -1,9 +1,7 @@
 "use client";
 
-import { formatPostedAt } from "@/components/capper/PendingBlock";
-import { formatPickText } from "@/lib/bet-format";
-import { formatStake } from "@/lib/formatters";
-import { formatMarketLabel } from "@/lib/markets";
+import { formatPostedAt, formatStake } from "@/lib/formatters";
+import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
 import {
   isLockedPick,
   type VipCapperStatus,
@@ -58,16 +56,14 @@ function SummaryRow({ pick }: { pick: VipLockedSummary }) {
 
 /* Subscriber/owner row. Mirrors PendingRow's layout: chips, pick line, meta. */
 export function LockedPickRow({ pick }: { pick: VipLockedPick }) {
-  const kind = pick.parlay_id != null ? "parlay_leg" : "straight";
-  const text = formatPickText({
-    pick: {
-      kind,
-      market: pick.market,
-      selection: pick.selection,
-      line: pick.line,
-      odds_taken: pick.odds_taken,
-    },
-  });
+  const shape = {
+    kind: pick.parlay_id != null ? ("parlay_leg" as const) : ("straight" as const),
+    market: pick.market,
+    selection: pick.selection,
+    line: pick.line,
+    odds_taken: pick.odds_taken,
+  };
+  const text = formatBetDescriptor(shape);
   const stake = pick.units != null && pick.units > 0 ? formatStake(pick.units) : null;
   const posted = formatPostedAt(pick.posted_at);
 
@@ -77,13 +73,7 @@ export function LockedPickRow({ pick }: { pick: VipLockedPick }) {
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <span className={CHIP}>{pick.sport}</span>
           <span className={CHIP}>
-            {formatMarketLabel({
-              kind: "straight",
-              market: pick.market,
-              selection: pick.selection,
-              line: pick.line,
-              odds_taken: pick.odds_taken,
-            })}
+            {formatMarketLabel(shape)}
           </span>
         </div>
         <div className="text-[12px] font-semibold text-[var(--color-text)] truncate">{text}</div>

@@ -24,19 +24,12 @@ export function SubscribeDoor({ status, handle }: { status: VipCapperStatus; han
 
   // Door closed: the closed eligibility copy takes the button's slot.
   const closed = status.eligibility.filter((e) => !e.eligible);
+  if (closed.length === 0) return null;
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {closed.length > 0 ? (
-        closed.map((row) => <EligibilityPill key={row.sport} row={row} />)
-      ) : (
-        <span
-          className="inline-flex items-center px-2.5 py-1 rounded-full
-                     bg-[rgba(255,255,255,0.04)] border border-[var(--color-border)]
-                     text-[11px] font-bold text-[var(--color-text-muted)] tracking-[0.01em]"
-        >
-          Not currently selling
-        </span>
-      )}
+      {closed.map((row) => (
+        <EligibilityPill key={row.sport} row={row} />
+      ))}
     </div>
   );
 }

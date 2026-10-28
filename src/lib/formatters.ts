@@ -102,3 +102,19 @@ export function formatPickDate(
   }
   return "";
 }
+
+/** Relative post time for a pending row: "just now", "12m ago", "3h ago", else "Oct 27" (ET). */
+export function formatPostedAt(iso: string | null): string | null {
+  if (!iso) return null;
+  const posted = new Date(iso).getTime();
+  const diffMin = Math.floor((Date.now() - posted) / 60_000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/New_York",
+  });
+}

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SubscribeDoor } from "./SubscribeDoor";
 import type { VipCapperStatus } from "@/lib/vip/types";
@@ -25,20 +25,6 @@ function status(over: Partial<VipCapperStatus>): VipCapperStatus {
   };
 }
 
-// Tooltip reads (hover: none) on mount; jsdom has no matchMedia.
-beforeAll(() => {
-  window.matchMedia ??= ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  })) as typeof window.matchMedia;
-});
-
 describe("SubscribeDoor", () => {
   it("door shows price button when open", () => {
     render(<SubscribeDoor status={status({})} handle="moneyplayzz" />);
@@ -62,6 +48,29 @@ describe("SubscribeDoor", () => {
     render(<SubscribeDoor status={status({ door_open: false })} handle="moneyplayzz" />);
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("Not currently selling: -4.0u MLB, last 30 days")).toBeInTheDocument();
+  });
+
+  it("door slot is empty when closed with no ineligible sports", () => {
+    const { container } = render(
+      <SubscribeDoor
+        status={status({
+          door_open: false,
+          eligibility: [
+            {
+              sport: "MLB",
+              eligible: true,
+              eligible_since: "2026-10-01",
+              units: 5,
+              n_picks: 20,
+              n_floor_picks: 20,
+              run_date: "2026-10-27",
+            },
+          ],
+        })}
+        handle="moneyplayzz"
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("door renders nothing without seller", () => {

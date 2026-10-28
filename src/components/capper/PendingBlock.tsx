@@ -5,26 +5,11 @@ import { XIcon } from "@/components/icons/XIcon";
 import { AffiliatePicker } from "@/components/affiliate/AffiliatePicker";
 import { AffiliateDisclaimer } from "@/components/affiliate/AffiliateDisclaimer";
 import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
-import { formatStake } from "@/lib/formatters";
+import { formatPostedAt, formatStake } from "@/lib/formatters";
 import type { SportsbookSummary } from "@/lib/api";
 import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
-
-export function formatPostedAt(iso: string | null): string | null {
-  if (!iso) return null;
-  const posted = new Date(iso).getTime();
-  const diffMin = Math.floor((Date.now() - posted) / 60_000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "America/New_York",
-  });
-}
 
 function formatStakeUnits(u: number | null): string | null {
   if (u == null || u <= 0) return null;

@@ -57,9 +57,22 @@ describe("LockedPicks", () => {
       />,
     );
     expect(screen.getByText("VIP · 1 locked")).toBeInTheDocument();
-    expect(screen.getByText("NYY ML -135")).toBeInTheDocument();
+    expect(screen.getByText("Yankees -135")).toBeInTheDocument();
     expect(screen.getByText("2u")).toBeInTheDocument();
     expect(screen.queryByText(/Reveals at/)).toBeNull();
+  });
+
+  it("locked subscriber parlay leg renders the leg, not a parlay label", () => {
+    render(
+      <LockedPicks
+        status={base({
+          viewer: { subscribed: false, is_owner: true },
+          locked: [{ ...pick, id: 12, parlay_id: 99, parlay_leg_index: 0, market: "spread", selection: "Rangers +1.5", line: 1.5, odds_taken: 120 }],
+        })}
+      />,
+    );
+    expect(screen.getByText("Rangers +1.5 +120")).toBeInTheDocument();
+    expect(screen.getByText("Spread")).toBeInTheDocument();
   });
 
   it("renders nothing with no locked picks", () => {

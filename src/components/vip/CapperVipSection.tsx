@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { getVipCapperStatus } from "@/lib/vip/client";
+import { VipApiError, getVipCapperStatus } from "@/lib/vip/client";
 import type { VipCapperStatus } from "@/lib/vip/types";
 import { EligibilityBadges } from "./EligibilityBadges";
 import { LockedPicks } from "./LockedPicks";
@@ -25,13 +25,19 @@ export function CapperVipSection({ capperId, handle }: { capperId: number; handl
 
   useEffect(() => {
     let cancelled = false;
+    // Drop the previous viewer's payload (e.g. a subscriber who just signed
+    // out) while the refetch for the new token is in flight.
+    setStatus(null);
     getVipCapperStatus(capperId, token)
       .then((s) => {
         if (!cancelled) setStatus(s);
       })
       .catch((err: unknown) => {
         // A VIP outage must never break the public profile: log and hide.
-        console.error("capper VIP status failed", err);
+        // 404 (capper or route not found) is an expected "nothing to show".
+        if (!(err instanceof VipApiError && err.status === 404)) {
+          console.error("capper VIP status failed", err);
+        }
         if (!cancelled) setStatus(null);
       });
     return () => {
