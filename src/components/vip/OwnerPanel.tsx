@@ -70,10 +70,16 @@ function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void
       >
         Cancel
       </button>
-      {error && <span className="text-[11px] text-[#f87171] font-semibold">{error}</span>}
+      {error && (
+        <span role="status" className="text-[11px] text-[#f87171] font-semibold">
+          {error}
+        </span>
+      )}
     </div>
   );
 }
+
+const DENYLISTED_HANDLES = new Set(["fadeai_", "tailslips"]);
 
 /** Owner-only panel on a capper's own profile: start selling, or the price line + composer. */
 export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
@@ -116,6 +122,8 @@ export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
 
   const me = userId && loaded?.userId === userId ? loaded.me : null;
   if (!me || !me.capper) return null;
+  // House accounts never sell (the platform denylists them too).
+  if (DENYLISTED_HANDLES.has(me.capper.handle.toLowerCase())) return null;
 
   return (
     <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-4 flex flex-col gap-3">

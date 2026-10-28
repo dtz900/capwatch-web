@@ -19,6 +19,9 @@ export const labelCls =
 // Native <option> rows paint the OS white otherwise (same fix as the admin panel).
 export const optionCls = "bg-[#0e0e12] text-[var(--color-text)]";
 
+/** The platform rejects tickets over 10 legs. */
+export const MAX_LEGS = 10;
+
 // Every market the shared label map knows, minus player props (v1).
 const VIP_LEG_TYPES = (Object.keys(LEG_TYPE_LABEL) as LegType[]).filter((t) => t !== "player");
 
@@ -79,6 +82,7 @@ export function LegEditor({ sport, legs, onChange, token, legOddsDisabled = fals
   };
 
   const target = Math.min(targetIdx, legs.length - 1);
+  const atMax = legs.length >= MAX_LEGS;
   const typeOptions = legTypeOptions(sport);
 
   return (
@@ -229,17 +233,20 @@ export function LegEditor({ sport, legs, onChange, token, legOddsDisabled = fals
         </div>
       ))}
 
-      <div>
+      <div className="flex items-center gap-2">
         <button
           type="button"
+          disabled={atMax}
           onClick={() => {
+            if (atMax) return;
             onChange([...legs, { ...EMPTY_LEG }]);
             setTargetIdx(legs.length);
           }}
-          className={btnCls}
+          className={`${btnCls} disabled:opacity-40 disabled:cursor-not-allowed`}
         >
           + Add leg
         </button>
+        {atMax && <span className="text-[10px] text-[var(--color-text-muted)]">Max {MAX_LEGS} legs</span>}
       </div>
     </div>
   );

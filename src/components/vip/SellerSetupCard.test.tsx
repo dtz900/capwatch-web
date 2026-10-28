@@ -94,4 +94,27 @@ describe("SellerSetupCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Start selling" }));
     await vi.waitFor(() => expect(onDone).toHaveBeenCalled());
   });
+
+  it("setup shows requirement line when nothing is eligible", () => {
+    render(
+      <SellerSetupCard
+        me={{ ...me, eligibility: [{ sport: "MLB", eligible: false, eligible_since: null, fail_streak: 2 }] }}
+        onDone={() => {}}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Start selling unlocks once a sport is eligible: a positive record over the last 30 days with at least 20 graded picks.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
+  });
+
+  it("maps a seller_denylisted 403 to the cannot-sell line", async () => {
+    client.postVipSeller.mockRejectedValue(new client.VipApiError(403, "seller_denylisted"));
+    render(<SellerSetupCard me={me} onDone={() => {}} />);
+    fillValid();
+    fireEvent.click(screen.getByRole("button", { name: "Start selling" }));
+    expect(await screen.findByText("This account cannot sell VIP picks.")).toBeInTheDocument();
+  });
 });

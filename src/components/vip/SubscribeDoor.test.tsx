@@ -79,4 +79,19 @@ describe("SubscribeDoor", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("door renders nothing for the owner", () => {
+    const { container } = render(
+      <SubscribeDoor status={status({ viewer: { subscribed: false, is_owner: true } })} handle="moneyplayzz" />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("door shows a Subscribed pill instead of the button for a subscriber", () => {
+    render(
+      <SubscribeDoor status={status({ viewer: { subscribed: true, is_owner: false } })} handle="moneyplayzz" />,
+    );
+    expect(screen.getByText("Subscribed")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
 });

@@ -177,7 +177,7 @@ describe("CapperVipSection", () => {
     expect(client.getVipCapperStatus).toHaveBeenCalledTimes(2);
   });
 
-  it("section owner with nothing public yet still sees start selling", async () => {
+  it("section owner with nothing public and nothing eligible sees the requirement line", async () => {
     auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "moneyplayzz" } };
     client.getVipCapperStatus.mockResolvedValue({
       ...status,
@@ -193,7 +193,8 @@ describe("CapperVipSection", () => {
       can_post_sports: [],
     });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    expect(await screen.findByRole("button", { name: "Start selling" })).toBeDisabled();
+    expect(await screen.findByText(/Start selling unlocks once a sport is eligible/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
     expect(screen.queryByText("Capper VIP")).toBeNull();
   });
 
@@ -246,5 +247,22 @@ describe("CapperVipSection", () => {
     expect(screen.getByLabelText("Units")).toBe(units);
     expect(screen.getByLabelText("Units")).toHaveValue(2.5);
     expect(screen.getByDisplayValue("Draft text")).toBeInTheDocument();
+  });
+
+  it("owner panel hidden for denylisted handle", async () => {
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "FadeAI_" } };
+    client.getVipCapperStatus.mockResolvedValue(status);
+    client.getVipMe.mockResolvedValue({
+      capper: { id: 7, handle: "FadeAI_" },
+      seller: null,
+      eligibility: [{ sport: "MLB", eligible: true, eligible_since: "2026-10-01", fail_streak: 0 }],
+      can_post_sports: ["MLB"],
+    });
+    render(<CapperVipSection capperId={7} handle="FadeAI_" />);
+    await screen.findByText("Capper VIP");
+    await waitFor(() => expect(client.getVipMe).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(screen.queryByText("Your VIP")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
   });
 });

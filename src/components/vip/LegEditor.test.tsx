@@ -97,4 +97,18 @@ describe("LegEditor", () => {
       expect.objectContaining({ game: expect.objectContaining({ game_pk: "401" }) }),
     ]);
   });
+
+  it("legEditor disables + Add leg at 10 legs", () => {
+    const onChange = vi.fn();
+    const nine = Array.from({ length: 9 }, () => ({ ...EMPTY_LEG }));
+    const { rerender } = render(<LegEditor sport="MLB" legs={nine} onChange={onChange} token="tok" />);
+    expect(screen.getByRole("button", { name: "+ Add leg" })).toBeEnabled();
+    expect(screen.queryByText("Max 10 legs")).toBeNull();
+    rerender(<LegEditor sport="MLB" legs={[...nine, { ...EMPTY_LEG }]} onChange={onChange} token="tok" />);
+    const add = screen.getByRole("button", { name: "+ Add leg" });
+    expect(add).toBeDisabled();
+    expect(screen.getByText("Max 10 legs")).toBeInTheDocument();
+    fireEvent.click(add);
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

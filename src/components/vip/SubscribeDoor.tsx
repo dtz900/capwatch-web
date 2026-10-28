@@ -8,6 +8,18 @@ import { formatPrice } from "./format";
 export function SubscribeDoor({ status, handle }: { status: VipCapperStatus; handle: string }) {
   const { seller } = status;
   if (!seller) return null;
+  // The owner never subscribes to themselves; a subscriber sees a pill.
+  if (status.viewer.is_owner) return null;
+  if (status.viewer.subscribed) {
+    return (
+      <span
+        className="inline-flex items-center px-3 py-1.5 rounded-lg border border-[var(--color-border-h)]
+                   text-[11px] font-bold tracking-[0.02em] text-[var(--color-text-soft)]"
+      >
+        Subscribed
+      </span>
+    );
+  }
 
   if (status.door_open) {
     return (

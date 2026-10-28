@@ -51,6 +51,9 @@ export function PriceInput({
 export const goldBtnCls =
   "inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[var(--color-gold)] text-[#0a0a0c] text-[12px] font-bold tracking-[0.02em] hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed";
 
+export const REQUIREMENT_LINE =
+  "Start selling unlocks once a sport is eligible: a positive record over the last 30 days with at least 20 graded picks.";
+
 export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void }) {
   const { session } = useAuth();
   const token = session?.access_token ?? null;
@@ -72,6 +75,8 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
     } catch (err) {
       if (err instanceof VipApiError && err.status === 409) {
         setError("You need a positive 30-day record in at least one sport first.");
+      } else if (err instanceof VipApiError && err.status === 403 && err.detail === "seller_denylisted") {
+        setError("This account cannot sell VIP picks.");
       } else {
         console.error("VIP seller create failed", err);
         setError("Could not start selling. Try again.");
@@ -80,6 +85,14 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
       setPending(false);
     }
   };
+
+  if (!me.eligibility.some((e) => e.eligible)) {
+    return (
+      <p role="status" className="text-[12px] text-[var(--color-text-soft)]">
+        {REQUIREMENT_LINE}
+      </p>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -98,7 +111,11 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
         <button type="button" className={goldBtnCls} disabled={!canSubmit} onClick={submit}>
           Start selling
         </button>
-        {error && <span className="text-[11px] text-[#f87171] font-semibold">{error}</span>}
+        {error && (
+          <span role="status" className="text-[11px] text-[#f87171] font-semibold">
+            {error}
+          </span>
+        )}
       </div>
     </div>
   );
