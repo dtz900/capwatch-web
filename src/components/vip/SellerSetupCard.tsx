@@ -6,7 +6,7 @@ import { VipApiError, postVipSeller } from "@/lib/vip/client";
 import type { VipMe } from "@/lib/vip/types";
 
 export const TERMS_SENTENCE =
-  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone when the game starts, and that TailSlips keeps 15% of each subscription (10% for founding sellers).";
+  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription (10% for founding sellers).";
 
 export const PRICE_MIN = 10;
 export const PRICE_MAX = 99;

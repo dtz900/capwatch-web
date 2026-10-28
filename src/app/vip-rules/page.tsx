@@ -57,7 +57,7 @@ export default function VipRules() {
         <h2 className={H2}>What a VIP pick is</h2>
         <p className={P}>
           A VIP pick is posted inside TailSlips and timestamped by TailSlips. The capper cannot edit
-          or delete it. It stays locked to subscribers until its scheduled start. After that it is
+          or delete it. It stays locked to subscribers until 30 minutes after its scheduled start. After that it is
           shown to everyone and graded like any other pick, and it counts on the leaderboard.
         </p>
 

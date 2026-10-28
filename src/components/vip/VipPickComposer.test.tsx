@@ -144,7 +144,7 @@ describe("VipPickComposer", () => {
     await fillOneLeg();
     fireEvent.click(screen.getByRole("button", { name: "Post VIP pick" }));
     expect(
-      await screen.findByText("Posted. Locked to subscribers until the game starts."),
+      await screen.findByText("Posted. Locked to subscribers until 30 minutes after the game starts."),
     ).toBeInTheDocument();
     expect(onPosted).toHaveBeenCalledWith([91]);
     expect(client.postVipPick).toHaveBeenCalledWith(
@@ -178,7 +178,7 @@ describe("VipPickComposer", () => {
     fireEvent.change(screen.getByLabelText("Combined odds"), { target: { value: "+260" } });
     expect(screen.getByLabelText("Leg 1 odds")).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Post VIP pick" }));
-    await screen.findByText("Posted. Locked to subscribers until the game starts.");
+    await screen.findByText("Posted. Locked to subscribers until 30 minutes after the game starts.");
     const body = client.postVipPick.mock.calls[0][0];
     expect(body.combined_odds).toBe(260);
     expect(body.legs.map((l: { odds: number | null }) => l.odds)).toEqual([null, null]);
@@ -265,7 +265,7 @@ describe("VipPickComposer", () => {
     fireEvent.change(screen.getByPlaceholderText("team (optional)"), { target: { value: "NYY" } });
     await fillOneLeg();
     fireEvent.click(screen.getByRole("button", { name: "Post VIP pick" }));
-    await screen.findByText("Posted. Locked to subscribers until the game starts.");
+    await screen.findByText("Posted. Locked to subscribers until 30 minutes after the game starts.");
     expect(screen.queryByRole("button", { name: "NYY @ BOS" })).toBeNull();
     expect(screen.getByPlaceholderText("team (optional)")).toHaveValue("");
   });
