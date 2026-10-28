@@ -2,7 +2,7 @@
 
 import type { VipEligibility } from "@/lib/vip/types";
 import { closedCopy, eligibleCopy, eligibilityDetail, focalUnits } from "./format";
-import { CHIP_MUTED, CHIP_POS, INNER_CARD } from "./styles";
+import { CHIP_MUTED, CHIP_VIP, INNER_CARD } from "./styles";
 
 export const ELIGIBILITY_TOOLTIP =
   "Eligibility is recomputed nightly from the same record shown on this page.";
@@ -20,12 +20,16 @@ export function EligibilityCard({ row }: { row: VipEligibility }) {
   const label = row.eligible ? eligibleCopy(row) : closedCopy(row);
   const lines = eligibilityDetail(row);
   return (
-    <div role="group" aria-label={label} className={`${INNER_CARD} flex flex-col gap-2.5 min-w-0`}>
+    <div
+      role="group"
+      aria-label={label}
+      className={`${INNER_CARD} flex flex-col gap-2.5 min-w-0 ${row.eligible ? "border-t-2 border-t-[var(--color-vip)]" : ""}`}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--color-text-soft)]">
           {row.sport}
         </span>
-        <span className={row.eligible ? CHIP_POS : CHIP_MUTED}>{row.eligible ? "Selling" : "Off"}</span>
+        <span className={row.eligible ? CHIP_VIP : CHIP_MUTED}>{row.eligible ? "Selling" : "Off"}</span>
       </div>
       <div
         className={`text-[28px] sm:text-[32px] leading-none font-extrabold tabular-nums tracking-[-0.02em] ${focalTone(row.units)}`}

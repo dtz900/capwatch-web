@@ -39,3 +39,22 @@ export const DOOR_CHIP_SUBSCRIBED =
 
 export const ERROR_TEXT = "text-[11px] text-[var(--color-neg)] font-semibold";
 export const OK_TEXT = "text-[11px] text-[var(--color-pos)] font-semibold";
+
+/* ---------- VIP brand (royal purple) ---------- */
+
+export const VIP_BAND_BG = "bg-[linear-gradient(135deg,var(--color-vip-deep),var(--color-vip))]";
+
+export const VIP_WORDMARK =
+  "inline-flex items-center rounded-md px-2 py-0.5 bg-[rgba(255,255,255,0.14)] text-[11px] font-extrabold tracking-[0.22em] text-[var(--color-text)]";
+
+/** Small purple VIP chip for headers on dark ground. */
+export const VIP_CHIP =
+  "inline-flex items-center rounded-md px-2 py-0.5 bg-[var(--color-vip-soft)] text-[var(--color-vip-text)] text-[10px] font-extrabold tracking-[0.18em]";
+
+export const CHIP_VIP = `${CHIP_BASE} border border-transparent bg-[var(--color-vip-soft)] text-[var(--color-vip-text)]`;
+
+/** Off-white button with deep purple text, for use on and around the band. */
+export const VIP_PRIMARY_BTN = `${BTN_BASE} h-10 px-4 bg-[var(--color-text)] text-[var(--color-vip-deep)] hover:opacity-90`;
+
+export const VIP_BAND_CHIP =
+  "inline-flex h-10 items-center rounded-lg px-4 bg-[rgba(255,255,255,0.14)] text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--color-text)]";

@@ -9,8 +9,9 @@ import { ELIGIBILITY_TOOLTIP, EligibilityBadges } from "./EligibilityBadges";
 import { LockedPicks } from "./LockedPicks";
 import { OwnerPanel } from "./OwnerPanel";
 import { SubscribeDoor } from "./SubscribeDoor";
-import { signedUnits } from "./format";
-import { EYEBROW, SECTION } from "./styles";
+import { VipBand } from "./VipBand";
+import { signedUnits, vipHeadline } from "./format";
+import { EYEBROW } from "./styles";
 
 function recordLine(r: VipCapperStatus["vip_record"]): string {
   const pushes = r.pushes > 0 ? `-${r.pushes}` : "";
@@ -100,6 +101,30 @@ function VipRecord({ record }: { record: VipCapperStatus["vip_record"] }) {
   );
 }
 
+const STEPS = [
+  "Picks post inside TailSlips",
+  "Locked to subscribers until 30 min after tip",
+  "Then graded like every other pick",
+];
+
+function HowItWorks() {
+  return (
+    <ol className="mt-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-x-2 gap-y-1 text-[11px] text-[var(--color-text-muted)]">
+      {STEPS.map((step, i) => (
+        <li key={step} className="inline-flex items-center gap-2">
+          {i > 0 && (
+            <span aria-hidden="true" className="hidden sm:inline">
+              ·
+            </span>
+          )}
+          <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-sm bg-[var(--color-vip)]" />
+          {step}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** Presentational profile section for a loaded status (the fixtures page
  *  renders it with mock payloads). */
 export function CapperVipView({
@@ -121,16 +146,25 @@ export function CapperVipView({
     <div className="flex flex-col gap-3">
       {ownerPanel}
       {showCard && (
-        <section className={SECTION}>
-          <div className="mb-4">
-            <Tooltip content={ELIGIBILITY_TOOLTIP}>
-              <span className={`${EYEBROW} cursor-help`}>Capper VIP</span>
-            </Tooltip>
-          </div>
-          <EligibilityBadges eligibility={status.eligibility} />
-          <div className="mt-4 pt-4 border-t border-[var(--color-border)] flex items-center justify-between gap-3 flex-wrap">
-            <VipRecord record={status.vip_record} />
-            <SubscribeDoor status={status} handle={handle} />
+        <section
+          aria-label="Capper VIP"
+          className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] overflow-hidden"
+        >
+          <VipBand
+            headline={vipHeadline(status)}
+            right={<SubscribeDoor status={status} handle={handle} />}
+          />
+          <div className="px-5 py-4">
+            <div className="mb-3">
+              <Tooltip content={ELIGIBILITY_TOOLTIP}>
+                <span className={`${EYEBROW} cursor-help`}>Last 30 days by sport</span>
+              </Tooltip>
+            </div>
+            <EligibilityBadges eligibility={status.eligibility} />
+            <HowItWorks />
+            <div className="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center justify-between gap-3 flex-wrap">
+              <VipRecord record={status.vip_record} />
+            </div>
           </div>
         </section>
       )}

@@ -22,6 +22,15 @@
   --color-bronze-soft: rgba(200, 129, 74, 0.06);
 }
 
+/* Capper VIP brand (VIP surfaces only, by owner request 2026-10-27). Plain
+   :root so the tokens always ship; they are only read through var(). */
+:root {
+  --color-vip: #6d28d9;
+  --color-vip-deep: #4c1d95;
+  --color-vip-soft: rgba(109, 40, 217, 0.18);
+  --color-vip-text: #c4b5fd;
+}
+
 /* The page ground lives on <html> only: a body background would paint over
    the fixed, negative z-index league wash (components/ui/SportTint). */
 html {

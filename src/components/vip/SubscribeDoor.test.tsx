@@ -26,11 +26,13 @@ function status(over: Partial<VipCapperStatus>): VipCapperStatus {
 }
 
 describe("SubscribeDoor", () => {
-  it("door shows price button when open", () => {
+  it("door open: big price and a Subscribe button", () => {
     render(<SubscribeDoor status={status({})} handle="moneyplayzz" />);
-    const link = screen.getByRole("link", { name: "Subscribe · $25/mo" });
+    const link = screen.getByRole("link", { name: "Subscribe" });
     expect(link).toHaveAttribute("href", "/cappers/moneyplayzz/subscribe");
-    expect(link).toHaveClass("bg-[var(--color-text)]");
+    expect(link).toHaveClass("text-[var(--color-vip-deep)]");
+    expect(screen.getByText("$25")).toBeInTheDocument();
+    expect(screen.getByText("/mo")).toBeInTheDocument();
   });
 
   it("door shows cents when the price is not whole", () => {
@@ -42,19 +44,19 @@ describe("SubscribeDoor", () => {
         handle="moneyplayzz"
       />,
     );
-    expect(screen.getByRole("link", { name: "Subscribe · $19.99/mo" })).toBeInTheDocument();
+    expect(screen.getByText("$19.99")).toBeInTheDocument();
   });
 
-  it("door closed shows one muted chip and no link", () => {
-    render(<SubscribeDoor status={status({ door_open: false })} handle="moneyplayzz" />);
-    expect(screen.queryByRole("link")).toBeNull();
-    expect(screen.getByText("Not selling right now")).toBeInTheDocument();
+  it("door closed renders nothing (the body explains)", () => {
+    const { container } = render(<SubscribeDoor status={status({ door_open: false })} handle="moneyplayzz" />);
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it("door closed without a seller shows the same chip", () => {
-    render(<SubscribeDoor status={status({ seller: null, door_open: false })} handle="moneyplayzz" />);
-    expect(screen.queryByRole("link")).toBeNull();
-    expect(screen.getByText("Not selling right now")).toBeInTheDocument();
+  it("no seller renders nothing", () => {
+    const { container } = render(
+      <SubscribeDoor status={status({ seller: null, door_open: false })} handle="moneyplayzz" />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("door renders nothing for the owner", () => {
@@ -64,17 +66,7 @@ describe("SubscribeDoor", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("owner with closed door: slot stays empty (reasons are on the cards)", () => {
-    const { container } = render(
-      <SubscribeDoor
-        status={status({ door_open: false, viewer: { subscribed: false, is_owner: true } })}
-        handle="moneyplayzz"
-      />,
-    );
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("door shows a Subscribed chip instead of the button for a subscriber", () => {
+  it("subscriber sees a Subscribed chip and no link", () => {
     render(
       <SubscribeDoor status={status({ viewer: { subscribed: true, is_owner: false } })} handle="moneyplayzz" />,
     );
@@ -82,7 +74,7 @@ describe("SubscribeDoor", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("subscriber with closed door sees Subscribed and no link", () => {
+  it("subscriber with closed door still sees Subscribed", () => {
     render(
       <SubscribeDoor
         status={status({ door_open: false, viewer: { subscribed: true, is_owner: false } })}
@@ -90,7 +82,6 @@ describe("SubscribeDoor", () => {
       />,
     );
     expect(screen.getByText("Subscribed")).toBeInTheDocument();
-    expect(screen.queryByText("Not selling right now")).toBeNull();
     expect(screen.queryByRole("link")).toBeNull();
   });
 });

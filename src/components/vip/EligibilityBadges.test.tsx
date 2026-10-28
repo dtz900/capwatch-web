@@ -30,7 +30,14 @@ describe("EligibilityBadges", () => {
     render(
       <EligibilityBadges
         eligibility={[
-          row({ sport: "NBA", eligible: false, units: -3.25, n_picks: 12, reason: "below_floor" }),
+          row({
+            sport: "NBA",
+            eligible: false,
+            units: -3.25,
+            n_picks: 12,
+            n_floor_picks: 12,
+            reason: "below_floor",
+          }),
         ]}
       />,
     );
@@ -39,11 +46,20 @@ describe("EligibilityBadges", () => {
     expect(screen.getByText("-3.3u")).toHaveClass("text-[var(--color-neg)]");
     expect(screen.getByText("12 picks · last 30 days")).toBeInTheDocument();
     expect(screen.getByText("Under the 20 pick floor")).toBeInTheDocument();
+    expect(screen.getByText("8 more picks to qualify")).toBeInTheDocument();
+  });
+
+  it("eligible card wears the purple top border and chip", () => {
+    render(<EligibilityBadges eligibility={[row({})]} />);
+    const card = screen.getByLabelText("Selling MLB VIP: +12.3u over last 30 days (41 picks)");
+    expect(card).toHaveClass("border-t-[var(--color-vip)]");
+    expect(screen.getByText("Selling")).toHaveClass("text-[var(--color-vip-text)]");
   });
 
   it("negative reason copy", () => {
     render(<EligibilityBadges eligibility={[row({ eligible: false, units: -11.4, reason: "negative" })]} />);
     expect(screen.getByText("Negative over 30 days")).toBeInTheDocument();
+    expect(screen.getByText("11.4u from eligible")).toBeInTheDocument();
   });
 
   it("grace night on an eligible sport", () => {
@@ -59,6 +75,7 @@ describe("EligibilityBadges", () => {
     );
     expect(screen.getByText("0.0u")).toHaveClass("text-[var(--color-text-muted)]");
     expect(screen.getAllByText("No record yet")).toHaveLength(1);
+    expect(screen.getByText("No picks in the last 30 days")).toBeInTheDocument();
   });
 
   it("renders nothing with no rows", () => {

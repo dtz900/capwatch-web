@@ -2,24 +2,24 @@
 
 import Link from "next/link";
 import type { VipCapperStatus } from "@/lib/vip/types";
-import { formatPrice } from "./format";
-import { DOOR_CHIP_MUTED, DOOR_CHIP_SUBSCRIBED, PRIMARY_BTN } from "./styles";
+import { VipPrice } from "./VipBand";
+import { VIP_BAND_CHIP, VIP_PRIMARY_BTN } from "./styles";
 
-/** Right slot of the VIP footer. The per-sport reasons live on the
- *  eligibility cards, so a closed door is one muted chip. */
+/** Right slot of the VIP band. Open door: price and Subscribe. Subscriber:
+ *  a Subscribed chip. Owner or closed door: nothing (the body says why). */
 export function SubscribeDoor({ status, handle }: { status: VipCapperStatus; handle: string }) {
   const { seller } = status;
   const { is_owner: isOwner, subscribed } = status.viewer;
 
-  // The owner never subscribes to themselves.
   if (isOwner) return null;
-  if (subscribed) return <span className={DOOR_CHIP_SUBSCRIBED}>Subscribed</span>;
-  if (!seller || !status.door_open) {
-    return <span className={DOOR_CHIP_MUTED}>Not selling right now</span>;
-  }
+  if (subscribed) return <span className={VIP_BAND_CHIP}>Subscribed</span>;
+  if (!seller || !status.door_open) return null;
   return (
-    <Link href={`/cappers/${encodeURIComponent(handle)}/subscribe`} className={PRIMARY_BTN}>
-      Subscribe · ${formatPrice(seller.price_cents)}/mo
-    </Link>
+    <div className="flex items-center gap-4">
+      <VipPrice cents={seller.price_cents} />
+      <Link href={`/cappers/${encodeURIComponent(handle)}/subscribe`} className={VIP_PRIMARY_BTN}>
+        Subscribe
+      </Link>
+    </div>
   );
 }

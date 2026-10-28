@@ -1,5 +1,5 @@
 import { formatUnits } from "@/lib/formatters";
-import type { VipEligibility } from "@/lib/vip/types";
+import type { VipCapperStatus, VipEligibility } from "@/lib/vip/types";
 
 /** Signed, one decimal, with the unit suffix: 12.34 -> "+12.3u". */
 export function signedUnits(units: number | null | undefined): string {
@@ -27,13 +27,55 @@ const REASON_COPY: Record<string, string> = {
   no_record: "No record yet",
 };
 
+/** Minimum graded picks in the 30 day window to qualify. */
+export const VIP_PICK_FLOOR = 20;
+
+/** How far an OFF sport is from qualifying, in one muted line. */
+export function eligibilityGap(e: VipEligibility): string | null {
+  if (e.eligible) return null;
+  if (e.reason === "below_floor") {
+    if (e.n_floor_picks == null) return `${VIP_PICK_FLOOR} picks to qualify`;
+    const left = Math.max(1, VIP_PICK_FLOOR - e.n_floor_picks);
+    return left === 1 ? "1 more pick to qualify" : `${left} more picks to qualify`;
+  }
+  if (e.reason === "negative" && e.units != null) {
+    return `${Math.abs(e.units).toFixed(1)}u from eligible`;
+  }
+  if (e.reason === "no_record") return "No picks in the last 30 days";
+  return null;
+}
+
+/** "NBA", "NBA and NFL", "MLB, NBA and NFL". */
+export function joinSports(sports: string[]): string {
+  if (sports.length <= 1) return sports.join("");
+  return `${sports.slice(0, -1).join(", ")} and ${sports[sports.length - 1]}`;
+}
+
+export const VIP_RULE_LINE =
+  "Cappers can only sell here while their public record is winning that sport over the last 30 days. Checked every night.";
+
+/** Band headline: does this capper sell VIP picks, and in what. */
+export function vipHeadline(s: VipCapperStatus): string {
+  const eligible = s.eligibility.filter((e) => e.eligible).map((e) => String(e.sport));
+  if (s.seller) {
+    return s.door_open && eligible.length > 0
+      ? `Selling ${joinSports(eligible)} VIP picks`
+      : "Not selling right now";
+  }
+  return eligible.length > 0
+    ? `Eligible to sell ${joinSports(eligible)} VIP picks`
+    : "Not eligible to sell yet";
+}
+
 /** Muted sub-lines under a card's focal number. */
 export function eligibilityDetail(e: VipEligibility): string[] {
   const first = e.units == null ? "No record yet" : `${e.n_picks ?? 0} picks · last 30 days`;
   let second: string | null = null;
   if (!e.eligible) second = e.reason ? (REASON_COPY[e.reason] ?? null) : null;
   else if (e.fail_streak === 1) second = "One bad night, still selling";
-  return second && second !== first ? [first, second] : [first];
+  const lines = second && second !== first ? [first, second] : [first];
+  const gap = eligibilityGap(e);
+  return gap ? [...lines, gap] : lines;
 }
 
 /** Whole dollars drop the cents: 2500 -> "25", 1999 -> "19.99". */
