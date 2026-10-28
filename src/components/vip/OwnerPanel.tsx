@@ -125,6 +125,22 @@ export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
   // House accounts never sell (the platform denylists them too).
   if (DENYLISTED_HANDLES.has(me.capper.handle.toLowerCase())) return null;
 
+  return <OwnerPanelView me={me} onRefresh={refresh} onPosted={() => onChanged?.()} />;
+}
+
+/** Presentational owner panel for a loaded /me. `composerToken` lets the
+ *  fixtures page show the composer without a signed-in session. */
+export function OwnerPanelView({
+  me,
+  onRefresh,
+  onPosted,
+  composerToken,
+}: {
+  me: VipMe;
+  onRefresh: () => void;
+  onPosted: () => void;
+  composerToken?: string;
+}) {
   return (
     <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -135,11 +151,11 @@ export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
       </div>
       {me.seller ? (
         <>
-          <PriceLine key={me.seller.price_cents} seller={me.seller} onSaved={refresh} />
-          <VipPickComposer me={me} onPosted={() => onChanged?.()} />
+          <PriceLine key={me.seller.price_cents} seller={me.seller} onSaved={onRefresh} />
+          <VipPickComposer me={me} onPosted={onPosted} token={composerToken} />
         </>
       ) : (
-        <SellerSetupCard me={me} onDone={refresh} />
+        <SellerSetupCard me={me} onDone={onRefresh} />
       )}
     </section>
   );

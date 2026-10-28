@@ -70,9 +70,18 @@ function legComplete(leg: LegDraft): boolean {
   }
 }
 
-export function VipPickComposer({ me, onPosted }: { me: VipMe; onPosted: (ids: number[]) => void }) {
+export function VipPickComposer({
+  me,
+  onPosted,
+  token: tokenOverride,
+}: {
+  me: VipMe;
+  onPosted: (ids: number[]) => void;
+  /** Fixtures only: stands in for the session token. */
+  token?: string;
+}) {
   const { session } = useAuth();
-  const token = session?.access_token ?? null;
+  const token = tokenOverride ?? session?.access_token ?? null;
   const sports = me.can_post_sports.map((s) => s.toUpperCase() as VipSport);
   const [sport, setSport] = useState<VipSport | null>(sports[0] ?? null);
   const [units, setUnits] = useState("1");

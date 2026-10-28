@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, getVipCapperStatus } from "@/lib/vip/client";
 import type { VipCapperStatus } from "@/lib/vip/types";
@@ -68,6 +68,20 @@ export function CapperVipSection({ capperId, handle }: { capperId: number; handl
   }, [capperId, userId, authReady, reload]);
 
   const ownerPanel = isOwner ? <OwnerPanel onChanged={refetch} /> : null;
+  return <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} />;
+}
+
+/** Presentational profile section for a loaded status (the fixtures page
+ *  renders it with mock payloads). */
+export function CapperVipView({
+  status,
+  handle,
+  ownerPanel = null,
+}: {
+  status: VipCapperStatus | null;
+  handle: string;
+  ownerPanel?: ReactNode;
+}) {
   if (!status || isEmpty(status)) {
     return ownerPanel ? <div className="flex flex-col gap-3">{ownerPanel}</div> : null;
   }
