@@ -71,7 +71,7 @@ export default function VipRules() {
         </p>
         <p className={P}>
           Billing pauses automatically if the capper is ineligible in every sport for 7 days, or
-          posts no VIP picks for 14 days. It resumes when he can post again.
+          posts no VIP picks for 14 days. It resumes when they can post again.
         </p>
 
         <h2 className={H2}>Money</h2>
@@ -85,8 +85,8 @@ export default function VipRules() {
         <p className={P}>
           TailSlips earns money from sellers, which is a conflict of interest, and we want you to
           see it. Sellers are graded by the same code as every other capper, with no special
-          treatment. Each capper&apos;s eligibility history is public on their profile, so you can
-          check when selling was on or off. See the{" "}
+          treatment. The numbers behind each eligibility decision, the window record and the pick
+          count, are shown on the capper&apos;s profile. See the{" "}
           <Link href="/methodology" className={LINK}>
             methodology
           </Link>{" "}
@@ -96,7 +96,7 @@ export default function VipRules() {
         <h2 className={H2}>Not advice</h2>
         <p className={P}>
           TailSlips does not provide betting advice. Every pick is the capper&apos;s own, and past
-          results do not predict future ones. You must be 18 or older to subscribe.
+          results do not predict future ones. You must be 21 or older to subscribe.
         </p>
       </main>
     </>

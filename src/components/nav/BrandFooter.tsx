@@ -46,7 +46,7 @@ export function BrandFooter() {
             {capperVipEnabled() && (
               <>
                 {" "}
-                ·{" "}
+                Â·{" "}
                 <Link href="/vip-rules" className="underline hover:text-[var(--color-text)]">
                   VIP rules
                 </Link>

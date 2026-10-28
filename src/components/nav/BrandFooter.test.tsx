@@ -18,5 +18,8 @@ describe("BrandFooter", () => {
     vi.stubEnv("NEXT_PUBLIC_CAPPER_VIP_ENABLED", "true");
     render(<BrandFooter />);
     expect(screen.getByRole("link", { name: "VIP rules" }).getAttribute("href")).toBe("/vip-rules");
+    const legal = screen.getByRole("link", { name: "Terms of Service" }).parentElement!;
+    expect(legal.textContent).not.toContain("\uFFFD");
+    expect(legal.textContent).toContain("Privacy Policy \u00B7 VIP rules");
   });
 });
