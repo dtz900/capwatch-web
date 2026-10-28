@@ -94,4 +94,28 @@ describe("SubscribeDoor", () => {
     expect(screen.getByText("Subscribed")).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
   });
+
+  it("owner with closed door sees the closed pills and no link", () => {
+    render(
+      <SubscribeDoor
+        status={status({ door_open: false, viewer: { subscribed: false, is_owner: true } })}
+        handle="moneyplayzz"
+      />,
+    );
+    expect(screen.getByText("Not currently selling: -4.0u MLB, last 30 days")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByText("Subscribed")).toBeNull();
+  });
+
+  it("subscriber with closed door sees Subscribed and the closed pills", () => {
+    render(
+      <SubscribeDoor
+        status={status({ door_open: false, viewer: { subscribed: true, is_owner: false } })}
+        handle="moneyplayzz"
+      />,
+    );
+    expect(screen.getByText("Subscribed")).toBeInTheDocument();
+    expect(screen.getByText("Not currently selling: -4.0u MLB, last 30 days")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
 });

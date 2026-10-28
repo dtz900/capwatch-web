@@ -38,6 +38,8 @@ describe("vip fixtures page", () => {
     expect(screen.getByText(/Start selling unlocks once a sport is eligible/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Post VIP pick" })).toBeInTheDocument();
     expect(screen.getByText("Paused: cold")).toBeInTheDocument();
+    // (c3) owner with a closed door sees the reason.
+    expect(screen.getByText("Not currently selling: -3.2u MLB, last 30 days")).toBeInTheDocument();
     expect(screen.getByText("Canceled")).toBeInTheDocument();
     // Anonymous: parlay legs collapse to one ticket, plus the straight.
     // Subscriber (a) and anonymous (b) both count 2 tickets; the tab card counts 1.

@@ -86,6 +86,15 @@ const ANONYMOUS: VipCapperStatus = {
   })),
 };
 
+/* Owner of a paused seller: the door is closed and says why per sport. */
+const OWNER_CLOSED: VipCapperStatus = {
+  ...BASE,
+  door_open: false,
+  viewer: { subscribed: false, is_owner: true },
+  eligibility: [{ ...ELIGIBLE, eligible: false, eligible_since: null, units: -3.2, n_picks: 24 }],
+  locked: [],
+};
+
 const OWNER_NO_SELLER: VipMe = {
   capper: { id: 7, handle: "moneyplayzz" },
   seller: null,
@@ -158,6 +167,20 @@ export function VipFixtures() {
       </Scenario>
       <Scenario label="(c2) Owner seller with the composer">
         <OwnerPanelView me={OWNER_SELLER} onRefresh={noop} onPosted={noop} composerToken="fixture" />
+      </Scenario>
+      <Scenario label="(c3) Owner seller, door closed (profile view)">
+        <CapperVipView
+          status={OWNER_CLOSED}
+          handle="moneyplayzz"
+          ownerPanel={
+            <OwnerPanelView
+              me={{ ...OWNER_SELLER, eligibility: [{ sport: "MLB", eligible: false, eligible_since: null, fail_streak: 2 }], can_post_sports: [] }}
+              onRefresh={noop}
+              onPosted={noop}
+              composerToken="fixture"
+            />
+          }
+        />
       </Scenario>
       <Scenario label="(d) My Tails VIP tab: active, paused (cold), canceled">
         <VipSubscriptionCards subscriptions={SUBSCRIPTIONS} />
