@@ -23,3 +23,10 @@ export function tofEnabled(): boolean {
 export function xAuthEnabled(): boolean {
   return vipEnabled() && process.env.NEXT_PUBLIC_X_AUTH_ENABLED === "true";
 }
+
+/* Capper VIP: cappers sell locked picks, subscribers unlock them. Needs
+   accounts (vipEnabled) because every call carries the user's token. Dark
+   until launch (decisions/log.md 2026-10-27). */
+export function capperVipEnabled(): boolean {
+  return vipEnabled() && process.env.NEXT_PUBLIC_CAPPER_VIP_ENABLED === "true";
+}
