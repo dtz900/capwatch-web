@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { EmailSignupForm } from "@/components/forms/EmailSignupForm";
+import { capperVipEnabled } from "@/lib/flags";
 
 export function BrandFooter() {
   return (
@@ -42,6 +43,15 @@ export function BrandFooter() {
             <Link href="/privacy" className="underline hover:text-[var(--color-text)]">
               Privacy Policy
             </Link>
+            {capperVipEnabled() && (
+              <>
+                {" "}
+                ·{" "}
+                <Link href="/vip-rules" className="underline hover:text-[var(--color-text)]">
+                  VIP rules
+                </Link>
+              </>
+            )}
           </p>
         </div>
         <Image
