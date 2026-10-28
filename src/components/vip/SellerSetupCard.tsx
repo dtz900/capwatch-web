@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, postVipSeller } from "@/lib/vip/client";
 import type { VipMe } from "@/lib/vip/types";
+import { ERROR_TEXT, PRIMARY_BTN } from "./styles";
 
 export const TERMS_SENTENCE =
   "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription (10% for founding sellers).";
@@ -38,7 +39,7 @@ export function PriceInput({
         <input
           id={id}
           inputMode="numeric"
-          className="w-20 px-2.5 py-1.5 text-[13px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
+          className="w-20 h-10 px-2.5 text-[13px] rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -47,9 +48,6 @@ export function PriceInput({
     </div>
   );
 }
-
-export const goldBtnCls =
-  "inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[var(--color-gold)] text-[#0a0a0c] text-[12px] font-bold tracking-[0.02em] hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed";
 
 export const REQUIREMENT_LINE =
   "Start selling unlocks once a sport is eligible: a positive record over the last 30 days with at least 20 graded picks.";
@@ -96,7 +94,7 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="text-[13px] font-bold text-[var(--color-text)]">Sell your picks as VIP</div>
+      <div className="text-[15px] font-extrabold text-[var(--color-text)]">Sell your picks as VIP</div>
       <PriceInput id="vip-seller-price" value={price} onChange={setPrice} />
       <label className="flex items-start gap-2 text-[11px] leading-snug text-[var(--color-text-soft)]">
         <input
@@ -108,11 +106,11 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
         <span>{TERMS_SENTENCE}</span>
       </label>
       <div className="flex items-center gap-3 flex-wrap">
-        <button type="button" className={goldBtnCls} disabled={!canSubmit} onClick={submit}>
+        <button type="button" className={PRIMARY_BTN} disabled={!canSubmit} onClick={submit}>
           Start selling
         </button>
         {error && (
-          <span role="status" className="text-[11px] text-[#f87171] font-semibold">
+          <span role="status" className={ERROR_TEXT}>
             {error}
           </span>
         )}

@@ -5,7 +5,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { getVipMe, patchVipSeller } from "@/lib/vip/client";
 import type { VipMe, VipSeller } from "@/lib/vip/types";
 import { formatPrice } from "./format";
-import { PriceInput, SellerSetupCard, goldBtnCls, parsePriceDollars } from "./SellerSetupCard";
+import { PriceInput, SellerSetupCard, parsePriceDollars } from "./SellerSetupCard";
+import { ERROR_TEXT, EYEBROW, INNER_CARD, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_BTN_SM, SECTION } from "./styles";
 import { VipPickComposer } from "./VipPickComposer";
 
 function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void }) {
@@ -36,11 +37,16 @@ function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void
 
   if (!editing) {
     return (
-      <div className="text-[12px] font-semibold text-[var(--color-text-soft)]">
-        Selling at ${formatPrice(seller.price_cents)}/mo ·{" "}
+      <div className={`${INNER_CARD} flex items-center justify-between gap-3 flex-wrap`}>
+        <div className="flex items-baseline gap-3">
+          <span className={EYEBROW}>Selling at</span>
+          <span className="text-[18px] font-extrabold tabular-nums leading-none text-[var(--color-text)]">
+            ${formatPrice(seller.price_cents)}/mo
+          </span>
+        </div>
         <button
           type="button"
-          className="underline underline-offset-2 hover:text-[var(--color-text)]"
+          className={SECONDARY_BTN_SM}
           onClick={() => {
             setPrice(formatPrice(seller.price_cents));
             setEditing(true);
@@ -53,11 +59,11 @@ function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void
   }
 
   return (
-    <div className="flex items-end gap-3 flex-wrap">
+    <div className={`${INNER_CARD} flex items-end gap-3 flex-wrap`}>
       <PriceInput id="vip-seller-price-edit" value={price} onChange={setPrice} />
       <button
         type="button"
-        className={goldBtnCls}
+        className={PRIMARY_BTN}
         disabled={dollars === null || pending}
         onClick={save}
       >
@@ -65,13 +71,13 @@ function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void
       </button>
       <button
         type="button"
-        className="text-[11px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        className={SECONDARY_BTN}
         onClick={() => setEditing(false)}
       >
         Cancel
       </button>
       {error && (
-        <span role="status" className="text-[11px] text-[#f87171] font-semibold">
+        <span role="status" className={ERROR_TEXT}>
           {error}
         </span>
       )}
@@ -142,20 +148,20 @@ export function OwnerPanelView({
   composerToken?: string;
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <span className="inline-flex w-1.5 h-1.5 rounded-full bg-[var(--color-gold)]" />
-        <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
-          Your VIP
-        </span>
-      </div>
+    <section className={`${SECTION} flex flex-col gap-4`}>
+      <span className={EYEBROW}>Your VIP</span>
       {me.seller ? (
         <>
           <PriceLine key={me.seller.price_cents} seller={me.seller} onSaved={onRefresh} />
-          <VipPickComposer me={me} onPosted={onPosted} token={composerToken} />
+          <div className={`${INNER_CARD} flex flex-col gap-3`}>
+            <span className={EYEBROW}>Post a VIP pick</span>
+            <VipPickComposer me={me} onPosted={onPosted} token={composerToken} />
+          </div>
         </>
       ) : (
-        <SellerSetupCard me={me} onDone={onRefresh} />
+        <div className={INNER_CARD}>
+          <SellerSetupCard me={me} onDone={onRefresh} />
+        </div>
       )}
     </section>
   );

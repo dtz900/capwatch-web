@@ -1,33 +1,55 @@
 "use client";
 
-import { Tooltip } from "@/components/common/Tooltip";
 import type { VipEligibility } from "@/lib/vip/types";
-import { closedCopy, eligibleCopy } from "./format";
+import { closedCopy, eligibleCopy, eligibilityDetail, focalUnits } from "./format";
+import { CHIP_MUTED, CHIP_POS, INNER_CARD } from "./styles";
 
 export const ELIGIBILITY_TOOLTIP =
   "Eligibility is recomputed nightly from the same record shown on this page.";
 
-const PILL =
-  "inline-flex items-center px-2.5 py-1 rounded-full border text-[11px] font-bold tracking-[0.01em]";
-const ELIGIBLE_PILL = `${PILL} bg-[var(--color-gold-soft)] border-[var(--color-gold)] text-[var(--color-gold)]`;
-const CLOSED_PILL = `${PILL} bg-[rgba(255,255,255,0.04)] border-[var(--color-border)] text-[var(--color-text-muted)]`;
+function focalTone(units: number | null): string {
+  if (units == null) return "text-[var(--color-text-muted)]";
+  if (units > 0) return "text-[var(--color-pos)]";
+  if (units < 0) return "text-[var(--color-neg)]";
+  return "text-[var(--color-text)]";
+}
 
-export function EligibilityPill({ row }: { row: VipEligibility }) {
+/** One sport: label + state chip, big signed units, muted sub-lines. The
+ *  spec's sentence lives on as the card's aria-label. */
+export function EligibilityCard({ row }: { row: VipEligibility }) {
+  const label = row.eligible ? eligibleCopy(row) : closedCopy(row);
+  const lines = eligibilityDetail(row);
   return (
-    <Tooltip content={ELIGIBILITY_TOOLTIP}>
-      <span className={row.eligible ? ELIGIBLE_PILL : CLOSED_PILL}>
-        {row.eligible ? eligibleCopy(row) : closedCopy(row)}
-      </span>
-    </Tooltip>
+    <div role="group" aria-label={label} className={`${INNER_CARD} flex flex-col gap-2.5 min-w-0`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--color-text-soft)]">
+          {row.sport}
+        </span>
+        <span className={row.eligible ? CHIP_POS : CHIP_MUTED}>{row.eligible ? "Selling" : "Off"}</span>
+      </div>
+      <div
+        className={`text-[28px] sm:text-[32px] leading-none font-extrabold tabular-nums tracking-[-0.02em] ${focalTone(row.units)}`}
+      >
+        {focalUnits(row.units)}
+      </div>
+      <div className="flex flex-col gap-0.5">
+        {lines.map((l) => (
+          <div key={l} className="text-[11px] text-[var(--color-text-muted)] font-medium">
+            {l}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
+/** Per-sport eligibility cards side by side. */
 export function EligibilityBadges({ eligibility }: { eligibility: VipEligibility[] }) {
   if (eligibility.length === 0) return null;
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {eligibility.map((row) => (
-        <EligibilityPill key={row.sport} row={row} />
+        <EligibilityCard key={row.sport} row={row} />
       ))}
     </div>
   );

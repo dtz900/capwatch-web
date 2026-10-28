@@ -26,6 +26,8 @@ const ELIGIBLE: VipEligibility = {
   n_picks: 31,
   n_floor_picks: 27,
   run_date: "2026-10-27",
+  reason: "ok",
+  fail_streak: 0,
 };
 
 function leg(
@@ -75,9 +77,25 @@ const BASE: VipCapperStatus = {
 };
 
 const SUBSCRIBER = BASE;
+/* Anonymous view also shows the grace night and a sport with no history row. */
 const ANONYMOUS: VipCapperStatus = {
   ...BASE,
   viewer: { subscribed: false, is_owner: false },
+  eligibility: [
+    ELIGIBLE,
+    { ...ELIGIBLE, sport: "NBA", units: 4.1, n_picks: 22, n_floor_picks: 21, fail_streak: 1 },
+    {
+      ...ELIGIBLE,
+      sport: "NFL",
+      eligible: false,
+      eligible_since: null,
+      units: null,
+      n_picks: null,
+      n_floor_picks: null,
+      reason: "no_record",
+      fail_streak: 3,
+    },
+  ],
   locked: [...PARLAY, STRAIGHT].map((p) => ({
     pick_id: p.id,
     sport: p.sport,
@@ -91,7 +109,17 @@ const OWNER_CLOSED: VipCapperStatus = {
   ...BASE,
   door_open: false,
   viewer: { subscribed: false, is_owner: true },
-  eligibility: [{ ...ELIGIBLE, eligible: false, eligible_since: null, units: -3.2, n_picks: 24 }],
+  eligibility: [
+    {
+      ...ELIGIBLE,
+      eligible: false,
+      eligible_since: null,
+      units: -3.2,
+      n_picks: 24,
+      reason: "negative",
+      fail_streak: 2,
+    },
+  ],
   locked: [],
 };
 

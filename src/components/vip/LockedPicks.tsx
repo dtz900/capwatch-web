@@ -10,6 +10,7 @@ import {
   type VipLockedSummary,
 } from "@/lib/vip/types";
 import { formatRevealTime } from "./format";
+import { EYEBROW } from "./styles";
 
 const CHIP =
   "text-[9px] uppercase tracking-[0.14em] font-bold px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]";
@@ -131,7 +132,7 @@ function SummaryRow({ ticket }: { ticket: SummaryTicket }) {
       <span
         aria-label="Locked"
         className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md
-                   bg-[var(--color-gold-soft)] text-[var(--color-gold)]"
+                   border border-[var(--color-border)] text-[var(--color-text-muted)]"
       >
         <LockGlyph />
       </span>
@@ -259,10 +260,7 @@ export function LockedTicketList({ tickets }: { tickets: LockedTicket[] }) {
 export function LockedHeader({ count, className = "mb-3" }: { count: number; className?: string }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <span className="inline-flex w-1.5 h-1.5 rounded-full bg-[var(--color-gold)]" />
-      <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
-        VIP · {count} locked
-      </span>
+      <span className={EYEBROW}>VIP · {count} locked</span>
     </div>
   );
 }

@@ -4,11 +4,13 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, getVipCapperStatus } from "@/lib/vip/client";
 import type { VipCapperStatus } from "@/lib/vip/types";
-import { EligibilityBadges } from "./EligibilityBadges";
+import { Tooltip } from "@/components/common/Tooltip";
+import { ELIGIBILITY_TOOLTIP, EligibilityBadges } from "./EligibilityBadges";
 import { LockedPicks } from "./LockedPicks";
 import { OwnerPanel } from "./OwnerPanel";
 import { SubscribeDoor } from "./SubscribeDoor";
 import { signedUnits } from "./format";
+import { EYEBROW, SECTION } from "./styles";
 
 function recordLine(r: VipCapperStatus["vip_record"]): string {
   const pushes = r.pushes > 0 ? `-${r.pushes}` : "";
@@ -71,6 +73,33 @@ export function CapperVipSection({ capperId, handle }: { capperId: number; handl
   return <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} />;
 }
 
+function VipRecord({ record }: { record: VipCapperStatus["vip_record"] }) {
+  if (record.n <= 0) {
+    return (
+      <span className="text-[12px] font-medium text-[var(--color-text-muted)]">
+        No VIP picks graded yet
+      </span>
+    );
+  }
+  const pushes = record.pushes > 0 ? `-${record.pushes}` : "";
+  const tone =
+    record.units > 0
+      ? "text-[var(--color-pos)]"
+      : record.units < 0
+        ? "text-[var(--color-neg)]"
+        : "text-[var(--color-text)]";
+  return (
+    <div role="group" aria-label={recordLine(record)} className="flex items-baseline gap-3 flex-wrap">
+      <span className={EYEBROW}>VIP record</span>
+      <span className="text-[15px] font-extrabold tabular-nums text-[var(--color-text)]">
+        {record.wins}-{record.losses}
+        {pushes}
+      </span>
+      <span className={`text-[15px] font-extrabold tabular-nums ${tone}`}>{signedUnits(record.units)}</span>
+    </div>
+  );
+}
+
 /** Presentational profile section for a loaded status (the fixtures page
  *  renders it with mock payloads). */
 export function CapperVipView({
@@ -86,35 +115,22 @@ export function CapperVipView({
     return ownerPanel ? <div className="flex flex-col gap-3">{ownerPanel}</div> : null;
   }
 
-  // With the door closed, SubscribeDoor already shows the closed pills in its
-  // slot, so the badge row keeps only the eligible sports.
-  const doorClosed = status.seller !== null && !status.door_open;
-  const badges = doorClosed ? status.eligibility.filter((e) => e.eligible) : status.eligibility;
   const showCard = status.seller !== null || status.eligibility.length > 0;
 
   return (
     <div className="flex flex-col gap-3">
       {ownerPanel}
       {showCard && (
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 py-4">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div className="flex flex-col gap-2.5 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex w-1.5 h-1.5 rounded-full bg-[var(--color-gold)]" />
-                <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold">
-                  Capper VIP
-                </span>
-              </div>
-              <EligibilityBadges eligibility={badges} />
-              {status.vip_record.n > 0 && (
-                <div className="text-[12px] font-semibold text-[var(--color-text-soft)]">
-                  {recordLine(status.vip_record)}
-                </div>
-              )}
-            </div>
-            <div className="shrink-0">
-              <SubscribeDoor status={status} handle={handle} />
-            </div>
+        <section className={SECTION}>
+          <div className="mb-4">
+            <Tooltip content={ELIGIBILITY_TOOLTIP}>
+              <span className={`${EYEBROW} cursor-help`}>Capper VIP</span>
+            </Tooltip>
+          </div>
+          <EligibilityBadges eligibility={status.eligibility} />
+          <div className="mt-4 pt-4 border-t border-[var(--color-border)] flex items-center justify-between gap-3 flex-wrap">
+            <VipRecord record={status.vip_record} />
+            <SubscribeDoor status={status} handle={handle} />
           </div>
         </section>
       )}

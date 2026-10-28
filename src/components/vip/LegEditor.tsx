@@ -9,11 +9,11 @@ import { useState } from "react";
 import { EMPTY_LEG, LEG_TYPE_LABEL, todayEt, type LegDraft, type LegType } from "@/lib/legDraft";
 import { searchVipGames } from "@/lib/vip/client";
 import type { VipGameResult, VipSport } from "@/lib/vip/types";
+import { ERROR_TEXT, SECONDARY_BTN_SM } from "./styles";
 
 export const inputCls =
-  "px-2.5 py-1.5 text-[12px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)] disabled:opacity-40";
-export const btnCls =
-  "px-3 py-1.5 rounded text-[10px] font-bold bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.10)] text-[var(--color-text-soft)]";
+  "h-8 px-2.5 text-[12px] rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)] disabled:opacity-40";
+export const btnCls = SECONDARY_BTN_SM;
 export const labelCls =
   "text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold";
 // Native <option> rows paint the OS white otherwise (same fix as the admin panel).
@@ -114,7 +114,7 @@ export function LegEditor({ sport, legs, onChange, token, legOddsDisabled = fals
         {games && games.length === 0 && (
           <span className="text-[10px] text-[var(--color-text-muted)]">No games found.</span>
         )}
-        {gamesError && <span className="text-[11px] text-[#f87171] font-semibold">{gamesError}</span>}
+        {gamesError && <span className={ERROR_TEXT}>{gamesError}</span>}
       </div>
       {games && games.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -123,7 +123,7 @@ export function LegEditor({ sport, legs, onChange, token, legOddsDisabled = fals
               key={`${g.game_pk}`}
               type="button"
               onClick={() => setLeg(target, { game: g })}
-              className="px-2.5 py-1.5 rounded text-[11px] bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.08)]"
+              className="px-2.5 py-1.5 rounded-lg border border-[var(--color-border)] text-[11px] font-semibold text-[var(--color-text-soft)] hover:border-[var(--color-border-h)] hover:text-[var(--color-text)] transition"
             >
               {gameLabel(g)}
             </button>
@@ -134,8 +134,8 @@ export function LegEditor({ sport, legs, onChange, token, legOddsDisabled = fals
       {legs.map((leg, idx) => (
         <div
           key={idx}
-          className={`rounded-lg border p-3 flex flex-col gap-2 ${
-            idx === target ? "border-[rgba(255,255,255,0.22)]" : "border-[rgba(255,255,255,0.08)]"
+          className={`rounded-xl border bg-[rgba(255,255,255,0.02)] px-4 py-3 flex flex-col gap-2 ${
+            idx === target ? "border-[var(--color-border-h)]" : "border-[var(--color-border)]"
           }`}
           onClick={() => setTargetIdx(idx)}
         >

@@ -12,7 +12,7 @@ import {
 import { VipApiError, postVipPick } from "@/lib/vip/client";
 import type { VipMe, VipSport } from "@/lib/vip/types";
 import { LegEditor, inputCls, labelCls, optionCls } from "./LegEditor";
-import { goldBtnCls } from "./SellerSetupCard";
+import { ERROR_TEXT, OK_TEXT, PRIMARY_BTN } from "./styles";
 
 const POSTED_MESSAGE = "Posted. Locked to subscribers until 30 minutes after the game starts.";
 const POSTED_MS = 5000;
@@ -221,21 +221,21 @@ export function VipPickComposer({
       />
 
       <div className="flex items-center gap-3 flex-wrap">
-        <button type="button" className={goldBtnCls} disabled={!canSubmit} onClick={submit}>
+        <button type="button" className={PRIMARY_BTN} disabled={!canSubmit} onClick={submit}>
           Post VIP pick
         </button>
         {!fieldsOk && (
-          <span role="status" className="text-[11px] text-[#f87171] font-semibold">
+          <span role="status" className={ERROR_TEXT}>
             {BOUNDS_MESSAGE}
           </span>
         )}
         {error && (
-          <span role="status" className="text-[11px] text-[#f87171] font-semibold">
+          <span role="status" className={ERROR_TEXT}>
             {error}
           </span>
         )}
         {posted && (
-          <span role="status" className="text-[11px] text-[#4ade80] font-semibold">
+          <span role="status" className={OK_TEXT}>
             {POSTED_MESSAGE}
           </span>
         )}

@@ -62,7 +62,8 @@ describe("CapperVipSection", () => {
   it("section shows VIP record line when n > 0", async () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    expect(await screen.findByText("VIP picks: 6-3-1, +2.4u")).toBeInTheDocument();
+    expect(await screen.findByLabelText("VIP picks: 6-3-1, +2.4u")).toHaveTextContent("6-3-1");
+    expect(screen.getByText("VIP record")).toBeInTheDocument();
     expect(screen.getByText("Capper VIP")).toBeInTheDocument();
     expect(client.getVipCapperStatus).toHaveBeenCalledWith(7, "tok");
   });
@@ -74,7 +75,8 @@ describe("CapperVipSection", () => {
     });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByText("Capper VIP");
-    expect(screen.queryByText(/VIP picks:/)).toBeNull();
+    expect(screen.queryByLabelText(/VIP picks:/)).toBeNull();
+    expect(screen.getByText("No VIP picks graded yet")).toBeInTheDocument();
   });
 
   it("section record line drops pushes when there are none", async () => {
@@ -83,7 +85,7 @@ describe("CapperVipSection", () => {
       vip_record: { n: 9, wins: 6, losses: 3, pushes: 0, units: -1.05 },
     });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    expect(await screen.findByText("VIP picks: 6-3, -1.1u")).toBeInTheDocument();
+    expect(await screen.findByLabelText("VIP picks: 6-3, -1.1u")).toHaveTextContent("6-3-1.1u");
   });
 
   it("section renders nothing and logs when the status call fails", async () => {
@@ -166,7 +168,8 @@ describe("CapperVipSection", () => {
     client.patchVipSeller.mockResolvedValue({ ...status.seller, price_cents: 3000 });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     expect(await screen.findByText("Your VIP")).toBeInTheDocument();
-    expect(screen.getByText(/Selling at \$25\/mo ·/)).toBeInTheDocument();
+    expect(screen.getByText("Selling at")).toBeInTheDocument();
+    expect(screen.getByText("$25/mo")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
     fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
