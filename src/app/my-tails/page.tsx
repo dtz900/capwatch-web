@@ -4,7 +4,7 @@ import Link from "next/link";
 import { TopNav } from "@/components/nav/TopNav";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { fetchLeaderboard, fetchTodayPicks } from "@/lib/api";
-import { capperVipEnabled, vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { capperVipEnabledFor, capperVipReachable, vipEnabled, vipTierEnabled } from "@/lib/flags";
 import { StableGrid } from "@/components/my-tails/StableGrid";
 import { BetSlipProvider } from "@/components/my-tails/BetSlipContext";
 import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
@@ -101,7 +101,7 @@ export default async function MyTailsPage({
   }[];
   // VIP subscriptions ride in the stable: a subscribed capper is always on
   // it (subscribing is the strongest tail) and its card carries the picks.
-  const vipByCapper = capperVipEnabled() ? await loadVipByCapper(supabase) : {};
+  const vipByCapper = capperVipReachable() ? await loadVipByCapper(supabase) : {};
   const ids = [
     ...new Set([...followRows.map((f) => f.capper_id), ...Object.keys(vipByCapper).map(Number)]),
   ];
@@ -273,6 +273,8 @@ async function loadVipByCapper(
     const { subscriptions } = await getVipSubscriptions(token);
     const out: Record<string, VipSubscription> = {};
     for (const sub of subscriptions) {
+      // In preview only the listed test cappers' subscriptions surface.
+      if (!capperVipEnabledFor(sub.capper.handle)) continue;
       if (hasVipAccess(sub) || sub.status === "paused") out[String(sub.capper.id)] = sub;
     }
     return out;

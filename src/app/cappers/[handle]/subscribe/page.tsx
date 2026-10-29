@@ -15,7 +15,7 @@ import {
 import { VIP_GLASS_DIVIDER, VIP_PRIMARY_BTN } from "@/components/vip/styles";
 import { fetchCapperProfile } from "@/lib/api";
 import { API_BASE } from "@/lib/config";
-import { capperVipEnabled } from "@/lib/flags";
+import { capperVipEnabledFor } from "@/lib/flags";
 import type { VipCapperStatus } from "@/lib/vip/types";
 
 export const dynamic = "force-dynamic";
@@ -47,8 +47,8 @@ async function fetchStatus(capperId: number): Promise<VipCapperStatus | null> {
 }
 
 export default async function SubscribePage({ params }: PageProps) {
-  if (!capperVipEnabled()) notFound();
   const { handle } = await params;
+  if (!capperVipEnabledFor(handle)) notFound();
 
   let profile;
   try {

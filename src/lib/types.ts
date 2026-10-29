@@ -288,6 +288,9 @@ export interface HistoryPick {
   ladder_chain_id?: string | null;
   /** Rung ordinal inside ladder_chain_id, from the capper's own "Day N". */
   ladder_day?: number | null;
+  /** Posted as a Capper VIP pick (revealed, or unlocked for this viewer).
+   * The row carries the VIP crown next to the pick. */
+  vip?: boolean;
 }
 
 /** Per-market straight-pick stats + cumulative trajectory, precomputed by the

@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { useEffect, useState } from "react";
 import { formatStake } from "@/lib/formatters";
 import { formatBetDescriptor } from "@/lib/markets";
 import {
@@ -124,6 +125,17 @@ function toSummary(p: VipLockedSummary | VipLockedPick): VipLockedSummary {
 
 /* ---------- rows ---------- */
 
+/** Wall clock sampled once on mount and every 30 s, so a row flips to
+ *  Started without a reload. Reading Date.now() in render is impure. */
+function useNow(stepMs = 30_000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), stepMs);
+    return () => window.clearInterval(id);
+  }, [stepMs]);
+  return now;
+}
+
 /* Fake pick text under the blur. The real selection never reaches an
  * anonymous viewer; this only gives the blur a pick-shaped silhouette. */
 const DECOYS = [
@@ -199,9 +211,14 @@ function UnlockedRow({
   by?: PickBy;
   children?: React.ReactNode;
 }) {
+  // Before start the game line says when it starts; once underway the
+  // time gives way to a Started tag (not "Live": history uses Live for
+  // in-game bets, and VIP picks are always pregame).
+  const now = useNow();
+  const started = !!pick.commence_time && new Date(pick.commence_time).getTime() <= now;
   const game = [
     pick.matchup,
-    pick.commence_time && formatRevealTime(pick.commence_time),
+    pick.commence_time && !started && `Starts ${formatRevealTime(pick.commence_time)}`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -227,12 +244,23 @@ function UnlockedRow({
             </span>
           )}
         </div>
-        {(game || by) && (
+        {(game || by || started) && (
           <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[12px] text-[var(--color-text-muted)]">
             {by && (
               <LeagueMark sport={pick.sport} eligible className="h-[13px]" />
             )}
             <span className="truncate">{game}</span>
+            {started && (
+              <span
+                className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded
+                           text-[9px] uppercase tracking-[0.12em] font-bold
+                           bg-[var(--color-vip-soft)] text-[var(--color-vip-text)]"
+                title="The game has started. This pick is locked in and can no longer be fixed or pulled."
+              >
+                <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[var(--color-vip-text)] animate-pulse" />
+                Started
+              </span>
+            )}
           </div>
         )}
         {children}

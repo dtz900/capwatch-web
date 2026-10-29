@@ -152,7 +152,7 @@ export function OwnerPanelView({
 }) {
   return (
     <section className={`${SECTION} flex flex-col gap-4`}>
-      <span className={EYEBROW}>Your VIP</span>
+      <span className={EYEBROW}>Your VIP dashboard</span>
       {me.seller ? (
         <>
           <PriceLine key={me.seller.price_cents} seller={me.seller} onSaved={onRefresh} />

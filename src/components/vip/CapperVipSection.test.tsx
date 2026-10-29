@@ -154,7 +154,7 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByRole("region", { name: "Capper VIP" });
-    expect(screen.queryByText("Your VIP")).toBeNull();
+    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
     expect(client.getVipMe).not.toHaveBeenCalled();
   });
 
@@ -169,7 +169,7 @@ describe("CapperVipSection", () => {
     });
     client.patchVipSeller.mockResolvedValue({ ...status.seller, price_cents: 3000 });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    expect(await screen.findByText("Your VIP")).toBeInTheDocument();
+    expect(await screen.findByText("Your VIP dashboard")).toBeInTheDocument();
     expect(screen.getByText("Selling at")).toBeInTheDocument();
     expect(screen.getByText("$25/mo")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
@@ -208,7 +208,7 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByRole("region", { name: "Capper VIP" });
-    expect(screen.queryByText("Your VIP")).toBeNull();
+    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
     expect(client.getVipMe).not.toHaveBeenCalled();
   });
 
@@ -267,7 +267,7 @@ describe("CapperVipSection", () => {
     await screen.findByRole("region", { name: "Capper VIP" });
     await waitFor(() => expect(client.getVipMe).toHaveBeenCalled());
     await Promise.resolve();
-    expect(screen.queryByText("Your VIP")).toBeNull();
+    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
     expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
   });
 });

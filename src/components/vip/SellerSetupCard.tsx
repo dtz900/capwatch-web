@@ -9,7 +9,7 @@ import { joinSports } from "./format";
 import { ERROR_TEXT, VIP_PRIMARY_BTN } from "./styles";
 
 export const TERMS_SENTENCE =
-  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription (10% for founding sellers), with payment processing fees coming out of my share.";
+  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription (10% for founding sellers), with payment processing fees coming out of the TailSlips share.";
 
 export const PRICE_MIN = 10;
 export const PRICE_MAX = 99;

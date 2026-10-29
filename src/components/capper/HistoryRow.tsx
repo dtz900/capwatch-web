@@ -7,6 +7,7 @@ import { formatUnitsSmart, displayUnits } from "@/lib/formatters";
 import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
+import { VipCrown } from "@/components/vip/VipCrown";
 
 // Odds column is 108px so the "NO ODDS GIVEN" stamp fits on one line
 // (Codex on #158); the header row shares this constant, so it stays aligned.
@@ -102,6 +103,9 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           ? "bg-[rgba(255,255,255,0.28)]"
           : "bg-[rgba(255,255,255,0.06)]";
   const unitsValue = displayUnits(pick.units);
+  // VIP picks carry a light royal purple wash across the whole row so they
+  // read as VIP at a glance, not just by the crown.
+  const vipTint = pick.vip ? "bg-[rgba(109,40,217,0.10)]" : "";
 
   const hasExpandableLegs = isParlay && !!pick.legs && pick.legs.length > 0;
   const [expanded, setExpanded] = useState(false);
@@ -127,6 +131,15 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           <ParlayLegGlyphs legs={pick.legs} />
         </>
       )}
+      {pick.vip && (
+        <>
+          {" "}
+          <VipCrown
+            className="w-4 h-4 align-[-3px]"
+            label="VIP pick: posted to subscribers first"
+          />
+        </>
+      )}
     </>
   );
 
@@ -148,7 +161,8 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
         tabIndex={hasExpandableLegs ? 0 : undefined}
         aria-expanded={hasExpandableLegs ? expanded : undefined}
         className={`group/row relative ${DESKTOP_GRID} pl-[19px] pr-5 py-3.5
-                    hover:bg-[rgba(255,255,255,0.02)] transition-colors duration-150
+                    ${pick.vip ? `${vipTint} hover:bg-[rgba(109,40,217,0.14)]` : "hover:bg-[rgba(255,255,255,0.02)]"}
+                    transition-colors duration-150
                     ${hasExpandableLegs ? "cursor-pointer" : ""}
                     ${isLast && !expanded ? "" : "sm:border-b sm:border-[rgba(255,255,255,0.035)]"}`}
       >
@@ -306,7 +320,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
         role={hasExpandableLegs ? "button" : undefined}
         tabIndex={hasExpandableLegs ? 0 : undefined}
         aria-expanded={hasExpandableLegs ? expanded : undefined}
-        className={`sm:hidden relative pl-4 pr-4 py-3
+        className={`sm:hidden relative pl-4 pr-4 py-3 ${vipTint}
                     ${hasExpandableLegs ? "cursor-pointer" : ""}
                     ${isLast && !expanded ? "" : "border-b border-[rgba(255,255,255,0.035)]"}`}
       >

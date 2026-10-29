@@ -14,7 +14,7 @@ import type { VipMe, VipSport } from "@/lib/vip/types";
 import { LegEditor, inputCls, labelCls, optionCls } from "./LegEditor";
 import { ERROR_TEXT, OK_TEXT, PRIMARY_BTN } from "./styles";
 
-const POSTED_MESSAGE = "Posted. Locked to subscribers until 30 minutes after the game starts.";
+const POSTED_MESSAGE = "Posted. Only your subscribers see it until 30 minutes after the game starts.";
 const POSTED_MS = 5000;
 const BOUNDS_MESSAGE =
   "Check units, odds, and lines: units 0.1 to 10, odds 100 to 10000 either side, lines as numbers.";

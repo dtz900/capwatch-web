@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
-import { capperVipEnabled } from "@/lib/flags";
+import { capperVipReachable } from "@/lib/flags";
 import { VipCrown } from "@/components/vip/VipCrown";
 
 export const metadata = {
@@ -30,7 +30,7 @@ const LINK =
   "text-[var(--color-vip-text)] underline decoration-[rgba(196,181,253,0.4)] underline-offset-[3px] hover:decoration-[var(--color-vip-text)]";
 
 export default function VipRules() {
-  if (!capperVipEnabled()) notFound();
+  if (!capperVipReachable()) notFound();
 
   return (
     <>
@@ -74,9 +74,9 @@ export default function VipRules() {
         <h2 className={H2}>What a VIP pick is</h2>
         <p className={P}>
           A VIP pick is posted inside TailSlips and timestamped by TailSlips. It
-          stays locked to subscribers until 30 minutes after its scheduled
-          start. After that it is shown to everyone and graded like any other
-          pick, and it counts on the leaderboard.
+          is only shown to the capper&apos;s subscribers until 30 minutes after its
+          scheduled start. After that everyone can see it, it is graded like
+          any other pick, and it counts on the leaderboard.
         </p>
         <p className={P}>
           A capper can fix a mistake within 10 minutes of posting, and only
