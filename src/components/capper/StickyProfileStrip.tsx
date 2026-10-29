@@ -9,6 +9,8 @@ import { formatHandle, formatRoi, formatUnits } from "@/lib/formatters";
 /** Flat strip that pins below the nav once the hero scrolls out of view. Shows
  * the avatar, handle, active scope, a mini sparkline, and the live net profit +
  * ROI for the current filters. Fixed-positioned so it never shifts page layout. */
+const NAV_HEIGHT = 64;
+
 export function StickyProfileStrip() {
   const { heroRef, handle, displayAgg, displayTrajectory, label, profile } = useCapperFilters();
   const [revealed, setRevealed] = useState(false);
@@ -16,12 +18,14 @@ export function StickyProfileStrip() {
   useEffect(() => {
     const el = heroRef.current;
     if (!el) return;
-    // Reveal when the hero is no longer intersecting the area below the 64px
-    // nav. threshold 0 + the nav-height rootMargin fires right as the hero's
-    // bottom edge passes under the nav.
+    // Reveal when the hero has scrolled UP past the 64px nav. threshold 0 +
+    // the nav-height rootMargin fires right as the hero's bottom edge passes
+    // under the nav. A hero that is out of view BELOW the fold (the Tail or
+    // Fade table opened above it pushes it down) must not reveal the strip:
+    // it would pin over the game's title, which is the game's close control.
     const obs = new IntersectionObserver(
-      ([entry]) => setRevealed(!entry.isIntersecting),
-      { rootMargin: "-64px 0px 0px 0px", threshold: 0 },
+      ([entry]) => setRevealed(!entry.isIntersecting && entry.boundingClientRect.top < NAV_HEIGHT),
+      { rootMargin: `-${NAV_HEIGHT}px 0px 0px 0px`, threshold: 0 },
     );
     obs.observe(el);
     return () => obs.disconnect();
