@@ -41,6 +41,10 @@ export interface VipLockedPick {
   game_id: string | null;
   parlay_id: number | null;
   parlay_leg_index: number | null;
+  /* "AWAY @ HOME" and scheduled start; optional so an older platform build
+     still renders. */
+  matchup?: string | null;
+  commence_time?: string | null;
   /* Not in the platform's _full_pick today; optional so a later addition is
      picked up without a type change. */
   stat_name?: string | null;
@@ -57,7 +61,13 @@ export function isLockedPick(
 export interface VipCapperStatus {
   seller: VipSeller | null;
   eligibility: VipEligibility[];
+  /** Per sport: cappers qualified to sell vs active in the 30 day window.
+   *  Optional so an older platform build still renders. */
+  sport_field?: Record<string, { qualified: number; active: number }>;
   door_open: boolean;
+  /** Why new subscriptions are closed; null when open. Optional so an older
+   *  platform build still renders. */
+  door_closed_reason?: "not_selling" | "ineligible" | "silent" | null;
   viewer: { subscribed: boolean; is_owner: boolean };
   vip_record: {
     n: number;
@@ -93,6 +103,8 @@ export interface VipSubscription {
   current_period_end: string | null;
   paused_at: string | null;
   pause_reason: string | null;
+  /** Period end has passed. Optional so an older platform build still renders. */
+  expired?: boolean;
   locked: VipLockedPick[];
 }
 
@@ -150,6 +162,11 @@ export const VIP_ERRORS = {
     "unknown_stat_name",
     "selection_not_in_game",
   ],
-  409: ["no_eligible_sport", "game_started", "game_start_unknown", "duplicate_pick"],
+  409: [
+    "no_eligible_sport",
+    "game_started",
+    "game_start_unknown",
+    "duplicate_pick",
+  ],
   404: ["capper_not_found", "seller_not_found"],
 } as const;

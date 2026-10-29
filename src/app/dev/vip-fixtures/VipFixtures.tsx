@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { CapperVipView } from "@/components/vip/CapperVipSection";
 import { OwnerPanelView } from "@/components/vip/OwnerPanel";
-import { VipSubscriptionCards } from "@/components/my-tails/VipTab";
+import { StableVipPicks } from "@/components/my-tails/StableVipPicks";
 import type {
   VipCapperStatus,
   VipEligibility,
@@ -48,6 +48,8 @@ function leg(
     posted_at: POSTED,
     reveal_at: REVEAL,
     game_id: `77600${id}`,
+    matchup: "NYY @ BOS",
+    commence_time: REVEAL,
     parlay_id: 900,
     parlay_leg_index: idx,
     ...over,
@@ -210,8 +212,14 @@ export function VipFixtures() {
           }
         />
       </Scenario>
-      <Scenario label="(d) My Tails VIP tab: active, paused (cold), canceled">
-        <VipSubscriptionCards subscriptions={SUBSCRIPTIONS} />
+      <Scenario label="(d) My Tails stable card VIP panel: active, paused (cold), canceled">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {SUBSCRIPTIONS.map((s) => (
+            <div key={s.capper.id} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] px-5 pb-4">
+              <StableVipPicks sub={s} />
+            </div>
+          ))}
+        </div>
       </Scenario>
     </main>
   );

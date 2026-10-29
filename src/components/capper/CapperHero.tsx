@@ -1,3 +1,4 @@
+import type React from "react";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { DeletedPicksPill } from "@/components/leaderboard/DeletedPicksPill";
@@ -44,12 +45,15 @@ export function CapperHero({
   windowAgg,
   trajectorySeries = [],
   window,
+  nameAdornment = null,
 }: {
   profile: CapperProfile;
   windowAgg: CapperAggregate | undefined;
   /** Cumulative profit_units series for the selected window. */
   trajectorySeries?: number[];
   window?: Window;
+  /** Rendered right after the name (the VIP crown). */
+  nameAdornment?: React.ReactNode;
 }) {
   const c = profile.capper;
   const isModel = c.handle === "fadeai_";
@@ -72,6 +76,7 @@ export function CapperHero({
           <h1 className="text-[24px] sm:text-[32px] font-extrabold tracking-[-0.02em] leading-none">
             {c.display_name ?? c.handle}
           </h1>
+          {nameAdornment}
           {c.has_paid_program && <PaidProgramPill />}
           <DeletedPicksPill count={windowAgg?.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
           <StreakBadge streak={c.current_day_streak} size="md" />

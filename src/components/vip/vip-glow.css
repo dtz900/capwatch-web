@@ -1,0 +1,18 @@
+/* Capper VIP glass: a soft lavender glow band sweeps left to right, then
+   rests. Sits under the content, clipped by its container. */
+@keyframes vip-glow-wave {
+  0% { transform: translateX(-120%); opacity: 0; }
+  8% { opacity: 1; }
+  45% { transform: translateX(260%); opacity: 1; }
+  52%, 100% { transform: translateX(260%); opacity: 0; }
+}
+.vip-glow-wave {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 38%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 0%, rgba(167,139,250,0.12) 28%, rgba(221,214,254,0.32) 50%, rgba(167,139,250,0.12) 72%, transparent 100%);
+  filter: blur(10px);
+  animation: vip-glow-wave 6s cubic-bezier(.45,.05,.35,1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vip-glow-wave { animation: none; opacity: 0; }
+}

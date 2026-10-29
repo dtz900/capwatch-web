@@ -33,23 +33,23 @@ describe("vip fixtures page", () => {
   it("renders every scenario when the flag is on", () => {
     vi.stubEnv("NEXT_PUBLIC_VIP_FIXTURES", "true");
     render(<VipFixturesPage />);
-    expect(screen.getAllByText("3-leg parlay +595 · 1u")).toHaveLength(2);
+    // Subscriber profile row (a) and the stable card VIP panel (d).
+    expect(screen.getAllByText("3-leg parlay +595")).toHaveLength(2);
     expect(screen.getByText("Subscribed")).toBeInTheDocument();
     expect(screen.getByText(/Start selling unlocks once a sport is eligible/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Post VIP pick" })).toBeInTheDocument();
-    expect(screen.getByText("Paused: cold")).toBeInTheDocument();
-    // (c3) owner with a closed door sees the reason on the MLB card.
+    expect(screen.getByText(/Billing is paused/)).toBeInTheDocument();
+    // (c3) owner with a closed door: MLB stat reads as not selling.
     expect(screen.getByLabelText("Not currently selling: -3.2u MLB, last 30 days")).toBeInTheDocument();
-    expect(screen.getByText("Negative over 30 days")).toBeInTheDocument();
-    // (b) anonymous: grace night and a sport with no history row.
-    expect(screen.getByText("One bad night, still selling")).toBeInTheDocument();
+    // (b) anonymous: a sport with no history row.
     expect(screen.getByLabelText("Not currently selling: +0.0u NFL, last 30 days")).toHaveTextContent(
       "0.0u",
     );
-    expect(screen.getByText("Canceled")).toBeInTheDocument();
+    expect(screen.getByText("Subscription ended")).toBeInTheDocument();
     // Anonymous: parlay legs collapse to one ticket, plus the straight.
-    // Subscriber (a) and anonymous (b) both count 2 tickets; the tab card counts 1.
-    expect(screen.getAllByText("VIP · 2 locked")).toHaveLength(2);
+    // Subscriber (a) and anonymous (b) both count 2 tickets.
+    expect(screen.getByRole("heading", { name: "VIP · 2 picks" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "VIP · 2 locked" })).toBeInTheDocument();
     expect(screen.getAllByLabelText("Locked")).toHaveLength(2);
   });
 });

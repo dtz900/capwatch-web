@@ -488,10 +488,6 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
             </div>
           </div>
 
-          <div className="mb-6">
-            <StatBandLive />
-          </div>
-
           {capperVipEnabled() && (
             <div className="mb-6">
               <CapperVipSection
@@ -500,6 +496,10 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
               />
             </div>
           )}
+
+          <div className="mb-6">
+            <StatBandLive />
+          </div>
 
           {/* Dossier is paid-tier inventory, held back from the free launch
               (decisions/log.md 2026-07-11). */}

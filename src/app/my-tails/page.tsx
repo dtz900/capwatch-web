@@ -11,8 +11,10 @@ import { BetSlipRail } from "@/components/my-tails/BetSlipRail";
 import { EmptyStable } from "@/components/my-tails/EmptyStable";
 import { MarketRankings } from "@/components/my-tails/MarketRankings";
 import { MyTailsTabs, type MyTailsTab, type MyTailsTabSpec } from "@/components/my-tails/MyTailsTabs";
-import { VipTab } from "@/components/my-tails/VipTab";
 import { createServiceSupabase } from "@/lib/supabase/service";
+import { getVipSubscriptions } from "@/lib/vip/client";
+import { hasVipAccess } from "@/lib/vip/access";
+import type { VipSubscription } from "@/lib/vip/types";
 import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
 import type { EdgeRow } from "@/lib/edges";
 import type { RankedEdgeRow } from "@/lib/marketRankings";
@@ -20,18 +22,17 @@ import type { RankedEdgeRow } from "@/lib/marketRankings";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Tails | TailSlips" };
 
-/* Stable always; Market Masters under the tier flag; VIP under the capper VIP
- * flag, signed-in only (subscriptions are per account). A lone stable renders bare (no tab strip). A requested tab that is
- * not present falls back to the stable. */
+/* Stable always; Market Masters under the tier flag. VIP subscriptions live
+ * inside the stable (a subscribed capper's card carries its VIP picks), not
+ * in a tab. A lone stable renders bare (no tab strip). A requested tab that
+ * is not present falls back to the stable. */
 function renderMyTailsSections(
   requestedTab: MyTailsTab | null,
   stable: ReactNode,
-  board: ReactNode,
-  signedIn: boolean
+  board: ReactNode
 ) {
   const tabs: MyTailsTabSpec[] = [{ key: "stable", label: "Stable", content: stable }];
   if (vipTierEnabled()) tabs.push({ key: "board", label: "Market Masters", content: board });
-  if (signedIn && capperVipEnabled()) tabs.push({ key: "vip", label: "VIP", content: <VipTab /> });
   if (tabs.length === 1) return stable;
   const initialTab = tabs.some((t) => t.key === requestedTab) ? (requestedTab as MyTailsTab) : "stable";
   return <MyTailsTabs initialTab={initialTab} tabs={tabs} />;
@@ -46,7 +47,7 @@ export default async function MyTailsPage({
 
   const { tab } = await searchParams;
   const requestedTab: MyTailsTab | null =
-    tab === "board" || tab === "vip" ? tab : null;
+    tab === "board" ? tab : null;
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -80,8 +81,7 @@ export default async function MyTailsPage({
             {renderMyTailsSections(
               requestedTab,
               <EmptyStable suggestions={top3} />,
-              <MarketRankings rows={[]} vip={false} />,
-              false
+              <MarketRankings rows={[]} vip={false} />
             )}
           </div>
         </main>
@@ -99,7 +99,12 @@ export default async function MyTailsPage({
     market: string;
     default_stake: number | null;
   }[];
-  const ids = [...new Set(followRows.map((f) => f.capper_id))];
+  // VIP subscriptions ride in the stable: a subscribed capper is always on
+  // it (subscribing is the strongest tail) and its card carries the picks.
+  const vipByCapper = capperVipEnabled() ? await loadVipByCapper(supabase) : {};
+  const ids = [
+    ...new Set([...followRows.map((f) => f.capper_id), ...Object.keys(vipByCapper).map(Number)]),
+  ];
 
   // Assigned slip stake per capper (first non-null across the capper's
   // follow rows; the setter writes them all so they agree).
@@ -238,19 +243,41 @@ export default async function MyTailsPage({
                 todayByCapper={todayByCapper}
                 scopesByCapper={scopesByCapper}
                 statsByCapper={statsByCapper}
+                vipByCapper={vipByCapper}
               />
             );
-          // Tabs exist for the Market Masters (paid-tier) and VIP sub-pages;
-          // with neither flag on, the launch is the stable alone.
+          // Tabs exist for the Market Masters (paid-tier) sub-page; with the
+          // flag off, the launch is the stable alone.
           return renderMyTailsSections(
             requestedTab,
             stableView,
-            <MarketRankings rows={rankingRows} vip={isVip} />,
-            true
+            <MarketRankings rows={rankingRows} vip={isVip} />
           );
         })()}
       </main>
       </BetSlipProvider>
     </>
   );
+}
+
+/** The viewer's VIP subscriptions keyed by capper id: every subscription
+ *  with access, plus paused ones (shown with a paused line). Ended ones drop
+ *  out. Fails soft: the stable still renders without them. */
+async function loadVipByCapper(
+  supabase: Awaited<ReturnType<typeof createServerSupabase>>
+): Promise<Record<string, VipSubscription>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token ?? null;
+  if (!token) return {};
+  try {
+    const { subscriptions } = await getVipSubscriptions(token);
+    const out: Record<string, VipSubscription> = {};
+    for (const sub of subscriptions) {
+      if (hasVipAccess(sub) || sub.status === "paused") out[String(sub.capper.id)] = sub;
+    }
+    return out;
+  } catch (err) {
+    console.error("my-tails vip subscriptions failed:", err);
+    return {};
+  }
 }

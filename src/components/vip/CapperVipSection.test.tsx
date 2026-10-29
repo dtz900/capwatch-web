@@ -66,8 +66,8 @@ describe("CapperVipSection", () => {
     expect(screen.getByText("VIP record")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
     expect(client.getVipCapperStatus).toHaveBeenCalledWith(7, "tok");
-    expect(screen.getByRole("heading", { name: "Selling MLB VIP picks" })).toBeInTheDocument();
-    expect(screen.getByText("Picks post inside TailSlips")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "What is this?" })).toHaveAttribute("href", "/vip-rules");
   });
 
   it("section hides VIP record line when n is 0", async () => {

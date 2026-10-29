@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, postVipSeller } from "@/lib/vip/client";
 import type { VipMe } from "@/lib/vip/types";
-import { ERROR_TEXT, PRIMARY_BTN } from "./styles";
+import { VipBand, VipGlassCard } from "./VipBand";
+import { joinSports } from "./format";
+import { ERROR_TEXT, VIP_PRIMARY_BTN } from "./styles";
 
 export const TERMS_SENTENCE =
-  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription (10% for founding sellers).";
+  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription (10% for founding sellers), with payment processing fees coming out of my share.";
 
 export const PRICE_MIN = 10;
 export const PRICE_MAX = 99;
@@ -84,37 +86,43 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
     }
   };
 
-  if (!me.eligibility.some((e) => e.eligible)) {
+  const eligible = me.eligibility.filter((e) => e.eligible).map((e) => String(e.sport));
+  if (eligible.length === 0) {
     return (
-      <p role="status" className="text-[12px] text-[var(--color-text-soft)]">
-        {REQUIREMENT_LINE}
-      </p>
+      <VipGlassCard>
+        <VipBand compact showRule={false} headline="Not eligible to sell yet" />
+        <p role="status" className="px-4 py-3 text-[12px] text-[var(--color-text-soft)]">
+          {REQUIREMENT_LINE}
+        </p>
+      </VipGlassCard>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="text-[15px] font-extrabold text-[var(--color-text)]">Sell your picks as VIP</div>
-      <PriceInput id="vip-seller-price" value={price} onChange={setPrice} />
-      <label className="flex items-start gap-2 text-[11px] leading-snug text-[var(--color-text-soft)]">
-        <input
-          type="checkbox"
-          className="mt-0.5"
-          checked={accepted}
-          onChange={(e) => setAccepted(e.target.checked)}
-        />
-        <span>{TERMS_SENTENCE}</span>
-      </label>
-      <div className="flex items-center gap-3 flex-wrap">
-        <button type="button" className={PRIMARY_BTN} disabled={!canSubmit} onClick={submit}>
-          Start selling
-        </button>
-        {error && (
-          <span role="status" className={ERROR_TEXT}>
-            {error}
-          </span>
-        )}
+    <VipGlassCard>
+      <VipBand compact showRule={false} headline={`Start selling ${joinSports(eligible)} VIP picks`} />
+      <div className="px-4 py-3 flex flex-col gap-3">
+        <PriceInput id="vip-seller-price" value={price} onChange={setPrice} />
+        <label className="flex items-start gap-2 text-[11px] leading-snug text-[var(--color-text-soft)]">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+          />
+          <span>{TERMS_SENTENCE}</span>
+        </label>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button type="button" className={VIP_PRIMARY_BTN} disabled={!canSubmit} onClick={submit}>
+            Start selling
+          </button>
+          {error && (
+            <span role="status" className={ERROR_TEXT}>
+              {error}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+    </VipGlassCard>
   );
 }

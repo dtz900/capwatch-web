@@ -1,21 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { formatPostedAt, formatStake } from "@/lib/formatters";
-import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
+import type React from "react";
+import { formatStake } from "@/lib/formatters";
+import { formatBetDescriptor } from "@/lib/markets";
 import {
   isLockedPick,
   type VipCapperStatus,
   type VipLockedPick,
   type VipLockedSummary,
 } from "@/lib/vip/types";
-import { formatRevealTime } from "./format";
+import { LeagueMark } from "./EligibilityBadges";
+import { VipCrown } from "./VipCrown";
+import { formatRevealPhrase, formatRevealTime } from "./format";
 import { EYEBROW } from "./styles";
-
-const CHIP =
-  "text-[9px] uppercase tracking-[0.14em] font-bold px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]";
-const ROW =
-  "flex items-center gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-[rgba(255,255,255,0.03)] transition-colors";
 
 function LockGlyph() {
   return (
@@ -46,7 +43,9 @@ export type LockedTicket =
  *  (shared parlay_id) become one ticket ordered by parlay_leg_index. Ticket
  *  order follows the first row seen. */
 export function groupLockedTickets(picks: VipLockedPick[]): LockedTicket[] {
-  const order: Array<{ kind: "straight"; pick: VipLockedPick } | { kind: "parlay"; id: number }> = [];
+  const order: Array<
+    { kind: "straight"; pick: VipLockedPick } | { kind: "parlay"; id: number }
+  > = [];
   const parlays = new Map<number, VipLockedPick[]>();
   for (const p of picks) {
     if (p.parlay_id == null) {
@@ -114,25 +113,54 @@ export function groupSummaryTickets(rows: VipLockedSummary[]): SummaryTicket[] {
 
 function toSummary(p: VipLockedSummary | VipLockedPick): VipLockedSummary {
   return isLockedPick(p)
-    ? { pick_id: p.id, sport: p.sport, reveal_at: p.reveal_at, posted_at: p.posted_at }
+    ? {
+        pick_id: p.id,
+        sport: p.sport,
+        reveal_at: p.reveal_at,
+        posted_at: p.posted_at,
+      }
     : p;
 }
 
 /* ---------- rows ---------- */
 
-function SummaryRow({ ticket }: { ticket: SummaryTicket }) {
+/* Fake pick text under the blur. The real selection never reaches an
+ * anonymous viewer; this only gives the blur a pick-shaped silhouette. */
+const DECOYS = [
+  "Team -3.5  -110  2u",
+  "Over 47.5  -105  1u",
+  "Team ML  +140  1.5u",
+  "Under 8.5  -115  1u",
+];
+
+export function SummaryRow({
+  ticket,
+  index,
+}: {
+  ticket: SummaryTicket;
+  index: number;
+}) {
+  const decoy =
+    ticket.legs > 1
+      ? `${ticket.legs}-leg parlay  +595  1u`
+      : DECOYS[index % DECOYS.length];
   return (
-    <div className={ROW}>
-      <div className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
-        <span className={CHIP}>{ticket.sport}</span>
-        <span className="text-[12px] font-semibold text-[var(--color-text-soft)]">
-          Reveals at {formatRevealTime(ticket.reveal_at)}
-        </span>
-      </div>
+    <div className="flex items-center gap-4 py-3">
+      <LeagueMark sport={ticket.sport} eligible className="h-[22px]" />
+      <span className="sr-only">{ticket.sport}</span>
+      <span
+        aria-hidden="true"
+        className="min-w-0 flex-1 truncate select-none text-[14px] font-bold text-[var(--color-text)]"
+        style={{ filter: "blur(5px)", userSelect: "none" }}
+      >
+        {decoy}
+      </span>
+      <span className="shrink-0 text-[12px] font-medium text-[var(--color-text-muted)] tabular-nums">
+        Reveals {formatRevealPhrase(ticket.reveal_at)}
+      </span>
       <span
         aria-label="Locked"
-        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md
-                   border border-[var(--color-border)] text-[var(--color-text-muted)]"
+        className="shrink-0 text-[var(--color-vip-text)]"
       >
         <LockGlyph />
       </span>
@@ -144,89 +172,139 @@ function stakeOf(units: number | null): string | null {
   return units != null && units > 0 ? formatStake(units) : null;
 }
 
-/* Subscriber/owner straight row. Mirrors PendingRow's layout: chips, pick line, meta. */
-export function LockedPickRow({ pick }: { pick: VipLockedPick }) {
-  const shape = {
-    kind: "straight" as const,
-    market: pick.market,
-    selection: pick.selection,
-    line: pick.line,
-    odds_taken: pick.odds_taken,
-  };
-  const text = formatBetDescriptor(shape);
-  const stake = stakeOf(pick.units);
-  const posted = formatPostedAt(pick.posted_at);
-
-  return (
-    <div className={ROW}>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <span className={CHIP}>{pick.sport}</span>
-          <span className={CHIP}>{formatMarketLabel(shape)}</span>
-        </div>
-        <div className="text-[12px] font-semibold text-[var(--color-text)] truncate">{text}</div>
-        <div className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
-          {stake && <span>{stake}</span>}
-          {posted && <span className="opacity-80">{posted}</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function signedOdds(o: number): string {
   return o > 0 ? `+${o}` : String(o);
 }
 
-/* One parlay ticket, expander pattern from PendingBlock (open by default).
- * The platform stores combined_odds and units on leg 0 only
- * (core/manual_bet.py); when leg 0 carries odds and no other leg does, that
- * is the ticket price and the legs render without odds. */
-export function LockedParlayRow({ legs }: { legs: VipLockedPick[] }) {
-  const [expanded, setExpanded] = useState(true);
-  const lead = legs.find((l) => l.parlay_leg_index === 0) ?? legs[0];
-  const combined =
-    lead.odds_taken != null && legs.every((l) => l === lead || l.odds_taken == null);
-  const title = formatBetDescriptor({ kind: "parlay", leg_count: legs.length });
-  const priced = combined && lead.odds_taken != null ? `${title} ${signedOdds(lead.odds_taken)}` : title;
-  const stake = stakeOf(lead.units);
-  const posted = formatPostedAt(lead.posted_at);
-  const toggle = () => setExpanded((v) => !v);
+/* Shared row frame for unlocked picks: league mark, the pick, the game under
+ * it, and when it goes public on the right. Same rhythm as SummaryRow so the
+ * locked and unlocked views read as one list. */
+export interface PickBy {
+  avatar: React.ReactNode;
+  name: React.ReactNode;
+}
 
+function UnlockedRow({
+  pick,
+  title,
+  stake,
+  by,
+  children,
+}: {
+  pick: VipLockedPick;
+  title: string;
+  stake: string | null;
+  /** Who posted it, for feeds that mix cappers (My Tails): the avatar takes
+   *  the left column and the league mark drops into the game line. */
+  by?: PickBy;
+  children?: React.ReactNode;
+}) {
+  const game = [
+    pick.matchup,
+    pick.commence_time && formatRevealTime(pick.commence_time),
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <div>
-      <div
-        role="button"
-        tabIndex={0}
-        aria-expanded={expanded}
-        onClick={toggle}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            toggle();
-          }
-        }}
-        className={`${ROW} cursor-pointer`}
-      >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <span className={CHIP}>{lead.sport}</span>
-            <span className={CHIP}>Parlay</span>
-          </div>
-          <div className="text-[12px] font-semibold text-[var(--color-text)] truncate">
-            {stake ? `${priced} · ${stake}` : priced}
-          </div>
-          {posted && (
-            <div className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5 opacity-80">
-              {posted}
-            </div>
+    <div className="flex items-start gap-4 py-3">
+      {by ? (
+        <div className="shrink-0">{by.avatar}</div>
+      ) : (
+        <div className="flex h-[22px] w-[26px] shrink-0 justify-center">
+          <LeagueMark sport={pick.sport} eligible className="h-[22px]" />
+        </div>
+      )}
+      <span className="sr-only">{pick.sport}</span>
+      <div className="min-w-0 flex-1">
+        {by && <div className="mb-0.5">{by.name}</div>}
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="truncate text-[14px] font-bold text-[var(--color-text)]">
+            {title}
+          </span>
+          {stake && (
+            <span className="shrink-0 text-[12px] font-semibold text-[var(--color-text-soft)] tabular-nums">
+              {stake}
+            </span>
           )}
         </div>
+        {(game || by) && (
+          <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[12px] text-[var(--color-text-muted)]">
+            {by && (
+              <LeagueMark sport={pick.sport} eligible className="h-[13px]" />
+            )}
+            <span className="truncate">{game}</span>
+          </div>
+        )}
+        {children}
       </div>
-      {expanded && (
-        <ul className="pl-4 pb-2 pt-0.5 text-[12px] text-[var(--color-text-soft)] flex flex-col gap-1">
-          {legs.map((l) => (
-            <li key={l.id} className="truncate">
+      <span className="shrink-0 pt-0.5 text-[12px] font-medium text-[var(--color-text-muted)] tabular-nums">
+        Public {formatRevealPhrase(pick.reveal_at)}
+      </span>
+    </div>
+  );
+}
+
+/* Subscriber/owner straight pick. */
+export function LockedPickRow({
+  pick,
+  by,
+}: {
+  pick: VipLockedPick;
+  by?: PickBy;
+}) {
+  const title = formatBetDescriptor({
+    kind: "straight",
+    market: pick.market,
+    selection: pick.selection,
+    line: pick.line,
+    odds_taken: pick.odds_taken,
+  });
+  return (
+    <UnlockedRow
+      pick={pick}
+      title={title}
+      stake={stakeOf(pick.units)}
+      by={by}
+    />
+  );
+}
+
+/* One parlay ticket. The platform stores combined_odds and units on leg 0
+ * only (core/manual_bet.py); when leg 0 carries odds and no other leg does,
+ * that is the ticket price and the legs render without odds. Legs sit under
+ * the ticket line with a VIP rule on the left so they read as one bet. */
+export function LockedParlayRow({
+  legs,
+  by,
+}: {
+  legs: VipLockedPick[];
+  by?: PickBy;
+}) {
+  const lead = legs.find((l) => l.parlay_leg_index === 0) ?? legs[0];
+  const combined =
+    lead.odds_taken != null &&
+    legs.every((l) => l === lead || l.odds_taken == null);
+  const name = formatBetDescriptor({ kind: "parlay", leg_count: legs.length });
+  const title =
+    combined && lead.odds_taken != null
+      ? `${name} ${signedOdds(lead.odds_taken)}`
+      : name;
+  // The ticket line shows when the first leg starts; each leg names its game.
+  const starts = legs
+    .map((l) => l.commence_time)
+    .filter((t): t is string => Boolean(t))
+    .sort();
+  return (
+    <UnlockedRow
+      pick={{ ...lead, matchup: null, commence_time: starts[0] ?? null }}
+      title={title}
+      stake={stakeOf(lead.units)}
+      by={by}
+    >
+      <ul className="mt-2 flex flex-col gap-1.5 border-l-2 border-[rgba(196,181,253,0.35)] pl-3">
+        {legs.map((l) => (
+          <li key={l.id} className="min-w-0">
+            <div className="truncate text-[13px] font-semibold text-[var(--color-text-soft)]">
               {formatBetDescriptor({
                 kind: "parlay_leg",
                 market: l.market,
@@ -234,18 +312,23 @@ export function LockedParlayRow({ legs }: { legs: VipLockedPick[] }) {
                 line: l.line,
                 odds_taken: combined ? null : l.odds_taken,
               })}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+            </div>
+            {l.matchup && (
+              <div className="truncate text-[11px] text-[var(--color-text-muted)]">
+                {l.matchup}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </UnlockedRow>
   );
 }
 
 /** Ticket rows for picks the viewer may see in full. */
 export function LockedTicketList({ tickets }: { tickets: LockedTicket[] }) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col divide-y divide-[rgba(255,255,255,0.06)]">
       {tickets.map((t) =>
         t.kind === "parlay" ? (
           <LockedParlayRow key={t.key} legs={t.legs} />
@@ -257,15 +340,46 @@ export function LockedTicketList({ tickets }: { tickets: LockedTicket[] }) {
   );
 }
 
-export function LockedHeader({ count, className = "mb-3" }: { count: number; className?: string }) {
+export function LockedHeader({
+  count,
+  unlocked = false,
+  className = "mb-3",
+}: {
+  count: number;
+  unlocked?: boolean;
+  className?: string;
+}) {
+  const label = unlocked
+    ? `${count} ${count === 1 ? "pick" : "picks"}`
+    : `${count} locked`;
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <span className={EYEBROW}>VIP · {count} locked</span>
+    <div
+      role="heading"
+      aria-level={3}
+      aria-label={`VIP · ${label}`}
+      className={`flex items-center gap-2 ${className}`}
+    >
+      {unlocked ? (
+        <VipCrown className="w-4 h-4" />
+      ) : (
+        <span aria-hidden="true" className="text-[var(--color-vip-text)]">
+          <LockGlyph />
+        </span>
+      )}
+      <span aria-hidden="true" className={EYEBROW}>
+        <span className="text-[var(--color-vip-text)]">VIP</span> · {label}
+      </span>
     </div>
   );
 }
 
-export function LockedPicks({ status }: { status: VipCapperStatus }) {
+export function LockedPicks({
+  status,
+  bare = false,
+}: {
+  status: VipCapperStatus;
+  bare?: boolean;
+}) {
   const locked: Array<VipLockedSummary | VipLockedPick> = status.locked;
   if (locked.length === 0) return null;
   const canSee = status.viewer.subscribed || status.viewer.is_owner;
@@ -276,14 +390,24 @@ export function LockedPicks({ status }: { status: VipCapperStatus }) {
   const summary = showFull ? [] : groupSummaryTickets(locked.map(toSummary));
 
   return (
-    <section className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4">
-      <LockedHeader count={showFull ? tickets.length : summary.length} />
+    <section
+      className={
+        bare
+          ? "px-5 sm:px-6 pt-3 pb-1"
+          : "rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4"
+      }
+    >
+      <LockedHeader
+        count={showFull ? tickets.length : summary.length}
+        unlocked={showFull}
+        className={bare ? "mb-0" : "mb-3"}
+      />
       {showFull ? (
         <LockedTicketList tickets={tickets} />
       ) : (
-        <div className="flex flex-col">
-          {summary.map((t) => (
-            <SummaryRow key={t.key} ticket={t} />
+        <div className="flex flex-col divide-y divide-[rgba(255,255,255,0.06)]">
+          {summary.map((t, i) => (
+            <SummaryRow key={t.key} ticket={t} index={i} />
           ))}
         </div>
       )}

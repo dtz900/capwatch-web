@@ -6,7 +6,7 @@ import { getVipMe, patchVipSeller } from "@/lib/vip/client";
 import type { VipMe, VipSeller } from "@/lib/vip/types";
 import { formatPrice } from "./format";
 import { PriceInput, SellerSetupCard, parsePriceDollars } from "./SellerSetupCard";
-import { ERROR_TEXT, EYEBROW, INNER_CARD, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_BTN_SM, SECTION } from "./styles";
+import { ERROR_TEXT, EYEBROW, INNER_CARD, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_BTN_SM, SECTION, VIP_CHIP } from "./styles";
 import { VipPickComposer } from "./VipPickComposer";
 
 function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void }) {
@@ -37,11 +37,14 @@ function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void
 
   if (!editing) {
     return (
-      <div className={`${INNER_CARD} flex items-center justify-between gap-3 flex-wrap`}>
+      <div className={`${INNER_CARD} flex items-center gap-3 flex-wrap`}>
         <div className="flex items-baseline gap-3">
           <span className={EYEBROW}>Selling at</span>
           <span className="text-[18px] font-extrabold tabular-nums leading-none text-[var(--color-text)]">
             ${formatPrice(seller.price_cents)}/mo
+          </span>
+          <span aria-hidden="true" className="text-[var(--color-text-muted)]">
+            ·
           </span>
         </div>
         <button
@@ -154,14 +157,15 @@ export function OwnerPanelView({
         <>
           <PriceLine key={me.seller.price_cents} seller={me.seller} onSaved={onRefresh} />
           <div className={`${INNER_CARD} flex flex-col gap-3`}>
-            <span className={EYEBROW}>Post a VIP pick</span>
+            <div className="flex items-center gap-2">
+              <span className={VIP_CHIP}>VIP</span>
+              <span className={EYEBROW}>Post a VIP pick</span>
+            </div>
             <VipPickComposer me={me} onPosted={onPosted} token={composerToken} />
           </div>
         </>
       ) : (
-        <div className={INNER_CARD}>
-          <SellerSetupCard me={me} onDone={onRefresh} />
-        </div>
+        <SellerSetupCard me={me} onDone={onRefresh} />
       )}
     </section>
   );

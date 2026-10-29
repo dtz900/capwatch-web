@@ -21,61 +21,31 @@ export function focalUnits(units: number | null | undefined): string {
   return signedUnits(units);
 }
 
-const REASON_COPY: Record<string, string> = {
-  below_floor: "Under the 20 pick floor",
-  negative: "Negative over 30 days",
-  no_record: "No record yet",
-};
-
-/** Minimum graded picks in the 30 day window to qualify. */
-export const VIP_PICK_FLOOR = 20;
-
-/** How far an OFF sport is from qualifying, in one muted line. */
-export function eligibilityGap(e: VipEligibility): string | null {
-  if (e.eligible) return null;
-  if (e.reason === "below_floor") {
-    if (e.n_floor_picks == null) return `${VIP_PICK_FLOOR} picks to qualify`;
-    const left = Math.max(1, VIP_PICK_FLOOR - e.n_floor_picks);
-    return left === 1 ? "1 more pick to qualify" : `${left} more picks to qualify`;
-  }
-  if (e.reason === "negative" && e.units != null) {
-    return `${Math.abs(e.units).toFixed(1)}u from eligible`;
-  }
-  if (e.reason === "no_record") return "No picks in the last 30 days";
-  return null;
-}
-
 /** "NBA", "NBA and NFL", "MLB, NBA and NFL". */
 export function joinSports(sports: string[]): string {
   if (sports.length <= 1) return sports.join("");
   return `${sports.slice(0, -1).join(", ")} and ${sports[sports.length - 1]}`;
 }
 
-export const VIP_RULE_LINE =
-  "Cappers can only sell here while their public record is winning that sport over the last 30 days. Checked every night.";
+export const VIP_RULE_LINE = "Only a winning 30 day record can sell.";
 
-/** Band headline: does this capper sell VIP picks, and in what. */
-export function vipHeadline(s: VipCapperStatus): string {
-  const eligible = s.eligibility.filter((e) => e.eligible).map((e) => String(e.sport));
-  if (s.seller) {
-    return s.door_open && eligible.length > 0
-      ? `Selling ${joinSports(eligible)} VIP picks`
-      : "Not selling right now";
-  }
-  return eligible.length > 0
-    ? `Eligible to sell ${joinSports(eligible)} VIP picks`
-    : "Not eligible to sell yet";
+/** Exclusivity line: this capper's place among every tracked capper
+ *  eligible to sell that sport, "1 of 1 eligible NBA cappers". Null when
+ *  nothing qualifies or the platform sent no counts. */
+export function exclusivityLine(s: VipCapperStatus): string | null {
+  const field = s.sport_field;
+  if (!field) return null;
+  const parts = s.eligibility
+    .filter((e) => e.eligible && field[String(e.sport)])
+    .map((e) => `1 of ${Math.max(1, field[String(e.sport)].qualified)} eligible ${e.sport} cappers`);
+  return parts.length === 0 ? null : parts.join(" · ");
 }
 
-/** Muted sub-lines under a card's focal number. */
-export function eligibilityDetail(e: VipEligibility): string[] {
-  const first = e.units == null ? "No record yet" : `${e.n_picks ?? 0} picks · last 30 days`;
-  let second: string | null = null;
-  if (!e.eligible) second = e.reason ? (REASON_COPY[e.reason] ?? null) : null;
-  else if (e.fail_streak === 1) second = "One bad night, still selling";
-  const lines = second && second !== first ? [first, second] : [first];
-  const gap = eligibilityGap(e);
-  return gap ? [...lines, gap] : lines;
+/** Band headline: one state for everyone. Eligible in any sport reads
+ *  "VIP Eligible" (with a check in the band), seller or not; the price and
+ *  Subscribe button say whether they are selling. */
+export function vipHeadline(s: VipCapperStatus): string {
+  return s.eligibility.some((e) => e.eligible) ? "VIP Eligible" : "Not VIP eligible right now";
 }
 
 /** Whole dollars drop the cents: 2500 -> "25", 1999 -> "19.99". */
@@ -100,4 +70,11 @@ export function formatRevealTime(iso: string, now: Date = new Date()): string {
   if (etDay(at) === etDay(now)) return `${t} ET`;
   const wd = at.toLocaleDateString("en-US", { weekday: "short", timeZone: "America/New_York" });
   return `${wd} ${t} ET`;
+}
+
+/** formatRevealTime with its preposition: "at 4:30 PM ET" today,
+ *  "on Sun 12:30 PM ET" on another day. */
+export function formatRevealPhrase(iso: string, now: Date = new Date()): string {
+  const when = formatRevealTime(iso, now);
+  return etDay(new Date(iso)) === etDay(now) ? `at ${when}` : `on ${when}`;
 }

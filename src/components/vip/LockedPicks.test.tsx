@@ -50,22 +50,23 @@ describe("LockedPicks", () => {
         })}
       />,
     );
-    expect(screen.getByText("VIP · 1 locked")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "VIP · 1 locked" })).toBeInTheDocument();
     expect(screen.getByText("Reveals at 7:05 PM ET")).toBeInTheDocument();
     expect(screen.getByText("MLB")).toBeInTheDocument();
     expect(screen.queryByText(/Yankees/)).toBeNull();
   });
 
-  it("locked subscriber shows selection", () => {
+  it("subscriber sees the pick, units and when it goes public", () => {
     render(
       <LockedPicks
         status={base({ viewer: { subscribed: true, is_owner: false }, locked: [pick] })}
       />,
     );
-    expect(screen.getByText("VIP · 1 locked")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "VIP · 1 pick" })).toBeInTheDocument();
     expect(screen.getByText("Yankees -135")).toBeInTheDocument();
     expect(screen.getByText("2u")).toBeInTheDocument();
-    expect(screen.queryByText(/Reveals at/)).toBeNull();
+    expect(screen.queryByText(/Reveals/)).toBeNull();
+    expect(screen.getByText(/^Public (at|on) /)).toBeInTheDocument();
   });
 
   it("subscriber sees a 3-leg parlay as one row with ticket odds and units", () => {
@@ -87,8 +88,9 @@ describe("LockedPicks", () => {
         })}
       />,
     );
-    expect(screen.getByText("VIP · 2 locked")).toBeInTheDocument();
-    expect(screen.getByText("3-leg parlay +600 · 1u")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "VIP · 2 picks" })).toBeInTheDocument();
+    expect(screen.getByText("3-leg parlay +600")).toBeInTheDocument();
+    expect(screen.getByText("1u")).toBeInTheDocument();
     const legs = screen.getAllByRole("listitem").map((li) => li.textContent);
     expect(legs).toEqual(["Yankees ML", "Dodgers", "Rangers"]);
     expect(screen.getByText("Yankees -135")).toBeInTheDocument();
@@ -106,7 +108,8 @@ describe("LockedPicks", () => {
         })}
       />,
     );
-    expect(screen.getByText("2-leg parlay · 2u")).toBeInTheDocument();
+    expect(screen.getByText("2-leg parlay")).toBeInTheDocument();
+    expect(screen.getByText("2u")).toBeInTheDocument();
     expect(screen.getByText("Mets -120")).toBeInTheDocument();
     expect(screen.getByText("Cubs +110")).toBeInTheDocument();
   });
@@ -126,7 +129,7 @@ describe("LockedPicks", () => {
         })}
       />,
     );
-    expect(screen.getByText("VIP · 2 locked")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "VIP · 2 locked" })).toBeInTheDocument();
     expect(screen.getAllByLabelText("Locked")).toHaveLength(2);
   });
 

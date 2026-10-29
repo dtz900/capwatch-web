@@ -17,65 +17,45 @@ function row(over: Partial<VipEligibility>): VipEligibility {
 }
 
 describe("EligibilityBadges", () => {
-  it("eligible card: exact sentence as aria-label, SELLING chip, focal units, picks line", () => {
+  it("eligible stat: exact sentence as aria-label, off-white units, picks count", () => {
     render(<EligibilityBadges eligibility={[row({})]} />);
-    const card = screen.getByLabelText("Selling MLB VIP: +12.3u over last 30 days (41 picks)");
-    expect(card).toHaveTextContent("MLB");
-    expect(card).toHaveTextContent("Selling");
-    expect(screen.getByText("+12.3u")).toHaveClass("text-[var(--color-pos)]");
-    expect(screen.getByText("41 picks · last 30 days")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Selling MLB VIP: +12.3u over last 30 days (41 picks)"),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText("MLB")).not.toHaveClass("grayscale");
+    expect(screen.getByText("+12.3u")).toHaveClass("text-[var(--color-text)]");
+    expect(screen.getByText("41 picks")).toBeInTheDocument();
+    expect(screen.getByText("last 30 days")).toBeInTheDocument();
   });
 
-  it("closed card: exact sentence as aria-label, OFF chip, neg units, reason line", () => {
+  it("closed stat: exact sentence as aria-label, muted units, never red", () => {
     render(
       <EligibilityBadges
-        eligibility={[
-          row({
-            sport: "NBA",
-            eligible: false,
-            units: -3.25,
-            n_picks: 12,
-            n_floor_picks: 12,
-            reason: "below_floor",
-          }),
-        ]}
+        eligibility={[row({ sport: "NBA", eligible: false, units: -3.25, n_picks: 12, reason: "below_floor" })]}
       />,
     );
-    const card = screen.getByLabelText("Not currently selling: -3.3u NBA, last 30 days");
-    expect(card).toHaveTextContent("Off");
-    expect(screen.getByText("-3.3u")).toHaveClass("text-[var(--color-neg)]");
-    expect(screen.getByText("12 picks · last 30 days")).toBeInTheDocument();
-    expect(screen.getByText("Under the 20 pick floor")).toBeInTheDocument();
-    expect(screen.getByText("8 more picks to qualify")).toBeInTheDocument();
+    screen.getByLabelText("Not currently selling: -3.3u NBA, last 30 days");
+    expect(screen.getByText("-3.3u")).toHaveClass("text-[var(--color-text-muted)]");
+    expect(screen.getByText("-3.3u")).not.toHaveClass("text-[var(--color-neg)]");
+    expect(screen.getByText("12 picks")).toBeInTheDocument();
+    expect(screen.getByAltText("NBA")).toHaveClass("grayscale");
   });
 
-  it("eligible card wears the purple top border and chip", () => {
-    render(<EligibilityBadges eligibility={[row({})]} />);
-    const card = screen.getByLabelText("Selling MLB VIP: +12.3u over last 30 days (41 picks)");
-    expect(card).toHaveClass("border-t-[var(--color-vip)]");
-    expect(screen.getByText("Selling")).toHaveClass("text-[var(--color-vip-text)]");
-  });
-
-  it("negative reason copy", () => {
-    render(<EligibilityBadges eligibility={[row({ eligible: false, units: -11.4, reason: "negative" })]} />);
-    expect(screen.getByText("Negative over 30 days")).toBeInTheDocument();
-    expect(screen.getByText("11.4u from eligible")).toBeInTheDocument();
-  });
-
-  it("grace night on an eligible sport", () => {
-    render(<EligibilityBadges eligibility={[row({ fail_streak: 1 })]} />);
-    expect(screen.getByText("One bad night, still selling")).toBeInTheDocument();
-  });
-
-  it("no history row renders a muted 0.0u and No record yet once", () => {
+  it("selling sports lead the line", () => {
     render(
       <EligibilityBadges
-        eligibility={[row({ eligible: false, units: null, n_picks: null, reason: "no_record" })]}
+        eligibility={[row({ sport: "MLB", eligible: false, units: -3 }), row({ sport: "NBA", units: 136.5 })]}
       />,
     );
+    const groups = screen.getAllByRole("group");
+    expect(groups[0]).toContainElement(screen.getByAltText("NBA"));
+    expect(groups[1]).toContainElement(screen.getByAltText("MLB"));
+  });
+
+  it("no history row renders a muted 0.0u and 0 picks", () => {
+    render(<EligibilityBadges eligibility={[row({ eligible: false, units: null, n_picks: null, reason: "no_record" })]} />);
     expect(screen.getByText("0.0u")).toHaveClass("text-[var(--color-text-muted)]");
-    expect(screen.getAllByText("No record yet")).toHaveLength(1);
-    expect(screen.getByText("No picks in the last 30 days")).toBeInTheDocument();
+    expect(screen.getByText("0 picks")).toBeInTheDocument();
   });
 
   it("renders nothing with no rows", () => {

@@ -20,7 +20,7 @@ function enableFlag() {
 }
 
 describe("vip-rules page", () => {
-  it("renders the six section headings", () => {
+  it("renders the five section headings", () => {
     enableFlag();
     const { container } = render(<VipRules />);
     const heads = Array.from(container.querySelectorAll("h2")).map((h) => h.textContent);
@@ -29,7 +29,6 @@ describe("vip-rules page", () => {
       "What a VIP pick is",
       "What subscribers get",
       "Money",
-      "Our conflict",
       "Not advice",
     ]);
   });

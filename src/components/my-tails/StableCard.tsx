@@ -8,6 +8,9 @@ import { Sparkline } from "@/components/leaderboard/Sparkline";
 import { MomentumStrip } from "@/components/leaderboard/MomentumStrip";
 import { StatusPill } from "@/components/my-tails/StatusPill";
 import { formatUnits, formatUnitsSmart, trimUnits } from "@/lib/formatters";
+import { StableVipPicks, vipStatusLine } from "@/components/my-tails/StableVipPicks";
+import { VipCrown } from "@/components/vip/VipCrown";
+import type { VipSubscription } from "@/lib/vip/types";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 
 /** localStorage key holding the capper ids whose lifetime block is folded. */
@@ -58,6 +61,7 @@ export function StableCard({
   scopes = [],
   scopeStats = [],
   onUntailMarket,
+  vip,
 }: {
   capper: CapperRow;
   onUntail: () => void;
@@ -65,6 +69,8 @@ export function StableCard({
   scopes?: string[];
   scopeStats?: ScopeStat[];
   onUntailMarket?: (market: string) => void;
+  /** The viewer's VIP subscription to this capper, if any. */
+  vip?: VipSubscription;
 }) {
   const slip = useBetSlip();
   const [openParlays, setOpenParlays] = useState<Set<number>>(new Set());
@@ -112,7 +118,11 @@ export function StableCard({
     slip.setCapperStake(Number(capper.capper_id), next);
   };
   return (
-    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-5 py-5">
+    <div
+      className={`relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border px-5 py-5 ${
+        vip?.status === "active" ? "border-[rgba(196,181,253,0.30)]" : "border-[var(--color-border)]"
+      }`}
+    >
       {/* Only unscoped cards render the lifetime block, so only they get
           the eye; a scoped card would have a button that changes nothing
           (Codex, PR #85). */}
@@ -131,14 +141,18 @@ export function StableCard({
           <EyeIcon off={profitHidden} />
         </button>
       )}
-      <button
-        aria-label={`Untail ${capper.display_name ?? capper.handle}`}
-        onClick={onUntail}
-        className="absolute right-3 top-3 z-10 text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-sm"
-        title="Untail"
-      >
-        {"✕"}
-      </button>
+      {/* A subscribed capper stays in the stable while the subscription
+          lives, so untailing would undo itself on reload. */}
+      {!vip && (
+        <button
+          aria-label={`Untail ${capper.display_name ?? capper.handle}`}
+          onClick={onUntail}
+          className="absolute right-3 top-3 z-10 text-[var(--color-text-muted)] hover:text-[var(--color-neg)] text-sm"
+          title="Untail"
+        >
+          {"✕"}
+        </button>
+      )}
       {/* Only the header links to the profile; the card body (stats, today
           picks) is plain so slip adds and the parlay expander don't navigate. */}
       <Link href={`/cappers/${capper.handle}`} className="block">
@@ -149,9 +163,19 @@ export function StableCard({
               <span className="font-bold text-[var(--color-text)] truncate">
                 {capper.display_name ?? capper.handle}
               </span>
+              {vip?.status === "active" && <VipCrown className="w-4 h-4 shrink-0" />}
               <StreakBadge streak={capper.current_day_streak} size="sm" />
             </div>
             <span className="text-xs text-[var(--color-text-muted)]">@{capper.handle}</span>
+            {vip && (
+              <span
+                className={`block text-[11px] font-semibold ${
+                  vip.status === "active" ? "text-[var(--color-vip-text)]" : "text-[var(--color-text-muted)]"
+                }`}
+              >
+                {vipStatusLine(vip)}
+              </span>
+            )}
             {scoped && (
               <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-gold)]">
                 {scopes.length === 1
@@ -303,6 +327,7 @@ export function StableCard({
             </div>
           </div>
         )}
+        {vip && <StableVipPicks sub={vip} />}
         <div className="mt-4 border-t border-[var(--color-border)] pt-3">
           <div className="flex items-baseline justify-between">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
@@ -348,6 +373,12 @@ export function StableCard({
                       : {})}
                   >
                     <div className="text-sm font-semibold leading-tight text-[var(--color-text)] truncate">
+                      {p.vip && (
+                        <span className="mr-1.5 inline-flex items-center gap-1 rounded bg-[rgba(167,139,250,0.16)] px-1 py-px align-[1px] text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--color-vip-text)]">
+                          <VipCrown className="w-2.5 h-2.5" />
+                          VIP
+                        </span>
+                      )}
                       {p.selection}
                       {expandable && (
                         <span className="ml-1.5 text-[10px] text-[var(--color-text-muted)]">

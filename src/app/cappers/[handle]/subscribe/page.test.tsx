@@ -10,11 +10,8 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/api", () => ({ fetchCapperProfile: vi.fn() }));
 vi.mock("@/components/nav/TopNav", () => ({ TopNav: () => <nav data-testid="topnav" /> }));
-vi.mock("@/components/auth/TailButton", () => ({
-  TailButton: ({ capperId }: { capperId: number }) => <button>Tail {capperId}</button>,
-}));
 vi.mock("@/components/vip/EligibilityBadges", () => ({
-  EligibilityBadges: () => <div data-testid="badges" />,
+  EligibilityGroups: () => <div data-testid="badges" />,
 }));
 
 import { notFound } from "next/navigation";
@@ -49,18 +46,34 @@ describe("subscribe page", () => {
     vi.clearAllMocks();
   });
 
-  it("renders price and open-soon copy", async () => {
+  it("renders the price, the Subscribe button and the proof", async () => {
     const el = await SubscribePage({ params: Promise.resolve({ handle: "sharp" }) });
     render(el);
-    expect(screen.getByText("$25/mo")).toBeTruthy();
-    expect(
-      screen.getByText("Subscriptions open soon. Follow @sharp to get notified."),
-    ).toBeTruthy();
-    expect(screen.getByText("Sharp Sam")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Sharp Sam VIP");
+    expect(screen.getAllByRole("button", { name: "Subscribe · $25/mo" })).toHaveLength(2);
+    expect(screen.getByText("Verified by TailSlips")).toBeTruthy();
+    expect(screen.getByText(/Secure checkout with Stripe/)).toBeTruthy();
     expect(screen.getByTestId("badges")).toBeTruthy();
-    expect(screen.getByText("Back to profile").closest("a")?.getAttribute("href")).toBe(
+    expect(screen.getByText("← Profile").closest("a")?.getAttribute("href")).toBe(
       "/cappers/sharp",
     );
+  });
+
+  it("hides Subscribe and says why when new subscriptions are closed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ...status, door_open: false, door_closed_reason: "silent" }),
+      }),
+    );
+    const el = await SubscribePage({ params: Promise.resolve({ handle: "sharp" }) });
+    render(el);
+    expect(screen.queryByRole("button", { name: /Subscribe/ })).toBeNull();
+    expect(screen.queryByText(/Secure checkout/)).toBeNull();
+    expect(
+      screen.getAllByText("No VIP picks in 14 days. Subscriptions reopen with the next pick."),
+    ).toHaveLength(2);
   });
 
   it("still renders when the status fetch fails", async () => {
@@ -69,6 +82,7 @@ describe("subscribe page", () => {
     render(el);
     expect(screen.queryByText(/\/mo/)).toBeNull();
     expect(screen.queryByTestId("badges")).toBeNull();
+    expect(screen.getByText("@sharp is not selling VIP picks right now.")).toBeTruthy();
   });
 
   it("404 when flag off", async () => {

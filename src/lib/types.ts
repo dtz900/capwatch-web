@@ -487,6 +487,9 @@ export interface TodayPickEntry {
   /** Present on parlay rows once the feed serves it (fadeai-platform #87).
       Ordered by leg_index ascending; the card expands these on click. */
   legs?: HistoryPickLeg[] | null;
+  /** Posted as a VIP pick; My Tails keeps tagging it after it goes public.
+      Optional so an older platform build still renders. */
+  vip?: boolean;
 }
 
 export interface TodayPicksResponse {

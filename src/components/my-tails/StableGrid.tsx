@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
+import type { VipSubscription } from "@/lib/vip/types";
 import { StableCard } from "@/components/my-tails/StableCard";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -10,21 +11,31 @@ export function StableGrid({
   todayByCapper = {},
   scopesByCapper = {},
   statsByCapper = {},
+  vipByCapper = {},
 }: {
   initial: CapperRow[];
   todayByCapper?: Record<string, TodayPickEntry[]>;
   scopesByCapper?: Record<string, string[]>;
   statsByCapper?: Record<string, ScopeStat[]>;
+  /** The viewer's VIP subscriptions by capper id; those cappers sort first. */
+  vipByCapper?: Record<string, VipSubscription>;
 }) {
-  const [rows, setRows] = useState(initial);
+  const [rows, setRows] = useState(() =>
+    [...initial].sort(
+      (a, b) =>
+        Number(Boolean(vipByCapper[String(b.capper_id)])) -
+        Number(Boolean(vipByCapper[String(a.capper_id)])),
+    ),
+  );
   const [scopes, setScopes] = useState(scopesByCapper);
   const { session } = useAuth();
   const supabase = useMemo(
     () =>
-      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         ? createBrowserSupabase()
         : null,
-    []
+    [],
   );
 
   async function untail(capperId: string) {
@@ -85,6 +96,7 @@ export function StableGrid({
           scopes={scopes[String(c.capper_id)] ?? []}
           scopeStats={statsByCapper[String(c.capper_id)] ?? []}
           onUntailMarket={(m) => untailMarket(String(c.capper_id), m)}
+          vip={vipByCapper[String(c.capper_id)]}
         />
       ))}
     </div>

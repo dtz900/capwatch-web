@@ -1,17 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, getVipCapperStatus } from "@/lib/vip/client";
 import type { VipCapperStatus } from "@/lib/vip/types";
-import { Tooltip } from "@/components/common/Tooltip";
-import { ELIGIBILITY_TOOLTIP, EligibilityBadges } from "./EligibilityBadges";
+import { EligibilityBadges } from "./EligibilityBadges";
 import { LockedPicks } from "./LockedPicks";
 import { OwnerPanel } from "./OwnerPanel";
 import { SubscribeDoor } from "./SubscribeDoor";
-import { VipBand } from "./VipBand";
-import { signedUnits, vipHeadline } from "./format";
-import { EYEBROW } from "./styles";
+import { VipBand, VipGlassCard } from "./VipBand";
+import { exclusivityLine, signedUnits, vipHeadline } from "./format";
+import { EYEBROW, VIP_GLASS_DIVIDER } from "./styles";
 
 function recordLine(r: VipCapperStatus["vip_record"]): string {
   const pushes = r.pushes > 0 ? `-${r.pushes}` : "";
@@ -19,10 +24,18 @@ function recordLine(r: VipCapperStatus["vip_record"]): string {
 }
 
 function isEmpty(s: VipCapperStatus): boolean {
-  return s.seller === null && s.eligibility.length === 0 && s.locked.length === 0;
+  return (
+    s.seller === null && s.eligibility.length === 0 && s.locked.length === 0
+  );
 }
 
-export function CapperVipSection({ capperId, handle }: { capperId: number; handle: string }) {
+export function CapperVipSection({
+  capperId,
+  handle,
+}: {
+  capperId: number;
+  handle: string;
+}) {
   const { session, capper, authReady } = useAuth();
   const token = session?.access_token ?? null;
   const userId = session?.user?.id ?? null;
@@ -71,7 +84,9 @@ export function CapperVipSection({ capperId, handle }: { capperId: number; handl
   }, [capperId, userId, authReady, reload]);
 
   const ownerPanel = isOwner ? <OwnerPanel onChanged={refetch} /> : null;
-  return <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} />;
+  return (
+    <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} />
+  );
 }
 
 function VipRecord({ record }: { record: VipCapperStatus["vip_record"] }) {
@@ -83,45 +98,21 @@ function VipRecord({ record }: { record: VipCapperStatus["vip_record"] }) {
     );
   }
   const pushes = record.pushes > 0 ? `-${record.pushes}` : "";
-  const tone =
-    record.units > 0
-      ? "text-[var(--color-pos)]"
-      : record.units < 0
-        ? "text-[var(--color-neg)]"
-        : "text-[var(--color-text)]";
   return (
-    <div role="group" aria-label={recordLine(record)} className="flex items-baseline gap-3 flex-wrap">
+    <div
+      role="group"
+      aria-label={recordLine(record)}
+      className="flex items-baseline gap-3 flex-wrap"
+    >
       <span className={EYEBROW}>VIP record</span>
       <span className="text-[15px] font-extrabold tabular-nums text-[var(--color-text)]">
         {record.wins}-{record.losses}
         {pushes}
       </span>
-      <span className={`text-[15px] font-extrabold tabular-nums ${tone}`}>{signedUnits(record.units)}</span>
+      <span className="text-[15px] font-extrabold tabular-nums text-[var(--color-text)]">
+        {signedUnits(record.units)}
+      </span>
     </div>
-  );
-}
-
-const STEPS = [
-  "Picks post inside TailSlips",
-  "Locked to subscribers until 30 min after tip",
-  "Then graded like every other pick",
-];
-
-function HowItWorks() {
-  return (
-    <ol className="mt-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-x-2 gap-y-1 text-[11px] text-[var(--color-text-muted)]">
-      {STEPS.map((step, i) => (
-        <li key={step} className="inline-flex items-center gap-2">
-          {i > 0 && (
-            <span aria-hidden="true" className="hidden sm:inline">
-              ·
-            </span>
-          )}
-          <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-sm bg-[var(--color-vip)]" />
-          {step}
-        </li>
-      ))}
-    </ol>
   );
 }
 
@@ -137,7 +128,9 @@ export function CapperVipView({
   ownerPanel?: ReactNode;
 }) {
   if (!status || isEmpty(status)) {
-    return ownerPanel ? <div className="flex flex-col gap-3">{ownerPanel}</div> : null;
+    return ownerPanel ? (
+      <div className="flex flex-col gap-3">{ownerPanel}</div>
+    ) : null;
   }
 
   const showCard = status.seller !== null || status.eligibility.length > 0;
@@ -146,29 +139,33 @@ export function CapperVipView({
     <div className="flex flex-col gap-3">
       {ownerPanel}
       {showCard && (
-        <section
-          aria-label="Capper VIP"
-          className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] overflow-hidden"
-        >
-          <VipBand
-            headline={vipHeadline(status)}
-            right={<SubscribeDoor status={status} handle={handle} />}
-          />
-          <div className="px-5 py-4">
-            <div className="mb-3">
-              <Tooltip content={ELIGIBILITY_TOOLTIP}>
-                <span className={`${EYEBROW} cursor-help`}>Last 30 days by sport</span>
-              </Tooltip>
+        <section aria-label="Capper VIP">
+          <VipGlassCard>
+            <VipBand
+              headline={vipHeadline(status)}
+              exclusivity={exclusivityLine(status)}
+              right={<SubscribeDoor status={status} handle={handle} />}
+            />
+            <div className="px-5 sm:px-6 pb-3.5">
+              <EligibilityBadges eligibility={status.eligibility} />
             </div>
-            <EligibilityBadges eligibility={status.eligibility} />
-            <HowItWorks />
-            <div className="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center justify-between gap-3 flex-wrap">
+            {status.locked.length > 0 && (
+              <div
+                className={`${VIP_GLASS_DIVIDER} relative`}
+                style={{ backgroundColor: "#1e0f3a" }}
+              >
+                <LockedPicks status={status} bare />
+              </div>
+            )}
+            <div
+              className={`${VIP_GLASS_DIVIDER} px-5 sm:px-6 py-2.5 flex items-center justify-between gap-3 flex-wrap`}
+            >
               <VipRecord record={status.vip_record} />
             </div>
-          </div>
+          </VipGlassCard>
         </section>
       )}
-      <LockedPicks status={status} />
+      {!showCard && <LockedPicks status={status} />}
     </div>
   );
 }

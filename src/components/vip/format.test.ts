@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eligibilityGap, formatRevealTime, joinSports, vipHeadline } from "./format";
+import { exclusivityLine, formatRevealTime, joinSports, vipHeadline } from "./format";
 import type { VipCapperStatus, VipEligibility } from "@/lib/vip/types";
 
 describe("formatRevealTime", () => {
@@ -42,24 +42,15 @@ function st(over: Partial<VipCapperStatus>): VipCapperStatus {
 }
 
 describe("vipHeadline", () => {
-  it("seller with open door lists eligible sports", () => {
-    expect(vipHeadline(st({}))).toBe("Selling NBA VIP picks");
-    expect(
-      vipHeadline(st({ eligibility: [el({}), el({ sport: "NFL" }), el({ sport: "MLB", eligible: false })] })),
-    ).toBe("Selling NBA and NFL VIP picks");
+  it("any eligible sport reads VIP Eligible, seller or not", () => {
+    expect(vipHeadline(st({}))).toBe("VIP Eligible");
+    expect(vipHeadline(st({ seller: null, door_open: false }))).toBe("VIP Eligible");
   });
 
-  it("seller with nothing eligible is not selling", () => {
+  it("nothing eligible", () => {
     expect(vipHeadline(st({ door_open: false, eligibility: [el({ eligible: false })] }))).toBe(
-      "Not selling right now",
+      "Not VIP eligible right now",
     );
-  });
-
-  it("no seller: eligible or not eligible yet", () => {
-    expect(vipHeadline(st({ seller: null, door_open: false }))).toBe("Eligible to sell NBA VIP picks");
-    expect(
-      vipHeadline(st({ seller: null, door_open: false, eligibility: [el({ eligible: false })] })),
-    ).toBe("Not eligible to sell yet");
   });
 
   it("joinSports", () => {
@@ -67,23 +58,25 @@ describe("vipHeadline", () => {
   });
 });
 
-describe("eligibilityGap", () => {
-  it("below floor counts picks left, singular at one, plain floor when unknown", () => {
-    expect(eligibilityGap(el({ eligible: false, reason: "below_floor", n_floor_picks: 3 }))).toBe(
-      "17 more picks to qualify",
+describe("exclusivityLine", () => {
+  it("places the capper among the eligible cappers per sport", () => {
+    expect(exclusivityLine(st({ sport_field: { NBA: { qualified: 1, active: 91 } } }))).toBe(
+      "1 of 1 eligible NBA cappers",
     );
-    expect(eligibilityGap(el({ eligible: false, reason: "below_floor", n_floor_picks: 19 }))).toBe(
-      "1 more pick to qualify",
-    );
-    expect(eligibilityGap(el({ eligible: false, reason: "below_floor", n_floor_picks: null }))).toBe(
-      "20 picks to qualify",
-    );
+    expect(
+      exclusivityLine(
+        st({
+          eligibility: [el({}), el({ sport: "NFL" })],
+          sport_field: { NBA: { qualified: 4, active: 91 }, NFL: { qualified: 2, active: 110 } },
+        }),
+      ),
+    ).toBe("1 of 4 eligible NBA cappers · 1 of 2 eligible NFL cappers");
   });
 
-  it("negative shows distance in units; eligible has no gap", () => {
-    expect(eligibilityGap(el({ eligible: false, reason: "negative", units: -11.42 }))).toBe(
-      "11.4u from eligible",
-    );
-    expect(eligibilityGap(el({}))).toBeNull();
+  it("null with no counts or nothing eligible", () => {
+    expect(exclusivityLine(st({}))).toBeNull();
+    expect(
+      exclusivityLine(st({ eligibility: [el({ eligible: false })], sport_field: { NBA: { qualified: 3, active: 91 } } })),
+    ).toBeNull();
   });
 });
