@@ -79,12 +79,22 @@ export default async function SubscribePage({ params }: PageProps) {
   const lockedRows = status?.locked ?? [];
   const cta =
     seller && doorOpen ? (
-      <button
-        type="button"
-        className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap`}
-      >
-        Subscribe · ${formatPrice(seller.price_cents)}/mo
-      </button>
+      // Checkout is the last build step (Stripe Connect). Until it lands the
+      // button is disabled rather than a live-looking control that does
+      // nothing (Codex P1 on #220).
+      <div className="flex flex-col items-start gap-1.5">
+        <button
+          type="button"
+          disabled
+          aria-describedby="subscribe-soon"
+          className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap`}
+        >
+          Subscribe · ${formatPrice(seller.price_cents)}/mo
+        </button>
+        <span id="subscribe-soon" className="text-[11px] text-[var(--color-text-muted)]">
+          Checkout opens soon.
+        </span>
+      </div>
     ) : (
       <p className="text-[13px] leading-snug text-[var(--color-text-muted)] sm:max-w-[280px]">
         {DOOR_CLOSED[closedReason]}

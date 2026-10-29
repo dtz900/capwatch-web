@@ -6,6 +6,7 @@ import { formatStake } from "@/lib/formatters";
 import type { TodayPickEntry } from "@/lib/types";
 import type { VipLockedPick, VipSubscription } from "@/lib/vip/types";
 import { hasVipAccess } from "@/lib/vip/access";
+import { parlayTicketOdds } from "@/lib/vip/odds";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 import {
   groupLockedTickets,
@@ -235,7 +236,9 @@ function toSlipPick(
     market: "parlay",
     selection: formatBetDescriptor({ kind: "parlay", leg_count: legs.length }),
     line: null,
-    odds_taken: lead.odds_taken,
+    // Combined price on leg 0, or the legs multiplied when each carries its
+    // own price; never leg 0's price stamped on the whole ticket.
+    odds_taken: parlayTicketOdds(legs),
     commence_time:
       legs
         .map((l) => l.commence_time)
