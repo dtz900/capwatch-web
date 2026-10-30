@@ -84,6 +84,9 @@ export function PickBuilder({
   const [sport, setSport] = useState<BoardSport | null>(boardSports[0] ?? null);
   const [fmt, setFmt] = useState<Fmt>("american");
   const [book, setBook] = useState(() => defaultBook(preferredBook));
+  // A main book saved in the stats card while the builder is open takes
+  // over the book picker and re-prices legs the capper has not typed over.
+  const [savedBook, setSavedBook] = useState(preferredBook);
   const [query, setQuery] = useState("");
   const [legs, setLegs] = useState<SlipLeg[]>([]);
   const [units, setUnits] = useState("1");
@@ -103,6 +106,13 @@ export function PickBuilder({
     setLegs(next);
     if (next.length === 0) setSlipOpen(false);
   };
+
+  if (preferredBook !== savedBook) {
+    setSavedBook(preferredBook);
+    const next = defaultBook(preferredBook);
+    setBook(next);
+    setLegs(rebook(legs, next, fmt));
+  }
 
   const games = useMemo(() => (sport ? boards.games[sport] ?? [] : []), [boards.games, sport]);
   const days = [...new Set(games.map((g) => g.day))];

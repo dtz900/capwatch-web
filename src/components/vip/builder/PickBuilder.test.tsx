@@ -237,4 +237,13 @@ describe("PickBuilder review fixes", () => {
     renderBuilder();
     expect(await screen.findByText("Prices did not load. Refresh to try again.")).toBeInTheDocument();
   });
+
+  it("follows a main book saved while it is open", async () => {
+    const { rerender } = render(<PickBuilder token="tok" eligibleSports={["NBA"]} preferredBook="fanduel" />);
+    await tapPrice(/^\+1\.5/);
+    expect(priceInput("CHA +1.5").value).toBe("-105");
+    rerender(<PickBuilder token="tok" eligibleSports={["NBA"]} preferredBook="draftkings" />);
+    expect((screen.getByLabelText("Your book") as HTMLSelectElement).value).toBe("draftkings");
+    expect(priceInput("CHA +1.5").value).toBe("-115");
+  });
 });

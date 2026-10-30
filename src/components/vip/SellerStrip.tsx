@@ -138,7 +138,7 @@ export function SellerStrip({
             {monthly !== null ? `$${monthly.toFixed(2)}` : "--"}
           </span>
           <span className="text-[11px] text-[var(--color-text-muted)]">
-            Est. at ${price}, you keep {Math.round(SELLER_SHARE * 100)}%
+            TailSlips share already removed
           </span>
         </Tile>
       </div>
