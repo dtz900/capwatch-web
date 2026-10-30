@@ -174,6 +174,10 @@ export function CapperVipView({
               className={`${VIP_GLASS_DIVIDER} px-5 sm:px-6 py-2.5 flex items-center justify-between gap-3 flex-wrap`}
             >
               <VipRecord record={status.vip_record} />
+              {/* VIP sits on top of the profile; free picks did not move. */}
+              <span className="text-[12px] font-medium text-[var(--color-text-muted)]">
+                Public picks are still in the same spot below
+              </span>
             </div>
           </VipGlassCard>
         </section>
