@@ -158,6 +158,9 @@ export interface ManualLegInput {
   player_name?: string | null;
   /** Leg sport on a multi-sport ticket (body sport "Multi"). */
   sport?: string | null;
+  /** Bet not on the board: selection is the text as the book wrote it; the
+   *  leg waits for review before it counts. */
+  offboard?: boolean;
 }
 
 export interface VipPickBody {

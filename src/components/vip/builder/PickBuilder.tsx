@@ -14,6 +14,7 @@ import { Board } from "./Board";
 import { BOOKS, OTHER_BOOK, defaultBook } from "./books";
 import { builderError, isFixClosed, isGameStarted } from "./errors";
 import { ManualEntry } from "./ManualEntry";
+import { OffBoardEntry } from "./OffBoardEntry";
 import { fmtPrice, type Fmt } from "./odds";
 import { Slip, slipTotals } from "./SlipCard";
 import { MAX_LEGS, combinedPrice, isSgp, rebook, reformat, toPickBody, toggleLeg, typed, unlockAt, type SlipLeg } from "./slip";
@@ -342,7 +343,21 @@ export function PickBuilder({
                       status={boards.status[sport] ?? "loading"}
                     />
                   )}
-                  <ManualEntry sports={sports} token={token} onAdd={addLegs} startOpen={!sport} />
+                  {sport ? (
+                    <>
+                      <OffBoardEntry
+                        games={allGames.filter((g) => !g.started).sort((a, b) => a.startMs - b.startMs)}
+                        onAdd={addLegs}
+                      />
+                      {/* MLB has no board yet: its sellers keep the editor. */}
+                      {sports.includes("MLB") && (
+                        <ManualEntry sports={["MLB"]} token={token} onAdd={addLegs} label="MLB pick?" />
+                      )}
+                    </>
+                  ) : (
+                    // No board (MLB-only seller): the structured editor is the builder.
+                    <ManualEntry sports={sports} token={token} onAdd={addLegs} startOpen />
+                  )}
                 </div>
                 <div className="contents lg:flex lg:flex-col lg:gap-4 lg:sticky lg:top-[136px] lg:max-h-[calc(100vh-152px)] lg:overflow-y-auto">
                   {stage === "build" && (

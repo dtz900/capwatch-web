@@ -246,4 +246,51 @@ describe("PickBuilder review fixes", () => {
     expect((screen.getByLabelText("Your book") as HTMLSelectElement).value).toBe("draftkings");
     expect(priceInput("CHA +1.5").value).toBe("-115");
   });
+
+  it("posts a bet not on the board as the book wrote it", async () => {
+    client.postVipPick.mockResolvedValue({ ok: true, created_pick_ids: [61], parlay_id: null, ticket_id: 61, reveal_at: START });
+    renderBuilder();
+    await screen.findByRole("button", { name: /^\+1\.5/ });
+    fireEvent.click(screen.getByRole("button", { name: "Bet not on the board?" }));
+    fireEvent.change(screen.getByLabelText("Bet as written"), { target: { value: "CHA 112-108 exact score" } });
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: "+2500" } });
+    // No game until the capper picks one: a late board must not choose it for them.
+    expect(screen.getByRole("button", { name: "Add to slip" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Game"), { target: { value: "NBA:g1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to slip" }));
+    expect(await screen.findByLabelText("Price for CHA 112-108 exact score")).toBeInTheDocument();
+    expect(screen.getByText(/Checked before it counts/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Review pick" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post to subscribers" }));
+    await waitFor(() => expect(client.postVipPick).toHaveBeenCalled());
+    expect(client.postVipPick.mock.calls[0][0].legs[0]).toEqual({
+      selection: "CHA 112-108 exact score", game_id: "g1", offboard: true, odds: 2500,
+    });
+  });
+
+  it("drops the off-board game choice when that game leaves the board", async () => {
+    const LATER: BoardGame = { ...BOARD, game_id: "g2", away: "BOS", home: "NYK" };
+    let startG1: (b: BoardGame) => void = () => {};
+    client.getVipBoardSlate.mockResolvedValue({ games: [BOARD, LATER] });
+    client.getVipBoardGame.mockImplementation((_sport: string, id: string) =>
+      id === "g1" ? new Promise<BoardGame>((r) => { startG1 = r; }) : Promise.resolve(LATER));
+    renderBuilder();
+    fireEvent.click(await screen.findByRole("button", { name: "Bet not on the board?" }));
+    fireEvent.change(screen.getByLabelText("Game"), { target: { value: "NBA:g1" } });
+    fireEvent.change(screen.getByLabelText("Bet as written"), { target: { value: "CHA 112-108 exact score" } });
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: "+2500" } });
+    expect(screen.getByRole("button", { name: "Add to slip" })).toBeEnabled();
+    // g1's board lands already started: the draft must not slide onto g2.
+    startG1({ ...BOARD, started: true });
+    await waitFor(() => expect((screen.getByLabelText("Game") as HTMLSelectElement).value).toBe(""));
+    expect(screen.getByRole("button", { name: "Add to slip" })).toBeDisabled();
+    expect((screen.getByLabelText("Bet as written") as HTMLInputElement).value).toBe("CHA 112-108 exact score");
+  });
+
+  it("keeps the MLB editor for a seller eligible in MLB and NBA", async () => {
+    renderBuilder(["NBA", "MLB"]);
+    await screen.findByRole("button", { name: "Bet not on the board?" });
+    fireEvent.click(screen.getByRole("button", { name: "MLB pick?" }));
+    expect(screen.getByRole("button", { name: "List games" })).toBeInTheDocument();
+  });
 });
