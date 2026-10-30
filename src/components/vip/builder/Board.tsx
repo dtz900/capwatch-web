@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { TeamLogo } from "@/components/slate/TeamLogo";
+import { LeagueMark } from "@/components/vip/EligibilityBadges";
 import { CHIP_MUTED, EYEBROW } from "@/components/vip/styles";
 import type { BoardSport } from "@/lib/vip/types";
 import { PERIODS, teamName, teamTerms, type BuilderGame, type Period } from "./adapt";
@@ -105,8 +107,69 @@ function GameRow({
   );
 }
 
+/** League logos are the sport filter. A sport the seller is not eligible
+ *  in stays visible, greyed, with a pointer to the rules. */
+function SportLogos({
+  sports,
+  eligible,
+  sport,
+  onSport,
+  legCount,
+}: {
+  sports: BoardSport[];
+  eligible: BoardSport[];
+  sport: BoardSport;
+  onSport: (s: BoardSport) => void;
+  legCount: (s: BoardSport) => number;
+}) {
+  return (
+    <div className="flex items-start gap-2 flex-wrap">
+      {sports.map((sp) => {
+        const ok = eligible.includes(sp);
+        const on = ok && sp === sport;
+        const n = legCount(sp);
+        if (!ok) {
+          return (
+            <div key={sp} className="flex items-center gap-2.5 h-12 px-3 rounded-xl border border-dashed border-[rgba(255,255,255,0.08)]">
+              <LeagueMark sport={sp} eligible={false} className="h-[26px]" />
+              <span className="flex flex-col leading-tight">
+                <span className="text-[11px] font-bold text-[var(--color-text-muted)]">Ineligible</span>
+                <Link href="/vip-rules" className="text-[10px] font-semibold text-[var(--color-text-soft)] underline underline-offset-2 hover:text-[var(--color-text)]">
+                  See the rules
+                </Link>
+              </span>
+            </div>
+          );
+        }
+        return (
+          <button
+            key={sp}
+            type="button"
+            aria-pressed={on}
+            aria-label={`${sp}${n > 0 ? `, ${n} on slip` : ""}`}
+            onClick={() => onSport(sp)}
+            className={`relative h-12 px-3.5 rounded-xl border flex items-center transition-colors duration-200 ${
+              on
+                ? "border-[var(--color-text)] bg-[rgba(255,255,255,0.08)]"
+                : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(255,255,255,0.22)] opacity-70 hover:opacity-100"
+            }`}
+          >
+            <LeagueMark sport={sp} eligible className="h-[26px]" />
+            {n > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-[var(--color-text)] text-[#0f0f14] text-[10px] font-extrabold tabular-nums flex items-center justify-center">
+                {n}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Board({
   sports,
+  eligible,
   sport,
   onSport,
   games,
@@ -122,7 +185,9 @@ export function Board({
   books,
   status,
 }: {
+  /** Every board sport, eligible or not. */
   sports: BoardSport[];
+  eligible: BoardSport[];
   sport: BoardSport;
   onSport: (s: BoardSport) => void;
   /** Every game on the chosen sport's slate, by start. */
@@ -154,20 +219,8 @@ export function Board({
   return (
     <>
       <div className="flex flex-col gap-3">
+        <SportLogos sports={sports} eligible={eligible} sport={sport} onSport={onSport} legCount={legCount} />
         <div className="flex items-center gap-3 flex-wrap">
-          {sports.length > 1 && (
-            <Segmented<BoardSport>
-              value={sport}
-              onChange={onSport}
-              options={sports.map((sp) => [
-                sp,
-                <span key={sp} className="tracking-[0.08em]">
-                  {sp}
-                  {legCount(sp) > 0 && <span className="ml-1.5 opacity-55">{legCount(sp)}</span>}
-                </span>,
-              ])}
-            />
-          )}
           {query.trim() === "" && days.length > 0 && (
             <Segmented<string>
               value={day}
