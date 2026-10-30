@@ -52,6 +52,25 @@ export interface VipLockedPick {
   stat_name?: string | null;
   direction?: string | null;
   player_name?: string | null;
+  /** Pulled before start: stays listed, graded no action. */
+  pulled?: boolean;
+  /** The ticket as first posted, on a fixed ticket's lead leg only. */
+  original?: VipOriginal | null;
+}
+
+export interface VipOriginal {
+  legs: Array<{
+    sport: string | null;
+    game_id: string | null;
+    selection: string;
+    stat_name: string | null;
+    line: number | null;
+    direction: string | null;
+    player_name: string | null;
+    odds_taken: number | null;
+  }>;
+  units: number | null;
+  combined_odds: number | null;
 }
 
 export function isLockedPick(

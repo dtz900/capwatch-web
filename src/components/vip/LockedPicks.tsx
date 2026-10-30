@@ -9,6 +9,7 @@ import {
   type VipCapperStatus,
   type VipLockedPick,
   type VipLockedSummary,
+  type VipOriginal,
 } from "@/lib/vip/types";
 import { LeagueMark } from "./EligibilityBadges";
 import { vipSelection } from "@/lib/vip/describe";
@@ -189,6 +190,21 @@ function signedOdds(o: number): string {
   return o > 0 ? `+${o}` : String(o);
 }
 
+/** "Red Sox +120 · 1u", "LAL -3 + Over 224.5 · +264 · 2u": a fixed
+ *  ticket as first posted. */
+export function originalSummary(o: VipOriginal): string {
+  const parlay = o.legs.length > 1;
+  const leg = (l: VipOriginal["legs"][number]) => {
+    const parts = [vipSelection(l)];
+    if (l.line != null) parts.push(/spread/.test(l.stat_name ?? "") ? signedOdds(l.line) : String(l.line));
+    if (!parlay && l.odds_taken != null) parts.push(signedOdds(l.odds_taken));
+    return parts.join(" ");
+  };
+  const price = parlay && o.combined_odds != null ? ` · ${signedOdds(o.combined_odds)}` : "";
+  const units = o.units != null ? ` · ${formatStake(o.units)}` : "";
+  return `${o.legs.map(leg).join(" + ")}${price}${units}`;
+}
+
 /* Shared row frame for unlocked picks: league mark, the pick, the game under
  * it, and when it goes public on the right. Same rhythm as SummaryRow so the
  * locked and unlocked views read as one list. */
@@ -216,7 +232,7 @@ function UnlockedRow({
   // time gives way to a Started tag (not "Live": history uses Live for
   // in-game bets, and VIP picks are always pregame).
   const now = useNow();
-  const started = !!pick.commence_time && new Date(pick.commence_time).getTime() <= now;
+  const started = !pick.pulled && !!pick.commence_time && new Date(pick.commence_time).getTime() <= now;
   const game = [
     pick.matchup,
     pick.commence_time && !started && `Starts ${formatRevealTime(pick.commence_time)}`,
@@ -236,9 +252,17 @@ function UnlockedRow({
       <div className="min-w-0 flex-1">
         {by && <div className="mb-0.5">{by.name}</div>}
         <div className="flex items-baseline gap-2 min-w-0">
-          <span className="truncate text-[14px] font-bold text-[var(--color-text)]">
+          <span className={`truncate text-[14px] font-bold text-[var(--color-text)] ${pick.pulled ? "line-through opacity-60" : ""}`}>
             {title}
           </span>
+          {pick.pulled && (
+            <span
+              className="shrink-0 px-1.5 py-0.5 rounded border border-[var(--color-border)] text-[9px] uppercase tracking-[0.12em] font-bold text-[var(--color-text-muted)]"
+              title="Pulled before the game started. It stays listed and counts as no action."
+            >
+              Pulled
+            </span>
+          )}
           {stake && (
             <span className="shrink-0 text-[12px] font-semibold text-[var(--color-text-soft)] tabular-nums">
               {stake}
@@ -265,6 +289,11 @@ function UnlockedRow({
           </div>
         )}
         {children}
+        {pick.original && (
+          <div className="mt-1 truncate text-[11px] text-[var(--color-text-muted)]">
+            Original: <span className="line-through">{originalSummary(pick.original)}</span>
+          </div>
+        )}
       </div>
       <span className="shrink-0 pt-0.5 text-[12px] font-medium text-[var(--color-text-muted)] tabular-nums">
         Public {formatRevealPhrase(pick.reveal_at)}

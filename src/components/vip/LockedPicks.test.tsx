@@ -133,6 +133,26 @@ describe("LockedPicks", () => {
     expect(screen.getAllByLabelText("Locked")).toHaveLength(2);
   });
 
+  it("a pulled pick shows struck with a Pulled tag", () => {
+    const status = base({ viewer: { subscribed: true, is_owner: false }, locked: [{ ...pick, pulled: true }] });
+    render(<LockedPicks status={status} />);
+    expect(screen.getByText("Pulled")).toBeInTheDocument();
+    expect(screen.getByText(/Yankees/)).toHaveClass("line-through");
+  });
+
+  it("a fixed pick shows the original next to the change", () => {
+    const original = {
+      legs: [{ sport: "MLB", game_id: "776001", selection: "Red Sox", stat_name: "win", line: null,
+               direction: null, player_name: null, odds_taken: 120 }],
+      units: 1,
+      combined_odds: null,
+    };
+    const status = base({ viewer: { subscribed: true, is_owner: false }, locked: [{ ...pick, original }] });
+    render(<LockedPicks status={status} />);
+    expect(screen.getByText(/^Original:/)).toBeInTheDocument();
+    expect(screen.getByText("Red Sox +120 · 1u")).toHaveClass("line-through");
+  });
+
   it("renders nothing with no locked picks", () => {
     const { container } = render(<LockedPicks status={base({})} />);
     expect(container).toBeEmptyDOMElement();
