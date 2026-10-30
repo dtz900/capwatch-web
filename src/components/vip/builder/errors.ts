@@ -5,6 +5,8 @@ const TEXT: Record<string, string> = {
   "409:game_started": "This game has started.",
   "409:game_start_unknown": "We could not find a start time for that game. Pick it from the list.",
   "409:duplicate_pick": "You already posted this pick a few minutes ago.",
+  "409:fix_in_progress": "That pick is already being fixed. Refresh to see it.",
+  "500:fix_failed": "Could not save the fix. Your original pick is still posted.",
   "409:fix_window_closed": "The 10 minute fix window has closed. You can still pull it.",
   "400:leg_missing_game": "Every leg needs a game from the list.",
   "400:unknown_stat_name": "That market is not gradeable yet. Pick a standard market.",
