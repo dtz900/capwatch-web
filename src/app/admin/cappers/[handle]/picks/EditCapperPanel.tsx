@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { refreshCapperProfileAction, updateCapperAction } from "../../actions";
+import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 
 interface EditCapperPanelProps {
   capperId: number;
@@ -162,16 +163,11 @@ export function EditCapperPanel({
               Profile image
             </div>
             <div className="flex items-center gap-3">
-              {/* Plain img: remote Twitter CDN URL, avoids next/image domain
-                  config on an admin-only page. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imgUrl ?? ""}
-                alt=""
-                width={40}
-                height={40}
-                className="w-10 h-10 rounded-full bg-[rgba(255,255,255,0.06)] object-cover shrink-0"
-              />
+              {/* Same next/image proxy as the public site: a browser that
+                  blocks pbs.twimg.com (privacy extensions do) showed a broken
+                  image here even after a good refresh. Keyed on the URL so a
+                  refresh swaps the picture immediately. */}
+              <CapperAvatar key={imgUrl ?? "none"} url={imgUrl} handle={handle} size={40} className="shrink-0" />
               <button
                 type="button"
                 onClick={onRefreshImage}
