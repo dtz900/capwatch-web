@@ -39,9 +39,9 @@ export function VipCrown({
   );
 }
 
-/** Crown beside a capper's name when they are eligible to sell VIP in any
- *  sport. Renders nothing until the status lands or on any failure. */
-export function VipNameCrown({ capperId }: { capperId: number }) {
+/** True once the status says the capper is eligible to sell VIP in any
+ *  sport; false until it lands and on any failure. */
+export function useVipEligible(capperId: number): boolean {
   const { session, authReady } = useAuth();
   const token = session?.access_token ?? null;
   const [show, setShow] = useState(false);
@@ -61,5 +61,10 @@ export function VipNameCrown({ capperId }: { capperId: number }) {
     // Token changes for the same viewer do not change eligibility.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [capperId, authReady]);
-  return show ? <VipCrown className="w-6 h-6 sm:w-7 sm:h-7" label="VIP capper" bold /> : null;
+  return show;
+}
+
+/** Crown beside a capper's name when they are eligible to sell VIP. */
+export function VipNameCrown() {
+  return <VipCrown className="w-6 h-6 sm:w-7 sm:h-7" label="VIP capper" bold />;
 }
