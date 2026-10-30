@@ -43,6 +43,8 @@ export function offBoardLeg(g: BuilderGame, text: string, price: string): SlipLe
   };
 }
 
+const gameKeyOf = (g: BuilderGame) => `${g.sport}:${g.id}`;
+
 export function OffBoardEntry({
   games,
   onAdd,
@@ -53,10 +55,12 @@ export function OffBoardEntry({
   onAdd: (legs: SlipLeg[]) => boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [gameId, setGameId] = useState("");
+  // "SPORT:id". Never defaulted: boards land one at a time, and a game that
+  // starts drops off, so a fallback would move a written bet onto another game.
+  const [gameKey, setGameKey] = useState("");
   const [text, setText] = useState("");
   const [price, setPrice] = useState("");
-  const g = games.find((x) => x.id === gameId) ?? games[0];
+  const g = games.find((x) => gameKeyOf(x) === gameKey);
   const p = parsePrice(price);
   const field =
     "h-9 px-2.5 text-[12px] rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none";
@@ -77,9 +81,12 @@ export function OffBoardEntry({
     <div className={`${INNER_CARD} flex flex-col gap-2`}>
       <span className={EYEBROW}>Bet not on the board</span>
       <div className="flex flex-col sm:flex-row gap-2">
-        <select aria-label="Game" className={field} value={g?.id ?? ""} onChange={(e) => setGameId(e.target.value)}>
+        <select aria-label="Game" className={field} value={g ? gameKey : ""} onChange={(e) => setGameKey(e.target.value)}>
+          <option value="" disabled className="bg-[#0e0e12]">
+            Pick a game
+          </option>
           {games.map((x) => (
-            <option key={`${x.sport}-${x.id}`} value={x.id} className="bg-[#0e0e12]">
+            <option key={gameKeyOf(x)} value={gameKeyOf(x)} className="bg-[#0e0e12]">
               {x.sport} · {x.away} @ {x.home} · {x.day} {x.time}
             </option>
           ))}
