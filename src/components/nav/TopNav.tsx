@@ -27,6 +27,12 @@ function isActive(href: string, pathname: string): boolean {
 /** Site nav plus, when the flag is on, the Tail or Fade hero folded under it
     on every page. The leaderboard passes its server-fetched hand for first
     paint; other pages let the hero hydrate from the session cache. */
+/** VIP checkout and rules pages: no Tail or Fade hero between the buyer
+ *  and the button. */
+function isVipPage(pathname: string): boolean {
+  return pathname.startsWith("/vip-rules") || /^\/cappers\/[^/]+\/subscribe(\/|$)/.test(pathname);
+}
+
 export function TopNav({ tofHand = null }: { tofHand?: TofHandResponse | null } = {}) {
   const pathname = usePathname() || "/";
   const flagOn = vipEnabled();
@@ -101,7 +107,7 @@ export function TopNav({ tofHand = null }: { tofHand?: TofHandResponse | null } 
         </div>
       </div>
     </nav>
-    {tofEnabled() && <TofHero initial={tofHand} />}
+    {tofEnabled() && !isVipPage(pathname) && <TofHero initial={tofHand} />}
     </>
   );
 }

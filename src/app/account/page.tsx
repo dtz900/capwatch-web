@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useUsernameClaim } from "@/components/auth/UsernameClaim";
 import { EmailAlertsToggle } from "@/components/account/EmailAlertsToggle";
 import { EmailPrefToggle } from "@/components/account/EmailPrefToggle";
+import { VipEmailToggle } from "@/components/account/VipEmailToggle";
 import { AvatarUpload } from "@/components/account/AvatarUpload";
 import { XVerificationCard } from "@/components/account/XVerificationCard";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
@@ -304,6 +305,7 @@ export default function AccountPage() {
             ariaLabel="Toggle daily hand emails"
           />
         )}
+        <VipEmailToggle />
       </div>
 
       {/* Bet slip record */}

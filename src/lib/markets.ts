@@ -28,7 +28,7 @@ export function normalizeBreakdown(breakdown: Record<string, number>): Record<st
 }
 
 interface PickLike {
-  kind?: "straight" | "parlay";
+  kind?: "straight" | "parlay" | "parlay_leg";
   market?: string | null;
   selection?: string | null;
   line?: number | null;

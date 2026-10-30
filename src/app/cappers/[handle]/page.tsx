@@ -36,7 +36,8 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Window, SportFilter } from "@/lib/types";
-import { vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { capperVipEnabledFor, vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { CapperVipSection } from "@/components/vip/CapperVipSection";
 import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
 
 interface PageProps {
@@ -486,6 +487,15 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
               <ShareFilteredButton />
             </div>
           </div>
+
+          {capperVipEnabledFor(handle) && (
+            <div className="mb-6">
+              <CapperVipSection
+                capperId={profile.capper.id}
+                handle={handle}
+              />
+            </div>
+          )}
 
           <div className="mb-6">
             <StatBandLive />

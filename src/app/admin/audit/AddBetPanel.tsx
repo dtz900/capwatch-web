@@ -11,76 +11,16 @@ import {
   searchGamesAction,
   searchPlayersAction,
   type GameSearchResult,
-  type ManualLegInput,
   type PlayerSearchResult,
 } from "./actions";
-
-type LegType = "ml" | "spread" | "total" | "team_runs" | "nrfi" | "player" | "custom";
-
-interface LegDraft {
-  type: LegType;
-  selection: string;
-  game: GameSearchResult | null;
-  odds: string;
-  line: string;
-  direction: "over" | "under" | "";
-  statName: string;
-  player: PlayerSearchResult | null;
-}
-
-const EMPTY_LEG: LegDraft = {
-  type: "ml",
-  selection: "",
-  game: null,
-  odds: "",
-  line: "",
-  direction: "",
-  statName: "",
-  player: null,
-};
-
-const LEG_TYPE_LABEL: Record<LegType, string> = {
-  ml: "Moneyline",
-  spread: "Run line",
-  total: "Total",
-  team_runs: "Team total",
-  nrfi: "NRFI/YRFI",
-  player: "Player prop",
-  custom: "Custom",
-};
-
-function legToInput(leg: LegDraft): ManualLegInput {
-  const line = leg.line.trim() === "" ? null : Number(leg.line);
-  const odds = leg.odds.trim() === "" ? null : Number(leg.odds);
-  const base: ManualLegInput = {
-    selection: leg.selection.trim(),
-    game_id: leg.game ? String(leg.game.game_pk) : null,
-    odds,
-  };
-  switch (leg.type) {
-    case "ml":
-      return { ...base, stat_name: "win" };
-    case "spread":
-      return { ...base, stat_name: "spread", line };
-    case "total":
-      return { ...base, stat_name: "total", direction: leg.direction || null, line };
-    case "team_runs":
-      return { ...base, stat_name: "team_runs", direction: leg.direction || null, line };
-    case "nrfi":
-      return { ...base, stat_name: "nrfi", direction: leg.direction || "under", line: 0.5 };
-    case "player":
-      return {
-        ...base,
-        stat_name: leg.statName.trim() || null,
-        direction: leg.direction || null,
-        line,
-        player_id: leg.player?.player_id ?? null,
-        player_name: leg.player?.full_name ?? null,
-      };
-    case "custom":
-      return { ...base, stat_name: leg.statName.trim() || null, direction: leg.direction || null, line };
-  }
-}
+import {
+  EMPTY_LEG,
+  LEG_TYPE_LABEL,
+  legToInput,
+  todayEt,
+  type LegDraft,
+  type LegType,
+} from "@/lib/legDraft";
 
 const inputCls =
   "px-2.5 py-1.5 text-[12px] rounded bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]";
@@ -92,10 +32,6 @@ const labelCls =
 // the OS white, which with inherited white text is unreadable (David
 // 2026-09-08). Same fix the audit panel's MarketSelect uses.
 const optionCls = "bg-[#0e0e12] text-[var(--color-text)]";
-
-function todayEt(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
-}
 
 export function AddBetPanel() {
   const [open, setOpen] = useState(false);
@@ -154,7 +90,7 @@ export function AddBetPanel() {
       setResult(null);
       const res = await addManualBetAction({
         capper: capper.trim(),
-        legs: legs.map(legToInput),
+        legs: legs.map((l) => legToInput(l)),
         units: units.trim() === "" ? null : Number(units),
         combined_odds: combinedOdds.trim() === "" ? null : Number(combinedOdds),
         tweet_url: tweetUrl.trim() || null,

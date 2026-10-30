@@ -288,6 +288,9 @@ export interface HistoryPick {
   ladder_chain_id?: string | null;
   /** Rung ordinal inside ladder_chain_id, from the capper's own "Day N". */
   ladder_day?: number | null;
+  /** Posted as a Capper VIP pick (revealed, or unlocked for this viewer).
+   * The row carries the VIP crown next to the pick. */
+  vip?: boolean;
 }
 
 /** Per-market straight-pick stats + cumulative trajectory, precomputed by the
@@ -487,6 +490,9 @@ export interface TodayPickEntry {
   /** Present on parlay rows once the feed serves it (fadeai-platform #87).
       Ordered by leg_index ascending; the card expands these on click. */
   legs?: HistoryPickLeg[] | null;
+  /** Posted as a VIP pick; My Tails keeps tagging it after it goes public.
+      Optional so an older platform build still renders. */
+  vip?: boolean;
 }
 
 export interface TodayPicksResponse {

@@ -30,3 +30,19 @@ describe("tofEnabled", () => {
     vi.unstubAllEnvs();
   });
 });
+
+describe("capperVipEnabled", () => {
+  beforeEach(() => vi.resetModules());
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("capperVipEnabled requires both flags", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CAPPER_VIP_ENABLED", "true");
+    vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "false");
+    const mod = await import("@/lib/flags");
+    expect(mod.capperVipEnabled()).toBe(false);
+    vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true");
+    expect(mod.capperVipEnabled()).toBe(true);
+    vi.stubEnv("NEXT_PUBLIC_CAPPER_VIP_ENABLED", "");
+    expect(mod.capperVipEnabled()).toBe(false);
+  });
+});

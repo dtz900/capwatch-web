@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/admin/parlay-palace", label: "Parlay Palace" },
   { href: "/admin/tof", label: "Tail or Fade" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/vip", label: "VIP" },
 ];
 
 function isActive(href: string, pathname: string): boolean {

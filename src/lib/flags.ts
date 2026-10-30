@@ -23,3 +23,34 @@ export function tofEnabled(): boolean {
 export function xAuthEnabled(): boolean {
   return vipEnabled() && process.env.NEXT_PUBLIC_X_AUTH_ENABLED === "true";
 }
+
+/* Capper VIP: cappers sell locked picks, subscribers unlock them. Needs
+   accounts (vipEnabled) because every call carries the user's token. Dark
+   until launch (decisions/log.md 2026-10-27). */
+export function capperVipEnabled(): boolean {
+  return vipEnabled() && process.env.NEXT_PUBLIC_CAPPER_VIP_ENABLED === "true";
+}
+
+/* Capper VIP preview: with the launch flag off, VIP renders only for the
+   cappers named here (comma separated handles, any case), so the whole flow
+   can run on production against a hidden test capper while every real
+   capper's profile stays exactly as it is today (David, 2026-10-29). */
+export function capperVipPreviewHandles(): string[] {
+  if (!vipEnabled()) return [];
+  return (process.env.NEXT_PUBLIC_CAPPER_VIP_PREVIEW_HANDLES ?? "")
+    .split(",")
+    .map((h) => h.trim().replace(/^@/, "").toLowerCase())
+    .filter(Boolean);
+}
+
+/** VIP surfaces for one capper: on at launch, or in preview for a listed capper. */
+export function capperVipEnabledFor(handle: string | null | undefined): boolean {
+  if (capperVipEnabled()) return true;
+  return !!handle && capperVipPreviewHandles().includes(handle.toLowerCase());
+}
+
+/** Unlisted pages a preview needs (the rules page the VIP card links to).
+ *  Global entry points like the footer link stay on capperVipEnabled(). */
+export function capperVipReachable(): boolean {
+  return capperVipEnabled() || capperVipPreviewHandles().length > 0;
+}

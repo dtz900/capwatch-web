@@ -5,26 +5,12 @@ import { XIcon } from "@/components/icons/XIcon";
 import { AffiliatePicker } from "@/components/affiliate/AffiliatePicker";
 import { AffiliateDisclaimer } from "@/components/affiliate/AffiliateDisclaimer";
 import { formatBetDescriptor, formatMarketLabel } from "@/lib/markets";
-import { formatStake } from "@/lib/formatters";
+import { formatPostedAt, formatStake } from "@/lib/formatters";
 import type { SportsbookSummary } from "@/lib/api";
 import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
-
-function formatPostedAt(iso: string | null): string | null {
-  if (!iso) return null;
-  const posted = new Date(iso).getTime();
-  const diffMin = Math.floor((Date.now() - posted) / 60_000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "America/New_York",
-  });
-}
+import { VipCrown } from "@/components/vip/VipCrown";
 
 function formatStakeUnits(u: number | null): string | null {
   if (u == null || u <= 0) return null;
@@ -70,7 +56,12 @@ function PendingRow({
         role={hasExpandableLegs ? "button" : undefined}
         tabIndex={hasExpandableLegs ? 0 : undefined}
         aria-expanded={hasExpandableLegs ? expanded : undefined}
-        className={`flex items-center gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-[rgba(255,255,255,0.03)] transition-colors${hasExpandableLegs ? " cursor-pointer" : ""}`}
+        className={`flex items-center gap-3 py-2 px-2 -mx-2 rounded-md transition-colors${
+          // Revealed VIP pick: same royal purple wash as its history row.
+          pick.vip
+            ? " bg-[rgba(109,40,217,0.10)] hover:bg-[rgba(109,40,217,0.14)]"
+            : " hover:bg-[rgba(255,255,255,0.03)]"
+        }${hasExpandableLegs ? " cursor-pointer" : ""}`}
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
@@ -105,6 +96,15 @@ function PendingRow({
               <>
                 {" "}
                 <ParlayLegGlyphs legs={pick.legs} />
+              </>
+            )}
+            {pick.vip && (
+              <>
+                {" "}
+                <VipCrown
+                  className="w-3.5 h-3.5 align-[-2px]"
+                  label="VIP pick: posted to subscribers first"
+                />
               </>
             )}
           </div>
