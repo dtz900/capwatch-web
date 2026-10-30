@@ -9,7 +9,10 @@ import { joinSports } from "./format";
 import { ERROR_TEXT, VIP_PRIMARY_BTN } from "./styles";
 
 export const TERMS_SENTENCE =
-  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription (10% for founding sellers), with payment processing fees coming out of the TailSlips share.";
+  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription, with payment processing fees coming out of the TailSlips share.";
+
+/** Capper's share: TailSlips keeps a flat 15% for everyone and absorbs processing. */
+const SELLER_SHARE = 0.85;
 
 export const PRICE_MIN = 10;
 export const PRICE_MAX = 99;
@@ -98,31 +101,78 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
     );
   }
 
+  // Full profile width: the form on the left, what selling means on the
+  // right, so the card reads as one deliberate panel instead of a narrow
+  // form stranded on a wide band. Stacks below lg.
   return (
     <VipGlassCard>
       <VipBand compact showRule={false} headline={`Start selling ${joinSports(eligible)} VIP picks`} />
-      <div className="px-4 py-3 flex flex-col gap-3">
-        <PriceInput id="vip-seller-price" value={price} onChange={setPrice} />
-        <label className="flex items-start gap-2 text-[11px] leading-snug text-[var(--color-text-soft)]">
-          <input
-            type="checkbox"
-            className="mt-0.5"
-            checked={accepted}
-            onChange={(e) => setAccepted(e.target.checked)}
-          />
-          <span>{TERMS_SENTENCE}</span>
-        </label>
-        <div className="flex items-center gap-3 flex-wrap">
-          <button type="button" className={VIP_PRIMARY_BTN} disabled={!canSubmit} onClick={submit}>
-            Start selling
-          </button>
-          {error && (
-            <span role="status" className={ERROR_TEXT}>
-              {error}
-            </span>
-          )}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] border-t border-[rgba(255,255,255,0.08)]">
+        <div className="px-4 sm:px-5 py-4 flex flex-col gap-4">
+          <div className="flex items-end gap-5 flex-wrap">
+            <PriceInput id="vip-seller-price" value={price} onChange={setPrice} />
+            <KeepLine dollars={dollars} />
+          </div>
+          <label className="flex items-start gap-2 text-[11px] leading-snug text-[var(--color-text-soft)]">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={accepted}
+              onChange={(e) => setAccepted(e.target.checked)}
+            />
+            <span>{TERMS_SENTENCE}</span>
+          </label>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button type="button" className={VIP_PRIMARY_BTN} disabled={!canSubmit} onClick={submit}>
+              Start selling
+            </button>
+            {error && (
+              <span role="status" className={ERROR_TEXT}>
+                {error}
+              </span>
+            )}
+          </div>
         </div>
+        <HowItWorks />
       </div>
     </VipGlassCard>
+  );
+}
+
+/** What the capper takes home per subscriber at the typed price. */
+function KeepLine({ dollars }: { dollars: number | null }) {
+  if (dollars === null) {
+    return <span className="sm:pb-6 text-[11px] text-[var(--color-text-muted)]">You keep 85% of every subscription.</span>;
+  }
+  const keep = (dollars * SELLER_SHARE).toFixed(2);
+  return (
+    <span className="sm:pb-6 text-[12px] text-[var(--color-text-soft)]">
+      You keep <span className="font-extrabold text-[var(--color-text)] tabular-nums">${keep}</span> of each ${dollars}{" "}
+      subscription, every month.
+    </span>
+  );
+}
+
+const HOW_IT_WORKS: { title: string; body: string }[] = [
+  { title: "Post inside TailSlips", body: "Your subscribers see the pick the moment you post it and get an email." },
+  { title: "Public 30 minutes after start", body: "Then everyone can see it, and it grades on your record like any other pick." },
+  { title: "Sell while you are winning", body: "Selling stays open in a sport while your last 30 days there are positive." },
+];
+
+function HowItWorks() {
+  return (
+    <ol className="px-4 sm:px-5 py-4 flex flex-col gap-3 border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.12)]">
+      {HOW_IT_WORKS.map((s, i) => (
+        <li key={s.title} className="flex items-start gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-vip-soft)] text-[11px] font-extrabold text-[var(--color-vip-text)] tabular-nums">
+            {i + 1}
+          </span>
+          <span className="flex flex-col gap-0.5">
+            <span className="text-[13px] font-bold text-[var(--color-text)]">{s.title}</span>
+            <span className="text-[12px] leading-snug text-[var(--color-text-soft)]">{s.body}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
