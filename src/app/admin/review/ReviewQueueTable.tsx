@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ReviewQueueItem } from "@/lib/api";
+import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import {
   approvePickAction,
   batchApprovePicksAction,
@@ -239,12 +240,7 @@ function ReviewRow({ item: it, onError, checked, onToggle }: RowProps) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             {it.capper_profile_image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={it.capper_profile_image_url}
-                alt=""
-                className="w-5 h-5 rounded-full"
-              />
+              <CapperAvatar url={it.capper_profile_image_url} handle={it.capper_handle} size={20} />
             )}
             {it.capper_handle ? (
               <Link
