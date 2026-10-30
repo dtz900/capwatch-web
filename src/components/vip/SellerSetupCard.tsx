@@ -9,7 +9,7 @@ import { joinSports } from "./format";
 import { ERROR_TEXT, VIP_PRIMARY_BTN } from "./styles";
 
 export const TERMS_SENTENCE =
-  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription, with payment processing fees coming out of the TailSlips share.";
+  "I understand I can start selling in a sport after a positive last 30 days there and keep selling only while my last 60 days there stay positive, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription, with payment processing fees coming out of the TailSlips share.";
 
 /** Capper's share: TailSlips keeps a flat 15% for everyone and absorbs processing. */
 const SELLER_SHARE = 0.85;
@@ -156,7 +156,7 @@ function KeepLine({ dollars }: { dollars: number | null }) {
 const HOW_IT_WORKS: { title: string; body: string }[] = [
   { title: "Post inside TailSlips", body: "Your subscribers see the pick the moment you post it and get an email." },
   { title: "Public 30 minutes after start", body: "Then everyone can see it, and it grades on your record like any other pick." },
-  { title: "Sell while you are winning", body: "Selling stays open in a sport while your last 30 days there are positive." },
+  { title: "Sell while you are winning", body: "Selling opens on a winning last 30 days and stays open while your last 60 days are positive." },
 ];
 
 function HowItWorks() {
