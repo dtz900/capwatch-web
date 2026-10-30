@@ -246,4 +246,22 @@ describe("PickBuilder review fixes", () => {
     expect((screen.getByLabelText("Your book") as HTMLSelectElement).value).toBe("draftkings");
     expect(priceInput("CHA +1.5").value).toBe("-115");
   });
+
+  it("posts a bet not on the board as the book wrote it", async () => {
+    client.postVipPick.mockResolvedValue({ ok: true, created_pick_ids: [61], parlay_id: null, ticket_id: 61, reveal_at: START });
+    renderBuilder();
+    await screen.findByRole("button", { name: /^\+1\.5/ });
+    fireEvent.click(screen.getByRole("button", { name: "Bet not on the board?" }));
+    fireEvent.change(screen.getByLabelText("Bet as written"), { target: { value: "CHA 112-108 exact score" } });
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: "+2500" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to slip" }));
+    expect(await screen.findByLabelText("Price for CHA 112-108 exact score")).toBeInTheDocument();
+    expect(screen.getByText(/Checked before it counts/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Review pick" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post to subscribers" }));
+    await waitFor(() => expect(client.postVipPick).toHaveBeenCalled());
+    expect(client.postVipPick.mock.calls[0][0].legs[0]).toEqual({
+      selection: "CHA 112-108 exact score", game_id: "g1", offboard: true, odds: 2500,
+    });
+  });
 });
