@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BoardSide, BoardSlateGame } from "@/lib/vip/types";
+import { nearAlts } from "./adapt";
 import { fmtPrice, parsePrice } from "./odds";
 import {
   betterThanBest,
@@ -163,5 +164,15 @@ describe("manual legs", () => {
     const body = toPickBody([leg], "1", "");
     expect(body.legs[0]).toEqual({ selection: "Yankees", game_id: "776001", market: "f5_ml", odds: 120 });
     expect(betterThanBest(leg)).toBeNull();
+  });
+});
+
+describe("nearAlts", () => {
+  it("keeps the rungs nearest the main line, both teams of a spread together", () => {
+    const sp = (sel: string, line: number) =>
+      side({ key: `${sel}${line}`, leg: { selection: sel, line } });
+    const alts = [sp("CHA", -28.5), sp("CHA", 0.5), sp("CHA", 2.5), sp("CHA", 3.5), sp("CHA", 9.5), sp("WSH", -0.5), sp("WSH", -2.5)];
+    // Distances from +1.5: 1 (0.5, 2.5, WSH -0.5/-2.5), 2 (3.5), then 8 and 30 drop.
+    expect(nearAlts(alts, "CHA", 1.5).map((s) => s.key)).toEqual(["CHA0.5", "CHA2.5", "CHA3.5", "WSH-0.5", "WSH-2.5"]);
   });
 });

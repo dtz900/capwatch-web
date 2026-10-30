@@ -3,7 +3,7 @@
 import { useContext, useState } from "react";
 import { EYEBROW } from "@/components/vip/styles";
 import type { BoardSide } from "@/lib/vip/types";
-import { PERIODS, teamName, type BuilderGame, type Period } from "./adapt";
+import { PERIODS, nearAlts, teamName, type BuilderGame, type Period } from "./adapt";
 import { MoreLink, NoPrice, PeriodCtx, PriceButton, TeamCell, type TapFn } from "./ui";
 
 type MoreView = null | "altSpreads" | "altTotals" | "teamTotals";
@@ -13,12 +13,35 @@ export function GameLines({ g, selected, onTap }: { g: BuilderGame; selected: Se
   // Thin games only have the full game posted yet.
   const period: Period = g.thin ? "Game" : boardPeriod;
   const [more, setMore] = useState<MoreView>(null);
+  const [allAlts, setAllAlts] = useState(false);
   const L = g.periods[period];
   const btn = (sd: BoardSide) => (
     <PriceButton key={sd.key} side={sd} selected={selected.has(sd.key)} onTap={() => onTap(sd, g.id)} />
   );
   const cell = (pair: [BoardSide, BoardSide] | null | undefined, i: 0 | 1) => (pair ? btn(pair[i]) : <NoPrice />);
-  const toggle = (v: MoreView) => setMore(more === v ? null : v);
+  const toggle = (v: MoreView) => {
+    setMore(more === v ? null : v);
+    setAllAlts(false);
+  };
+  // Books post dozens of alt rungs; open on the ones near the main line.
+  const altGrid = (sides: BoardSide[], main: number | null) => {
+    const near = nearAlts(sides, g.away, main);
+    const shown = allAlts ? sides : near;
+    return (
+      <>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{shown.map(btn)}</div>
+        {near.length < sides.length && (
+          <button
+            type="button"
+            onClick={() => setAllAlts(!allAlts)}
+            className="self-start text-[11px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          >
+            {allAlts ? "Fewer lines" : `Show all ${sides.length}`}
+          </button>
+        )}
+      </>
+    );
+  };
   const label = PERIODS.find(([p]) => p === period)?.[1] ?? period;
   const hasAlts = !!L && (L.altSpreads.length > 0 || L.altTotals.length > 0 ||
     L.teamTotals.away.length > 0 || L.teamTotals.home.length > 0);
@@ -53,12 +76,8 @@ export function GameLines({ g, selected, onTap }: { g: BuilderGame; selected: Se
           )}
         </div>
       ) : null}
-      {L && more === "altSpreads" && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{L.altSpreads.map(btn)}</div>
-      )}
-      {L && more === "altTotals" && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{L.altTotals.map(btn)}</div>
-      )}
+      {L && more === "altSpreads" && altGrid(L.altSpreads, L.spread?.[0].leg.line ?? null)}
+      {L && more === "altTotals" && altGrid(L.altTotals, L.total?.[0].leg.line ?? null)}
       {L && more === "teamTotals" && (
         <div className="grid grid-cols-2 gap-3">
           {(["away", "home"] as const).map((t) => (

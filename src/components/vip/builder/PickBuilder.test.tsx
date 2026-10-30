@@ -43,9 +43,9 @@ const SPREAD_A = side("g1:sp:a", "CHA +1.5", "+1.5", -110, { fanduel: -105, draf
 const SPREAD_H = side("g1:sp:h", "WSH -1.5", "-1.5", -110, { fanduel: -115, draftkings: -105 },
   { selection: "WSH", line: -1.5 });
 // Nobody but DraftKings hangs this total: FanDuel shows the market price.
-const OVER = side("g1:to:o", "CHA/WSH Over 220.5", "O 220.5", -110, { draftkings: -108 },
+const OVER = side("g1:to:o", "Over 220.5", "O 220.5", -110, { draftkings: -108 },
   { stat_name: "total", selection: "Over", line: 220.5, direction: "over" });
-const UNDER = side("g1:to:u", "CHA/WSH Under 220.5", "U 220.5", -110, { draftkings: -112 },
+const UNDER = side("g1:to:u", "Under 220.5", "U 220.5", -110, { draftkings: -112 },
   { stat_name: "total", selection: "Under", line: 220.5, direction: "under" });
 
 const BOARD: BoardGame = {
