@@ -16,7 +16,7 @@ import { builderError, isFixClosed, isGameStarted } from "./errors";
 import { ManualEntry } from "./ManualEntry";
 import { fmtPrice, type Fmt } from "./odds";
 import { Slip, slipTotals } from "./SlipCard";
-import { MAX_LEGS, combinedPrice, rebook, reformat, toPickBody, toggleLeg, typed, unlockAt, type SlipLeg } from "./slip";
+import { MAX_LEGS, combinedPrice, isSgp, rebook, reformat, toPickBody, toggleLeg, typed, unlockAt, type SlipLeg } from "./slip";
 import { PostedView, TicketView, summary, type Posted, type Ticket } from "./TicketView";
 import { BookCtx, FmtCtx, GlassCard, PeriodCtx, Segmented } from "./ui";
 import { useBoards } from "./useBoards";
@@ -231,6 +231,8 @@ export function PickBuilder({
     if (!posted) return;
     setLegs(posted.legs);
     setUnits(posted.units);
+    // A same game parlay carries its book price on the ticket, not the legs.
+    setSgpPrice(isSgp(posted.legs) && posted.combined !== null ? fmtPrice(posted.combined, fmt) : "");
     setError(null);
     setFixing(true);
     setStage("build");

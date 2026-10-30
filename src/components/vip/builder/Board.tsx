@@ -79,7 +79,11 @@ function GameRow({
           <TeamCell sport={g.sport} abbr={g.away} />
           <TeamCell sport={g.sport} abbr={g.home} />
           <p className="text-[11px] text-[var(--color-text-muted)]">
-            {g.started ? "VIP picks close at the scheduled start." : "Loading prices..."}
+            {g.started
+              ? "VIP picks close at the scheduled start."
+              : g.failed
+                ? "Prices did not load. Refresh to try again."
+                : "Loading prices..."}
           </p>
         </div>
       ) : view === "props" ? (

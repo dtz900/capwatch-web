@@ -230,4 +230,11 @@ describe("PickBuilder review fixes", () => {
     expect(screen.getByLabelText("Leg 1 selection")).toHaveValue("Pick 11");
     expect(screen.queryByLabelText("Price for Pick 11")).toBeNull();
   });
+
+  it("says so when a game's board fails to load", async () => {
+    client.getVipBoardGame.mockRejectedValue(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    renderBuilder();
+    expect(await screen.findByText("Prices did not load. Refresh to try again.")).toBeInTheDocument();
+  });
 });

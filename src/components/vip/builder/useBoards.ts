@@ -34,6 +34,7 @@ class BoardQueue {
   constructor(
     private readonly load: (job: Job) => Promise<BoardGame>,
     private readonly onLoaded: (sport: BoardSport, b: BoardGame) => void,
+    private readonly onFailed: (sport: BoardSport, id: string) => void,
   ) {}
 
   push(jobs: Job[]) {
@@ -59,7 +60,10 @@ class BoardQueue {
         .then((b) => {
           if (!this.stopped) this.onLoaded(job.sport, b);
         })
-        .catch((err: unknown) => console.error(`VIP board ${job.sport} ${job.id} failed`, err))
+        .catch((err: unknown) => {
+          console.error(`VIP board ${job.sport} ${job.id} failed`, err);
+          if (!this.stopped) this.onFailed(job.sport, job.id);
+        })
         .finally(() => {
           this.running -= 1;
           this.pump();
@@ -88,6 +92,8 @@ export function useBoards(sports: BoardSport[], token: string | null): Boards {
         const g = fromBoard(b, new Date());
         setGames((all) => ({ ...all, [sport]: (all[sport] ?? []).map((x) => (x.id === g.id ? g : x)) }));
       },
+      (sport, id) =>
+        setGames((all) => ({ ...all, [sport]: (all[sport] ?? []).map((x) => (x.id === id ? { ...x, failed: true } : x)) })),
     );
     queue.current = q;
     for (const sport of key ? (key.split(",") as BoardSport[]) : []) {

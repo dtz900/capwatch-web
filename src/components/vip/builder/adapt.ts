@@ -49,6 +49,8 @@ export interface BuilderGame {
   home: string;
   /** False until the game's board has loaded. */
   loaded: boolean;
+  /** The board request failed: say so instead of loading forever. */
+  failed?: boolean;
   periods: Partial<Record<Period, Lines>>;
   props: PropMarket[];
   slate: BoardSlateGame;
