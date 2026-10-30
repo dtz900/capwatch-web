@@ -165,6 +165,8 @@ export interface SlipProps {
   onClear: () => void;
   onReview: () => void;
   fixing: boolean;
+  /** Leave the fix; the posted ticket stands. */
+  onCancelFix: () => void;
   /** null before mount; false below lg, where the slip is a drawer. */
   isLg: boolean | null;
   open: boolean;
@@ -296,6 +298,15 @@ export function Slip(p: SlipProps) {
               >
                 {p.fixing ? "Review fix" : "Review pick"}
               </button>
+              {p.fixing && (
+                <button
+                  type="button"
+                  onClick={p.onCancelFix}
+                  className="self-center text-[12px] font-semibold text-[rgba(247,243,233,0.6)] hover:text-[var(--color-text)]"
+                >
+                  Keep the posted pick
+                </button>
+              )}
             </div>
           )}
         </div>

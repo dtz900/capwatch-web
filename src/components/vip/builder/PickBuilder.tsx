@@ -291,15 +291,7 @@ export function PickBuilder({
                     Only your subscribers see it until 30 minutes after the game starts. Then everyone can.
                   </p>
                 )}
-                {fixing && stage !== "posted" && (
-                  <button
-                    type="button"
-                    onClick={cancelFix}
-                    className="self-start text-[11px] font-semibold text-[var(--color-text-soft)] hover:text-[var(--color-text)] underline underline-offset-2"
-                  >
-                    Keep the posted pick
-                  </button>
-                )}
+
               </div>
               <div className={`flex items-end gap-3 flex-wrap ${stage === "posted" ? "hidden" : ""}`}>
                 <label className="flex flex-col gap-1">
@@ -366,6 +358,7 @@ export function PickBuilder({
                       onClear={() => updateLegs([])}
                       onReview={review}
                       fixing={fixing}
+                      onCancelFix={cancelFix}
                       isLg={isLg}
                       open={slipOpen}
                       onOpen={setSlipOpen}
