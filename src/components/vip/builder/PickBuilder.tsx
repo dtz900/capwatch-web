@@ -344,10 +344,16 @@ export function PickBuilder({
                     />
                   )}
                   {sport ? (
-                    <OffBoardEntry
-                      games={allGames.filter((g) => !g.started).sort((a, b) => a.startMs - b.startMs)}
-                      onAdd={addLegs}
-                    />
+                    <>
+                      <OffBoardEntry
+                        games={allGames.filter((g) => !g.started).sort((a, b) => a.startMs - b.startMs)}
+                        onAdd={addLegs}
+                      />
+                      {/* MLB has no board yet: its sellers keep the editor. */}
+                      {sports.includes("MLB") && (
+                        <ManualEntry sports={["MLB"]} token={token} onAdd={addLegs} label="MLB pick?" />
+                      )}
+                    </>
                   ) : (
                     // No board (MLB-only seller): the structured editor is the builder.
                     <ManualEntry sports={sports} token={token} onAdd={addLegs} startOpen />

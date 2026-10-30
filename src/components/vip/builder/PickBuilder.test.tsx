@@ -264,4 +264,11 @@ describe("PickBuilder review fixes", () => {
       selection: "CHA 112-108 exact score", game_id: "g1", offboard: true, odds: 2500,
     });
   });
+
+  it("keeps the MLB editor for a seller eligible in MLB and NBA", async () => {
+    renderBuilder(["NBA", "MLB"]);
+    await screen.findByRole("button", { name: "Bet not on the board?" });
+    fireEvent.click(screen.getByRole("button", { name: "MLB pick?" }));
+    expect(screen.getByRole("button", { name: "List games" })).toBeInTheDocument();
+  });
 });

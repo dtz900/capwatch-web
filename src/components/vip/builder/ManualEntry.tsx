@@ -89,6 +89,7 @@ export function ManualEntry({
   token,
   onAdd,
   startOpen = false,
+  label = "Bet not on the board?",
 }: {
   sports: VipSport[];
   token: string;
@@ -96,6 +97,8 @@ export function ManualEntry({
   onAdd: (legs: SlipLeg[]) => boolean;
   /** MLB-only sellers have no board, so the editor is the whole builder. */
   startOpen?: boolean;
+  /** Closed-state link text. */
+  label?: string;
 }) {
   const [open, setOpen] = useState(startOpen);
   const [sport, setSport] = useState<VipSport>(sports[0]);
@@ -110,7 +113,7 @@ export function ManualEntry({
         onClick={() => setOpen(true)}
         className="self-start text-[11px] font-semibold text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
       >
-        Bet not on the board?
+        {label}
       </button>
     );
   }
