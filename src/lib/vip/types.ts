@@ -167,7 +167,8 @@ export type BoardPeriodKey = "Game" | "1H" | "2H" | "1Q" | "2Q" | "3Q" | "4Q";
 
 /** The exact leg a board side posts. */
 export interface BoardLeg {
-  sport: BoardSport;
+  /** MLB only on off-board (manual) legs. */
+  sport: VipSport;
   game_id: string;
   stat_name: string;
   selection: string;
@@ -212,7 +213,7 @@ export interface BoardProp {
 }
 
 export interface BoardSlateGame {
-  sport: BoardSport;
+  sport: VipSport;
   game_id: string;
   away: string;
   home: string;

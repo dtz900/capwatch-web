@@ -152,3 +152,16 @@ describe("unlockAt", () => {
     expect(unlockAt(legs, new Date("2026-10-27T18:00:00.000Z"), "America/Los_Angeles")).toBe("4:30 PM Friday");
   });
 });
+
+describe("manual legs", () => {
+  it("post the exact input the structured editor built", () => {
+    const manual = { selection: "Yankees", game_id: "776001", market: "f5_ml", odds: null };
+    const leg: SlipLeg = {
+      side: side({ key: "manual:1", quotes: {}, leg: { sport: "NBA", stat_name: "", selection: "Yankees" } }),
+      game: { ...GAME, sport: "NBA" }, price: "+120", edited: true, manual,
+    };
+    const body = toPickBody([leg], "1", "");
+    expect(body.legs[0]).toEqual({ selection: "Yankees", game_id: "776001", market: "f5_ml", odds: 120 });
+    expect(betterThanBest(leg)).toBeNull();
+  });
+});

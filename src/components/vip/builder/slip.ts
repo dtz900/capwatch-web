@@ -12,6 +12,8 @@ export interface SlipLeg {
   price: string;
   /** The capper typed over the prefill; a book switch leaves it alone. */
   edited: boolean;
+  /** Off-board leg from the structured editor: posted exactly as built. */
+  manual?: ManualLegInput;
 }
 
 /** That book's price at this exact rung, or null if it doesn't hang it. */
@@ -75,6 +77,11 @@ export function betterThanBest(leg: SlipLeg): number | null {
 }
 
 function legInput(l: SlipLeg, multi: boolean, priced: boolean): ManualLegInput {
+  if (l.manual) {
+    const out: ManualLegInput = { ...l.manual, odds: priced ? parsePrice(l.price) : null };
+    if (multi) out.sport = l.side.leg.sport;
+    return out;
+  }
   const b = l.side.leg;
   const out: ManualLegInput = {
     selection: b.selection,
