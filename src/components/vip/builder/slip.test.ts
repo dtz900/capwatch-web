@@ -9,6 +9,7 @@ import {
   pairKey,
   quoteAt,
   rebook,
+  reformat,
   toPickBody,
   toggleLeg,
   unlockAt,
@@ -174,5 +175,23 @@ describe("nearAlts", () => {
     const alts = [sp("CHA", -28.5), sp("CHA", 0.5), sp("CHA", 2.5), sp("CHA", 3.5), sp("CHA", 9.5), sp("WSH", -0.5), sp("WSH", -2.5)];
     // Distances from +1.5: 1 (0.5, 2.5, WSH -0.5/-2.5), 2 (3.5), then 8 and 30 drop.
     expect(nearAlts(alts, "CHA", 1.5).map((s) => s.key)).toEqual(["CHA0.5", "CHA2.5", "CHA3.5", "WSH-0.5", "WSH-2.5"]);
+  });
+});
+
+describe("decimal display keeps the exact price", () => {
+  it("posts the tapped American price, not the rounded decimal", () => {
+    const s = side({ quotes: { fanduel: -160 }, best: -160 });
+    const legs = toggleLeg([], s, GAME, "fanduel", "decimal");
+    expect(legs[0].price).toBe("1.63");
+    expect(toPickBody(legs, "1", "").legs[0].odds).toBe(-160);
+    expect(betterThanBest(legs[0])).toBeNull();
+    const back = reformat(reformat(legs, "american"), "decimal");
+    expect(toPickBody(reformat(back, "american"), "1", "").legs[0].odds).toBe(-160);
+  });
+
+  it("a typed price wins over the prefill", () => {
+    const legs = toggleLeg([], side(), GAME, "fanduel", "decimal");
+    const typed = [{ ...legs[0], price: "1.80", edited: true }];
+    expect(toPickBody(typed, "1", "").legs[0].odds).toBe(-125);
   });
 });

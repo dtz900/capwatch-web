@@ -133,11 +133,13 @@ export function SellerStrip({
           </span>
         </Tile>
 
-        <Tile label="This month">
+        <Tile label="Per month">
           <span className="text-[20px] font-extrabold tabular-nums leading-none text-[var(--color-text)]">
             {monthly !== null ? `$${monthly.toFixed(2)}` : "--"}
           </span>
-          <span className="text-[11px] text-[var(--color-text-muted)]">You keep {Math.round(SELLER_SHARE * 100)}%</span>
+          <span className="text-[11px] text-[var(--color-text-muted)]">
+            Est. at ${price}, you keep {Math.round(SELLER_SHARE * 100)}%
+          </span>
         </Tile>
       </div>
 

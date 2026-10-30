@@ -51,7 +51,13 @@ const UNDER = side("g1:to:u", "Under 220.5", "U 220.5", -110, { draftkings: -112
 const BOARD: BoardGame = {
   sport: "NBA", game_id: "g1", away: "CHA", home: "WSH", commence_time: START, started: false, thin: false,
   periods: { Game: { spread: [SPREAD_A, SPREAD_H], total: [OVER, UNDER], ml: null, alt_spreads: [], alt_totals: [], team_totals: [] } },
-  props: [],
+  props: [{
+    player: "LaMelo Ball", player_id: "4432816", team: "CHA", stat_name: "points", group: "Points",
+    sides: null,
+    alts: [side("g1:pr:lamelo:30", "30+ Points", "30+", 210, { fanduel: 210 },
+      { stat_name: "points", selection: "LaMelo Ball", line: 29.5, direction: "over",
+        player_id: "4432816", player_name: "LaMelo Ball" })],
+  }],
 };
 
 function renderBuilder(eligible = ["NBA"]) {
@@ -180,5 +186,29 @@ describe("PickBuilder", () => {
       sport: "MLB", legs: [{ selection: "NYY", game_id: "7781", stat_name: "win", odds: 120 }],
     });
     expect(await screen.findByText("Sent to your subscribers")).toBeInTheDocument();
+  });
+});
+
+
+describe("PickBuilder review fixes", () => {
+  it("names the player on a prop alt", async () => {
+    renderBuilder();
+    fireEvent.click(await screen.findByRole("button", { name: "Player props" }));
+    await tapPrice(/^30\+/);
+    expect(screen.getByLabelText("Price for LaMelo Ball 30+ Points")).toBeInTheDocument();
+  });
+
+  it("a fix can be abandoned, and a closed window returns to Pull", async () => {
+    client.postVipPick.mockResolvedValue({ ok: true, created_pick_ids: [41], parlay_id: null, ticket_id: 41, reveal_at: START });
+    client.fixVipPick.mockRejectedValue(new client.VipApiError(409, "fix_window_closed"));
+    await postSpread();
+    fireEvent.click(await screen.findByRole("button", { name: /^Fix/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Keep the posted pick" }));
+    expect(await screen.findByRole("button", { name: "Pull" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Fix/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Review fix" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save fix" }));
+    expect(await screen.findByText(/fix window has closed/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pull" })).toBeInTheDocument();
   });
 });

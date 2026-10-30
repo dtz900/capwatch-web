@@ -384,16 +384,74 @@ export function LockedParlayRow({
 }
 
 /** Ticket rows for picks the viewer may see in full. */
-export function LockedTicketList({ tickets }: { tickets: LockedTicket[] }) {
+export type PullFn = (ticketId: number) => Promise<void>;
+
+/** Owner-only Pull on a posted ticket that has not started: a pick stays
+ *  pullable after the builder that posted it is gone (reload, Post
+ *  another). Two taps, like the builder. */
+function OwnerPull({ lead, onPull }: { lead: VipLockedPick; onPull: PullFn }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const now = useNow();
+  const started = !!lead.commence_time && new Date(lead.commence_time).getTime() <= now;
+  if (lead.pulled || started) return null;
+  const link = "text-[11px] font-bold underline underline-offset-2 decoration-[var(--color-border-h)]";
+  return (
+    <div className="pl-[42px] -mt-1.5 pb-2.5 flex items-center gap-3 text-[11px]">
+      {!confirming ? (
+        <button type="button" className={`${link} text-[var(--color-text-soft)] hover:text-[var(--color-text)]`} onClick={() => setConfirming(true)}>
+          Pull
+        </button>
+      ) : (
+        <>
+          <span className="text-[var(--color-text-soft)]">Pull this pick? Subscribers get an alert.</span>
+          <button
+            type="button"
+            disabled={busy}
+            className={`${link} text-[var(--color-text)]`}
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              try {
+                await onPull(lead.id);
+                setConfirming(false);
+              } catch (err) {
+                console.error("VIP pull failed", err);
+                setError("Could not pull. The game may have started.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Pull pick
+          </button>
+          <button type="button" className={`${link} text-[var(--color-text-muted)]`} onClick={() => setConfirming(false)}>
+            Keep it
+          </button>
+        </>
+      )}
+      {error && <span className="text-[var(--color-neg)] font-semibold">{error}</span>}
+    </div>
+  );
+}
+
+export function LockedTicketList({ tickets, onPull }: { tickets: LockedTicket[]; onPull?: PullFn }) {
   return (
     <div className="flex flex-col divide-y divide-[rgba(255,255,255,0.06)]">
-      {tickets.map((t) =>
-        t.kind === "parlay" ? (
-          <LockedParlayRow key={t.key} legs={t.legs} />
-        ) : (
-          <LockedPickRow key={t.key} pick={t.pick} />
-        ),
-      )}
+      {tickets.map((t) => {
+        const lead = t.kind === "parlay" ? t.legs.find((l) => l.parlay_leg_index === 0) ?? t.legs[0] : t.pick;
+        // A parlay locks when its first game starts.
+        const first = t.kind === "parlay"
+          ? { ...lead, commence_time: t.legs.map((l) => l.commence_time).filter(Boolean).sort()[0] ?? null }
+          : lead;
+        return (
+          <div key={t.key}>
+            {t.kind === "parlay" ? <LockedParlayRow legs={t.legs} /> : <LockedPickRow pick={t.pick} />}
+            {onPull && <OwnerPull lead={first} onPull={onPull} />}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -434,9 +492,12 @@ export function LockedHeader({
 export function LockedPicks({
   status,
   bare = false,
+  onPull,
 }: {
   status: VipCapperStatus;
   bare?: boolean;
+  /** Owner only: pull a posted ticket by its lead id. */
+  onPull?: PullFn;
 }) {
   const locked: Array<VipLockedSummary | VipLockedPick> = status.locked;
   if (locked.length === 0) return null;
@@ -461,7 +522,7 @@ export function LockedPicks({
         className={bare ? "mb-0" : "mb-3"}
       />
       {showFull ? (
-        <LockedTicketList tickets={tickets} />
+        <LockedTicketList tickets={tickets} onPull={status.viewer.is_owner ? onPull : undefined} />
       ) : (
         <div className="flex flex-col divide-y divide-[rgba(255,255,255,0.06)]">
           {summary.map((t, i) => (

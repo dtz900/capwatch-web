@@ -32,5 +32,8 @@ export function builderError(err: unknown): string {
   return "Could not post the pick. Try again.";
 }
 
+export const isFixClosed = (err: unknown) =>
+  err instanceof VipApiError && err.status === 409 && err.detail === "fix_window_closed";
+
 export const isGameStarted = (err: unknown) =>
   err instanceof VipApiError && err.status === 409 && err.detail === "game_started";

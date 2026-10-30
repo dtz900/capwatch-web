@@ -23,7 +23,7 @@ export function parsePrice(raw: string): number | null {
   }
   if (!/^-?\d{3,5}$/.test(t)) return null;
   const a = Number(t);
-  return Math.abs(a) >= 100 && Math.abs(a) <= 5000 ? a : null;
+  return Math.abs(a) >= 100 && Math.abs(a) <= 10000 ? a : null;
 }
 
 /** a pays more than b for the bettor. */

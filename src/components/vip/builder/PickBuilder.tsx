@@ -8,16 +8,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { VipCrown } from "@/components/vip/VipCrown";
 import { ERROR_TEXT, EYEBROW, VIP_PRIMARY_BTN, VIP_WORDMARK } from "@/components/vip/styles";
 import { fixVipPick, postVipPick, pullVipPick } from "@/lib/vip/client";
-import type { BoardSide, BoardSport, VipSport } from "@/lib/vip/types";
+import type { BoardSide, BoardSport, VipClamp, VipSport } from "@/lib/vip/types";
 import { bookCount, type Period } from "./adapt";
 import { Board } from "./Board";
 import { BOOKS, OTHER_BOOK, defaultBook } from "./books";
-import { builderError, isGameStarted } from "./errors";
+import { builderError, isFixClosed, isGameStarted } from "./errors";
 import { ManualEntry } from "./ManualEntry";
 import { fmtPrice, parsePrice, type Fmt } from "./odds";
 import { Slip, slipTotals } from "./SlipCard";
-import { MAX_LEGS, rebook, reformat, toPickBody, toggleLeg, unlockAt, type SlipLeg } from "./slip";
-import { PostedView, TicketView, summary, type Posted } from "./TicketView";
+import { MAX_LEGS, combinedPrice, rebook, reformat, toPickBody, toggleLeg, unlockAt, type SlipLeg } from "./slip";
+import { PostedView, TicketView, summary, type Posted, type Ticket } from "./TicketView";
 import { BookCtx, FmtCtx, GlassCard, PeriodCtx, Segmented } from "./ui";
 import { useBoards } from "./useBoards";
 
@@ -38,6 +38,22 @@ function useIsLg(): boolean | null {
     return () => mq.removeEventListener("change", sync);
   }, []);
   return isLg;
+}
+
+/** The ticket as recorded: each clamped leg (leg_index null on a straight)
+ *  and a clamped ticket price take the server's recorded price. */
+function applyClamps(t: Ticket, clamped: VipClamp[], fmt: Fmt): Ticket {
+  if (clamped.length === 0) return t;
+  const parlay = t.legs.length > 1;
+  const legs = t.legs.map((l, i) => {
+    const c = clamped.find((x) => (parlay ? x.leg_index === i : x.leg_index === null));
+    return c ? { ...l, american: c.recorded, edited: false, price: fmtPrice(c.recorded, fmt) } : l;
+  });
+  const ticketClamp = parlay ? clamped.find((x) => x.leg_index === null) : clamped[0];
+  let combined = t.combined;
+  if (ticketClamp) combined = ticketClamp.recorded;
+  else if (parlay && clamped.length > 0) combined = combinedPrice(legs) ?? combined;
+  return { ...t, legs, combined };
 }
 
 const startOf = (l: SlipLeg) => (l.game.commence_time ? Date.parse(l.game.commence_time) : Infinity);
@@ -142,13 +158,22 @@ export function PickBuilder({
       window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 140, behavior: "smooth" });
     });
 
+  /** Leave a fix without saving: the posted ticket stands as it was. */
+  const cancelFix = () => {
+    setFixing(false);
+    setStage("posted");
+    toBuilderTop();
+  };
+
   const post = async () => {
     setBusy(true);
     setError(null);
     const body = toPickBody(legs, units, sgpPrice);
     try {
       const res = fixing && posted ? await fixVipPick(posted.ticketId, body, token) : await postVipPick(body, token);
-      const ticket = { legs, units, combined: totals.combined, book };
+      // Show what the record holds: a clamped leg or ticket at the
+      // recorded price, not the one typed.
+      const ticket = applyClamps({ legs, units, combined: totals.combined, book }, res.clamped ?? [], fmt);
       const deadline = res.fix_deadline ? Date.parse(res.fix_deadline) : Date.now() + FIX_WINDOW_MS;
       setPosted({
         ...ticket,
@@ -166,7 +191,11 @@ export function PickBuilder({
       onPosted?.();
     } catch (err) {
       setError(builderError(err));
-      if (isGameStarted(err)) {
+      if (fixing && posted && (isFixClosed(err) || isGameStarted(err))) {
+        // The fix can never land now; back to the posted ticket, where
+        // Pull still works while the game has not started.
+        cancelFix();
+      } else if (isGameStarted(err)) {
         updateLegs(dropStarted(legs, Date.now()));
         setStage("build");
       }
@@ -240,6 +269,15 @@ export function PickBuilder({
                   <p className="text-[12px] text-[var(--color-text-muted)]">
                     Only your subscribers see it until 30 minutes after the game starts. Then everyone can.
                   </p>
+                )}
+                {fixing && stage !== "posted" && (
+                  <button
+                    type="button"
+                    onClick={cancelFix}
+                    className="self-start text-[11px] font-semibold text-[var(--color-text-soft)] hover:text-[var(--color-text)] underline underline-offset-2"
+                  >
+                    Keep the posted pick
+                  </button>
                 )}
               </div>
               <div className={`flex items-end gap-3 flex-wrap ${stage === "posted" ? "hidden" : ""}`}>

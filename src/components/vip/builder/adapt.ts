@@ -138,13 +138,17 @@ function lines(p: BoardPeriod, away: string, home: string): Lines {
   };
 }
 
+/** "30+ Points" -> "LaMelo Ball 30+ Points" unless the label has the name. */
+const named = (s: BoardSide, player: string): BoardSide =>
+  s.label.includes(player) ? s : { ...s, label: `${player} ${s.label}` };
+
 const prop = (p: BoardProp): PropMarket => ({
   player: p.player,
   team: p.team,
   stat: PROP_LABEL[p.stat_name] ?? p.stat_name.replace(/_/g, " "),
   group: p.group,
-  sides: p.sides,
-  alts: p.alts,
+  sides: p.sides ? [named(p.sides[0], p.player), named(p.sides[1], p.player)] : null,
+  alts: p.alts.map((s) => named(s, p.player)),
 });
 
 export function fromSlate(g: BoardSlateGame, now: Date): BuilderGame {

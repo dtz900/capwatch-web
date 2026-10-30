@@ -12,6 +12,10 @@ export interface SlipLeg {
   price: string;
   /** The capper typed over the prefill; a book switch leaves it alone. */
   edited: boolean;
+  /** Exact American price of an unedited prefill. Decimal text is rounded
+   *  to 2 places (-160 shows 1.63, which reads back as -159), so the posted
+   *  and compared price comes from here until the capper types over it. */
+  american?: number;
   /** Off-board leg from the structured editor: posted exactly as built. */
   manual?: ManualLegInput;
 }
@@ -23,6 +27,15 @@ export function quoteAt(side: BoardSide, book: string): number | null {
 }
 
 export const prefill = (side: BoardSide, book: string) => quoteAt(side, book) ?? side.price;
+
+/** The leg's American price: exact for an unedited prefill, else parsed. */
+export const legPrice = (l: SlipLeg): number | null =>
+  !l.edited && l.american != null ? l.american : parsePrice(l.price);
+
+const prefilled = (side: BoardSide, book: string, fmt: Fmt) => {
+  const american = prefill(side, book);
+  return { price: fmtPrice(american, fmt), american, edited: false };
+};
 
 /** Sides that can't ride together share a key: both teams of one spread or
  *  moneyline, over and under of one total or prop. Team totals keep the
@@ -41,16 +54,16 @@ export function toggleLeg(
   const pair = pairKey(side);
   const kept = legs.filter((l) => pairKey(l.side) !== pair);
   if (kept.length >= MAX_LEGS) return legs;
-  return [...kept, { side, game, price: fmtPrice(prefill(side, book), fmt), edited: false }];
+  return [...kept, { side, game, ...prefilled(side, book, fmt) }];
 }
 
 /** Re-prefill the legs the capper hasn't typed over. */
 export const rebook = (legs: SlipLeg[], book: string, fmt: Fmt): SlipLeg[] =>
-  legs.map((l) => (l.edited ? l : { ...l, price: fmtPrice(prefill(l.side, book), fmt) }));
+  legs.map((l) => (l.edited || l.manual ? l : { ...l, ...prefilled(l.side, book, fmt) }));
 
 export const reformat = (legs: SlipLeg[], fmt: Fmt): SlipLeg[] =>
   legs.map((l) => {
-    const p = parsePrice(l.price);
+    const p = legPrice(l);
     return p === null ? l : { ...l, price: fmtPrice(p, fmt) };
   });
 
@@ -63,7 +76,7 @@ export const legSports = (legs: SlipLeg[]) => [...new Set(legs.map((l) => l.side
  *  game parlay is priced by the book). */
 export function combinedPrice(legs: SlipLeg[]): number | null {
   if (legs.length === 0 || isSgp(legs)) return null;
-  const prices = legs.map((l) => parsePrice(l.price));
+  const prices = legs.map(legPrice);
   if (prices.some((p) => p === null)) return null;
   return toAmerican(prices.reduce<number>((d, p) => d * toDecimal(p as number), 1));
 }
@@ -71,14 +84,14 @@ export function combinedPrice(legs: SlipLeg[]): number | null {
 /** The best book's price when the capper's price beats every tracked book
  *  (the record counts it at that price), else null. */
 export function betterThanBest(leg: SlipLeg): number | null {
-  const p = parsePrice(leg.price);
+  const p = legPrice(leg);
   if (p === null || Object.keys(leg.side.quotes).length === 0) return null;
   return pays(p, leg.side.best) ? leg.side.best : null;
 }
 
 function legInput(l: SlipLeg, multi: boolean, priced: boolean): ManualLegInput {
   if (l.manual) {
-    const out: ManualLegInput = { ...l.manual, odds: priced ? parsePrice(l.price) : null };
+    const out: ManualLegInput = { ...l.manual, odds: priced ? legPrice(l) : null };
     if (multi) out.sport = l.side.leg.sport;
     return out;
   }
@@ -92,7 +105,7 @@ function legInput(l: SlipLeg, multi: boolean, priced: boolean): ManualLegInput {
     player_id: b.player_id == null ? null : Number(b.player_id),
     player_name: b.player_name,
   };
-  if (priced) out.odds = parsePrice(l.price);
+  if (priced) out.odds = legPrice(l);
   if (multi) out.sport = b.sport;
   return out;
 }

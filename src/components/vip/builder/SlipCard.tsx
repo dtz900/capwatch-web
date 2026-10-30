@@ -7,7 +7,7 @@ import { VIP_GLASS, VIP_GLASS_SHEEN, VIP_PRIMARY_BTN, VIP_WORDMARK } from "@/com
 import { dayLabel, timeLabel } from "./adapt";
 import { OTHER_BOOK, bookName } from "./books";
 import { fmtPrice, parsePrice, toDecimal } from "./odds";
-import { betterThanBest, combinedPrice, isSgp, legSports, quoteAt, type SlipLeg } from "./slip";
+import { betterThanBest, combinedPrice, isSgp, legPrice, legSports, quoteAt, type SlipLeg } from "./slip";
 import { BookCtx, FmtCtx, LegLogo } from "./ui";
 
 export interface SlipTotals {
@@ -22,7 +22,7 @@ export interface SlipTotals {
 }
 
 export function slipTotals(legs: SlipLeg[], units: string, sgpPrice: string): SlipTotals {
-  const allPriced = legs.length > 0 && legs.every((l) => parsePrice(l.price) !== null);
+  const allPriced = legs.length > 0 && legs.every((l) => legPrice(l) !== null);
   const unitsN = Number(units);
   const unitsOk = units.trim() !== "" && unitsN >= 0.1 && unitsN <= 10;
   const sameGame = isSgp(legs);
@@ -56,7 +56,7 @@ function SlipLegRow({
 }) {
   const fmt = useContext(FmtCtx);
   const book = useContext(BookCtx);
-  const price = parsePrice(leg.price);
+  const price = legPrice(leg);
   const best = leg.manual ? null : betterThanBest(leg);
   const where = leg.manual
     ? "Checked before it counts"

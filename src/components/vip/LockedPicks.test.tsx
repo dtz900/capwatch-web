@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { LockedPicks } from "./LockedPicks";
 import type { VipCapperStatus, VipLockedPick } from "@/lib/vip/types";
 
@@ -151,6 +151,22 @@ describe("LockedPicks", () => {
     render(<LockedPicks status={status} />);
     expect(screen.getByText(/^Original:/)).toBeInTheDocument();
     expect(screen.getByText("Red Sox +120 · 1u")).toHaveClass("line-through");
+  });
+
+  it("owner can pull an open pick from the list, two taps", async () => {
+    const onPull = vi.fn().mockResolvedValue(undefined);
+    const status = base({ viewer: { subscribed: false, is_owner: true },
+                          locked: [{ ...pick, commence_time: "2026-10-28T23:05:00Z" }] });
+    render(<LockedPicks status={status} onPull={onPull} />);
+    fireEvent.click(screen.getByRole("button", { name: "Pull" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pull pick" }));
+    await waitFor(() => expect(onPull).toHaveBeenCalledWith(11));
+  });
+
+  it("subscribers never see Pull", () => {
+    const status = base({ viewer: { subscribed: true, is_owner: false }, locked: [pick] });
+    render(<LockedPicks status={status} onPull={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Pull" })).toBeNull();
   });
 
   it("renders nothing with no locked picks", () => {

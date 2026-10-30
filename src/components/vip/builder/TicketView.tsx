@@ -6,9 +6,9 @@ import { ERROR_TEXT, PRIMARY_BTN, SECONDARY_BTN, VIP_WORDMARK } from "@/componen
 import type { VipClamp } from "@/lib/vip/types";
 import { teamName } from "./adapt";
 import { OTHER_BOOK, bookName } from "./books";
-import { fmtPrice, parsePrice, toDecimal, type Fmt } from "./odds";
+import { fmtPrice, toDecimal, type Fmt } from "./odds";
 import { legWhen } from "./SlipCard";
-import { unlockAt, type SlipLeg } from "./slip";
+import { legPrice, unlockAt, type SlipLeg } from "./slip";
 import { GlassCard, LegLogo } from "./ui";
 
 export interface Ticket {
@@ -70,7 +70,7 @@ export function TicketView({
             </div>
             <span className="text-[14px] font-extrabold tabular-nums text-[var(--color-text)]">
               {(() => {
-                const p = parsePrice(l.price);
+                const p = legPrice(l);
                 return p !== null ? fmtPrice(p, fmt) : l.price;
               })()}
             </span>
