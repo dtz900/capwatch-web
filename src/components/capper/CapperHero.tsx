@@ -46,6 +46,7 @@ export function CapperHero({
   trajectorySeries = [],
   window,
   nameAdornment = null,
+  vipRing = false,
 }: {
   profile: CapperProfile;
   windowAgg: CapperAggregate | undefined;
@@ -54,6 +55,8 @@ export function CapperHero({
   window?: Window;
   /** Rendered right after the name (the VIP crown). */
   nameAdornment?: React.ReactNode;
+  /** Royal purple ring around the avatar for a VIP-eligible capper. */
+  vipRing?: boolean;
 }) {
   const c = profile.capper;
   const isModel = c.handle === "fadeai_";
@@ -70,6 +73,11 @@ export function CapperHero({
         size={72}
         apiIntegrated={isModel}
         accountDeleted={accountDeleted}
+        className={
+          vipRing
+            ? "rounded-full ring-2 ring-[var(--color-vip)] ring-offset-2 ring-offset-[var(--color-bg)] shadow-[0_0_18px_rgba(109,40,217,0.45)]"
+            : ""
+        }
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap mb-1">
