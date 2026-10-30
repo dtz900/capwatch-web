@@ -203,6 +203,21 @@ describe("CapperVipSection", () => {
     expect(screen.queryByRole("region", { name: "Capper VIP" })).toBeNull();
   });
 
+  it("section shows the owner panel when the platform says this viewer owns the capper", async () => {
+    // Owner linked in the database without X verification: no claimed capper
+    // on the session, but the status says is_owner.
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: null };
+    client.getVipCapperStatus.mockResolvedValue({ ...status, viewer: { subscribed: false, is_owner: true } });
+    client.getVipMe.mockResolvedValue({
+      capper: { id: 7, handle: "moneyplayzz" },
+      seller: status.seller,
+      eligibility: [],
+      can_post_sports: ["MLB"],
+    });
+    render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    expect(await screen.findByText("Your VIP dashboard")).toBeInTheDocument();
+  });
+
   it("section hides the owner panel from a different signed-in capper", async () => {
     auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 99, handle: "someoneelse" } };
     client.getVipCapperStatus.mockResolvedValue(status);
