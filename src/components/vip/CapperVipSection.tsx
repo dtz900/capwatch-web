@@ -39,7 +39,6 @@ export function CapperVipSection({
   const { session, capper, authReady } = useAuth();
   const token = session?.access_token ?? null;
   const userId = session?.user?.id ?? null;
-  const isOwner = capper?.id === capperId;
   const [status, setStatus] = useState<VipCapperStatus | null>(null);
   // Bumped by the owner panel after a post or seller change.
   const [reload, setReload] = useState(0);
@@ -83,6 +82,10 @@ export function CapperVipSection({
     };
   }, [capperId, userId, authReady, reload]);
 
+  // The platform's word on ownership (cappers.claimed_by_user_id) wins: an
+  // owner linked without X verification has no claimed capper on the
+  // session. The session claim still counts before the status lands.
+  const isOwner = capper?.id === capperId || status?.viewer.is_owner === true;
   const ownerPanel = isOwner ? <OwnerPanel onChanged={refetch} /> : null;
   return (
     <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} />
