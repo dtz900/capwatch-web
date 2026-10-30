@@ -298,16 +298,17 @@ export function Slip(p: SlipProps) {
               >
                 {p.fixing ? "Review fix" : "Review pick"}
               </button>
-              {p.fixing && (
-                <button
-                  type="button"
-                  onClick={p.onCancelFix}
-                  className="self-center text-[12px] font-semibold text-[rgba(247,243,233,0.6)] hover:text-[var(--color-text)]"
-                >
-                  Keep the posted pick
-                </button>
-              )}
             </div>
+          )}
+          {/* Outside the legs block: an emptied slip must still leave the fix. */}
+          {p.fixing && (
+            <button
+              type="button"
+              onClick={p.onCancelFix}
+              className="mt-3 self-center text-[12px] font-semibold text-[rgba(247,243,233,0.6)] hover:text-[var(--color-text)]"
+            >
+              Keep the posted pick
+            </button>
           )}
         </div>
       </div>
