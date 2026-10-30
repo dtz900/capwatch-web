@@ -332,7 +332,8 @@ export function PickBuilder({
                 <div className="flex flex-col gap-4 min-w-0">
                   {sport && (
                     <Board
-                      sports={boardSports}
+                      sports={BOARD_SPORTS}
+                      eligible={boardSports}
                       sport={sport}
                       onSport={switchSport}
                       games={games}
