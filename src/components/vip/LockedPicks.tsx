@@ -11,6 +11,8 @@ import {
   type VipLockedSummary,
   type VipOriginal,
 } from "@/lib/vip/types";
+import { TeamLogo } from "@/components/slate/TeamLogo";
+import type { Sport } from "@/lib/types";
 import { LeagueMark } from "./EligibilityBadges";
 import { vipSelection } from "@/lib/vip/describe";
 import { VipCrown } from "./VipCrown";
@@ -274,6 +276,7 @@ function UnlockedRow({
             {by && (
               <LeagueMark sport={pick.sport} eligible className="h-[13px]" />
             )}
+            <MatchupLogos matchup={pick.matchup} sport={pick.sport} />
             <span className="truncate">{game}</span>
             {started && (
               <span
@@ -372,8 +375,9 @@ export function LockedParlayRow({
               })}
             </div>
             {l.matchup && (
-              <div className="truncate text-[11px] text-[var(--color-text-muted)]">
-                {l.matchup}
+              <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-[var(--color-text-muted)]">
+                <MatchupLogos matchup={l.matchup} sport={l.sport} />
+                <span className="truncate">{l.matchup}</span>
               </div>
             )}
           </li>
@@ -385,6 +389,20 @@ export function LockedParlayRow({
 
 /** Ticket rows for picks the viewer may see in full. */
 export type PullFn = (ticketId: number) => Promise<void>;
+
+/** "CHA @ WSH" as the two team logos, so a pick reads at a glance. Nothing
+ *  when the matchup is not two team codes. */
+function MatchupLogos({ matchup, sport }: { matchup: string | null | undefined; sport: string }) {
+  const teams = (matchup ?? "").split(" @ ").map((t) => t.trim());
+  if (teams.length !== 2 || teams.some((t) => !/^[A-Z]{2,4}$/.test(t))) return null;
+  const s = sport.toUpperCase() as Sport;
+  return (
+    <span aria-hidden="true" className="inline-flex items-center gap-0.5 shrink-0">
+      <TeamLogo abbr={teams[0]} sport={s} size={16} flat />
+      <TeamLogo abbr={teams[1]} sport={s} size={16} flat />
+    </span>
+  );
+}
 
 /** Owner-only Pull on a posted ticket that has not started: a pick stays
  *  pullable after the builder that posted it is gone (reload, Post

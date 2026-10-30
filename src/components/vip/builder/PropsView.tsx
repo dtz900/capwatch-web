@@ -107,7 +107,7 @@ export function PropsView({
           className="h-8 w-full sm:w-52 px-3 text-[12px] rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
         />
         {!searching && (
-          <div className="flex items-center gap-1.5 overflow-x-auto sm:ml-auto">
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:ml-auto">
             {tabs.map((t) => (
               <Pill key={t} on={t === tab} onClick={() => setTab(t)}>
                 {t}
