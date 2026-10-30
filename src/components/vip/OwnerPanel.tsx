@@ -150,6 +150,16 @@ export function OwnerPanelView({
   onPosted: () => void;
   composerToken?: string;
 }) {
+  // Not selling yet: the purple setup card IS the dashboard, so it sits
+  // under the label on its own rather than boxed inside another card.
+  if (!me.seller) {
+    return (
+      <section aria-label="Your VIP dashboard" className="flex flex-col gap-2.5">
+        <span className={EYEBROW}>Your VIP dashboard</span>
+        <SellerSetupCard me={me} onDone={onRefresh} />
+      </section>
+    );
+  }
   return (
     <section className={`${SECTION} flex flex-col gap-4`}>
       <span className={EYEBROW}>Your VIP dashboard</span>
