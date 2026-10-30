@@ -29,7 +29,7 @@ const me: VipMe = {
 };
 
 const TERMS =
-  "I understand I can only sell while my public TailSlips record is positive in that sport over the last 30 days, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription, with payment processing fees coming out of the TailSlips share.";
+  "I understand I can start selling in a sport after a positive last 30 days there and keep selling only while my last 60 days there stay positive, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription, with payment processing fees coming out of the TailSlips share.";
 
 function fillValid() {
   fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "25" } });

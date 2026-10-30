@@ -60,11 +60,13 @@ export default function VipRules() {
 
         <h2 className={H2}>Who can sell</h2>
         <p className={P}>
-          A capper can sell only while their public record is positive. We look
-          at the trailing 30 days and need at least 20 graded picks staked at
-          0.5u or more, with net units above zero. Public picks and VIP picks
-          are combined in that number, so a seller cannot hide a bad stretch by
-          moving losses into one bucket.
+          A capper can start selling only after a winning stretch. We look at
+          the trailing 30 days and need at least 20 graded picks staked at 0.5u
+          or more, with net units above zero. Once selling, a capper stays open
+          while the trailing 60 days are positive, so one cold week does not
+          switch a proven winner off. Public picks and VIP picks are combined in
+          those numbers, so a seller cannot hide a bad stretch by moving losses
+          into one bucket.
         </p>
         <p className={P}>
           Eligibility is checked every night. Two failed nights in a row switch
