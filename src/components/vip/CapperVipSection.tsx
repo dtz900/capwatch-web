@@ -137,10 +137,12 @@ export function CapperVipView({
   }
 
   const showCard = status.seller !== null || status.eligibility.length > 0;
+  // Before selling, the eligible banner leads and the setup card follows.
+  const panelAfterCard = status.seller === null;
 
   return (
     <div className="flex flex-col gap-3">
-      {ownerPanel}
+      {!panelAfterCard && ownerPanel}
       {showCard && (
         <section aria-label="Capper VIP">
           <VipGlassCard>
@@ -169,6 +171,7 @@ export function CapperVipView({
         </section>
       )}
       {!showCard && <LockedPicks status={status} />}
+      {panelAfterCard && ownerPanel}
     </div>
   );
 }
