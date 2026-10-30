@@ -9,6 +9,7 @@ import {
   type VipCapperStatus,
   type VipLockedPick,
   type VipLockedSummary,
+  type VipOriginal,
 } from "@/lib/vip/types";
 import { LeagueMark } from "./EligibilityBadges";
 import { vipSelection } from "@/lib/vip/describe";
@@ -189,6 +190,21 @@ function signedOdds(o: number): string {
   return o > 0 ? `+${o}` : String(o);
 }
 
+/** "Red Sox +120 · 1u", "LAL -3 + Over 224.5 · +264 · 2u": a fixed
+ *  ticket as first posted. */
+export function originalSummary(o: VipOriginal): string {
+  const parlay = o.legs.length > 1;
+  const leg = (l: VipOriginal["legs"][number]) => {
+    const parts = [vipSelection(l)];
+    if (l.line != null) parts.push(/spread/.test(l.stat_name ?? "") ? signedOdds(l.line) : String(l.line));
+    if (!parlay && l.odds_taken != null) parts.push(signedOdds(l.odds_taken));
+    return parts.join(" ");
+  };
+  const price = parlay && o.combined_odds != null ? ` · ${signedOdds(o.combined_odds)}` : "";
+  const units = o.units != null ? ` · ${formatStake(o.units)}` : "";
+  return `${o.legs.map(leg).join(" + ")}${price}${units}`;
+}
+
 /* Shared row frame for unlocked picks: league mark, the pick, the game under
  * it, and when it goes public on the right. Same rhythm as SummaryRow so the
  * locked and unlocked views read as one list. */
@@ -216,7 +232,7 @@ function UnlockedRow({
   // time gives way to a Started tag (not "Live": history uses Live for
   // in-game bets, and VIP picks are always pregame).
   const now = useNow();
-  const started = !!pick.commence_time && new Date(pick.commence_time).getTime() <= now;
+  const started = !pick.pulled && !!pick.commence_time && new Date(pick.commence_time).getTime() <= now;
   const game = [
     pick.matchup,
     pick.commence_time && !started && `Starts ${formatRevealTime(pick.commence_time)}`,
@@ -236,9 +252,17 @@ function UnlockedRow({
       <div className="min-w-0 flex-1">
         {by && <div className="mb-0.5">{by.name}</div>}
         <div className="flex items-baseline gap-2 min-w-0">
-          <span className="truncate text-[14px] font-bold text-[var(--color-text)]">
+          <span className={`truncate text-[14px] font-bold text-[var(--color-text)] ${pick.pulled ? "line-through opacity-60" : ""}`}>
             {title}
           </span>
+          {pick.pulled && (
+            <span
+              className="shrink-0 px-1.5 py-0.5 rounded border border-[var(--color-border)] text-[9px] uppercase tracking-[0.12em] font-bold text-[var(--color-text-muted)]"
+              title="Pulled before the game started. It stays listed and counts as no action."
+            >
+              Pulled
+            </span>
+          )}
           {stake && (
             <span className="shrink-0 text-[12px] font-semibold text-[var(--color-text-soft)] tabular-nums">
               {stake}
@@ -265,6 +289,11 @@ function UnlockedRow({
           </div>
         )}
         {children}
+        {pick.original && (
+          <div className="mt-1 truncate text-[11px] text-[var(--color-text-muted)]">
+            Original: <span className="line-through">{originalSummary(pick.original)}</span>
+          </div>
+        )}
       </div>
       <span className="shrink-0 pt-0.5 text-[12px] font-medium text-[var(--color-text-muted)] tabular-nums">
         Public {formatRevealPhrase(pick.reveal_at)}
@@ -355,16 +384,74 @@ export function LockedParlayRow({
 }
 
 /** Ticket rows for picks the viewer may see in full. */
-export function LockedTicketList({ tickets }: { tickets: LockedTicket[] }) {
+export type PullFn = (ticketId: number) => Promise<void>;
+
+/** Owner-only Pull on a posted ticket that has not started: a pick stays
+ *  pullable after the builder that posted it is gone (reload, Post
+ *  another). Two taps, like the builder. */
+function OwnerPull({ lead, onPull }: { lead: VipLockedPick; onPull: PullFn }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const now = useNow();
+  const started = !!lead.commence_time && new Date(lead.commence_time).getTime() <= now;
+  if (lead.pulled || started) return null;
+  const link = "text-[11px] font-bold underline underline-offset-2 decoration-[var(--color-border-h)]";
+  return (
+    <div className="pl-[42px] -mt-1.5 pb-2.5 flex items-center gap-3 text-[11px]">
+      {!confirming ? (
+        <button type="button" className={`${link} text-[var(--color-text-soft)] hover:text-[var(--color-text)]`} onClick={() => setConfirming(true)}>
+          Pull
+        </button>
+      ) : (
+        <>
+          <span className="text-[var(--color-text-soft)]">Pull this pick? Subscribers get an alert.</span>
+          <button
+            type="button"
+            disabled={busy}
+            className={`${link} text-[var(--color-text)]`}
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              try {
+                await onPull(lead.id);
+                setConfirming(false);
+              } catch (err) {
+                console.error("VIP pull failed", err);
+                setError("Could not pull. The game may have started.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Pull pick
+          </button>
+          <button type="button" className={`${link} text-[var(--color-text-muted)]`} onClick={() => setConfirming(false)}>
+            Keep it
+          </button>
+        </>
+      )}
+      {error && <span className="text-[var(--color-neg)] font-semibold">{error}</span>}
+    </div>
+  );
+}
+
+export function LockedTicketList({ tickets, onPull }: { tickets: LockedTicket[]; onPull?: PullFn }) {
   return (
     <div className="flex flex-col divide-y divide-[rgba(255,255,255,0.06)]">
-      {tickets.map((t) =>
-        t.kind === "parlay" ? (
-          <LockedParlayRow key={t.key} legs={t.legs} />
-        ) : (
-          <LockedPickRow key={t.key} pick={t.pick} />
-        ),
-      )}
+      {tickets.map((t) => {
+        const lead = t.kind === "parlay" ? t.legs.find((l) => l.parlay_leg_index === 0) ?? t.legs[0] : t.pick;
+        // A parlay locks when its first game starts.
+        const first = t.kind === "parlay"
+          ? { ...lead, commence_time: t.legs.map((l) => l.commence_time).filter(Boolean).sort()[0] ?? null }
+          : lead;
+        return (
+          <div key={t.key}>
+            {t.kind === "parlay" ? <LockedParlayRow legs={t.legs} /> : <LockedPickRow pick={t.pick} />}
+            {onPull && <OwnerPull lead={first} onPull={onPull} />}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -405,9 +492,12 @@ export function LockedHeader({
 export function LockedPicks({
   status,
   bare = false,
+  onPull,
 }: {
   status: VipCapperStatus;
   bare?: boolean;
+  /** Owner only: pull a posted ticket by its lead id. */
+  onPull?: PullFn;
 }) {
   const locked: Array<VipLockedSummary | VipLockedPick> = status.locked;
   if (locked.length === 0) return null;
@@ -432,7 +522,7 @@ export function LockedPicks({
         className={bare ? "mb-0" : "mb-3"}
       />
       {showFull ? (
-        <LockedTicketList tickets={tickets} />
+        <LockedTicketList tickets={tickets} onPull={status.viewer.is_owner ? onPull : undefined} />
       ) : (
         <div className="flex flex-col divide-y divide-[rgba(255,255,255,0.06)]">
           {summary.map((t, i) => (

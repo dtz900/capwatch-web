@@ -33,6 +33,7 @@ const TERMS =
 
 function fillValid() {
   fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "25" } });
+  fireEvent.change(screen.getByLabelText("Your main book"), { target: { value: "draftkings" } });
   fireEvent.click(screen.getByLabelText(TERMS));
 }
 
@@ -53,6 +54,9 @@ describe("SellerSetupCard", () => {
     expect(button).toBeDisabled();
 
     fireEvent.click(screen.getByLabelText(TERMS));
+    // A main book is required too.
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Your main book"), { target: { value: "fanduel" } });
     expect(button).toBeEnabled();
 
     for (const bad of ["9", "100", "25.5", "", "abc"]) {
@@ -75,7 +79,7 @@ describe("SellerSetupCard", () => {
       await screen.findByText("You need a positive 30-day record in at least one sport first."),
     ).toBeInTheDocument();
     expect(client.postVipSeller).toHaveBeenCalledWith(
-      { price_cents: 2500, accept_terms: true },
+      { price_cents: 2500, accept_terms: true, preferred_book: "draftkings" },
       "tok",
     );
     expect(onDone).not.toHaveBeenCalled();
@@ -108,6 +112,18 @@ describe("SellerSetupCard", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
+  });
+
+  it("double submit sends once", async () => {
+    let resolve: (v: unknown) => void = () => {};
+    client.postVipSeller.mockReturnValue(new Promise((r) => { resolve = r; }));
+    render(<SellerSetupCard me={me} onDone={() => {}} />);
+    fillValid();
+    const button = screen.getByRole("button", { name: "Start selling" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(client.postVipSeller).toHaveBeenCalledTimes(1);
+    resolve({});
   });
 
   it("maps a seller_denylisted 403 to the cannot-sell line", async () => {

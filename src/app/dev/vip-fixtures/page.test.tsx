@@ -18,6 +18,11 @@ vi.mock("@/lib/vip/client", () => ({
   getVipMe: vi.fn(),
   getVipCapperStatus: vi.fn(),
   getVipSubscriptions: vi.fn(),
+  getVipSellerSubscribers: vi.fn(() => Promise.resolve({ subscribers: [] })),
+  getVipBoardSlate: vi.fn(() => Promise.resolve({ games: [] })),
+  getVipBoardGame: vi.fn(),
+  fixVipPick: vi.fn(),
+  pullVipPick: vi.fn(),
 }));
 
 import VipFixturesPage from "./page";
@@ -37,7 +42,7 @@ describe("vip fixtures page", () => {
     expect(screen.getAllByText("3-leg parlay +595")).toHaveLength(2);
     expect(screen.getByText("Subscribed")).toBeInTheDocument();
     expect(screen.getByText(/Start selling unlocks once a sport is eligible/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Post VIP pick" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Post a VIP pick" })).toBeInTheDocument();
     expect(screen.getByText(/Billing is paused/)).toBeInTheDocument();
     // (c3) owner with a closed door: MLB stat reads as not selling.
     expect(screen.getByLabelText("Not currently selling: -3.2u MLB, last 30 days")).toBeInTheDocument();

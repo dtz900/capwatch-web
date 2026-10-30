@@ -8,10 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { VipApiError, getVipCapperStatus } from "@/lib/vip/client";
+import { VipApiError, getVipCapperStatus, pullVipPick } from "@/lib/vip/client";
 import type { VipCapperStatus } from "@/lib/vip/types";
 import { EligibilityBadges } from "./EligibilityBadges";
-import { LockedPicks } from "./LockedPicks";
+import { LockedPicks, type PullFn } from "./LockedPicks";
 import { OwnerPanel } from "./OwnerPanel";
 import { SubscribeDoor } from "./SubscribeDoor";
 import { VipBand, VipGlassCard } from "./VipBand";
@@ -87,8 +87,14 @@ export function CapperVipSection({
   // session. The session claim still counts before the status lands.
   const isOwner = capper?.id === capperId || status?.viewer.is_owner === true;
   const ownerPanel = isOwner ? <OwnerPanel onChanged={refetch} /> : null;
+  const onPull: PullFn | undefined = isOwner
+    ? async (ticketId) => {
+        await pullVipPick(ticketId, tokenRef.current);
+        refetch();
+      }
+    : undefined;
   return (
-    <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} />
+    <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} onPull={onPull} />
   );
 }
 
@@ -125,10 +131,12 @@ export function CapperVipView({
   status,
   handle,
   ownerPanel = null,
+  onPull,
 }: {
   status: VipCapperStatus | null;
   handle: string;
   ownerPanel?: ReactNode;
+  onPull?: PullFn;
 }) {
   if (!status || isEmpty(status)) {
     return ownerPanel ? (
@@ -159,7 +167,7 @@ export function CapperVipView({
                 className={`${VIP_GLASS_DIVIDER} relative`}
                 style={{ backgroundColor: "#1e0f3a" }}
               >
-                <LockedPicks status={status} bare />
+                <LockedPicks status={status} bare onPull={onPull} />
               </div>
             )}
             <div
@@ -170,7 +178,7 @@ export function CapperVipView({
           </VipGlassCard>
         </section>
       )}
-      {!showCard && <LockedPicks status={status} />}
+      {!showCard && <LockedPicks status={status} onPull={onPull} />}
       {panelAfterCard && ownerPanel}
     </div>
   );
