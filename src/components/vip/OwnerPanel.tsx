@@ -6,8 +6,8 @@ import { getVipMe, patchVipSeller } from "@/lib/vip/client";
 import type { VipMe, VipSeller } from "@/lib/vip/types";
 import { formatPrice } from "./format";
 import { PriceInput, SellerSetupCard, parsePriceDollars } from "./SellerSetupCard";
-import { ERROR_TEXT, EYEBROW, INNER_CARD, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_BTN_SM, SECTION, VIP_CHIP } from "./styles";
-import { VipPickComposer } from "./VipPickComposer";
+import { PickBuilder } from "./builder/PickBuilder";
+import { ERROR_TEXT, EYEBROW, INNER_CARD, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_BTN_SM, SECTION, VIP_PRIMARY_BTN } from "./styles";
 
 function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void }) {
   const { session } = useAuth();
@@ -137,8 +137,38 @@ export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
   return <OwnerPanelView me={me} onRefresh={refresh} onPosted={() => onChanged?.()} />;
 }
 
+/** The board stays closed until the capper asks for it, so their own
+ *  profile reads like everyone else's on a normal visit. */
+function BuilderToggle({ me, token, onPosted }: { me: VipMe; token: string; onPosted: () => void }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button type="button" className={`${VIP_PRIMARY_BTN} self-start`} onClick={() => setOpen(true)}>
+        Post a VIP pick
+      </button>
+    );
+  }
+  return (
+    <>
+      <button
+        type="button"
+        className="self-end text-[11px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        onClick={() => setOpen(false)}
+      >
+        Close pick builder
+      </button>
+      <PickBuilder
+        token={token}
+        eligibleSports={me.can_post_sports}
+        preferredBook={me.seller?.preferred_book}
+        onPosted={onPosted}
+      />
+    </>
+  );
+}
+
 /** Presentational owner panel for a loaded /me. `composerToken` lets the
- *  fixtures page show the composer without a signed-in session. */
+ *  fixtures page show the builder without a signed-in session. */
 export function OwnerPanelView({
   me,
   onRefresh,
@@ -150,6 +180,8 @@ export function OwnerPanelView({
   onPosted: () => void;
   composerToken?: string;
 }) {
+  const { session } = useAuth();
+  const token = composerToken ?? session?.access_token ?? null;
   // Not selling yet: the purple setup card IS the dashboard, so it sits
   // under the label on its own rather than boxed inside another card.
   if (!me.seller) {
@@ -163,19 +195,11 @@ export function OwnerPanelView({
   return (
     <section className={`${SECTION} flex flex-col gap-4`}>
       <span className={EYEBROW}>Your VIP dashboard</span>
-      {me.seller ? (
-        <>
-          <PriceLine key={me.seller.price_cents} seller={me.seller} onSaved={onRefresh} />
-          <div className={`${INNER_CARD} flex flex-col gap-3`}>
-            <div className="flex items-center gap-2">
-              <span className={VIP_CHIP}>VIP</span>
-              <span className={EYEBROW}>Post a VIP pick</span>
-            </div>
-            <VipPickComposer me={me} onPosted={onPosted} token={composerToken} />
-          </div>
-        </>
+      <PriceLine key={me.seller.price_cents} seller={me.seller} onSaved={onRefresh} />
+      {me.can_post_sports.length === 0 ? (
+        <p className="text-[12px] text-[var(--color-text-muted)]">You can post VIP picks once a sport is eligible.</p>
       ) : (
-        <SellerSetupCard me={me} onDone={onRefresh} />
+        token && <BuilderToggle me={me} token={token} onPosted={onPosted} />
       )}
     </section>
   );

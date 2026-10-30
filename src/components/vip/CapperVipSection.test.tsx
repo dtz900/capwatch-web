@@ -251,11 +251,9 @@ describe("CapperVipSection", () => {
     });
     const { rerender } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByRole("region", { name: "Capper VIP" });
-    const units = await screen.findByLabelText("Units");
-    fireEvent.change(units, { target: { value: "2.5" } });
-    fireEvent.change(screen.getByPlaceholderText('selection text, e.g. "Yankees ML"'), {
-      target: { value: "Draft text" },
-    });
+    fireEvent.click(await screen.findByRole("button", { name: "Post a VIP pick" }));
+    const draft = screen.getByPlaceholderText('selection text, e.g. "Yankees ML"');
+    fireEvent.change(draft, { target: { value: "Draft text" } });
 
     auth.value = owner("tok-refreshed");
     rerender(<CapperVipSection capperId={7} handle="moneyplayzz" />);
@@ -264,9 +262,7 @@ describe("CapperVipSection", () => {
     expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
     expect(client.getVipMe).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Units")).toBe(units);
-    expect(screen.getByLabelText("Units")).toHaveValue(2.5);
-    expect(screen.getByDisplayValue("Draft text")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Draft text")).toBe(draft);
   });
 
   it("owner panel hidden for denylisted handle", async () => {
