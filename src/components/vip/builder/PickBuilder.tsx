@@ -232,7 +232,8 @@ export function PickBuilder({
     setLegs(posted.legs);
     setUnits(posted.units);
     // A same game parlay carries its book price on the ticket, not the legs.
-    setSgpPrice(isSgp(posted.legs) && posted.combined !== null ? fmtPrice(posted.combined, fmt) : "");
+    // American text reads back exactly; decimal would round (1.63 -> -159).
+    setSgpPrice(isSgp(posted.legs) && posted.combined !== null ? fmtPrice(posted.combined, "american") : "");
     setError(null);
     setFixing(true);
     setStage("build");
