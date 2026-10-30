@@ -5,6 +5,8 @@ export interface VipSeller {
   price_cents: number;
   founding: boolean;
   status: string;
+  /** Book the builder prefills prices from; "other" = not in the feed. */
+  preferred_book?: string | null;
 }
 
 export interface VipEligibility {
@@ -127,6 +129,8 @@ export interface ManualLegInput {
   odds?: number | null;
   player_id?: number | null;
   player_name?: string | null;
+  /** Leg sport on a multi-sport ticket (body sport "Multi"). */
+  sport?: string | null;
 }
 
 export interface VipPickBody {
@@ -137,11 +141,89 @@ export interface VipPickBody {
   is_live?: boolean;
 }
 
+export interface VipClamp {
+  /** null for a straight or the ticket price. */
+  leg_index: number | null;
+  posted: number;
+  recorded: number;
+  book: string | null;
+}
+
 export interface VipPickResult {
   ok: true;
   created_pick_ids: number[];
   parlay_id: number | null;
+  /** Lead pick id: what fix and pull address. Optional for older builds. */
+  ticket_id?: number;
   reveal_at: string;
+  fix_deadline?: string;
+  clamped?: VipClamp[];
+}
+
+/* ---------- pick builder board (GET /api/vip/board/...) ---------- */
+
+export type BoardSport = "NBA" | "NFL";
+export type BoardPeriodKey = "Game" | "1H" | "2H" | "1Q" | "2Q" | "3Q" | "4Q";
+
+/** The exact leg a board side posts. */
+export interface BoardLeg {
+  sport: BoardSport;
+  game_id: string;
+  stat_name: string;
+  selection: string;
+  line: number | null;
+  direction: "over" | "under" | null;
+  player_id: string | null;
+  player_name: string | null;
+}
+
+export interface BoardSide {
+  key: string;
+  /** Slip and subscriber text, e.g. "1H CHA +1". */
+  label: string;
+  /** Board button text, e.g. "+1". */
+  short: string;
+  /** Consensus American price: Pinnacle, else the book median. */
+  price: number;
+  /** Book id to American price at this exact rung ("pinnacle" included). */
+  quotes: Record<string, number>;
+  best: number;
+  best_book: string | null;
+  leg: BoardLeg;
+}
+
+export interface BoardPeriod {
+  spread: [BoardSide, BoardSide] | null;
+  total: [BoardSide, BoardSide] | null;
+  ml: [BoardSide, BoardSide] | null;
+  alt_spreads: BoardSide[];
+  alt_totals: BoardSide[];
+  team_totals: BoardSide[];
+}
+
+export interface BoardProp {
+  player: string;
+  player_id: string | null;
+  team: string;
+  stat_name: string;
+  group: string;
+  sides: [BoardSide, BoardSide] | null;
+  alts: BoardSide[];
+}
+
+export interface BoardSlateGame {
+  sport: BoardSport;
+  game_id: string;
+  away: string;
+  home: string;
+  commence_time: string | null;
+  started: boolean;
+}
+
+export interface BoardGame extends BoardSlateGame {
+  thin: boolean;
+  periods: Partial<Record<BoardPeriodKey, BoardPeriod>>;
+  props: BoardProp[];
 }
 
 /* Error detail strings the platform returns in the `detail` field. */

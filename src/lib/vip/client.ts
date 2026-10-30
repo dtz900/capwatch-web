@@ -1,5 +1,8 @@
 import { API_BASE } from "@/lib/config";
 import type {
+  BoardGame,
+  BoardSlateGame,
+  BoardSport,
   VipCapperStatus,
   VipGameResult,
   VipMe,
@@ -57,7 +60,7 @@ export function getVipMe(token: string | null) {
 }
 
 export function postVipSeller(
-  body: { price_cents: number; accept_terms: boolean },
+  body: { price_cents: number; accept_terms: boolean; preferred_book?: string | null },
   token: string | null,
 ) {
   return vipFetch<VipSeller>("/api/vip/seller", {
@@ -67,7 +70,10 @@ export function postVipSeller(
   });
 }
 
-export function patchVipSeller(body: { price_cents: number }, token: string | null) {
+export function patchVipSeller(
+  body: { price_cents?: number; preferred_book?: string },
+  token: string | null,
+) {
   return vipFetch<VipSeller>("/api/vip/seller", {
     method: "PATCH",
     body: JSON.stringify(body),
@@ -95,4 +101,38 @@ export function postVipPick(body: VipPickBody, token: string | null) {
 
 export function getVipSubscriptions(token: string | null) {
   return vipFetch<{ subscriptions: VipSubscription[] }>("/api/vip/subscriptions", { token });
+}
+
+export function getVipBoardSlate(sport: BoardSport, token: string | null) {
+  const qs = new URLSearchParams({ sport });
+  return vipFetch<{ games: BoardSlateGame[] }>(`/api/vip/board/slate?${qs}`, { token });
+}
+
+export function getVipBoardGame(sport: BoardSport, gameId: string, token: string | null) {
+  return vipFetch<BoardGame>(
+    `/api/vip/board/${encodeURIComponent(sport)}/${encodeURIComponent(gameId)}`,
+    { token },
+  );
+}
+
+export function fixVipPick(ticketId: number, body: VipPickBody, token: string | null) {
+  return vipFetch<VipPickResult>(`/api/vip/picks/${ticketId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+    token,
+  });
+}
+
+/* Pull a posted ticket. 204 has no body, and 404 means it is already gone
+ * (a double tap or a retry), so both resolve. */
+export async function pullVipPick(ticketId: number, token: string | null): Promise<void> {
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(`${API_BASE}/api/vip/picks/${ticketId}`, {
+    method: "DELETE",
+    headers,
+    cache: "no-store",
+  });
+  if (res.ok || res.status === 404) return;
+  throw new VipApiError(res.status, await readDetail(res));
 }
