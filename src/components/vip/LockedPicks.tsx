@@ -11,6 +11,7 @@ import {
   type VipLockedSummary,
 } from "@/lib/vip/types";
 import { LeagueMark } from "./EligibilityBadges";
+import { vipSelection } from "@/lib/vip/describe";
 import { VipCrown } from "./VipCrown";
 import { formatRevealPhrase, formatRevealTime } from "./format";
 import { EYEBROW } from "./styles";
@@ -283,7 +284,7 @@ export function LockedPickRow({
   const title = formatBetDescriptor({
     kind: "straight",
     market: pick.market,
-    selection: pick.selection,
+    selection: vipSelection(pick),
     line: pick.line,
     odds_taken: pick.odds_taken,
   });
@@ -336,7 +337,7 @@ export function LockedParlayRow({
               {formatBetDescriptor({
                 kind: "parlay_leg",
                 market: l.market,
-                selection: l.selection,
+                selection: vipSelection(l),
                 line: l.line,
                 odds_taken: combined ? null : l.odds_taken,
               })}

@@ -318,12 +318,23 @@ export function BetSlipProvider({
       const key = String(capperId);
       // One stake per capper: applied to every follow row (whole-capper or
       // scoped) so the setting survives scope toggles.
+      // A subscription-only capper has no follow row yet, so the update
+      // matches nothing and the preference would vanish on reload (Codex
+      // P2 on #220). Subscribing is the strongest tail, so give them the
+      // whole-capper follow row the setting lives on.
       supabase
         .from("capper_follows")
         .update({ default_stake: value })
         .eq("user_id", userId)
         .eq("capper_id", capperId)
-        .then(({ error }) => {
+        .select("id")
+        .then(async ({ data, error }) => {
+          if (!error && (data ?? []).length === 0 && value !== null) {
+            const ins = await supabase
+              .from("capper_follows")
+              .insert({ user_id: userId, capper_id: capperId, market: "all", default_stake: value });
+            error = ins.error;
+          }
           if (error) {
             console.error("capper stake update failed:", error);
             const prev = persistedStakesRef.current[key] ?? null;

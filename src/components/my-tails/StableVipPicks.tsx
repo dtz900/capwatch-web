@@ -7,6 +7,7 @@ import type { TodayPickEntry } from "@/lib/types";
 import type { VipLockedPick, VipSubscription } from "@/lib/vip/types";
 import { hasVipAccess } from "@/lib/vip/access";
 import { parlayTicketOdds } from "@/lib/vip/odds";
+import { vipSelection } from "@/lib/vip/describe";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 import {
   groupLockedTickets,
@@ -67,7 +68,7 @@ function VipTicketRow({
     const title = formatBetDescriptor({
       kind: "straight",
       market: p.market,
-      selection: p.selection,
+      selection: vipSelection(p),
       line: p.line,
       odds_taken: p.odds_taken,
     });
@@ -98,7 +99,7 @@ function VipTicketRow({
               {formatBetDescriptor({
                 kind: "parlay_leg",
                 market: l.market,
-                selection: l.selection,
+                selection: vipSelection(l),
                 line: l.line,
                 odds_taken: combined ? null : l.odds_taken,
               })}
@@ -214,7 +215,7 @@ function toSlipPick(
       selection: formatBetDescriptor({
         kind: "straight",
         market: p.market,
-        selection: p.selection,
+        selection: vipSelection(p),
         line: p.line,
         odds_taken: null,
       }),
