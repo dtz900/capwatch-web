@@ -6,6 +6,17 @@ import { StableCard } from "@/components/my-tails/StableCard";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 
+/** Untailing a capper's last market scope drops the card, unless the viewer
+ *  subscribes to that capper: the subscription keeps the card (and its VIP
+ *  picks) on the stable without any follow row. */
+export function rowsAfterLastScope(
+  rows: CapperRow[],
+  capperId: string,
+  subscribed: boolean,
+): CapperRow[] {
+  return subscribed ? rows : rows.filter((r) => String(r.capper_id) !== capperId);
+}
+
 export function StableGrid({
   initial,
   todayByCapper = {},
@@ -67,7 +78,7 @@ export function StableGrid({
     const remaining = (scopes[capperId] ?? []).filter((m) => m !== market);
     const nextScopes = { ...scopes };
     if (remaining.length === 0) {
-      setRows(rows.filter((r) => String(r.capper_id) !== capperId));
+      setRows(rowsAfterLastScope(rows, capperId, Boolean(vipByCapper[capperId])));
       delete nextScopes[capperId];
     } else {
       nextScopes[capperId] = remaining;
