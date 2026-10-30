@@ -17,6 +17,7 @@ import { fetchCapperProfile } from "@/lib/api";
 import { API_BASE } from "@/lib/config";
 import { capperVipEnabledFor } from "@/lib/flags";
 import type { VipCapperStatus } from "@/lib/vip/types";
+import { avatarSrc } from "@/lib/avatarSrc";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +125,7 @@ export default async function SubscribePage({ params }: PageProps) {
             {capper.profile_image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={capper.profile_image_url}
+                src={avatarSrc(capper.profile_image_url) as string}
                 alt=""
                 width={64}
                 height={64}

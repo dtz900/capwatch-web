@@ -4,6 +4,7 @@ import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { TeamLogo } from "@/components/slate/TeamLogo";
 import { teamColor } from "@/lib/teams";
 import type { Sport } from "@/lib/types";
+import { avatarSrc } from "@/lib/avatarSrc";
 
 export const CATEGORY: Record<string, { label: string; color: string }> = {
   contested: { label: "CONTESTED", color: "#f5c54a" },
@@ -110,7 +111,7 @@ export function TofCardFace({
         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#2dd4bf] bg-[#26262e] text-[14px] font-extrabold text-[var(--color-text-soft)] shadow-[0_0_0_1px_rgba(45,212,191,0.25)]">
           {card.profile_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={card.profile_image_url} alt="" className="h-full w-full object-cover" />
+            <img src={avatarSrc(card.profile_image_url) as string} alt="" className="h-full w-full object-cover" />
           ) : (
             (card.handle ?? "?").slice(0, 2).toUpperCase()
           )}

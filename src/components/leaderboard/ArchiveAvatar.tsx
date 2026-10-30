@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { avatarSrc } from "@/lib/avatarSrc";
 
 /** Avatar for frozen archive pages. X profile-image URLs rot whenever a
  * capper changes their picture, and an archive is served indefinitely, so a
@@ -26,7 +27,7 @@ export function ArchiveAvatar({
       {showImg ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={url as string}
+          src={avatarSrc(url) as string}
           alt={initials}
           width={size}
           height={size}
