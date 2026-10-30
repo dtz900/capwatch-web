@@ -10,6 +10,7 @@ const TEXT: Record<string, string> = {
   "400:unknown_stat_name": "That market is not gradeable yet. Pick a standard market.",
   "400:unknown_market": "That market is not gradeable yet. Pick a standard market.",
   "400:selection_not_in_game": "The selection must name one of the two teams in the game you picked.",
+  "400:missing_direction": "Pick over or under for that prop.",
   "400:player_mismatch": "That player is not in this game. Pick the prop from the board.",
   "400:sgp_needs_ticket_price": "Enter the price your book gave you for the same game parlay.",
   "400:parlay_needs_price": "Enter a price for every leg.",
