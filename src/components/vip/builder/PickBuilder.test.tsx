@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { BoardGame, BoardSide } from "@/lib/vip/types";
 
 const client = vi.hoisted(() => {
@@ -179,6 +179,6 @@ describe("PickBuilder", () => {
     expect(client.postVipPick.mock.calls[0][0]).toMatchObject({
       sport: "MLB", legs: [{ selection: "NYY", game_id: "7781", stat_name: "win", odds: 120 }],
     });
-    expect(within(document.body).getByText("Sent to your subscribers")).toBeInTheDocument();
+    expect(await screen.findByText("Sent to your subscribers")).toBeInTheDocument();
   });
 });

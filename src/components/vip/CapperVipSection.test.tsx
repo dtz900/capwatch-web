@@ -19,6 +19,9 @@ const client = vi.hoisted(() => {
     getVipCapperStatus: vi.fn(),
     getVipMe: vi.fn(),
     patchVipSeller: vi.fn(),
+    getVipSellerSubscribers: vi.fn(),
+    getVipBoardSlate: vi.fn(),
+    getVipBoardGame: vi.fn(),
     postVipSeller: vi.fn(),
     postVipPick: vi.fn(),
     searchVipGames: vi.fn(),
@@ -56,6 +59,11 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockReset();
     client.getVipMe.mockReset();
     client.patchVipSeller.mockReset();
+    client.getVipSellerSubscribers.mockResolvedValue({ subscribers: [
+      { username: "sharpshooter_22", since: "2026-10-04T12:00:00Z", renews: true, current_period_end: "2026-11-04T12:00:00Z" },
+      { username: null, since: "2026-09-30T12:00:00Z", renews: false, current_period_end: "2026-11-01T12:00:00Z" },
+    ] });
+    client.getVipBoardSlate.mockResolvedValue({ games: [] });
   });
   afterEach(() => vi.unstubAllEnvs());
 
@@ -158,21 +166,25 @@ describe("CapperVipSection", () => {
     expect(client.getVipMe).not.toHaveBeenCalled();
   });
 
-  it("section owner panel shows the price line and saves a new price", async () => {
+  it("seller stats card shows price, book, subscribers and saves a new price", async () => {
     auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "moneyplayzz" } };
     client.getVipCapperStatus.mockResolvedValue(status);
     client.getVipMe.mockResolvedValue({
       capper: { id: 7, handle: "moneyplayzz" },
-      seller: status.seller,
+      seller: { ...status.seller, preferred_book: "draftkings" },
       eligibility: [],
       can_post_sports: ["MLB"],
     });
     client.patchVipSeller.mockResolvedValue({ ...status.seller, price_cents: 3000 });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     expect(await screen.findByText("Your VIP dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Selling at")).toBeInTheDocument();
-    expect(screen.getByText("$25/mo")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    expect(screen.getByText("DraftKings")).toBeInTheDocument();
+    // One renewing, one canceled but still in its period.
+    expect(await screen.findByText("active · 1 canceling")).toBeInTheDocument();
+    expect(screen.getByText("$21.25")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    expect(screen.getByText("@sharpshooter_22")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
     fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>

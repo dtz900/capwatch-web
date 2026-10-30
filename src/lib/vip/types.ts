@@ -23,6 +23,14 @@ export interface VipEligibility {
   fail_streak?: number;
 }
 
+export interface VipSellerSubscriber {
+  username: string | null;
+  since: string | null;
+  /** False when canceled but still inside the paid period. */
+  renews: boolean;
+  current_period_end: string | null;
+}
+
 export interface VipLockedSummary {
   pick_id: number;
   sport: string;

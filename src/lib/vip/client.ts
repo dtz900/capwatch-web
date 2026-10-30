@@ -9,6 +9,7 @@ import type {
   VipPickBody,
   VipPickResult,
   VipSeller,
+  VipSellerSubscriber,
   VipSubscription,
 } from "./types";
 
@@ -79,6 +80,10 @@ export function patchVipSeller(
     body: JSON.stringify(body),
     token,
   });
+}
+
+export function getVipSellerSubscribers(token: string | null) {
+  return vipFetch<{ subscribers: VipSellerSubscriber[] }>("/api/vip/seller/subscribers", { token });
 }
 
 export function searchVipGames(

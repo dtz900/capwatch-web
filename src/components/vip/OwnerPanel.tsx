@@ -2,91 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { getVipMe, patchVipSeller } from "@/lib/vip/client";
-import type { VipMe, VipSeller } from "@/lib/vip/types";
-import { formatPrice } from "./format";
-import { PriceInput, SellerSetupCard, parsePriceDollars } from "./SellerSetupCard";
+import { getVipMe } from "@/lib/vip/client";
+import type { VipMe } from "@/lib/vip/types";
+import { SellerSetupCard } from "./SellerSetupCard";
+import { SellerStrip } from "./SellerStrip";
 import { PickBuilder } from "./builder/PickBuilder";
-import { ERROR_TEXT, EYEBROW, INNER_CARD, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_BTN_SM, SECTION, VIP_PRIMARY_BTN } from "./styles";
-
-function PriceLine({ seller, onSaved }: { seller: VipSeller; onSaved: () => void }) {
-  const { session } = useAuth();
-  const token = session?.access_token ?? null;
-  const [editing, setEditing] = useState(false);
-  const [price, setPrice] = useState(formatPrice(seller.price_cents));
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const dollars = parsePriceDollars(price);
-
-  const save = async () => {
-    if (dollars === null) return;
-    setPending(true);
-    setError(null);
-    try {
-      await patchVipSeller({ price_cents: dollars * 100 }, token);
-      setEditing(false);
-      onSaved();
-    } catch (err) {
-      console.error("VIP price change failed", err);
-      setError("Could not change the price. Try again.");
-    } finally {
-      setPending(false);
-    }
-  };
-
-  if (!editing) {
-    return (
-      <div className={`${INNER_CARD} flex items-center gap-3 flex-wrap`}>
-        <div className="flex items-baseline gap-3">
-          <span className={EYEBROW}>Selling at</span>
-          <span className="text-[18px] font-extrabold tabular-nums leading-none text-[var(--color-text)]">
-            ${formatPrice(seller.price_cents)}/mo
-          </span>
-          <span aria-hidden="true" className="text-[var(--color-text-muted)]">
-            ·
-          </span>
-        </div>
-        <button
-          type="button"
-          className={SECONDARY_BTN_SM}
-          onClick={() => {
-            setPrice(formatPrice(seller.price_cents));
-            setEditing(true);
-          }}
-        >
-          Change
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${INNER_CARD} flex items-end gap-3 flex-wrap`}>
-      <PriceInput id="vip-seller-price-edit" value={price} onChange={setPrice} />
-      <button
-        type="button"
-        className={PRIMARY_BTN}
-        disabled={dollars === null || pending}
-        onClick={save}
-      >
-        Save
-      </button>
-      <button
-        type="button"
-        className={SECONDARY_BTN}
-        onClick={() => setEditing(false)}
-      >
-        Cancel
-      </button>
-      {error && (
-        <span role="status" className={ERROR_TEXT}>
-          {error}
-        </span>
-      )}
-    </div>
-  );
-}
+import { EYEBROW, SECTION, VIP_PRIMARY_BTN } from "./styles";
 
 const DENYLISTED_HANDLES = new Set(["fadeai_", "tailslips"]);
 
@@ -195,7 +116,7 @@ export function OwnerPanelView({
   return (
     <section className={`${SECTION} flex flex-col gap-4`}>
       <span className={EYEBROW}>Your VIP dashboard</span>
-      <PriceLine key={me.seller.price_cents} seller={me.seller} onSaved={onRefresh} />
+      <SellerStrip seller={me.seller} token={token} onSaved={onRefresh} />
       {me.can_post_sports.length === 0 ? (
         <p className="text-[12px] text-[var(--color-text-muted)]">You can post VIP picks once a sport is eligible.</p>
       ) : (

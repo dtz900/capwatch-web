@@ -18,6 +18,11 @@ vi.mock("@/lib/vip/client", () => ({
   getVipMe: vi.fn(),
   getVipCapperStatus: vi.fn(),
   getVipSubscriptions: vi.fn(),
+  getVipSellerSubscribers: vi.fn(() => Promise.resolve({ subscribers: [] })),
+  getVipBoardSlate: vi.fn(() => Promise.resolve({ games: [] })),
+  getVipBoardGame: vi.fn(),
+  fixVipPick: vi.fn(),
+  pullVipPick: vi.fn(),
 }));
 
 import VipFixturesPage from "./page";

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, postVipSeller } from "@/lib/vip/client";
 import type { VipMe } from "@/lib/vip/types";
+import { BOOKS, OTHER_BOOK } from "./builder/books";
 import { VipBand, VipGlassCard } from "./VipBand";
 import { joinSports } from "./format";
 import { ERROR_TEXT, VIP_PRIMARY_BTN } from "./styles";
@@ -12,7 +13,7 @@ export const TERMS_SENTENCE =
   "I understand I can start selling in a sport after a positive last 30 days there and keep selling only while my last 60 days there stay positive, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription, with payment processing fees coming out of the TailSlips share.";
 
 /** Capper's share: TailSlips keeps a flat 15% for everyone and absorbs processing. */
-const SELLER_SHARE = 0.85;
+export const SELLER_SHARE = 0.85;
 
 export const PRICE_MIN = 10;
 export const PRICE_MAX = 99;
@@ -61,19 +62,21 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
   const { session } = useAuth();
   const token = session?.access_token ?? null;
   const [price, setPrice] = useState("");
+  const [book, setBook] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const dollars = parsePriceDollars(price);
-  const canSubmit = dollars !== null && accepted && !pending && me.capper !== null;
+  const canSubmit = dollars !== null && book !== "" && accepted && !pending && me.capper !== null;
 
   const submit = async () => {
-    if (dollars === null) return;
+    // Pending guards a double tap: the button disables on the next render.
+    if (dollars === null || pending) return;
     setPending(true);
     setError(null);
     try {
-      await postVipSeller({ price_cents: dollars * 100, accept_terms: true }, token);
+      await postVipSeller({ price_cents: dollars * 100, accept_terms: true, preferred_book: book }, token);
       onDone();
     } catch (err) {
       if (err instanceof VipApiError && err.status === 409) {
@@ -113,6 +116,7 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
             <PriceInput id="vip-seller-price" value={price} onChange={setPrice} />
             <KeepLine dollars={dollars} />
           </div>
+          <BookSelect value={book} onChange={setBook} />
           <label className="flex items-start gap-2 text-[11px] leading-snug text-[var(--color-text-soft)]">
             <input
               type="checkbox"
@@ -136,6 +140,35 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
         <HowItWorks />
       </div>
     </VipGlassCard>
+  );
+}
+
+function BookSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor="vip-seller-book" className="text-[11px] font-semibold text-[var(--color-text-soft)]">
+        Your main book
+      </label>
+      <select
+        id="vip-seller-book"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-full sm:w-56 px-2.5 text-[13px] rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-[var(--color-text)] focus:outline-none focus:border-[rgba(255,255,255,0.20)]"
+      >
+        <option value="" disabled className="bg-[#0e0e12]">
+          Choose a book
+        </option>
+        {BOOKS.map((b) => (
+          <option key={b.id} value={b.id} className="bg-[#0e0e12]">
+            {b.name}
+          </option>
+        ))}
+        <option value={OTHER_BOOK} className="bg-[#0e0e12]">
+          Other book
+        </option>
+      </select>
+      <span className="text-[10px] text-[var(--color-text-muted)]">Your picks prefill at this book. Change it on any pick.</span>
+    </div>
   );
 }
 
