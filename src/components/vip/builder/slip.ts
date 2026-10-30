@@ -12,9 +12,10 @@ export interface SlipLeg {
   price: string;
   /** The capper typed over the prefill; a book switch leaves it alone. */
   edited: boolean;
-  /** Exact American price of an unedited prefill. Decimal text is rounded
-   *  to 2 places (-160 shows 1.63, which reads back as -159), so the posted
-   *  and compared price comes from here until the capper types over it. */
+  /** Exact American price whenever one is known (a prefill, or a typed
+   *  price carried through a format switch). Decimal text is rounded to 2
+   *  places (-160 shows 1.63, which reads back as -159), so posting and
+   *  comparing use this; typing clears it and the text is parsed. */
   american?: number;
   /** Off-board leg from the structured editor: posted exactly as built. */
   manual?: ManualLegInput;
@@ -28,9 +29,11 @@ export function quoteAt(side: BoardSide, book: string): number | null {
 
 export const prefill = (side: BoardSide, book: string) => quoteAt(side, book) ?? side.price;
 
-/** The leg's American price: exact for an unedited prefill, else parsed. */
-export const legPrice = (l: SlipLeg): number | null =>
-  !l.edited && l.american != null ? l.american : parsePrice(l.price);
+/** The leg's American price: the exact one when known, else parsed. */
+export const legPrice = (l: SlipLeg): number | null => l.american ?? parsePrice(l.price);
+
+/** A typed price: the text is the truth until the next format switch. */
+export const typed = (l: SlipLeg, price: string): SlipLeg => ({ ...l, price, edited: true, american: undefined });
 
 const prefilled = (side: BoardSide, book: string, fmt: Fmt) => {
   const american = prefill(side, book);
@@ -64,7 +67,7 @@ export const rebook = (legs: SlipLeg[], book: string, fmt: Fmt): SlipLeg[] =>
 export const reformat = (legs: SlipLeg[], fmt: Fmt): SlipLeg[] =>
   legs.map((l) => {
     const p = legPrice(l);
-    return p === null ? l : { ...l, price: fmtPrice(p, fmt) };
+    return p === null ? l : { ...l, price: fmtPrice(p, fmt), american: p };
   });
 
 export const isSgp = (legs: SlipLeg[]) =>

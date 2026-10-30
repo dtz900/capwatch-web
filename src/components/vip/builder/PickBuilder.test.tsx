@@ -211,4 +211,23 @@ describe("PickBuilder review fixes", () => {
     expect(await screen.findByText(/fix window has closed/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pull" })).toBeInTheDocument();
   });
+
+  it("refuses a manual batch past the leg limit and keeps the drafts", async () => {
+    client.searchVipGames.mockResolvedValue({
+      results: [{ game_pk: 7781, away_team: "NYY", home_team: "BOS", game_date: "2026-10-30", commence_time: START }],
+    });
+    renderBuilder(["MLB"]);
+    const addOne = async (n: number) => {
+      fireEvent.click(screen.getByRole("button", { name: "List games" }));
+      fireEvent.click(await screen.findByRole("button", { name: "NYY @ BOS" }));
+      fireEvent.change(screen.getByLabelText("Leg 1 selection"), { target: { value: `Pick ${n}` } });
+      fireEvent.change(screen.getByLabelText("Leg 1 odds"), { target: { value: "+120" } });
+      fireEvent.click(screen.getByRole("button", { name: "Add to slip" }));
+    };
+    for (let n = 1; n <= 10; n++) await addOne(n);
+    await addOne(11);
+    expect(await screen.findByText(/holds up to 10 legs/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Leg 1 selection")).toHaveValue("Pick 11");
+    expect(screen.queryByLabelText("Price for Pick 11")).toBeNull();
+  });
 });

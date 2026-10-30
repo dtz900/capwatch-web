@@ -14,9 +14,9 @@ import { Board } from "./Board";
 import { BOOKS, OTHER_BOOK, defaultBook } from "./books";
 import { builderError, isFixClosed, isGameStarted } from "./errors";
 import { ManualEntry } from "./ManualEntry";
-import { fmtPrice, parsePrice, type Fmt } from "./odds";
+import { fmtPrice, type Fmt } from "./odds";
 import { Slip, slipTotals } from "./SlipCard";
-import { MAX_LEGS, combinedPrice, rebook, reformat, toPickBody, toggleLeg, unlockAt, type SlipLeg } from "./slip";
+import { MAX_LEGS, combinedPrice, rebook, reformat, toPickBody, toggleLeg, typed, unlockAt, type SlipLeg } from "./slip";
 import { PostedView, TicketView, summary, type Posted, type Ticket } from "./TicketView";
 import { BookCtx, FmtCtx, GlassCard, PeriodCtx, Segmented } from "./ui";
 import { useBoards } from "./useBoards";
@@ -124,9 +124,17 @@ export function PickBuilder({
     updateLegs(toggleLeg(legs, side, g.slate, book, fmt));
   };
 
-  const addLegs = (more: SlipLeg[]) => {
+  /** False (and nothing added) when the batch would pass the leg limit, so
+   *  the editor keeps the drafts instead of dropping some silently. */
+  const addLegs = (more: SlipLeg[]): boolean => {
+    if (legs.length + more.length > MAX_LEGS) {
+      setError(`A ticket holds up to ${MAX_LEGS} legs. Remove some first.`);
+      return false;
+    }
+    setError(null);
     setStage("build");
-    setLegs([...legs, ...more].slice(0, MAX_LEGS));
+    setLegs([...legs, ...more]);
+    return true;
   };
 
   const switchBook = (next: string) => {
@@ -137,8 +145,8 @@ export function PickBuilder({
   const switchFmt = (next: Fmt) => {
     setFmt(next);
     setLegs(reformat(legs, next));
-    const sp = parsePrice(sgpPrice);
-    if (sp !== null) setSgpPrice(fmtPrice(sp, next));
+    // The same game parlay price stays as typed: rewriting it in the other
+    // format would round it (1.63 reads back as -159, not -160).
   };
 
   const switchSport = (next: BoardSport) => {
@@ -339,7 +347,7 @@ export function PickBuilder({
                       onUnits={setUnits}
                       sgpPrice={sgpPrice}
                       onSgpPrice={setSgpPrice}
-                      onPrice={(i, v) => setLegs(legs.map((x, j) => (j === i ? { ...x, price: v, edited: true } : x)))}
+                      onPrice={(i, v) => setLegs(legs.map((x, j) => (j === i ? typed(x, v) : x)))}
                       onRemove={(i) => updateLegs(legs.filter((_, j) => j !== i))}
                       onClear={() => updateLegs([])}
                       onReview={review}

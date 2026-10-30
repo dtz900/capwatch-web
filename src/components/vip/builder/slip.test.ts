@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BoardSide, BoardSlateGame } from "@/lib/vip/types";
 import { nearAlts } from "./adapt";
+import { manualLabel } from "./ManualEntry";
 import { fmtPrice, parsePrice } from "./odds";
 import {
   betterThanBest,
@@ -12,6 +13,7 @@ import {
   reformat,
   toPickBody,
   toggleLeg,
+  typed,
   unlockAt,
   type SlipLeg,
 } from "./slip";
@@ -191,7 +193,25 @@ describe("decimal display keeps the exact price", () => {
 
   it("a typed price wins over the prefill", () => {
     const legs = toggleLeg([], side(), GAME, "fanduel", "decimal");
-    const typed = [{ ...legs[0], price: "1.80", edited: true }];
-    expect(toPickBody(typed, "1", "").legs[0].odds).toBe(-125);
+    expect(toPickBody([typed(legs[0], "1.80")], "1", "").legs[0].odds).toBe(-125);
+  });
+});
+
+describe("typed prices survive format switches", () => {
+  it("a typed -160 still posts -160 after switching to decimal", () => {
+    const legs = toggleLeg([], side(), GAME, "fanduel", "american");
+    const edited = [typed(legs[0], "-160")];
+    const dec = reformat(edited, "decimal");
+    expect(dec[0].price).toBe("1.63");
+    expect(toPickBody(dec, "1", "").legs[0].odds).toBe(-160);
+  });
+});
+
+describe("manual leg labels", () => {
+  it("carry the side and line entered apart from the selection", () => {
+    expect(manualLabel({ selection: "NYY", stat_name: "team_runs", line: 4.5, direction: "under" })).toBe("NYY Under 4.5");
+    expect(manualLabel({ selection: "NYY", stat_name: "spread", line: 1.5 })).toBe("NYY +1.5");
+    expect(manualLabel({ selection: "NYY -1.5", stat_name: "spread", line: -1.5 })).toBe("NYY -1.5");
+    expect(manualLabel({ selection: "Yankees ML", stat_name: "win" })).toBe("Yankees ML");
   });
 });

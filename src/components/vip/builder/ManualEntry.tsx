@@ -30,6 +30,23 @@ export function draftReady(leg: LegDraft): boolean {
 
 let seq = 0;
 
+/** The pick as subscribers get it: "NYY Under 4.5", "NYY -1.5", not just
+ *  the selection the side and line were entered apart from. */
+export function manualLabel(input: { selection: string; stat_name?: string | null;
+                                     line?: number | null; direction?: string | null }): string {
+  const sel = input.selection.trim();
+  const dir = (input.direction ?? "").toLowerCase();
+  const parts = [sel];
+  if ((dir === "over" || dir === "under") && !/\b(over|under)\b/i.test(sel)) {
+    parts.push(dir === "over" ? "Over" : "Under");
+  }
+  if (input.line != null && !sel.includes(String(Math.abs(input.line)))) {
+    const spread = (input.stat_name ?? "").includes("spread");
+    parts.push(spread && input.line > 0 ? `+${input.line}` : String(input.line));
+  }
+  return parts.join(" ");
+}
+
 export function draftToSlipLeg(d: LegDraft, sport: VipSport): SlipLeg {
   const price = parsePrice(d.odds) as number;
   // The slip posts its own price over this odds field.
@@ -37,7 +54,7 @@ export function draftToSlipLeg(d: LegDraft, sport: VipSport): SlipLeg {
   const g = d.game as VipGameResult;
   const side: BoardSide = {
     key: `manual:${++seq}`,
-    label: input.selection,
+    label: manualLabel(input),
     short: "",
     price,
     quotes: {},
@@ -61,6 +78,7 @@ export function draftToSlipLeg(d: LegDraft, sport: VipSport): SlipLeg {
       commence_time: g.commence_time ?? null, started: false,
     },
     price: d.odds.trim(),
+    american: price,
     edited: true,
     manual: input,
   };
@@ -74,7 +92,8 @@ export function ManualEntry({
 }: {
   sports: VipSport[];
   token: string;
-  onAdd: (legs: SlipLeg[]) => void;
+  /** False when the slip could not take them; the drafts stay. */
+  onAdd: (legs: SlipLeg[]) => boolean;
   /** MLB-only sellers have no board, so the editor is the whole builder. */
   startOpen?: boolean;
 }) {
@@ -135,7 +154,7 @@ export function ManualEntry({
           className={SECONDARY_BTN_SM}
           disabled={!ready}
           onClick={() => {
-            onAdd(drafts.map((d) => draftToSlipLeg(d, sport)));
+            if (!onAdd(drafts.map((d) => draftToSlipLeg(d, sport)))) return;
             reset();
             if (!startOpen) setOpen(false);
           }}
