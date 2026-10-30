@@ -1,11 +1,12 @@
-/* Round board photo with the username initial as the fallback. Plain <img>:
-   avatar hosts are pbs.twimg.com and the Supabase bucket, neither is on the
-   next/image allow-list and a 20px circle gains nothing from optimization. */
+import { avatarSrc } from "@/lib/avatarSrc";
+/* Round board photo with the username initial as the fallback. Plain <img>
+   (X avatars routed through the next/image proxy by avatarSrc); the Supabase
+   bucket is not on the next/image allow-list. */
 export function BoardAvatar({ url, name, size = 20 }: { url: string | null; name: string; size?: number }) {
   const px = `${size}px`;
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={name} width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: px, height: px }} />;
+    return <img src={avatarSrc(url) as string} alt={name} width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: px, height: px }} />;
   }
   return (
     <span

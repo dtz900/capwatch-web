@@ -1,3 +1,4 @@
+import { avatarSrc } from "@/lib/avatarSrc";
 // Circular capper avatar with a thin gold ring; falls back to the first
 // letter of the handle when the URL is missing. Used on PalaceCard and
 // ParlayHero so the gallery and detail page both show whose parlay it is.
@@ -15,7 +16,7 @@ export function CapperAvatar({ url, handle, size = 28 }: {
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={url}
+          src={avatarSrc(url) as string}
           alt=""
           width={size}
           height={size}
