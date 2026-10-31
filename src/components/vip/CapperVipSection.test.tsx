@@ -32,6 +32,7 @@ const client = vi.hoisted(() => {
 vi.mock("@/lib/vip/client", () => client);
 
 import { CapperVipSection } from "./CapperVipSection";
+import { VipInitialStatusProvider } from "./VipInitialStatus";
 
 const status: VipCapperStatus = {
   seller: { price_cents: 2500, founding: false, status: "active" },
@@ -469,6 +470,33 @@ describe("CapperVipSection", () => {
       const calls = client.getVipCapperStatus.mock.calls.length;
       await vi.advanceTimersByTimeAsync(9000);
       expect(client.getVipCapperStatus.mock.calls.length).toBe(calls);
+    });
+  });
+  describe("first paint from the server's anonymous status", () => {
+    it("paints the card before the viewer's status lands, with Subscribe held back", () => {
+      client.getVipCapperStatus.mockReturnValue(new Promise(() => {}));
+      render(
+        <VipInitialStatusProvider status={status}>
+          <CapperVipSection capperId={7} handle="moneyplayzz" />
+        </VipInitialStatusProvider>,
+      );
+      expect(screen.getByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Subscribe" })).not.toBeInTheDocument();
+    });
+
+    it("a subscriber goes straight to Subscribed, never Subscribe", async () => {
+      client.getVipCapperStatus.mockResolvedValue({
+        ...status,
+        viewer: { subscribed: true, is_owner: false, billing: "stripe" },
+      });
+      render(
+        <VipInitialStatusProvider status={status}>
+          <CapperVipSection capperId={7} handle="moneyplayzz" />
+        </VipInitialStatusProvider>,
+      );
+      expect(screen.queryByRole("link", { name: "Subscribe" })).not.toBeInTheDocument();
+      expect(await screen.findByText("Subscribed")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Subscribe" })).not.toBeInTheDocument();
     });
   });
 });

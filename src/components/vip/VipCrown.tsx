@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getVipCapperStatus } from "@/lib/vip/client";
+import { useVipInitialStatus } from "./VipInitialStatus";
 
 /** The TailSlips brand crown in VIP purple: the green logo crown's exact
  *  shape (crown-gradient.png) with the same top-to-bottom fade, orchid to
@@ -39,7 +40,10 @@ export function VipCrown({
 export function useVipEligible(capperId: number): boolean {
   const { session, authReady } = useAuth();
   const token = session?.access_token ?? null;
-  const [show, setShow] = useState(false);
+  // Eligibility is the same for every viewer, so the server's first-paint
+  // status can show the ring and crown before the client call returns.
+  const initial = useVipInitialStatus();
+  const [show, setShow] = useState(() => !!initial?.eligibility.some((e) => e.eligible));
   useEffect(() => {
     if (!authReady) return;
     let cancelled = false;

@@ -15,6 +15,7 @@ import { EligibilityBadges } from "./EligibilityBadges";
 import { LockedPicks, type PullFn } from "./LockedPicks";
 import { OwnerPanel } from "./OwnerPanel";
 import { SubscribeDoor } from "./SubscribeDoor";
+import { useVipInitialStatus } from "./VipInitialStatus";
 import { VipBand, VipGlassCard } from "./VipBand";
 import { exclusivityLine, signedUnits, vipHeadline } from "./format";
 import { EYEBROW, INNER_CARD, VIP_GLASS_DIVIDER } from "./styles";
@@ -157,6 +158,12 @@ export function CapperVipSection({
   // owner linked without X verification has no claimed capper on the
   // session. The session claim still counts before the status lands.
   const isOwner = capper?.id === capperId || status?.viewer.is_owner === true;
+  // Until this viewer's own status lands, paint the server's anonymous one
+  // with the viewer-specific parts (Subscribe/Subscribed, picks) held back.
+  // Not for a known owner: their dashboard replaces the public card.
+  const initial = useVipInitialStatus();
+  const viewerPending = status === null && initial !== null && capper?.id !== capperId;
+  const shown = status ?? (viewerPending ? initial : null);
   // Set by the owner panel once its selling dashboard is actually on screen.
   const [ownerDashboard, setOwnerDashboard] = useState(false);
   const ownerPanel = isOwner ? (
@@ -183,12 +190,13 @@ export function CapperVipSection({
         </div>
       )}
       <CapperVipView
-        status={status}
+        status={shown}
         handle={handle}
         capperId={capperId}
         ownerPanel={ownerPanel}
         ownerDashboard={isOwner && ownerDashboard}
         onPull={onPull}
+        viewerPending={viewerPending}
       />
     </>
   );
@@ -230,6 +238,7 @@ export function CapperVipView({
   ownerPanel = null,
   ownerDashboard = false,
   onPull,
+  viewerPending = false,
 }: {
   status: VipCapperStatus | null;
   handle: string;
@@ -238,6 +247,9 @@ export function CapperVipView({
   /** The owner's selling dashboard is rendered: skip the public card. */
   ownerDashboard?: boolean;
   onPull?: PullFn;
+  /** `status` is the anonymous first paint: hold back Subscribe/Subscribed
+   *  and picks until the viewer's own status lands. */
+  viewerPending?: boolean;
 }) {
   if (!status || isEmpty(status)) {
     return ownerPanel ? (
@@ -269,12 +281,19 @@ export function CapperVipView({
             <VipBand
               headline={vipHeadline(status)}
               exclusivity={exclusivityLine(status)}
-              right={<SubscribeDoor status={status} handle={handle} capperId={capperId} />}
+              right={
+                viewerPending ? (
+                  // Same height as the Subscribe row, so nothing shifts when it lands.
+                  <div aria-hidden="true" className="h-10" />
+                ) : (
+                  <SubscribeDoor status={status} handle={handle} capperId={capperId} />
+                )
+              }
             />
             <div className="px-5 sm:px-6 pb-3.5">
               <EligibilityBadges eligibility={status.eligibility} tiles />
             </div>
-            {status.locked.length > 0 && (
+            {!viewerPending && status.locked.length > 0 && (
               <div
                 className={`${VIP_GLASS_DIVIDER} relative`}
                 style={{ backgroundColor: "#1e0f3a" }}
@@ -294,7 +313,7 @@ export function CapperVipView({
           </VipGlassCard>
         </section>
       )}
-      {!showCard && <LockedPicks status={status} onPull={onPull} />}
+      {!showCard && !viewerPending && <LockedPicks status={status} onPull={onPull} />}
       {panelAfterCard && ownerPanel}
     </div>
   );
