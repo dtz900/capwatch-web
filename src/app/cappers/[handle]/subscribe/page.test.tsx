@@ -50,11 +50,9 @@ describe("subscribe page", () => {
     const el = await SubscribePage({ params: Promise.resolve({ handle: "sharp" }) });
     render(el);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Sharp Sam VIP");
-    const buttons = screen.getAllByRole("button", { name: "Subscribe · $25/mo" });
-    expect(buttons).toHaveLength(2);
-    // No checkout yet: the button must not look live.
-    for (const b of buttons) expect(b).toBeDisabled();
-    expect(screen.getAllByText("Checkout opens soon.")).toHaveLength(2);
+    // Hero anchors to the single checkout block; signed out, its button waits on auth.
+    expect(screen.getByRole("link", { name: "Subscribe · $25/mo" })).toHaveAttribute("href", "#subscribe");
+    expect(screen.getByRole("button", { name: "Subscribe · $25/mo" })).toBeDisabled();
     expect(screen.getByText("Verified by TailSlips")).toBeTruthy();
     expect(screen.getByText(/Secure checkout with Stripe/)).toBeTruthy();
     expect(screen.getByTestId("badges")).toBeTruthy();

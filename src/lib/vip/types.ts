@@ -99,7 +99,14 @@ export interface VipCapperStatus {
   /** Why new subscriptions are closed; null when open. Optional so an older
    *  platform build still renders. */
   door_closed_reason?: "not_selling" | "ineligible" | "silent" | null;
-  viewer: { subscribed: boolean; is_owner: boolean };
+  viewer: {
+    subscribed: boolean;
+    is_owner: boolean;
+    /** How the viewer pays: "stripe" can use the portal, "admin" is a grant. Optional for older platform builds. */
+    billing?: "stripe" | "admin" | null;
+  };
+  /** False until the capper is allowlisted for Stripe payments (ship dark). Optional for older platform builds. */
+  payments_enabled?: boolean;
   vip_record: {
     n: number;
     wins: number;

@@ -5,6 +5,7 @@
  * Also handles the return from Stripe (?vip=onboarded / ?vip=resume). */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { stripVipParam } from "@/lib/vip/returnParam";
 import { getVipSellerAccount, startVipOnboarding, startVipSelling } from "@/lib/vip/client";
 import { ERROR_TEXT, INNER_CARD, SECONDARY_BTN_SM } from "./styles";
 
@@ -22,13 +23,6 @@ function Row({ children, action, error }: { children: ReactNode; action?: ReactN
       )}
     </div>
   );
-}
-
-/** Drop ?vip= from the address bar so Back or a reload never replays it. */
-function stripVipParam(params: URLSearchParams) {
-  params.delete("vip");
-  const qs = params.toString();
-  window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`);
 }
 
 export function SellerStatusBanner({

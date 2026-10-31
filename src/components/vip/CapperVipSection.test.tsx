@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { VipCapperStatus } from "@/lib/vip/types";
 
 const auth = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
@@ -292,5 +292,58 @@ describe("CapperVipSection", () => {
     await Promise.resolve();
     expect(screen.queryByText("Your VIP dashboard")).toBeNull();
     expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
+  });
+
+  describe("return from checkout", () => {
+    const paid = { ...status, viewer: { subscribed: true, is_owner: false, billing: "stripe" as const } };
+    beforeEach(() => {
+      vi.useFakeTimers();
+      window.history.replaceState(null, "", "/cappers/moneyplayzz?vip=subscribed");
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      window.history.replaceState(null, "", "/");
+    });
+
+    it("success return polls until access", async () => {
+      client.getVipCapperStatus
+        .mockResolvedValueOnce(status)
+        .mockResolvedValueOnce(status)
+        .mockResolvedValue(paid);
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      expect(window.location.search).toBe("");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(screen.getByText("You're in. VIP picks show here and arrive by email.")).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(screen.getByText("Subscribed")).toBeInTheDocument();
+      const calls = client.getVipCapperStatus.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(client.getVipCapperStatus.mock.calls.length).toBe(calls);
+    });
+
+    it("stops polling after 30 seconds", async () => {
+      client.getVipCapperStatus.mockResolvedValue(status);
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await vi.advanceTimersByTimeAsync(31000);
+      const calls = client.getVipCapperStatus.mock.calls.length;
+      expect(calls).toBeLessThanOrEqual(12);
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(client.getVipCapperStatus.mock.calls.length).toBe(calls);
+    });
+
+    it("stops polling on unmount", async () => {
+      client.getVipCapperStatus.mockResolvedValue(status);
+      const { unmount } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await vi.advanceTimersByTimeAsync(3000);
+      unmount();
+      const calls = client.getVipCapperStatus.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(client.getVipCapperStatus.mock.calls.length).toBe(calls);
+    });
   });
 });

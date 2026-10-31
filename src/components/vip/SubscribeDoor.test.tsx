@@ -1,7 +1,27 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { SubscribeDoor } from "./SubscribeDoor";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { VipCapperStatus } from "@/lib/vip/types";
+import { subscriberDisclosure, SUBSCRIBER_TERMS_VERSION } from "@/lib/vip/terms";
+
+const auth = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => auth.value }));
+const router = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+const client = vi.hoisted(() => {
+  class VipApiError extends Error {
+    readonly status: number;
+    readonly detail: string;
+    constructor(status: number, detail: string) {
+      super(`vip_${status}`);
+      this.status = status;
+      this.detail = detail;
+    }
+  }
+  return { startVipCheckout: vi.fn(), openVipPortal: vi.fn(), VipApiError };
+});
+vi.mock("@/lib/vip/client", () => client);
+
+import { SubscribeCheckout, SubscribeDoor } from "./SubscribeDoor";
 
 function status(over: Partial<VipCapperStatus>): VipCapperStatus {
   return {
@@ -83,5 +103,114 @@ describe("SubscribeDoor", () => {
     );
     expect(screen.getByText("Subscribed")).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
+  });
+});
+
+describe("SubscribeCheckout", () => {
+  const assign = vi.fn();
+  beforeEach(() => {
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } } };
+    router.push.mockReset();
+    client.startVipCheckout.mockReset();
+    client.openVipPortal.mockReset();
+    assign.mockReset();
+    vi.stubGlobal("location", { ...window.location, assign, pathname: "/cappers/sharp/subscribe" });
+  });
+  const open = (over: Partial<VipCapperStatus> = {}) =>
+    render(<SubscribeCheckout status={status({ payments_enabled: true, ...over })} handle="sharp" />);
+  const consentAndSubscribe = () => {
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /Subscribe/ }));
+  };
+
+  it("signed out goes to sign in with next", () => {
+    auth.value = { authReady: true, session: null };
+    open();
+    fireEvent.click(screen.getByRole("button", { name: /Subscribe/ }));
+    expect(router.push).toHaveBeenCalledWith("/login?next=%2Fcappers%2Fsharp%2Fsubscribe");
+    expect(client.startVipCheckout).not.toHaveBeenCalled();
+  });
+
+  it("subscribe disabled until consent", async () => {
+    client.startVipCheckout.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
+    open();
+    const btn = screen.getByRole("button", { name: /Subscribe/ });
+    expect(btn).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(btn).toBeEnabled();
+    fireEvent.click(btn);
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.stripe.com/x"));
+    expect(client.startVipCheckout).toHaveBeenCalledWith(7, SUBSCRIBER_TERMS_VERSION, "tok");
+  });
+
+  it("disclosure shows price and no refunds", () => {
+    open();
+    expect(screen.getByText(subscriberDisclosure(2500))).toBeInTheDocument();
+    expect(screen.getByText(/No refunds\./)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+  });
+
+  it("already subscribed shows manage link", async () => {
+    client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "already_subscribed"));
+    open();
+    consentAndSubscribe();
+    expect(await screen.findByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
+  });
+
+  it("not_selling shows the door-closed copy", async () => {
+    client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "not_selling"));
+    open();
+    consentAndSubscribe();
+    expect(await screen.findByText("Not taking subscribers right now.")).toBeInTheDocument();
+  });
+
+  it("own_capper uses plain copy", async () => {
+    client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "own_capper"));
+    open();
+    consentAndSubscribe();
+    expect(await screen.findByText("This is your own VIP.")).toBeInTheDocument();
+  });
+
+  it("unexpected error says try again", async () => {
+    client.startVipCheckout.mockRejectedValue(new Error("boom"));
+    open();
+    consentAndSubscribe();
+    expect(await screen.findByText("Something went wrong. Try again.")).toBeInTheDocument();
+  });
+
+  it("payments off keeps Subscribe disabled with no checkout call", () => {
+    open({ payments_enabled: false });
+    fireEvent.click(screen.getByRole("checkbox"));
+    const btn = screen.getByRole("button", { name: /Subscribe/ });
+    expect(btn).toBeDisabled();
+    fireEvent.click(btn);
+    expect(client.startVipCheckout).not.toHaveBeenCalled();
+  });
+});
+
+describe("SubscribeDoor manage link", () => {
+  it("stripe subscriber sees Manage subscription even with payments off", () => {
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } } };
+    render(
+      <SubscribeDoor
+        status={status({
+          payments_enabled: false,
+          viewer: { subscribed: true, is_owner: false, billing: "stripe" },
+        })}
+        handle="sharp"
+      />,
+    );
+    expect(screen.getByText("Subscribed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
+  });
+
+  it("admin-granted subscriber has no manage link", () => {
+    render(
+      <SubscribeDoor
+        status={status({ viewer: { subscribed: true, is_owner: false, billing: "admin" } })}
+        handle="sharp"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Manage subscription" })).toBeNull();
   });
 });

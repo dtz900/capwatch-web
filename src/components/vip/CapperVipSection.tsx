@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, getVipCapperStatus, pullVipPick } from "@/lib/vip/client";
+import { stripVipParam } from "@/lib/vip/returnParam";
 import type { VipCapperStatus } from "@/lib/vip/types";
 import { EligibilityBadges } from "./EligibilityBadges";
 import { LockedPicks, type PullFn } from "./LockedPicks";
@@ -16,12 +17,16 @@ import { OwnerPanel } from "./OwnerPanel";
 import { SubscribeDoor } from "./SubscribeDoor";
 import { VipBand, VipGlassCard } from "./VipBand";
 import { exclusivityLine, signedUnits, vipHeadline } from "./format";
-import { EYEBROW, VIP_GLASS_DIVIDER } from "./styles";
+import { EYEBROW, INNER_CARD, VIP_GLASS_DIVIDER } from "./styles";
 
 function recordLine(r: VipCapperStatus["vip_record"]): string {
   const pushes = r.pushes > 0 ? `-${r.pushes}` : "";
   return `VIP picks: ${r.wins}-${r.losses}${pushes}, ${signedUnits(r.units)}`;
 }
+
+/** After Stripe Checkout the webhook may land a moment after the redirect. */
+const CHECKOUT_POLL_MS = 3000;
+const CHECKOUT_POLL_MAX_MS = 30000;
 
 function isEmpty(s: VipCapperStatus): boolean {
   return (
@@ -43,6 +48,10 @@ export function CapperVipSection({
   // Bumped by the owner panel after a post or seller change.
   const [reload, setReload] = useState(0);
   const refetch = useCallback(() => setReload((n) => n + 1), []);
+  // True after returning from Stripe Checkout (?vip=subscribed), until access
+  // shows or the poll times out.
+  const [returned, setReturned] = useState(false);
+  const [polling, setPolling] = useState(false);
   const viewerKey = useRef<string | null>(null);
   // Read at request time so a token refresh (same user, new access_token)
   // neither refetches nor resets the section. Declared before the fetch
@@ -82,6 +91,29 @@ export function CapperVipSection({
     };
   }, [capperId, userId, authReady, reload]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("vip") !== "subscribed") return;
+    stripVipParam(params);
+    setReturned(true);
+    setPolling(true);
+  }, []);
+
+  const hasAccess = status?.viewer.subscribed === true;
+  useEffect(() => {
+    if (!polling) return;
+    if (hasAccess) {
+      setPolling(false);
+      return;
+    }
+    const tick = setInterval(refetch, CHECKOUT_POLL_MS);
+    const stop = setTimeout(() => setPolling(false), CHECKOUT_POLL_MAX_MS);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(stop);
+    };
+  }, [polling, hasAccess, refetch]);
+
   // The platform's word on ownership (cappers.claimed_by_user_id) wins: an
   // owner linked without X verification has no claimed capper on the
   // session. The session claim still counts before the status lands.
@@ -94,7 +126,14 @@ export function CapperVipSection({
       }
     : undefined;
   return (
-    <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} onPull={onPull} />
+    <>
+      {returned && (
+        <div className={`${INNER_CARD} mb-3 text-[13px] text-[var(--color-text-soft)]`} role="status">
+          You&apos;re in. VIP picks show here and arrive by email.
+        </div>
+      )}
+      <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} onPull={onPull} />
+    </>
   );
 }
 

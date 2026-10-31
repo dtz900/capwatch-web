@@ -165,3 +165,15 @@ export async function pullVipPick(ticketId: number, token: string | null): Promi
   if (res.ok || res.status === 404) return;
   throw new VipApiError(res.status, await readDetail(res));
 }
+
+export function startVipCheckout(capperId: number | string, termsVersion: string, token: string | null) {
+  return vipFetch<{ url: string }>(`/api/vip/cappers/${capperId}/checkout`, {
+    method: "POST",
+    body: JSON.stringify({ terms_version: termsVersion }),
+    token,
+  });
+}
+
+export function openVipPortal(capperId: number | string, token: string | null) {
+  return vipFetch<{ url: string }>(`/api/vip/cappers/${capperId}/portal`, { method: "POST", token });
+}
