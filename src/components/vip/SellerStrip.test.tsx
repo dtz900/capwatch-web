@@ -19,7 +19,7 @@ const client = vi.hoisted(() => {
     stopVipSelling: vi.fn(),
     startVipSelling: vi.fn(),
     startVipOnboarding: vi.fn(),
-    getVipSellerAccount: vi.fn(),
+    getVipSellerAccount: vi.fn().mockResolvedValue({ status: "onboarding", charges_enabled: false, stage: "needs_info" }),
   };
 });
 vi.mock("@/lib/vip/client", () => client);

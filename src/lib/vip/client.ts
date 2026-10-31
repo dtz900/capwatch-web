@@ -9,6 +9,7 @@ import type {
   VipPickBody,
   VipPickResult,
   VipSeller,
+  VipSellerAccount,
   VipSellerSubscriber,
   VipSubscription,
 } from "./types";
@@ -92,7 +93,7 @@ export function startVipOnboarding(token: string | null) {
 }
 
 export function getVipSellerAccount(token: string | null) {
-  return vipFetch<{ status: string; charges_enabled: boolean }>("/api/vip/seller/account", { token });
+  return vipFetch<VipSellerAccount>("/api/vip/seller/account", { token });
 }
 
 export function stopVipSelling(token: string | null) {

@@ -7,9 +7,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { stripVipParam } from "@/lib/vip/returnParam";
 import { getVipSellerAccount, startVipOnboarding, startVipSelling } from "@/lib/vip/client";
+import type { VipSellerAccount } from "@/lib/vip/types";
 import { ERROR_TEXT, INNER_CARD, SECONDARY_BTN_SM } from "./styles";
 
 const STRIPE_DASHBOARD = "https://dashboard.stripe.com";
+
+/** While Stripe has the seller's account in flight, re-read it this often so the
+ *  page moves on its own (and once more whenever the tab comes back). */
+const ACCOUNT_POLL_MS = 10000;
+const LIVE_STATUSES = ["onboarding", "restricted"];
 
 function Row({ children, action, error }: { children: ReactNode; action?: ReactNode; error?: string | null }) {
   return (
@@ -39,6 +45,7 @@ export function SellerStatusBanner({
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stage, setStage] = useState<VipSellerAccount["stage"]>(null);
   // Read at request time; the return handler below must run once per mount.
   const tokenRef = useRef(token);
   const changeRef = useRef(onStatusChange);
@@ -62,6 +69,35 @@ export function SellerStatusBanner({
     }
   };
 
+  const live = LIVE_STATUSES.includes(status);
+  // Stripe's verdict lands minutes after the capper leaves its form, and a
+  // restriction can clear in another tab: re-read until the seller is live.
+  useEffect(() => {
+    if (!live) return;
+    let cancelled = false;
+    const check = () => {
+      if (document.visibilityState === "hidden") return;
+      getVipSellerAccount(tokenRef.current)
+        .then((a) => {
+          if (cancelled) return;
+          setStage(a.stage);
+          if (a.status !== status) changeRef.current(a.status);
+        })
+        .catch((err: unknown) => console.error("VIP account refresh failed", err));
+    };
+    check();
+    const tick = setInterval(check, ACCOUNT_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(tick);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [live, status]);
+
   useEffect(() => {
     if (handled.current) return;
     const params = new URLSearchParams(window.location.search);
@@ -69,9 +105,12 @@ export function SellerStatusBanner({
     if (vip === "onboarded") {
       handled.current = true;
       stripVipParam(params);
-      getVipSellerAccount(tokenRef.current)
-        .then((a) => changeRef.current(a.status))
-        .catch((err: unknown) => console.error("VIP account refresh failed", err));
+      // A live seller is already being re-read above.
+      if (!live) {
+        getVipSellerAccount(tokenRef.current)
+          .then((a) => changeRef.current(a.status))
+          .catch((err: unknown) => console.error("VIP account refresh failed", err));
+      }
     } else if (vip === "resume" && paymentsEnabled && (status === "onboarding" || status === "restricted")) {
       handled.current = true;
       stripVipParam(params);
@@ -82,7 +121,7 @@ export function SellerStatusBanner({
           setError("Could not reopen Stripe. Try Continue setup.");
         });
     }
-  }, [paymentsEnabled, status]);
+  }, [paymentsEnabled, status, live]);
 
   const restart = async () => {
     if (pending) return;
@@ -99,6 +138,11 @@ export function SellerStatusBanner({
     }
   };
 
+  if (status === "onboarding" && stage === "verifying") {
+    return (
+      <Row error={error}>Stripe is verifying your details. Hang tight, this page updates on its own.</Row>
+    );
+  }
   if (status === "onboarding") {
     return (
       <Row

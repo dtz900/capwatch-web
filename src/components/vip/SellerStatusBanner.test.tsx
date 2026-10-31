@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 const client = vi.hoisted(() => ({
   startVipOnboarding: vi.fn(),
@@ -25,6 +25,7 @@ describe("SellerStatusBanner", () => {
     client.startVipOnboarding.mockReset();
     client.getVipSellerAccount.mockReset();
     client.startVipSelling.mockReset();
+    client.getVipSellerAccount.mockResolvedValue({ status: "onboarding", charges_enabled: false, stage: "needs_info" });
     setLocation("");
   });
 
@@ -131,5 +132,67 @@ describe("SellerStatusBanner", () => {
     setLocation("?vip=resume");
     render(<SellerStatusBanner {...base} paymentsEnabled={false} status="onboarding" />);
     expect(client.startVipOnboarding).not.toHaveBeenCalled();
+  });
+
+  describe("live refresh", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    const VERIFYING = "Stripe is verifying your details. Hang tight, this page updates on its own.";
+
+    it("verifying shows the wait line and no button", async () => {
+      client.getVipSellerAccount.mockResolvedValue({ status: "onboarding", charges_enabled: false, stage: "verifying" });
+      render(<SellerStatusBanner {...base} status="onboarding" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByText(VERIFYING)).toBeInTheDocument();
+      expect(screen.queryByRole("button")).toBeNull();
+    });
+
+    it("polls while onboarding and reports the flip to active", async () => {
+      client.getVipSellerAccount
+        .mockResolvedValueOnce({ status: "onboarding", charges_enabled: false, stage: "verifying" })
+        .mockResolvedValue({ status: "active", charges_enabled: true, stage: null });
+      const onStatusChange = vi.fn();
+      render(<SellerStatusBanner {...base} onStatusChange={onStatusChange} status="onboarding" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(onStatusChange).not.toHaveBeenCalled();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10000);
+      });
+      expect(onStatusChange).toHaveBeenCalledWith("active");
+    });
+
+    it("re-checks when the tab comes back", async () => {
+      render(<SellerStatusBanner {...base} status="restricted" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const calls = client.getVipSellerAccount.mock.calls.length;
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(client.getVipSellerAccount.mock.calls.length).toBe(calls + 1);
+    });
+
+    it("does not poll an active or stopped seller", async () => {
+      render(<SellerStatusBanner {...base} status="active" />);
+      render(<SellerStatusBanner {...base} status="stopped" />);
+      await vi.advanceTimersByTimeAsync(30000);
+      expect(client.getVipSellerAccount).not.toHaveBeenCalled();
+    });
+
+    it("stops polling on unmount", async () => {
+      const { unmount } = render(<SellerStatusBanner {...base} status="onboarding" />);
+      await vi.advanceTimersByTimeAsync(0);
+      unmount();
+      const calls = client.getVipSellerAccount.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(30000);
+      expect(client.getVipSellerAccount.mock.calls.length).toBe(calls);
+    });
   });
 });

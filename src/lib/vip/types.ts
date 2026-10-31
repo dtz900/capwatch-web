@@ -24,6 +24,14 @@ export interface VipEligibility {
   fail_streak?: number;
 }
 
+/** GET /api/vip/seller/account. `stage` says where a not-yet-charging account
+ *  is: the capper owes Stripe something, or Stripe is checking. Null once live. */
+export interface VipSellerAccount {
+  status: string;
+  charges_enabled: boolean;
+  stage: "needs_info" | "verifying" | null;
+}
+
 export interface VipSellerSubscriber {
   username: string | null;
   since: string | null;

@@ -27,6 +27,9 @@ function recordLine(r: VipCapperStatus["vip_record"]): string {
 /** After Stripe Checkout the webhook may land a moment after the redirect. */
 const CHECKOUT_POLL_MS = 3000;
 const CHECKOUT_POLL_MAX_MS = 30000;
+/** Access can end any time (refund, dispute, cancel): re-read the status this
+ *  often while the tab is visible, and whenever it becomes visible again. */
+const ACCESS_RECHECK_MS = 30000;
 
 function isEmpty(s: VipCapperStatus): boolean {
   return (
@@ -103,6 +106,37 @@ export function CapperVipSection({
     setReturned(true);
     setPolling(true);
   }, []);
+
+  // Background re-check: success replaces the status (picks go the moment access
+  // ends); a failure keeps what is on screen rather than blanking the section.
+  const showing = status !== null && !isEmpty(status);
+  useEffect(() => {
+    if (!showing) return;
+    let cancelled = false;
+    const key = viewerKey.current;
+    const recheck = () => {
+      if (document.visibilityState === "hidden") return;
+      getVipCapperStatus(capperId, tokenRef.current)
+        .then((s) => {
+          if (!cancelled && viewerKey.current === key) setStatus(s);
+        })
+        .catch((err: unknown) => {
+          if (!(err instanceof VipApiError && err.status === 404)) {
+            console.error("capper VIP re-check failed", err);
+          }
+        });
+    };
+    const tick = setInterval(recheck, ACCESS_RECHECK_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") recheck();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(tick);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [showing, capperId, userId]);
 
   const hasAccess = status?.viewer.subscribed === true;
   useEffect(() => {

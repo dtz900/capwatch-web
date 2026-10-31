@@ -295,6 +295,76 @@ describe("CapperVipSection", () => {
     expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
   });
 
+  describe("live access re-check", () => {
+    const paid = { ...status, viewer: { subscribed: true, is_owner: false, billing: "stripe" as const } };
+    let hidden = false;
+    beforeEach(() => {
+      vi.useFakeTimers();
+      hidden = false;
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => (hidden ? "hidden" : "visible"),
+      });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      // Back to jsdom's own getter on the prototype.
+      delete (document as { visibilityState?: string }).visibilityState;
+    });
+    const settle = () =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+    it("a subscriber who loses access loses the picks without a refresh", async () => {
+      client.getVipCapperStatus.mockResolvedValueOnce(paid).mockResolvedValue(status);
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await settle();
+      expect(screen.getByText("Subscribed")).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30000);
+      });
+      expect(screen.queryByText("Subscribed")).toBeNull();
+    });
+
+    it("re-checks when the tab comes back, not while hidden", async () => {
+      client.getVipCapperStatus.mockResolvedValue(paid);
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await settle();
+      hidden = true;
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+      hidden = false;
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(client.getVipCapperStatus).toHaveBeenCalledTimes(2);
+    });
+
+    it("a failed re-check keeps the section on screen", async () => {
+      client.getVipCapperStatus.mockResolvedValueOnce(paid).mockRejectedValue(new Error("blip"));
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await settle();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30000);
+      });
+      expect(screen.getByText("Subscribed")).toBeInTheDocument();
+      err.mockRestore();
+    });
+
+    it("does not re-check a profile with no VIP to show", async () => {
+      client.getVipCapperStatus.mockResolvedValue({
+        ...status, seller: null, eligibility: [], locked: [],
+      });
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await settle();
+      await vi.advanceTimersByTimeAsync(90000);
+      expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("return from checkout", () => {
     const paid = { ...status, viewer: { subscribed: true, is_owner: false, billing: "stripe" as const } };
     beforeEach(() => {
@@ -364,7 +434,8 @@ describe("CapperVipSection", () => {
       const calls = client.getVipCapperStatus.mock.calls.length;
       expect(calls).toBeLessThanOrEqual(12);
       await vi.advanceTimersByTimeAsync(9000);
-      expect(client.getVipCapperStatus.mock.calls.length).toBe(calls);
+      // The 3s checkout poll would add 3; only the 30s access re-check may land.
+      expect(client.getVipCapperStatus.mock.calls.length - calls).toBeLessThanOrEqual(1);
     });
 
     it("stops polling on unmount", async () => {
