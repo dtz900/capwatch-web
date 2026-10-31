@@ -38,7 +38,7 @@ export default function Terms() {
           Terms of Service
         </h1>
         <p className="text-[var(--color-text-muted)] text-[13px] mb-8">
-          Last updated: 2026-10-03
+          Last updated: 2026-10-31
         </p>
 
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
@@ -136,6 +136,25 @@ export default function Terms() {
           reserve the right to disqualify any entry or participant we reasonably believe is
           fraudulent, abusive, or in violation of these Terms, and to cancel, suspend, or modify the
           game at our discretion.
+        </p>
+
+        <h2 className="text-[20px] font-bold mt-9 mb-3">Capper VIP subscriptions</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Some cappers sell a monthly VIP subscription to their picks. The capper is the seller and
+          the merchant of record, and the charge is made on the capper&apos;s own Stripe account.
+          We run the marketplace. You must be 21 or older to subscribe. VIP picks are not betting
+          advice: every pick is the capper&apos;s own, and past results do not predict future ones.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          A subscription renews every month at the price shown at checkout until you cancel. You can
+          cancel anytime from Manage subscription, and you keep access through the period you paid
+          for. There are no refunds.
+        </p>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Billing pauses if the capper goes cold or silent. You are not charged while it is paused,
+          and your next billing date moves out by the days you paid for but the capper could not
+          post. If a capper stops selling, your subscription is cancelled, you are not charged
+          again, and you keep access through the date you already paid for.
         </p>
 
         <h2 className="text-[20px] font-bold mt-9 mb-3">Affiliate links</h2>
