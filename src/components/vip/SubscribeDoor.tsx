@@ -112,7 +112,9 @@ export function SubscribeCheckout({
   const blockRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const focusIfHash = () => {
-      if (window.location.hash === "#subscribe") blockRef.current?.focus();
+      // The anchor already scrolled (clear of the sticky header via scroll-mt);
+      // a plain focus() would scroll again and bury the block under it.
+      if (window.location.hash === "#subscribe") blockRef.current?.focus({ preventScroll: true });
     };
     focusIfHash();
     window.addEventListener("hashchange", focusIfHash);
@@ -127,7 +129,7 @@ export function SubscribeCheckout({
 
   if (manage || status.viewer.billing === "stripe") {
     return (
-      <div id="subscribe" ref={blockRef} tabIndex={-1} className="flex flex-col items-start gap-1.5 outline-none">
+      <div id="subscribe" ref={blockRef} tabIndex={-1} className="scroll-mt-28 flex flex-col items-start gap-1.5 outline-none">
         <p className="text-[13px] text-[var(--color-text-soft)]">You are already subscribed.</p>
         <ManageSubscriptionLink capperId={capperId} />
       </div>
@@ -161,12 +163,12 @@ export function SubscribeCheckout({
 
   if (!session) {
     return (
-      <div id="subscribe" ref={blockRef} tabIndex={-1} className="flex flex-col items-start gap-1.5 outline-none">
+      <div id="subscribe" ref={blockRef} tabIndex={-1} className="scroll-mt-28 flex flex-col items-start gap-1.5 outline-none">
         <button
           type="button"
           disabled={!authReady || !paymentsOn}
           onClick={signIn}
-          className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap`}
+          className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap w-full sm:w-auto`}
         >
           {label}
         </button>
@@ -180,7 +182,7 @@ export function SubscribeCheckout({
   // Subscribe stays off until the platform enables payments for this capper
   // (payments_enabled), so no checkout call is ever made while dark.
   return (
-    <div id="subscribe" ref={blockRef} tabIndex={-1} className="flex flex-col items-start gap-3 sm:max-w-[420px] outline-none">
+    <div id="subscribe" ref={blockRef} tabIndex={-1} className="scroll-mt-28 flex flex-col items-start gap-3 sm:max-w-[420px] outline-none">
       <p className="text-[12px] leading-snug text-[var(--color-text-soft)]">
         {subscriberDisclosure(seller.price_cents)}
       </p>
@@ -204,7 +206,7 @@ export function SubscribeCheckout({
         type="button"
         disabled={!agreed || pending || !paymentsOn}
         onClick={subscribe}
-        className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap`}
+        className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap w-full sm:w-auto`}
       >
         {label}
       </button>
