@@ -136,6 +136,11 @@ export function OwnerPanelView({
   const { session } = useAuth();
   const token = composerToken ?? session?.access_token ?? null;
   const [building, setBuilding] = useState(false);
+  const builderRef = useRef<HTMLDivElement>(null);
+  // Opening the builder snaps down to it: it renders below the whole dashboard.
+  useEffect(() => {
+    if (building) builderRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [building]);
   // Not selling yet: the purple setup card IS the dashboard, so it sits
   // under the label on its own rather than boxed inside another card.
   if (!me.seller) {
@@ -173,7 +178,10 @@ export function OwnerPanelView({
         }
       />
       {building && canPost && token && (
-        <Builder me={me} token={token} onPosted={onPosted} onClose={() => setBuilding(false)} />
+        // scroll-mt clears the sticky site header.
+        <div ref={builderRef} className="scroll-mt-20">
+          <Builder me={me} token={token} onPosted={onPosted} onClose={() => setBuilding(false)} />
+        </div>
       )}
     </div>
   );

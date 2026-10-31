@@ -36,11 +36,11 @@ const STATUS_CHIP: Record<string, string> = {
 const PILL = "text-[10px] font-extrabold tracking-[0.1em] uppercase px-2 py-1 rounded-md tabular-nums whitespace-nowrap";
 const COUNT_CHIP =
   "text-[11px] font-bold px-2 py-0.5 rounded-md bg-[rgba(255,255,255,0.05)] border border-[var(--color-border-h)] text-[var(--color-text-soft)]";
-const HERO_NUM = "text-[40px] leading-none font-extrabold tabular-nums";
+const HERO_NUM = "text-[30px] sm:text-[40px] leading-none font-extrabold tabular-nums";
 
-function Hero({ label, children }: { label: string; children: ReactNode }) {
+function Hero({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
   return (
-    <div className="px-5 sm:px-6 py-5 flex flex-col gap-1 min-w-0">
+    <div className={`px-5 sm:px-6 py-4 sm:py-5 flex flex-col gap-1 min-w-0 ${className}`}>
       <span className={EYEBROW}>{label}</span>
       {children}
     </div>
@@ -230,12 +230,12 @@ export function SellerStrip({
     >
       {/* Status band: are you selling, where you qualify, and the one action. */}
       <div
-        className={`px-5 sm:px-6 py-4 flex flex-col gap-3 ${
+        className={`px-5 sm:px-6 py-4 flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-4 ${
           live ? "" : "bg-[rgba(255,255,255,0.03)] border-b border-[var(--color-border)]"
         }`}
         style={live ? { background: "linear-gradient(100deg, #4c1d95 0%, #2e1065 60%, #1e0f3a 100%)" } : undefined}
       >
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-4 flex-wrap min-w-0">
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex items-center gap-2.5">
               <span
@@ -267,9 +267,18 @@ export function SellerStrip({
               </span>
             )}
           </div>
-          {live && postAction && <div className="ml-auto">{postAction}</div>}
         </div>
-        {live && eligibility.length > 0 && <EligibilityBadges eligibility={eligibility} />}
+        {/* Phone: full width under the sports. sm up: right of the header. */}
+        {live && postAction && (
+          <div className="order-last sm:order-none sm:col-start-2 sm:row-start-1 [&>button]:w-full sm:[&>button]:w-auto">
+            {postAction}
+          </div>
+        )}
+        {live && eligibility.length > 0 && (
+          <div className="sm:col-span-2">
+            <EligibilityBadges eligibility={eligibility} tiles />
+          </div>
+        )}
       </div>
 
       {status !== "active" && (
@@ -284,7 +293,8 @@ export function SellerStrip({
       )}
 
       {/* Hero numbers */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-border)]">
+      {/* Phone: You make | Subscribers side by side, record full width below. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3">
         <Hero label="You make">
           <div className="flex items-baseline gap-1">
             <span className={`${HERO_NUM} ${monthly ? strong : "text-[var(--color-text-muted)]"}`}>
@@ -293,7 +303,13 @@ export function SellerStrip({
             <span className="text-[13px] font-semibold text-[var(--color-text-muted)]">/mo</span>
           </div>
           <span className="text-[12px] text-[var(--color-text-muted)]">
-            {live ? "After TailSlips' 15%" : "Nobody renews while stopped"}
+            {live ? (
+              <>
+                After <span className="hidden sm:inline">TailSlips&apos; </span>15%
+              </>
+            ) : (
+              "Nobody renews while stopped"
+            )}
             {paymentsEnabled && (
               <>
                 {" · "}
@@ -303,13 +319,13 @@ export function SellerStrip({
                   rel="noopener noreferrer"
                   className="font-semibold text-[var(--color-text-soft)] underline underline-offset-2 decoration-[var(--color-border-h)] hover:text-[var(--color-text)]"
                 >
-                  Payouts in Stripe ↗<span className="sr-only"> (opens in a new tab)</span>
+                  Payouts<span className="hidden sm:inline"> in Stripe</span> ↗<span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </>
             )}
           </span>
         </Hero>
-        <Hero label="Paying subscribers">
+        <Hero label="Paying subscribers" className="border-l border-[var(--color-border)]">
           <span className={`${HERO_NUM} ${renewing ? strong : "text-[var(--color-text-muted)]"}`}>
             {renewing ?? "--"}
           </span>
@@ -320,7 +336,10 @@ export function SellerStrip({
             </div>
           )}
         </Hero>
-        <Hero label="VIP record">
+        <Hero
+          label="VIP record"
+          className="col-span-2 sm:col-span-1 border-t sm:border-t-0 sm:border-l border-[var(--color-border)]"
+        >
           {vipRecord && vipRecord.n > 0 ? (
             <>
               <div className="flex items-baseline gap-3 flex-wrap">
@@ -398,7 +417,8 @@ export function SellerStrip({
         {canStop && !stopping && (
           <button
             type="button"
-            className="ml-auto text-[12px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-neg)]"
+            // Phone: its own row under a divider, well clear of the Edit links.
+            className="basis-full sm:basis-auto ml-auto mt-1 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-[var(--color-border)] text-right text-[12px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-neg)]"
             onClick={() => {
               setStopError(null);
               setStopping(true);
