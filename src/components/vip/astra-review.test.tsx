@@ -104,6 +104,15 @@ describe("PR 233 independent review", () => {
     expect(screen.queryByRole("button", { name: "Manage subscription" })).not.toBeNull();
   });
 
+  it("F2b: a checkout return whose first status is a paused Stripe subscription still reaches Manage", async () => {
+    // Codex on the F2 fix: the subscription exists at Stripe (billing "stripe") but
+    // access was never seen; the hold must release so the viewer can manage it.
+    window.history.replaceState(null, "", "/cappers/moneyplayzz?vip=subscribed");
+    client.getVipCapperStatus.mockResolvedValue(sellerPaused);
+    await profile();
+    expect(screen.getByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Subscribe" })).toBeNull();
+  });
   it("F3: a seller restriction alone must not be diagnosed as a failed customer card", () => {
     render(<SubscribeDoor status={sellerPaused} handle="moneyplayzz" capperId={7} />);
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeInTheDocument();

@@ -188,9 +188,12 @@ export function CapperVipSection({
   }, [showing, clientFailed, capperId, userId, fetchStatus]);
 
   const hasAccess = status?.viewer.subscribed === true;
+  // The subscription is known to exist at Stripe (access or not): a checkout
+  // return has nothing more to wait for, and Manage must be reachable.
+  const billingSeen = hasAccess || status?.viewer.billing === "stripe";
   useEffect(() => {
     if (!polling) return;
-    if (hasAccess) {
+    if (billingSeen) {
       setPolling(false);
       return;
     }
@@ -203,13 +206,13 @@ export function CapperVipSection({
       clearInterval(tick);
       clearTimeout(stop);
     };
-  }, [polling, hasAccess, refetch]);
+  }, [polling, billingSeen, refetch]);
   useEffect(() => {
-    if (returned && hasAccess) {
+    if (returned && billingSeen) {
       setConfirmed(true);
       setTimedOut(false);
     }
-  }, [returned, hasAccess]);
+  }, [returned, billingSeen]);
   // Just back from Checkout and access not showing yet: never offer Subscribe
   // beside "You're in" (the webhook may simply be late). Once access has been
   // seen the door is the viewer's again: a later pause must still show Manage.
