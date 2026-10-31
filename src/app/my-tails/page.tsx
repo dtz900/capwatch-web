@@ -13,6 +13,7 @@ import { MarketRankings } from "@/components/my-tails/MarketRankings";
 import { MyTailsTabs, type MyTailsTab, type MyTailsTabSpec } from "@/components/my-tails/MyTailsTabs";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import { getVipSubscriptions } from "@/lib/vip/client";
+import { vipOnlyRow } from "@/lib/vip/stableRow";
 import { hasVipAccess } from "@/lib/vip/access";
 import type { VipSubscription } from "@/lib/vip/types";
 import type { CapperRow, ScopeStat, TodayPickEntry } from "@/lib/types";
@@ -193,7 +194,11 @@ export default async function MyTailsPage({
     }
   }
 
-  const stable = ids.map((id) => byId.get(String(id))).filter(Boolean) as CapperRow[];
+  // A VIP capper off the season board (hidden preview capper, no picks this
+  // season) still belongs on the stable: build its row from the subscription.
+  const stable = ids
+    .map((id) => byId.get(String(id)) ?? vipOnlyRow(vipByCapper[String(id)]))
+    .filter(Boolean) as CapperRow[];
   const today = ids.length > 0 ? await fetchTodayPicks(ids).catch(() => ({ date: "", picks: [] })) : { date: "", picks: [] };
 
   const todayByCapper: Record<string, TodayPickEntry[]> = {};
