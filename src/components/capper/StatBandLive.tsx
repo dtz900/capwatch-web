@@ -6,7 +6,7 @@ import { MarketTailToggle } from "@/components/capper/MarketTailToggle";
 import { TailButton } from "@/components/auth/TailButton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { followScopeForMarket } from "@/lib/followScope";
-import { vipEnabled } from "@/lib/flags";
+import { capperVipEnabledFor, vipEnabled } from "@/lib/flags";
 
 /** Stat band bound to the filter context. Dims slightly while a bet-type
  * change is in flight (the only filter change that refetches the stats).
@@ -47,6 +47,7 @@ export function StatBandLive() {
         scopeLabel={label}
         marketScoped={marketScoped}
         action={action}
+        vipIncluded={capperVipEnabledFor(profile.capper.handle)}
       />
     </div>
   );

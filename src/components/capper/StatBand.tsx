@@ -26,6 +26,8 @@ interface Props {
    * whole-capper tail normally, tail-this-market while a market filter is
    * active (see StatBandLive). */
   action?: React.ReactNode;
+  /** Footnote that graded VIP picks count here (they do once revealed). */
+  vipIncluded?: boolean;
 }
 
 export function StatBand({
@@ -36,6 +38,7 @@ export function StatBand({
   scopeLabel,
   marketScoped = false,
   action,
+  vipIncluded = false,
 }: Props) {
   if (!agg) {
     return (
@@ -165,6 +168,12 @@ export function StatBand({
               </Link>
             )}
           </div>
+        </div>
+      )}
+
+      {vipIncluded && (
+        <div className="mt-5 text-[11px] text-[var(--color-text-muted)]">
+          Public + VIP picks included
         </div>
       )}
     </div>
