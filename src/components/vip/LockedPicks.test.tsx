@@ -7,7 +7,7 @@ const REVEAL = "2026-10-27T23:05:00Z"; // 7:05 PM ET
 
 function base(over: Partial<VipCapperStatus>): VipCapperStatus {
   return {
-    seller: { capper_id: 7, price_cents: 2500, founding: false, status: "active" },
+    seller: { price_cents: 2500, founding: false, status: "active" },
     eligibility: [],
     door_open: true,
     viewer: { subscribed: false, is_owner: false },

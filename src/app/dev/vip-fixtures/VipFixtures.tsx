@@ -70,7 +70,7 @@ const STRAIGHT: VipLockedPick = {
 };
 
 const BASE: VipCapperStatus = {
-  seller: { capper_id: 7, price_cents: 2500, founding: true, status: "active" },
+  seller: { price_cents: 2500, founding: true, status: "active" },
   eligibility: [ELIGIBLE],
   door_open: true,
   viewer: { subscribed: true, is_owner: false },
@@ -130,12 +130,14 @@ const OWNER_NO_SELLER: VipMe = {
   seller: null,
   eligibility: [{ sport: "MLB", eligible: false, eligible_since: null, fail_streak: 2 }],
   can_post_sports: [],
+  payments_enabled: true,
 };
 const OWNER_SELLER: VipMe = {
   capper: { id: 7, handle: "moneyplayzz" },
   seller: BASE.seller,
   eligibility: [{ sport: "MLB", eligible: true, eligible_since: "2026-10-01", fail_streak: 0 }],
   can_post_sports: ["MLB"],
+  payments_enabled: true,
 };
 
 function capper(id: number, handle: string, name: string) {
@@ -187,10 +189,10 @@ export function VipFixtures() {
     <main className="mx-auto max-w-3xl px-4 py-10 flex flex-col gap-10">
       <h1 className="text-2xl font-bold text-[var(--color-text)]">Capper VIP fixtures</h1>
       <Scenario label="(a) Profile section, subscriber: 3-leg parlay + straight">
-        <CapperVipView status={SUBSCRIBER} handle="moneyplayzz" />
+        <CapperVipView status={SUBSCRIBER} handle="moneyplayzz" capperId={7} />
       </Scenario>
       <Scenario label="(b) Profile section, anonymous: summary rows">
-        <CapperVipView status={ANONYMOUS} handle="moneyplayzz" />
+        <CapperVipView status={ANONYMOUS} handle="moneyplayzz" capperId={7} />
       </Scenario>
       <Scenario label="(c1) Owner, no seller, nothing eligible">
         <OwnerPanelView me={OWNER_NO_SELLER} onRefresh={noop} onPosted={noop} />
@@ -201,6 +203,7 @@ export function VipFixtures() {
       <Scenario label="(c3) Owner seller, door closed (profile view)">
         <CapperVipView
           status={OWNER_CLOSED}
+          capperId={7}
           handle="moneyplayzz"
           ownerPanel={
             <OwnerPanelView

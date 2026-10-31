@@ -37,6 +37,8 @@ import {
 } from "@/lib/seo";
 import type { BetTypeFilter, CapperRow, Window, SportFilter } from "@/lib/types";
 import { capperVipEnabledFor, vipEnabled, vipTierEnabled } from "@/lib/flags";
+import { fetchPublicVipStatus } from "@/lib/vip/server";
+import { VipInitialStatusProvider } from "@/components/vip/VipInitialStatus";
 import { CapperVipSection } from "@/components/vip/CapperVipSection";
 import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
 
@@ -67,6 +69,8 @@ const DEFAULT_WINDOW: Window = "season";
 const OG_CARD_VERSION = "16";
 
 export const revalidate = 60;
+// Longest the page waits on the VIP first-paint status before rendering without it.
+const VIP_FIRST_PAINT_MS = 1500;
 export const maxDuration = 30;
 
 function filterLabelFor(window: Window, betType: BetTypeFilter): string {
@@ -418,6 +422,11 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   }
 
   const allTimeAgg = profile.aggregates["all_time"];
+  // VIP ring, crown and card paint with the page. Anonymous status only
+  // (safe to cache); a slow or failed fetch falls back to the client call.
+  const initialVip = capperVipEnabledFor(handle)
+    ? await withDeadline(fetchPublicVipStatus(profile.capper.id), VIP_FIRST_PAINT_MS, null)
+    : null;
 
   const faqItems = buildCapperFaq({
     handle,
@@ -449,6 +458,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
       <SportTint sport={sport} />
       <TopNav />
       <main className="max-w-[1240px] mx-auto px-4 sm:px-7 pb-16">
+        <VipInitialStatusProvider status={initialVip}>
         <CapperFilterProvider
           // Keyed by sport: the league tabs are a query-string navigation
           // that keeps this client component mounted, so without a key the
@@ -466,6 +476,17 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
         >
           <StickyProfileStrip />
           <CapperHeroLive />
+
+          {/* VIP sits above the league and filter controls: none of them
+              apply to it, and under them it read as filtered. */}
+          {capperVipEnabledFor(handle) && (
+            <div className="mb-6">
+              <CapperVipSection
+                capperId={profile.capper.id}
+                handle={handle}
+              />
+            </div>
+          )}
 
           {/* League switch: its own row above the per-view filters, the same
               control as the leaderboard so MLB, NFL and NBA records read apart. */}
@@ -487,15 +508,6 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
               <ShareFilteredButton />
             </div>
           </div>
-
-          {capperVipEnabledFor(handle) && (
-            <div className="mb-6">
-              <CapperVipSection
-                capperId={profile.capper.id}
-                handle={handle}
-              />
-            </div>
-          )}
 
           <div className="mb-6">
             <StatBandLive />
@@ -550,6 +562,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
             <HistoryList />
           </section>
         </CapperFilterProvider>
+        </VipInitialStatusProvider>
 
         <SimilarCappers rows={leaderboardRows} currentHandle={handle} />
 

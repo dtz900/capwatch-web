@@ -94,6 +94,21 @@ describe("PickBuilder", () => {
     expect(client.getVipBoardGame).toHaveBeenCalledWith("NBA", "g1", "tok");
   });
 
+  it("a thin game never shows full-game prices under a period tab", async () => {
+    const thin: BoardGame = { ...BOARD, game_id: "g2", thin: true };
+    const full: BoardGame = {
+      ...BOARD,
+      periods: { ...BOARD.periods, "1H": { ...BOARD.periods.Game!, spread: null, total: null } },
+    };
+    client.getVipBoardSlate.mockResolvedValue({ games: [full, thin] });
+    client.getVipBoardGame.mockImplementation(async (_s: string, id: string) => (id === "g2" ? thin : full));
+    renderBuilder();
+    await screen.findAllByRole("button", { name: /^\+1\.5/ });
+    fireEvent.click(screen.getByRole("button", { name: "1st half" }));
+    expect(screen.queryAllByRole("button", { name: /^\+1\.5/ })).toHaveLength(0);
+    expect(screen.getByText("1st half lines open closer to game time.")).toBeInTheDocument();
+  });
+
   it("re-prices legs the capper has not typed over when the book changes", async () => {
     renderBuilder();
     await tapPrice(/^\+1\.5/);

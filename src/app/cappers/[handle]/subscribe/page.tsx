@@ -7,7 +7,9 @@ import { VipLockedTeaser } from "@/components/vip/VipPaywall";
 import { VipRulesTile } from "@/components/vip/VipRulesTile";
 import { VipBand, VipGlassCard, VipPrice } from "@/components/vip/VipBand";
 import { VipCrown } from "@/components/vip/VipCrown";
+import { SubscribeCheckout } from "@/components/vip/SubscribeDoor";
 import {
+  DOOR_CLOSED,
   exclusivityLine,
   formatPrice,
   vipHeadline,
@@ -80,22 +82,12 @@ export default async function SubscribePage({ params }: PageProps) {
   const lockedRows = status?.locked ?? [];
   const cta =
     seller && doorOpen ? (
-      // Checkout is the last build step (Stripe Connect). Until it lands the
-      // button is disabled rather than a live-looking control that does
-      // nothing (Codex P1 on #220).
-      <div className="flex flex-col items-start gap-1.5">
-        <button
-          type="button"
-          disabled
-          aria-describedby="subscribe-soon"
-          className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap`}
-        >
-          Subscribe · ${formatPrice(seller.price_cents)}/mo
-        </button>
-        <span id="subscribe-soon" className="text-[11px] text-[var(--color-text-muted)]">
-          Checkout opens soon.
-        </span>
-      </div>
+      <a
+        href="#subscribe"
+        className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap`}
+      >
+        Subscribe · ${formatPrice(seller.price_cents)}/mo
+      </a>
     ) : (
       <p className="text-[13px] leading-snug text-[var(--color-text-muted)] sm:max-w-[280px]">
         {DOOR_CLOSED[closedReason]}
@@ -224,7 +216,11 @@ export default async function SubscribePage({ params }: PageProps) {
             <div
               className={`${VIP_GLASS_DIVIDER} px-5 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4`}
             >
-              {cta}
+              {seller && doorOpen && status ? (
+                <SubscribeCheckout status={status} handle={handle} capperId={capper.id} />
+              ) : (
+                cta
+              )}
               {doorOpen && (
                 <span className="flex items-center gap-2 text-[12px] text-[var(--color-text-muted)]">
                   <svg
@@ -263,7 +259,7 @@ const PERK_TILE =
 const PERKS = [
   {
     title: "First look",
-    body: "Every pick the second it posts. Everyone else sees it after the game starts.",
+    body: "Every pick the second it posts. Everyone else sees it 30 minutes after the game starts.",
     icon: "M13 2 4 14h7l-1 8 9-12h-7l1-8Z",
   },
   {
@@ -343,12 +339,3 @@ function Shield() {
     </svg>
   );
 }
-
-/** Shown in place of the Subscribe button when new subscriptions are closed.
- *  Keep in step with the pause rules on /vip-rules. */
-const DOOR_CLOSED: Record<string, string> = {
-  silent: "No VIP picks in 14 days. Subscriptions reopen with the next pick.",
-  ineligible:
-    "Not eligible to sell right now. Subscriptions reopen when they qualify again.",
-  not_selling: "Not taking subscribers right now.",
-};

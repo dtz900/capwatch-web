@@ -78,3 +78,12 @@ export function formatRevealPhrase(iso: string, now: Date = new Date()): string 
   const when = formatRevealTime(iso, now);
   return etDay(new Date(iso)) === etDay(now) ? `at ${when}` : `on ${when}`;
 }
+
+/** Shown in place of the Subscribe button when new subscriptions are closed.
+ *  Keep in step with the pause rules on /vip-rules. */
+export const DOOR_CLOSED: Record<string, string> = {
+  silent: "No VIP picks in 14 days. Subscriptions reopen with the next pick.",
+  ineligible:
+    "Not eligible to sell right now. Subscriptions reopen when they qualify again.",
+  not_selling: "Not taking subscribers right now.",
+};

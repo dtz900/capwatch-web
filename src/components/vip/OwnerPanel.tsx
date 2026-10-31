@@ -3,16 +3,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getVipMe } from "@/lib/vip/client";
-import type { VipMe } from "@/lib/vip/types";
+import type { VipCapperStatus, VipEligibility, VipMe } from "@/lib/vip/types";
 import { SellerSetupCard } from "./SellerSetupCard";
+import { PromotePanel } from "./PromotePanel";
 import { SellerStrip } from "./SellerStrip";
 import { PickBuilder } from "./builder/PickBuilder";
-import { EYEBROW, SECTION, VIP_PRIMARY_BTN } from "./styles";
+import { EYEBROW, VIP_PRIMARY_BTN } from "./styles";
 
 const DENYLISTED_HANDLES = new Set(["fadeai_", "tailslips"]);
 
 /** Owner-only panel on a capper's own profile: start selling, or the price line + composer. */
-export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
+export function OwnerPanel({
+  onChanged,
+  eligibility,
+  vipRecord,
+  exclusivity,
+  onDashboard,
+  status,
+}: {
+  onChanged?: () => void;
+  eligibility?: VipEligibility[];
+  vipRecord?: VipCapperStatus["vip_record"] | null;
+  exclusivity?: string | null;
+  /** Told whether the selling dashboard is rendered. */
+  onDashboard?: (shown: boolean) => void;
+  /** The public status (Promote cards read it). */
+  status?: VipCapperStatus | null;
+} = {}) {
   const { session } = useAuth();
   const token = session?.access_token ?? null;
   const userId = session?.user?.id ?? null;
@@ -51,30 +68,37 @@ export function OwnerPanel({ onChanged }: { onChanged?: () => void } = {}) {
   }, [userId, tick]);
 
   const me = userId && loaded?.userId === userId ? loaded.me : null;
-  if (!me || !me.capper) return null;
   // House accounts never sell (the platform denylists them too).
-  if (DENYLISTED_HANDLES.has(me.capper.handle.toLowerCase())) return null;
+  const denied = !!me?.capper && DENYLISTED_HANDLES.has(me.capper.handle.toLowerCase());
+  // The selling dashboard is on screen: the section drops the public card it repeats.
+  const dashboard = !!me?.capper && !denied && me.seller !== null;
+  useEffect(() => {
+    onDashboard?.(dashboard);
+  }, [dashboard, onDashboard]);
+  if (!me || !me.capper || denied) return null;
 
-  return <OwnerPanelView me={me} onRefresh={refresh} onPosted={() => onChanged?.()} />;
+  return (
+    <OwnerPanelView
+      me={me}
+      onRefresh={refresh}
+      onPosted={() => onChanged?.()}
+      eligibility={eligibility}
+      vipRecord={vipRecord}
+      exclusivity={exclusivity}
+      status={status}
+    />
+  );
 }
 
-/** The board stays closed until the capper asks for it, so their own
- *  profile reads like everyone else's on a normal visit. */
-function BuilderToggle({ me, token, onPosted }: { me: VipMe; token: string; onPosted: () => void }) {
-  const [open, setOpen] = useState(false);
-  if (!open) {
-    return (
-      <button type="button" className={`${VIP_PRIMARY_BTN} self-start`} onClick={() => setOpen(true)}>
-        Post a VIP pick
-      </button>
-    );
-  }
+/** The builder under the dashboard; the band's Post a VIP pick opens it, so the
+ *  capper's own profile reads like everyone else's on a normal visit. */
+function Builder({ me, token, onPosted, onClose }: { me: VipMe; token: string; onPosted: () => void; onClose: () => void }) {
   return (
     <>
       <button
         type="button"
         className="self-end text-[11px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-        onClick={() => setOpen(false)}
+        onClick={onClose}
       >
         Close pick builder
       </button>
@@ -95,14 +119,28 @@ export function OwnerPanelView({
   onRefresh,
   onPosted,
   composerToken,
+  eligibility,
+  vipRecord,
+  exclusivity,
+  status,
 }: {
   me: VipMe;
   onRefresh: () => void;
   onPosted: () => void;
   composerToken?: string;
+  eligibility?: VipEligibility[];
+  vipRecord?: VipCapperStatus["vip_record"] | null;
+  exclusivity?: string | null;
+  status?: VipCapperStatus | null;
 }) {
   const { session } = useAuth();
   const token = composerToken ?? session?.access_token ?? null;
+  const [building, setBuilding] = useState(false);
+  const builderRef = useRef<HTMLDivElement>(null);
+  // Opening the builder snaps down to it: it renders below the whole dashboard.
+  useEffect(() => {
+    if (building) builderRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [building]);
   // Not selling yet: the purple setup card IS the dashboard, so it sits
   // under the label on its own rather than boxed inside another card.
   if (!me.seller) {
@@ -113,15 +151,38 @@ export function OwnerPanelView({
       </section>
     );
   }
+  const canPost = me.can_post_sports.length > 0 && !!token;
+  // Stopped and disabled sellers get no action in the band (it is hidden there).
+  const postAction = canPost ? (
+    <button type="button" className={VIP_PRIMARY_BTN} onClick={() => setBuilding(!building)}>
+      {building ? "Close pick builder" : "Post a VIP pick"}
+    </button>
+  ) : (
+    <span className="text-[12px] text-[var(--color-vip-text)]">You can post VIP picks once a sport is eligible.</span>
+  );
   return (
-    <section className={`${SECTION} flex flex-col gap-4`}>
-      <span className={EYEBROW}>Your VIP dashboard</span>
-      <SellerStrip seller={me.seller} token={token} onSaved={onRefresh} />
-      {me.can_post_sports.length === 0 ? (
-        <p className="text-[12px] text-[var(--color-text-muted)]">You can post VIP picks once a sport is eligible.</p>
-      ) : (
-        token && <BuilderToggle me={me} token={token} onPosted={onPosted} />
+    <div className="flex flex-col gap-3">
+      <SellerStrip
+        seller={me.seller}
+        token={token}
+        paymentsEnabled={me.payments_enabled}
+        onSaved={onRefresh}
+        eligibility={eligibility}
+        vipRecord={vipRecord}
+        exclusivity={exclusivity}
+        postAction={postAction}
+        promote={
+          status && me.capper && me.seller.status === "active" ? (
+            <PromotePanel handle={me.capper.handle} capperId={me.capper.id} status={status} token={token} />
+          ) : null
+        }
+      />
+      {building && canPost && token && (
+        // scroll-mt clears the sticky site header.
+        <div ref={builderRef} className="scroll-mt-20">
+          <Builder me={me} token={token} onPosted={onPosted} onClose={() => setBuilding(false)} />
+        </div>
       )}
-    </section>
+    </div>
   );
 }

@@ -9,9 +9,11 @@ import type {
   VipPickBody,
   VipPickResult,
   VipSeller,
+  VipSellerAccount,
   VipSellerSubscriber,
   VipSubscription,
 } from "./types";
+import type { VipReceipt } from "./promote";
 
 export class VipApiError extends Error {
   readonly status: number;
@@ -56,12 +58,22 @@ export function getVipCapperStatus(capperId: number | string, token: string | nu
   return vipFetch<VipCapperStatus>(`/api/vip/cappers/${capperId}`, { token });
 }
 
+/** Revealed winning VIP tickets, newest first (Promote receipts). */
+export function getVipReceipts(capperId: number | string, token: string | null) {
+  return vipFetch<{ receipts: VipReceipt[] }>(`/api/vip/cappers/${capperId}/receipts`, { token });
+}
+
 export function getVipMe(token: string | null) {
   return vipFetch<VipMe>("/api/vip/me", { token });
 }
 
 export function postVipSeller(
-  body: { price_cents: number; accept_terms: boolean; preferred_book?: string | null },
+  body: {
+    price_cents: number;
+    accept_terms: boolean;
+    terms_version: string;
+    preferred_book?: string | null;
+  },
   token: string | null,
 ) {
   return vipFetch<VipSeller>("/api/vip/seller", {
@@ -80,6 +92,25 @@ export function patchVipSeller(
     body: JSON.stringify(body),
     token,
   });
+}
+
+export function startVipOnboarding(token: string | null) {
+  return vipFetch<{ url: string }>("/api/vip/seller/onboarding", { method: "POST", token });
+}
+
+export function getVipSellerAccount(token: string | null) {
+  return vipFetch<VipSellerAccount>("/api/vip/seller/account", { token });
+}
+
+export function stopVipSelling(token: string | null) {
+  return vipFetch<{ status: string; canceled: number }>("/api/vip/seller/stop", {
+    method: "POST",
+    token,
+  });
+}
+
+export function startVipSelling(token: string | null) {
+  return vipFetch<{ status: string }>("/api/vip/seller/start", { method: "POST", token });
 }
 
 export function getVipSellerSubscribers(token: string | null) {
@@ -140,4 +171,16 @@ export async function pullVipPick(ticketId: number, token: string | null): Promi
   });
   if (res.ok || res.status === 404) return;
   throw new VipApiError(res.status, await readDetail(res));
+}
+
+export function startVipCheckout(capperId: number | string, termsVersion: string, token: string | null) {
+  return vipFetch<{ url: string }>(`/api/vip/cappers/${capperId}/checkout`, {
+    method: "POST",
+    body: JSON.stringify({ terms_version: termsVersion }),
+    token,
+  });
+}
+
+export function openVipPortal(capperId: number | string, token: string | null) {
+  return vipFetch<{ url: string }>(`/api/vip/cappers/${capperId}/portal`, { method: "POST", token });
 }

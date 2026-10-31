@@ -47,20 +47,30 @@ export function LeagueMark({
 /** One sport on the stat line: league mark, units, picks. Selling sports read in
  *  off-white, the rest muted; nothing is red or green here. The spec's
  *  sentence lives on as the group's aria-label. */
-export function EligibilityStat({ row }: { row: VipEligibility }) {
+export function EligibilityStat({ row, tile = false }: { row: VipEligibility; tile?: boolean }) {
   const label = row.eligible ? eligibleCopy(row) : closedCopy(row);
   const tone = row.eligible
     ? "text-[var(--color-text)]"
     : "text-[var(--color-text-muted)]";
+  // Tile: a stacked cell under sm (three sports fit one phone row); a plain stat from sm up.
+  const box = tile
+    ? `flex flex-col items-center gap-1 py-2.5 px-1 rounded-lg min-w-0 sm:flex-row sm:gap-3 sm:p-0 sm:rounded-none sm:bg-transparent ${
+        row.eligible ? "bg-[rgba(255,255,255,0.06)]" : "bg-[rgba(255,255,255,0.025)]"
+      }`
+    : "flex items-center gap-3 min-w-0";
   return (
     <div
       role="group"
       aria-label={label}
-      className="flex items-center gap-3 min-w-0"
+      className={box}
     >
-      <LeagueMark sport={String(row.sport)} eligible={row.eligible} />
+      <LeagueMark
+        sport={String(row.sport)}
+        eligible={row.eligible}
+        className={tile ? "h-[30px] sm:h-[44px]" : undefined}
+      />
       <span
-        className={`text-[24px] sm:text-[26px] leading-none font-extrabold tabular-nums tracking-[-0.02em] ${tone}`}
+        className={`${tile ? "text-[18px]" : "text-[24px]"} sm:text-[26px] leading-none font-extrabold tabular-nums tracking-[-0.02em] ${tone}`}
       >
         {focalUnits(row.units)}
       </span>
@@ -74,23 +84,34 @@ export function EligibilityStat({ row }: { row: VipEligibility }) {
 /** Per-sport stats on one line, selling sports first. */
 export function EligibilityBadges({
   eligibility,
+  tiles = false,
 }: {
   eligibility: VipEligibility[];
+  /** Phone layout as one row of tiles (seller dashboard). */
+  tiles?: boolean;
 }) {
   if (eligibility.length === 0) return null;
   const ordered = [...eligibility].sort(
     (a, b) => Number(b.eligible) - Number(a.eligible),
   );
   return (
-    <div className="flex flex-wrap items-center gap-x-9 gap-y-4">
+    <div
+      className={
+        tiles
+          ? "grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-x-9 sm:gap-y-4"
+          : "flex flex-wrap items-center gap-x-9 gap-y-4"
+      }
+    >
       {ordered.map((row) => (
-        <EligibilityStat key={row.sport} row={row} />
+        <EligibilityStat key={row.sport} row={row} tile={tiles} />
       ))}
-      <Tooltip content={ELIGIBILITY_TOOLTIP}>
-        <span className="cursor-help text-[11px] text-[var(--color-text-muted)] underline decoration-dotted decoration-[rgba(255,255,255,0.25)] underline-offset-[3px]">
-          last 30 days
-        </span>
-      </Tooltip>
+      <span className={tiles ? "col-span-3 sm:col-span-1" : undefined}>
+        <Tooltip content={ELIGIBILITY_TOOLTIP}>
+          <span className="cursor-help text-[11px] text-[var(--color-text-muted)] underline decoration-dotted decoration-[rgba(255,255,255,0.25)] underline-offset-[3px]">
+            last 30 days
+          </span>
+        </Tooltip>
+      </span>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Suspense, useState, useMemo } from "react";
 import { notFound, useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { vipEnabled } from "@/lib/flags";
+import { signInReturnPath } from "@/app/auth/callback/redirects";
 
 /**
  * Sign-in: magic link + emailed code, same email.
@@ -67,7 +68,11 @@ function LoginInner() {
       setError(error.message);
       return;
     }
-    window.location.href = "/my-tails";
+    // The magic link returns through /auth/callback, which reads the saved
+    // path; the code path has to read it here or every sign-in lands on My Tails.
+    const dest = signInReturnPath(document.cookie);
+    document.cookie = "ts_return_to=; path=/; max-age=0";
+    window.location.href = dest;
   }
 
   async function google() {

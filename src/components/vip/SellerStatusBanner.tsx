@@ -1,0 +1,209 @@
+"use client";
+
+/* Seller status banner: what Stripe onboarding, a restriction, a stop or a
+ * platform disable means for the capper, and the one action that moves it.
+ * Also handles the return from Stripe (?vip=onboarded / ?vip=resume). */
+
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { stripVipParam } from "@/lib/vip/returnParam";
+import { getVipSellerAccount, startVipOnboarding, startVipSelling } from "@/lib/vip/client";
+import type { VipSellerAccount } from "@/lib/vip/types";
+import { ERROR_TEXT, INNER_CARD, SECONDARY_BTN_SM } from "./styles";
+
+const STRIPE_DASHBOARD = "https://dashboard.stripe.com";
+
+/** While Stripe has the seller's account in flight, re-read it this often so the
+ *  page moves on its own (and once more whenever the tab comes back). */
+const ACCOUNT_POLL_MS = 10000;
+const LIVE_STATUSES = ["onboarding", "restricted"];
+
+function Row({ children, action, error }: { children: ReactNode; action?: ReactNode; error?: string | null }) {
+  return (
+    <div className={`${INNER_CARD} flex items-center gap-3 flex-wrap`}>
+      <span className="text-[12px] text-[var(--color-text-soft)]">{children}</span>
+      {action && <span className="ml-auto">{action}</span>}
+      {error && (
+        <span role="status" className={`${ERROR_TEXT} w-full`}>
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function SellerStatusBanner({
+  status,
+  token,
+  paymentsEnabled,
+  onStatusChange,
+}: {
+  status: string;
+  token: string | null;
+  paymentsEnabled: boolean;
+  /** Called with the new seller status after Stripe or the platform changed it. */
+  onStatusChange: (status: string) => void;
+}) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stage, setStage] = useState<VipSellerAccount["stage"]>(null);
+  // Read at request time; the return handler below must run once per mount.
+  const tokenRef = useRef(token);
+  const changeRef = useRef(onStatusChange);
+  const handled = useRef(false);
+  useEffect(() => {
+    tokenRef.current = token;
+    changeRef.current = onStatusChange;
+  }, [token, onStatusChange]);
+
+  const goToStripe = async () => {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      const { url } = await startVipOnboarding(tokenRef.current);
+      window.location.assign(url);
+    } catch (err) {
+      console.error("VIP onboarding link failed", err);
+      setError("Could not open Stripe. Try again.");
+      setPending(false);
+    }
+  };
+
+  // After location.assign to Stripe, Back restores this page from the bfcache
+  // with pending still true: Continue setup would stay disabled until a reload.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setPending(false);
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
+  const live = LIVE_STATUSES.includes(status);
+  // Stripe's verdict lands minutes after the capper leaves its form, and a
+  // restriction can clear in another tab: re-read until the seller is live.
+  useEffect(() => {
+    if (!live) return;
+    let cancelled = false;
+    const check = () => {
+      if (document.visibilityState === "hidden") return;
+      getVipSellerAccount(tokenRef.current)
+        .then((a) => {
+          if (cancelled) return;
+          setStage(a.stage);
+          if (a.status !== status) changeRef.current(a.status);
+        })
+        .catch((err: unknown) => console.error("VIP account refresh failed", err));
+    };
+    check();
+    const tick = setInterval(check, ACCOUNT_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(tick);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [live, status]);
+
+  useEffect(() => {
+    if (handled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const vip = params.get("vip");
+    if (vip === "onboarded") {
+      handled.current = true;
+      stripVipParam(params);
+      // A live seller is already being re-read above.
+      if (!live) {
+        getVipSellerAccount(tokenRef.current)
+          .then((a) => changeRef.current(a.status))
+          .catch((err: unknown) => console.error("VIP account refresh failed", err));
+      }
+    } else if (vip === "resume" && paymentsEnabled && (status === "onboarding" || status === "restricted")) {
+      handled.current = true;
+      stripVipParam(params);
+      startVipOnboarding(tokenRef.current)
+        .then(({ url }) => window.location.assign(url))
+        .catch((err: unknown) => {
+          console.error("VIP onboarding resume failed", err);
+          setError("Could not reopen Stripe. Try Continue setup.");
+        });
+    }
+  }, [paymentsEnabled, status, live]);
+
+  const restart = async () => {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      const r = await startVipSelling(tokenRef.current);
+      onStatusChange(r.status);
+    } catch (err) {
+      console.error("VIP start selling failed", err);
+      setError("Could not start selling again. Try again.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  if (status === "onboarding" && stage === "verifying") {
+    return (
+      <Row error={error}>Stripe is verifying your details. Hang tight, this page updates on its own.</Row>
+    );
+  }
+  if (status === "onboarding") {
+    return (
+      <Row
+        error={error}
+        action={
+          paymentsEnabled && (
+            <button type="button" className={SECONDARY_BTN_SM} disabled={pending} onClick={goToStripe}>
+              Continue setup
+            </button>
+          )
+        }
+      >
+        Finishing setup with Stripe. Your Subscribe button turns on when Stripe is done.
+      </Row>
+    );
+  }
+  if (status === "restricted") {
+    return (
+      <Row
+        action={
+          <a
+            href={STRIPE_DASHBOARD}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${SECONDARY_BTN_SM} no-underline`}
+          >
+            Open Stripe
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        }
+      >
+        Stripe needs more information before you can take payments. Billing for your subscribers is paused until it&apos;s sorted.
+      </Row>
+    );
+  }
+  if (status === "stopped") {
+    return (
+      <Row
+        error={error}
+        action={
+          <button type="button" className={SECONDARY_BTN_SM} disabled={pending} onClick={restart}>
+            Start selling again
+          </button>
+        }
+      >
+        You stopped selling. New subscriptions are closed; current subscribers keep access until their period ends.
+      </Row>
+    );
+  }
+  if (status === "disabled") {
+    return <Row>VIP selling is turned off for your account. Contact support@tailslips.com.</Row>;
+  }
+  return null;
+}

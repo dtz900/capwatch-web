@@ -1,0 +1,60 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { openVipPortal } from "@/lib/vip/client";
+import { ERROR_TEXT } from "./styles";
+
+/** Opens the Stripe customer portal (update card, cancel). Always available
+ *  to someone already paying, even while new checkouts are switched off. */
+export function ManageSubscriptionLink({ capperId }: { capperId: number }) {
+  const { session } = useAuth();
+  const token = session?.access_token ?? null;
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // After location.assign, bfcache Back restores this page with pending stuck.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setPending(false);
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
+  const open = async () => {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      const { url } = await openVipPortal(capperId, token);
+      window.location.assign(url);
+    } catch (err) {
+      console.error("VIP billing portal failed", err);
+      setError("Could not open billing. Try again.");
+      setPending(false);
+    }
+  };
+
+  return (
+    <span className="inline-flex flex-col items-start gap-1">
+      <button
+        type="button"
+        onClick={open}
+        disabled={pending}
+        className="text-[12px] font-bold text-[var(--color-vip-text)] underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
+      >
+        Manage subscription
+      </button>
+      {/* Stripe's portal never sends people back on its own. */}
+      <span className="text-[11px] text-[var(--color-vip-text)] opacity-70">
+        Opens Stripe. Use the back link at the top to return.
+      </span>
+      {error && (
+        <span role="status" className={ERROR_TEXT}>
+          {error}
+        </span>
+      )}
+    </span>
+  );
+}

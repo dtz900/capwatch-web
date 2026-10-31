@@ -3,7 +3,9 @@ import { API_BASE } from "@/lib/config";
 import {
   VipApiError,
   getVipCapperStatus,
+  openVipPortal,
   postVipSeller,
+  startVipCheckout,
   vipFetch,
 } from "@/lib/vip/client";
 import { isLockedPick } from "@/lib/vip/types";
@@ -18,6 +20,20 @@ function mockFetch(status: number, body: unknown) {
   vi.stubGlobal("fetch", fn);
   return fn;
 }
+
+describe("checkout and portal URLs", () => {
+  beforeEach(() => vi.unstubAllGlobals());
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("embed the real capper id", async () => {
+    const fn = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ url: "https://x" }), { status: 200 }));
+    vi.stubGlobal("fetch", fn);
+    await startVipCheckout(42, "v1", "t");
+    await openVipPortal(42, "t");
+    expect(fn.mock.calls[0][0]).toBe(`${API_BASE}/api/vip/cappers/42/checkout`);
+    expect(fn.mock.calls[1][0]).toBe(`${API_BASE}/api/vip/cappers/42/portal`);
+  });
+});
 
 describe("vipFetch", () => {
   beforeEach(() => vi.unstubAllGlobals());
@@ -50,11 +66,11 @@ describe("vipFetch", () => {
 
   it("sets JSON content type and serializes body for writes", async () => {
     const fn = mockFetch(200, { capper_id: 1 });
-    await postVipSeller({ price_cents: 1500, accept_terms: true }, "t");
+    await postVipSeller({ price_cents: 1500, accept_terms: true, terms_version: "v1" }, "t");
     const [, init] = fn.mock.calls[0];
     expect(init.method).toBe("POST");
     expect(new Headers(init.headers).get("Content-Type")).toBe("application/json");
-    expect(JSON.parse(init.body)).toEqual({ price_cents: 1500, accept_terms: true });
+    expect(JSON.parse(init.body)).toEqual({ price_cents: 1500, accept_terms: true, terms_version: "v1" });
   });
 
   it("falls back to status text when no detail", async () => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { VipCapperStatus } from "@/lib/vip/types";
 
 const auth = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
@@ -24,6 +24,7 @@ const client = vi.hoisted(() => {
     getVipBoardGame: vi.fn(),
     postVipSeller: vi.fn(),
     postVipPick: vi.fn(),
+    openVipPortal: vi.fn(),
     searchVipGames: vi.fn(),
     VipApiError,
   };
@@ -31,9 +32,10 @@ const client = vi.hoisted(() => {
 vi.mock("@/lib/vip/client", () => client);
 
 import { CapperVipSection } from "./CapperVipSection";
+import { VipInitialStatusProvider } from "./VipInitialStatus";
 
 const status: VipCapperStatus = {
-  seller: { capper_id: 7, price_cents: 2500, founding: false, status: "active" },
+  seller: { price_cents: 2500, founding: false, status: "active" },
   eligibility: [
     {
       sport: "MLB",
@@ -162,7 +164,7 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByRole("region", { name: "Capper VIP" });
-    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your VIP dashboard" })).toBeNull();
     expect(client.getVipMe).not.toHaveBeenCalled();
   });
 
@@ -177,14 +179,14 @@ describe("CapperVipSection", () => {
     });
     client.patchVipSeller.mockResolvedValue({ ...status.seller, price_cents: 3000 });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    expect(await screen.findByText("Your VIP dashboard")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Your VIP dashboard" })).toBeInTheDocument();
     expect(screen.getByText("DraftKings")).toBeInTheDocument();
     // One renewing, one canceled but still in its period.
-    expect(await screen.findByText("active · 1 canceling")).toBeInTheDocument();
+    expect(await screen.findByText("1 canceling")).toBeInTheDocument();
     expect(screen.getByText("$21.25")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Subscribers/ }));
     expect(screen.getByText("@sharpshooter_22")).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Edit price" }));
     fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
@@ -215,6 +217,25 @@ describe("CapperVipSection", () => {
     expect(screen.queryByRole("region", { name: "Capper VIP" })).toBeNull();
   });
 
+  it.each([
+    ["active", true],
+    ["stopped", false],
+    ["disabled", false],
+  ])("owner panel eligibility hint for a %s seller with nothing eligible", async (sellerStatus, shown) => {
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "moneyplayzz" } };
+    client.getVipCapperStatus.mockResolvedValue(status);
+    client.getVipMe.mockResolvedValue({
+      capper: { id: 7, handle: "moneyplayzz" },
+      seller: { ...status.seller, status: sellerStatus, preferred_book: "draftkings" },
+      eligibility: [],
+      can_post_sports: [],
+    });
+    render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await screen.findByRole("region", { name: "Your VIP dashboard" });
+    const hint = screen.queryByText("You can post VIP picks once a sport is eligible.");
+    expect(hint !== null).toBe(shown);
+  });
+
   it("section shows the owner panel when the platform says this viewer owns the capper", async () => {
     // Owner linked in the database without X verification: no claimed capper
     // on the session, but the status says is_owner.
@@ -227,7 +248,7 @@ describe("CapperVipSection", () => {
       can_post_sports: ["MLB"],
     });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    expect(await screen.findByText("Your VIP dashboard")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Your VIP dashboard" })).toBeInTheDocument();
   });
 
   it("section hides the owner panel from a different signed-in capper", async () => {
@@ -235,7 +256,7 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByRole("region", { name: "Capper VIP" });
-    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your VIP dashboard" })).toBeNull();
     expect(client.getVipMe).not.toHaveBeenCalled();
   });
 
@@ -262,7 +283,7 @@ describe("CapperVipSection", () => {
       can_post_sports: ["MLB"],
     });
     const { rerender } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    await screen.findByRole("region", { name: "Capper VIP" });
+    await screen.findByRole("region", { name: "Your VIP dashboard" });
     fireEvent.click(await screen.findByRole("button", { name: "Post a VIP pick" }));
     const draft = screen.getByPlaceholderText('selection text, e.g. "Yankees ML"');
     fireEvent.change(draft, { target: { value: "Draft text" } });
@@ -273,8 +294,50 @@ describe("CapperVipSection", () => {
 
     expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
     expect(client.getVipMe).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Your VIP dashboard" })).toBeInTheDocument();
+    // The selling owner's dashboard replaces the public card.
+    expect(screen.queryByRole("region", { name: "Capper VIP" })).toBeNull();
     expect(screen.getByDisplayValue("Draft text")).toBe(draft);
+  });
+
+  it("re-check skips an expired token so a sleeping subscriber is not shown the paywall", async () => {
+    const fresh = { access_token: "tok", user: { id: "u1" }, expires_at: Math.floor(Date.now() / 1000) + 3600 };
+    auth.value = { authReady: true, session: fresh };
+    client.getVipCapperStatus.mockResolvedValue({ ...status, viewer: { subscribed: true, is_owner: false, billing: "stripe" } });
+    const { rerender } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await screen.findByRole("region", { name: "Capper VIP" });
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+
+    // Laptop wakes: the stored token has expired and supabase-js has not refreshed it yet.
+    auth.value = { authReady: true, session: { ...fresh, expires_at: Math.floor(Date.now() / 1000) - 60 } };
+    rerender(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+
+    // The refresh lands (same user, new token): the next re-check goes out with it.
+    auth.value = { authReady: true, session: { ...fresh, access_token: "tok2" } };
+    rerender(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(2);
+    expect(client.getVipCapperStatus).toHaveBeenLastCalledWith(7, "tok2");
+  });
+
+  it("keeps re-checking after the first client fetch failed", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    client.getVipCapperStatus.mockRejectedValueOnce(new client.VipApiError(500, "boom"));
+    client.getVipCapperStatus.mockResolvedValue(status);
+    const { container } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await waitFor(() => expect(err).toHaveBeenCalled());
+    expect(container).toBeEmptyDOMElement();
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(await screen.findByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+    err.mockRestore();
   });
 
   it("owner panel hidden for denylisted handle", async () => {
@@ -282,7 +345,8 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     client.getVipMe.mockResolvedValue({
       capper: { id: 7, handle: "FadeAI_" },
-      seller: null,
+      // A seller row on a house account must not blank the section.
+      seller: status.seller,
       eligibility: [{ sport: "MLB", eligible: true, eligible_since: "2026-10-01", fail_streak: 0 }],
       can_post_sports: ["MLB"],
     });
@@ -290,7 +354,214 @@ describe("CapperVipSection", () => {
     await screen.findByRole("region", { name: "Capper VIP" });
     await waitFor(() => expect(client.getVipMe).toHaveBeenCalled());
     await Promise.resolve();
-    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your VIP dashboard" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+  });
+
+  describe("live access re-check", () => {
+    const paid = { ...status, viewer: { subscribed: true, is_owner: false, billing: "stripe" as const } };
+    let hidden = false;
+    beforeEach(() => {
+      vi.useFakeTimers();
+      hidden = false;
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => (hidden ? "hidden" : "visible"),
+      });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      // Back to jsdom's own getter on the prototype.
+      delete (document as { visibilityState?: string }).visibilityState;
+    });
+    const settle = () =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+    it("a subscriber who loses access loses the picks without a refresh", async () => {
+      client.getVipCapperStatus.mockResolvedValueOnce(paid).mockResolvedValue(status);
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await settle();
+      expect(screen.getByText("Subscribed")).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30000);
+      });
+      expect(screen.queryByText("Subscribed")).toBeNull();
+    });
+
+    it("re-checks when the tab comes back, not while hidden", async () => {
+      client.getVipCapperStatus.mockResolvedValue(paid);
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await settle();
+      hidden = true;
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+      hidden = false;
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(client.getVipCapperStatus).toHaveBeenCalledTimes(2);
+    });
+
+    it("a failed re-check keeps the section on screen", async () => {
+      client.getVipCapperStatus.mockResolvedValueOnce(paid).mockRejectedValue(new Error("blip"));
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await settle();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30000);
+      });
+      expect(screen.getByText("Subscribed")).toBeInTheDocument();
+      err.mockRestore();
+    });
+
+    it("does not re-check a profile with no VIP to show", async () => {
+      client.getVipCapperStatus.mockResolvedValue({
+        ...status, seller: null, eligibility: [], locked: [],
+      });
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await settle();
+      await vi.advanceTimersByTimeAsync(90000);
+      expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("return from checkout", () => {
+    const paid = { ...status, viewer: { subscribed: true, is_owner: false, billing: "stripe" as const } };
+    beforeEach(() => {
+      vi.useFakeTimers();
+      window.history.replaceState(null, "", "/cappers/moneyplayzz?vip=subscribed");
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      window.history.replaceState(null, "", "/");
+    });
+
+    it("success return polls until access", async () => {
+      client.getVipCapperStatus
+        .mockResolvedValueOnce(status)
+        .mockResolvedValueOnce(status)
+        .mockResolvedValue(paid);
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      expect(window.location.search).toBe("");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(screen.getByText("You're in. VIP picks show here and arrive by email.")).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(screen.getByText("Subscribed")).toBeInTheDocument();
+      const calls = client.getVipCapperStatus.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(client.getVipCapperStatus.mock.calls.length).toBe(calls);
+    });
+
+    it("a failed poll keeps the last good status on screen", async () => {
+      client.getVipCapperStatus
+        .mockResolvedValueOnce(status)
+        .mockRejectedValueOnce(new Error("blip"));
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(client.getVipCapperStatus.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+    });
+
+    it("manage subscription uses the profile capper id", async () => {
+      client.getVipCapperStatus.mockResolvedValue(paid);
+      client.openVipPortal.mockResolvedValue({ url: "https://billing.stripe.com/p" });
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Manage subscription" }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(client.openVipPortal).toHaveBeenCalledWith(7, expect.anything());
+    });
+
+    it("stops polling after 30 seconds", async () => {
+      client.getVipCapperStatus.mockResolvedValue(status);
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await vi.advanceTimersByTimeAsync(31000);
+      const calls = client.getVipCapperStatus.mock.calls.length;
+      expect(calls).toBeLessThanOrEqual(12);
+      await vi.advanceTimersByTimeAsync(9000);
+      // The 3s checkout poll would add 3; only the 30s access re-check may land.
+      expect(client.getVipCapperStatus.mock.calls.length - calls).toBeLessThanOrEqual(1);
+    });
+
+    it("stops polling on unmount", async () => {
+      client.getVipCapperStatus.mockResolvedValue(status);
+      const { unmount } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await vi.advanceTimersByTimeAsync(3000);
+      unmount();
+      const calls = client.getVipCapperStatus.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(client.getVipCapperStatus.mock.calls.length).toBe(calls);
+    });
+  });
+  describe("first paint from the server's anonymous status", () => {
+    it("paints the card before the viewer's status lands, with Subscribe held back", () => {
+      client.getVipCapperStatus.mockReturnValue(new Promise(() => {}));
+      render(
+        <VipInitialStatusProvider status={status}>
+          <CapperVipSection capperId={7} handle="moneyplayzz" />
+        </VipInitialStatusProvider>,
+      );
+      expect(screen.getByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Subscribe" })).not.toBeInTheDocument();
+    });
+
+    it("a failed client call falls back to the public card, without Subscribe for a signed-in viewer", async () => {
+      // Signed in: their own status is unknown, not "not subscribed". The card
+      // shows (no freeze) but the purchase link waits for the re-check.
+      client.getVipCapperStatus.mockRejectedValue(new client.VipApiError(500, "boom"));
+      render(
+        <VipInitialStatusProvider status={status}>
+          <CapperVipSection capperId={7} handle="moneyplayzz" />
+        </VipInitialStatusProvider>,
+      );
+      expect(await screen.findByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Subscribe" })).toBeNull();
+    });
+
+    it("a failed client call for an anonymous viewer still offers Subscribe", async () => {
+      auth.value = { authReady: true, session: null };
+      client.getVipCapperStatus.mockRejectedValue(new client.VipApiError(500, "boom"));
+      render(
+        <VipInitialStatusProvider status={status}>
+          <CapperVipSection capperId={7} handle="moneyplayzz" />
+        </VipInitialStatusProvider>,
+      );
+      expect(await screen.findByRole("link", { name: "Subscribe" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+    });
+
+    it("a subscriber goes straight to Subscribed, never Subscribe", async () => {
+      client.getVipCapperStatus.mockResolvedValue({
+        ...status,
+        viewer: { subscribed: true, is_owner: false, billing: "stripe" },
+      });
+      render(
+        <VipInitialStatusProvider status={status}>
+          <CapperVipSection capperId={7} handle="moneyplayzz" />
+        </VipInitialStatusProvider>,
+      );
+      expect(screen.queryByRole("link", { name: "Subscribe" })).not.toBeInTheDocument();
+      expect(await screen.findByText("Subscribed")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Subscribe" })).not.toBeInTheDocument();
+    });
   });
 });

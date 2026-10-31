@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getVipCapperStatus } from "@/lib/vip/client";
+import { useVipInitialStatus } from "./VipInitialStatus";
 
-/** The TailSlips brand crown in light purple. Uses logo-crown-bold.png, a
- *  stroke-thickened copy of logo-crown.png (alpha dilated ~15px at source
- *  size) so it reads at 20-28px; tinted through a CSS mask. `bold` is kept
- *  for call-site compatibility. */
+/** The TailSlips brand crown in VIP purple: the green logo crown's exact
+ *  shape (crown-gradient.png) with the same top-to-bottom fade, orchid to
+ *  violet, baked into public/vip-crown-purple.png. The share cards draw the
+ *  same file. `bold` is kept for call-site compatibility. */
 export function VipCrown({
   className = "w-5 h-5",
   label,
@@ -17,15 +18,10 @@ export function VipCrown({
   bold?: boolean;
 }) {
   const mask: React.CSSProperties = {
-    backgroundColor: "var(--color-vip-text)",
-    WebkitMaskImage: "url(/logo-crown-bold.png)",
-    maskImage: "url(/logo-crown-bold.png)",
-    WebkitMaskSize: "contain",
-    maskSize: "contain",
-    WebkitMaskRepeat: "no-repeat",
-    maskRepeat: "no-repeat",
-    WebkitMaskPosition: "center",
-    maskPosition: "center",
+    backgroundImage: "url(/vip-crown-purple.png)",
+    backgroundSize: "contain",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "center",
   };
   return (
     <span
@@ -44,7 +40,10 @@ export function VipCrown({
 export function useVipEligible(capperId: number): boolean {
   const { session, authReady } = useAuth();
   const token = session?.access_token ?? null;
-  const [show, setShow] = useState(false);
+  // Eligibility is the same for every viewer, so the server's first-paint
+  // status can show the ring and crown before the client call returns.
+  const initial = useVipInitialStatus();
+  const [show, setShow] = useState(() => !!initial?.eligibility.some((e) => e.eligible));
   useEffect(() => {
     if (!authReady) return;
     let cancelled = false;

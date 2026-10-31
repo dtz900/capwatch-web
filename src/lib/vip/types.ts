@@ -1,10 +1,11 @@
 export type VipSport = "MLB" | "NFL" | "NBA";
 
+export type VipSellerStatus = "onboarding" | "active" | "restricted" | "stopped" | "disabled";
+
 export interface VipSeller {
-  capper_id: number;
   price_cents: number;
   founding: boolean;
-  status: string;
+  status: VipSellerStatus | string;
   /** Book the builder prefills prices from; "other" = not in the feed. */
   preferred_book?: string | null;
 }
@@ -17,18 +18,28 @@ export interface VipEligibility {
   n_picks: number | null;
   n_floor_picks: number | null;
   run_date: string | null;
-  /* Latest history reason ('ok' | 'below_floor' | 'negative' | 'no_record')
+  /* Latest history reason ('ok' | 'below_floor' | 'few_wins' | 'negative' | 'low_roi' | 'no_record' | 'held_60')
      and consecutive failing nights; optional so older payloads still type. */
   reason?: string | null;
   fail_streak?: number;
 }
 
+/** GET /api/vip/seller/account. `stage` says where a not-yet-charging account
+ *  is: the capper owes Stripe something, or Stripe is checking. Null once live. */
+export interface VipSellerAccount {
+  status: string;
+  charges_enabled: boolean;
+  stage: "needs_info" | "verifying" | null;
+}
+
 export interface VipSellerSubscriber {
   username: string | null;
   since: string | null;
-  /** False when canceled but still inside the paid period. */
+  /** False when canceled but still inside the paid period, and when paused. */
   renews: boolean;
   current_period_end: string | null;
+  /** Paused rows are billing-on-hold subscribers; older payloads omit it. */
+  status?: "active" | "paused" | "canceled";
 }
 
 export interface VipLockedSummary {
@@ -97,7 +108,14 @@ export interface VipCapperStatus {
   /** Why new subscriptions are closed; null when open. Optional so an older
    *  platform build still renders. */
   door_closed_reason?: "not_selling" | "ineligible" | "silent" | null;
-  viewer: { subscribed: boolean; is_owner: boolean };
+  viewer: {
+    subscribed: boolean;
+    is_owner: boolean;
+    /** How the viewer pays: "stripe" can use the portal, "admin" is a grant. Optional for older platform builds. */
+    billing?: "stripe" | "admin" | null;
+  };
+  /** False until the capper is allowlisted for Stripe payments (ship dark). Optional for older platform builds. */
+  payments_enabled?: boolean;
   vip_record: {
     n: number;
     wins: number;
@@ -118,6 +136,8 @@ export interface VipMe {
     fail_streak: number;
   }>;
   can_post_sports: string[];
+  /** False until the capper is allowlisted for Stripe payments (ship dark). */
+  payments_enabled: boolean;
 }
 
 export interface VipSubscription {

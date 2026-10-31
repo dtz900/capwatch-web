@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { VipApiError, postVipSeller } from "@/lib/vip/client";
+import { VipApiError, postVipSeller, startVipOnboarding } from "@/lib/vip/client";
+import { SELLER_AGREEMENT_VERSION } from "@/lib/vip/terms";
 import type { VipMe } from "@/lib/vip/types";
 import { BOOKS, OTHER_BOOK } from "./builder/books";
 import { VipBand, VipGlassCard } from "./VipBand";
 import { joinSports } from "./format";
 import { ERROR_TEXT, VIP_PRIMARY_BTN } from "./styles";
-
-export const TERMS_SENTENCE =
-  "I understand I can start selling in a sport after a positive last 30 days there and keep selling only while my last 60 days there stay positive, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription, with payment processing fees coming out of the TailSlips share.";
 
 /** Capper's share: TailSlips keeps a flat 15% for everyone and absorbs processing. */
 export const SELLER_SHARE = 0.85;
@@ -56,7 +54,7 @@ export function PriceInput({
 }
 
 export const REQUIREMENT_LINE =
-  "Start selling unlocks once a sport is eligible: a positive record over the last 30 days with at least 20 graded picks.";
+  "Start selling unlocks once a sport is eligible: 30+ graded picks, 5+ wins and +3% ROI over the last 30 days.";
 
 export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void }) {
   const { session } = useAuth();
@@ -68,21 +66,38 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
   const [error, setError] = useState<string | null>(null);
 
   const dollars = parsePriceDollars(price);
-  const canSubmit = dollars !== null && book !== "" && accepted && !pending && me.capper !== null;
+  const canSubmit = dollars !== null && book !== "" && accepted && !pending && me.capper !== null &&
+    me.payments_enabled;
 
   const submit = async () => {
     // Pending guards a double tap: the button disables on the next render.
     if (dollars === null || pending) return;
     setPending(true);
     setError(null);
+    let created = false;
     try {
-      await postVipSeller({ price_cents: dollars * 100, accept_terms: true, preferred_book: book }, token);
-      onDone();
+      await postVipSeller(
+        {
+          price_cents: dollars * 100,
+          accept_terms: true,
+          terms_version: SELLER_AGREEMENT_VERSION,
+          preferred_book: book,
+        },
+        token,
+      );
+      created = true;
+      const { url } = await startVipOnboarding(token);
+      window.location.assign(url);
     } catch (err) {
       if (err instanceof VipApiError && err.status === 409) {
-        setError("You need a positive 30-day record in at least one sport first.");
+        setError("You need an eligible sport first: 30+ graded picks, 5+ wins and +3% ROI over the last 30 days.");
       } else if (err instanceof VipApiError && err.status === 403 && err.detail === "seller_denylisted") {
         setError("This account cannot sell VIP picks.");
+      } else if (created) {
+        // The seller row exists; the status banner offers Continue setup.
+        console.error("VIP onboarding link failed", err);
+        onDone();
+        return;
       } else {
         console.error("VIP seller create failed", err);
         setError("Could not start selling. Try again.");
@@ -124,12 +139,28 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
               checked={accepted}
               onChange={(e) => setAccepted(e.target.checked)}
             />
-            <span>{TERMS_SENTENCE}</span>
+            <span>
+              I agree to the{" "}
+              <a
+                href="/seller-agreement"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 text-[var(--color-text)]"
+              >
+                Seller Agreement
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </span>
           </label>
           <div className="flex items-center gap-3 flex-wrap">
             <button type="button" className={VIP_PRIMARY_BTN} disabled={!canSubmit} onClick={submit}>
               Start selling
             </button>
+            {!me.payments_enabled && (
+              <span role="status" className="text-[11px] text-[var(--color-text-muted)]">
+                Payments aren&apos;t open yet.
+              </span>
+            )}
             {error && (
               <span role="status" className={ERROR_TEXT}>
                 {error}

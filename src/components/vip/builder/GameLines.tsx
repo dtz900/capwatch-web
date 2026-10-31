@@ -9,12 +9,12 @@ import { MoreLink, NoPrice, PeriodCtx, PriceButton, TeamCell, type TapFn } from 
 type MoreView = null | "altSpreads" | "altTotals" | "teamTotals";
 
 export function GameLines({ g, selected, onTap }: { g: BuilderGame; selected: Set<string>; onTap: TapFn }) {
-  const boardPeriod = useContext(PeriodCtx);
-  // Thin games only have the full game posted yet.
-  const period: Period = g.thin ? "Game" : boardPeriod;
+  const period: Period = useContext(PeriodCtx);
   const [more, setMore] = useState<MoreView>(null);
   const [allAlts, setAllAlts] = useState(false);
-  const L = g.periods[period];
+  // Thin games only have the full game posted yet. Never stand full-game prices
+  // in for a period: the tap would post a full-game pick under a period header.
+  const L = g.thin && period !== "Game" ? undefined : g.periods[period];
   const btn = (sd: BoardSide) => (
     <PriceButton key={sd.key} side={sd} selected={selected.has(sd.key)} onTap={() => onTap(sd, g.id)} />
   );
@@ -58,7 +58,9 @@ export function GameLines({ g, selected, onTap }: { g: BuilderGame; selected: Se
         </div>
       ))}
       {!L ? (
-        <p className="text-[11px] text-[var(--color-text-muted)]">No {label.toLowerCase()} lines posted for this game yet.</p>
+        <p className="text-[11px] text-[var(--color-text-muted)]">
+          {g.thin ? `${label} lines open closer to game time.` : `No ${label.toLowerCase()} lines posted for this game yet.`}
+        </p>
       ) : g.thin ? (
         <p className="text-[11px] text-[var(--color-text-muted)]">
           Main lines only so far. Alts, periods and props open closer to game time.
