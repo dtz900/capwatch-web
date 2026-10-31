@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { errorRedirectTarget } from "./redirects";
+import { errorRedirectTarget, signInReturnPath } from "./redirects";
 
 describe("errorRedirectTarget", () => {
   const origin = "https://tailslips.com";
@@ -19,5 +19,21 @@ describe("errorRedirectTarget", () => {
   it("ignores protocol-relative and absolute cookie values", () => {
     expect(errorRedirectTarget(origin, encodeURIComponent("//evil.com"), "x")).toBe("https://tailslips.com/login?error=x");
     expect(errorRedirectTarget(origin, encodeURIComponent("https://evil.com"), "x")).toBe("https://tailslips.com/login?error=x");
+  });
+});
+
+describe("signInReturnPath", () => {
+  it("returns the saved sign-in path from the cookie header", () => {
+    const cookies = `a=1; ts_return_to=${encodeURIComponent("/cappers/zz_viptest/subscribe")}; b=2`;
+    expect(signInReturnPath(cookies)).toBe("/cappers/zz_viptest/subscribe");
+  });
+
+  it("falls back to /my-tails with no cookie", () => {
+    expect(signInReturnPath("a=1")).toBe("/my-tails");
+  });
+
+  it("rejects anything that is not a same-origin path", () => {
+    expect(signInReturnPath(`ts_return_to=${encodeURIComponent("//evil.com")}`)).toBe("/my-tails");
+    expect(signInReturnPath(`ts_return_to=${encodeURIComponent("https://evil.com")}`)).toBe("/my-tails");
   });
 });

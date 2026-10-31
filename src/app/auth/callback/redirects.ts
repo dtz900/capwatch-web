@@ -11,3 +11,17 @@ export function errorRedirectTarget(origin: string, linkReturnCookie: string | u
   const sep = dest.includes("?") ? "&" : "?";
   return `${origin}${dest}${sep}error=${encodeURIComponent(message)}`;
 }
+
+/* Where a sign-in by emailed code lands: the path the sign-in button saved in
+   ts_return_to (the same cookie /auth/callback honors for the magic link), or
+   /my-tails. Only a same-origin path is trusted. */
+export function signInReturnPath(cookieHeader: string): string {
+  const raw = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("ts_return_to="))
+    ?.slice("ts_return_to=".length);
+  if (!raw) return "/my-tails";
+  const decoded = decodeURIComponent(raw);
+  return decoded.startsWith("/") && !decoded.startsWith("//") ? decoded : "/my-tails";
+}
