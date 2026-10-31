@@ -48,6 +48,19 @@ describe("vip admin actions", () => {
     expect(await grantVipSubscriptionAction(input)).toEqual({ ok: false, error: "Request failed (500)" });
   });
 
+  it("409 and 502 details map to readable errors", async () => {
+    mockFetch(409, { detail: "has_stripe_subscription" });
+    expect(await grantVipSubscriptionAction(input)).toEqual({
+      ok: false,
+      error: "This user pays through Stripe. A grant would bury that subscription; extend it from the capper's Stripe account instead.",
+    });
+    mockFetch(502, { detail: "revoke_incomplete" });
+    expect(await revokeVipSubscriptionAction(input)).toEqual({
+      ok: false,
+      error: "Stripe could not cancel the subscription, so nothing changed. Try again.",
+    });
+  });
+
   it("non-JSON 404 falls through to generic error", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,

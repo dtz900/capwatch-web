@@ -29,29 +29,33 @@ export type VipGrantResult =
     }
   | { ok: false; error: string };
 
-const NOT_FOUND_MESSAGES: Record<string, string> = {
+const DETAIL_MESSAGES: Record<string, string> = {
   user_not_found: "User not found",
   capper_not_found: "Capper not found",
+  // The platform refuses to upsert an admin row over a live Stripe subscription
+  // (it would orphan the subscription, still billing with no row to find).
+  has_stripe_subscription:
+    "This user pays through Stripe. A grant would bury that subscription; extend it from the capper's Stripe account instead.",
+  // Revoke cancels at Stripe before writing the row; a Stripe failure leaves both as they were.
+  revoke_incomplete: "Stripe could not cancel the subscription, so nothing changed. Try again.",
 };
 
 async function readError(
   res: Response,
   method: "POST" | "DELETE",
 ): Promise<string> {
-  if (res.status === 404) {
-    let detail: unknown;
-    let parsed = false;
-    try {
-      detail = ((await res.json()) as { detail?: unknown }).detail;
-      parsed = true;
-    } catch {
-      // Non-JSON 404 falls through to the generic message below.
-    }
-    if (typeof detail === "string" && NOT_FOUND_MESSAGES[detail]) {
-      return NOT_FOUND_MESSAGES[detail];
-    }
-    if (parsed && method === "DELETE") return "No subscription to revoke";
+  let detail: unknown;
+  let parsed = false;
+  try {
+    detail = ((await res.json()) as { detail?: unknown }).detail;
+    parsed = true;
+  } catch {
+    // Non-JSON body falls through to the generic message below.
   }
+  if (typeof detail === "string" && DETAIL_MESSAGES[detail]) {
+    return DETAIL_MESSAGES[detail];
+  }
+  if (res.status === 404 && parsed && method === "DELETE") return "No subscription to revoke";
   return `Request failed (${res.status})`;
 }
 
