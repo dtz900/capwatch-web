@@ -41,6 +41,37 @@ describe("SellerStrip", () => {
     client.getVipSellerSubscribers.mockResolvedValue({ subscribers: [] });
   });
 
+  it("counts paused and canceling subscribers apart from active ones", async () => {
+    client.getVipSellerSubscribers.mockResolvedValue({ subscribers: [
+      { username: "a", since: null, renews: true, current_period_end: "2026-11-24T12:00:00Z", status: "active" },
+      { username: "p", since: null, renews: false, current_period_end: null, status: "paused" },
+      { username: "c", since: null, renews: false, current_period_end: "2026-11-20T12:00:00Z", status: "canceled" },
+    ] });
+    renderStrip();
+    expect(await screen.findByText("active · 1 paused · 1 canceling")).toBeInTheDocument();
+    // $25 x 1 renewing x seller share: paused subscribers are not billed.
+    expect(screen.getByText("$21.25")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    expect(screen.getByText("Paused")).toBeInTheDocument();
+    expect(screen.getByText(/^Renews Nov/)).toBeInTheDocument();
+    expect(screen.getByText(/^Ends Nov/)).toBeInTheDocument();
+  });
+
+  it("reloads subscribers after stopping", async () => {
+    client.getVipSellerSubscribers
+      .mockResolvedValueOnce({ subscribers: [
+        { username: "a", since: null, renews: true, current_period_end: null, status: "active" }] })
+      .mockResolvedValue({ subscribers: [
+        { username: "a", since: null, renews: false, current_period_end: null, status: "canceled" }] });
+    client.stopVipSelling.mockResolvedValue({ status: "stopped", canceled: 1 });
+    renderStrip();
+    expect(await screen.findByText("$21.25")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Stop selling" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Stop selling" })[0]);
+    expect(await screen.findByText("active · 1 canceling")).toBeInTheDocument();
+    expect(screen.getByText("$0.00")).toBeInTheDocument();
+  });
+
   it("explains the pause under Subscribers", () => {
     renderStrip();
     expect(

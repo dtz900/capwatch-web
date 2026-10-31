@@ -71,6 +71,7 @@ export function SellerStrip({
     if (stopping) stopPanelRef.current?.focus();
   }, [stopping]);
 
+  // Reloaded when the seller status changes: a stop cancels every renewal.
   useEffect(() => {
     let cancelled = false;
     getVipSellerSubscribers(tokenRef.current)
@@ -81,10 +82,16 @@ export function SellerStrip({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [status]);
 
   const renewing = subs?.filter((s) => s.renews).length ?? null;
-  const canceling = subs ? subs.length - (renewing ?? 0) : 0;
+  const paused = subs?.filter((s) => s.status === "paused").length ?? 0;
+  const canceling = subs ? subs.length - (renewing ?? 0) - paused : 0;
+  const subsLine = [
+    "active",
+    paused > 0 && `${paused} paused`,
+    canceling > 0 && `${canceling} canceling`,
+  ].filter(Boolean).join(" · ");
   const monthly = renewing !== null ? renewing * price * SELLER_SHARE : null;
   const draft = parsePriceDollars(draftPrice);
 
@@ -185,7 +192,7 @@ export function SellerStrip({
             {renewing ?? "--"}
           </span>
           <span className="text-[11px] text-[var(--color-text-muted)]">
-            active{canceling > 0 ? ` · ${canceling} canceling` : ""}
+            {subsLine}
           </span>
           <span className="text-[10px] leading-snug text-[var(--color-text-muted)]">
             If you go cold, your subscribers stop being charged and their billing dates move out by the days you
@@ -279,7 +286,11 @@ export function SellerStrip({
               </span>
               {s.since && <span className="text-[var(--color-text-muted)]">since {shortDate(s.since)}</span>}
               <span className="ml-auto text-[var(--color-text-soft)] tabular-nums">
-                {s.current_period_end ? `${s.renews ? "Renews" : "Ends"} ${shortDate(s.current_period_end)}` : ""}
+                {s.status === "paused"
+                  ? "Paused"
+                  : s.current_period_end
+                    ? `${s.renews ? "Renews" : "Ends"} ${shortDate(s.current_period_end)}`
+                    : ""}
               </span>
             </div>
           ))}

@@ -117,7 +117,8 @@ export function OwnerPanelView({
     <section className={`${SECTION} flex flex-col gap-4`}>
       <span className={EYEBROW}>Your VIP dashboard</span>
       <SellerStrip seller={me.seller} token={token} paymentsEnabled={me.payments_enabled} onSaved={onRefresh} />
-      {me.can_post_sports.length === 0 ? (
+      {/* Stopped and disabled sellers have the banner; the eligibility hint would mislead. */}
+      {me.seller.status === "stopped" || me.seller.status === "disabled" ? null : me.can_post_sports.length === 0 ? (
         <p className="text-[12px] text-[var(--color-text-muted)]">You can post VIP picks once a sport is eligible.</p>
       ) : (
         token && <BuilderToggle me={me} token={token} onPosted={onPosted} />

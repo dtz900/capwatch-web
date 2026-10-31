@@ -216,6 +216,25 @@ describe("CapperVipSection", () => {
     expect(screen.queryByRole("region", { name: "Capper VIP" })).toBeNull();
   });
 
+  it.each([
+    ["active", true],
+    ["stopped", false],
+    ["disabled", false],
+  ])("owner panel eligibility hint for a %s seller with nothing eligible", async (sellerStatus, shown) => {
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "moneyplayzz" } };
+    client.getVipCapperStatus.mockResolvedValue(status);
+    client.getVipMe.mockResolvedValue({
+      capper: { id: 7, handle: "moneyplayzz" },
+      seller: { ...status.seller, status: sellerStatus, preferred_book: "draftkings" },
+      eligibility: [],
+      can_post_sports: [],
+    });
+    render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await screen.findByText("Your VIP dashboard");
+    const hint = screen.queryByText("You can post VIP picks once a sport is eligible.");
+    expect(hint !== null).toBe(shown);
+  });
+
   it("section shows the owner panel when the platform says this viewer owns the capper", async () => {
     // Owner linked in the database without X verification: no claimed capper
     // on the session, but the status says is_owner.

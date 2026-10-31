@@ -35,9 +35,11 @@ export interface VipSellerAccount {
 export interface VipSellerSubscriber {
   username: string | null;
   since: string | null;
-  /** False when canceled but still inside the paid period. */
+  /** False when canceled but still inside the paid period, and when paused. */
   renews: boolean;
   current_period_end: string | null;
+  /** Paused rows are billing-on-hold subscribers; older payloads omit it. */
+  status?: "active" | "paused" | "canceled";
 }
 
 export interface VipLockedSummary {
