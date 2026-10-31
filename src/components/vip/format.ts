@@ -7,7 +7,17 @@ export function signedUnits(units: number | null | undefined): string {
 }
 
 export function eligibleCopy(e: VipEligibility): string {
+  if (e.in_season === false)
+    return `${e.sport} VIP eligible, back when the season starts: ${signedUnits(e.units)} over last 30 days (${e.n_picks ?? 0} picks)`;
   return `Selling ${e.sport} VIP: ${signedUnits(e.units)} over last 30 days (${e.n_picks ?? 0} picks)`;
+}
+
+/** Eligibility rows with in_season filled from the status's in-season list;
+ *  untouched when an older platform build sends no list. */
+export function withSeason(s: VipCapperStatus): VipEligibility[] {
+  const live = s.in_season_sports;
+  if (!live) return s.eligibility;
+  return s.eligibility.map((e) => ({ ...e, in_season: live.includes(String(e.sport)) }));
 }
 
 export function closedCopy(e: VipEligibility): string {
@@ -86,4 +96,6 @@ export const DOOR_CLOSED: Record<string, string> = {
   ineligible:
     "Not eligible to sell right now. Subscriptions reopen when they qualify again.",
   not_selling: "Not taking subscribers right now.",
+  off_season:
+    "Eligible, but the season hasn't started. Subscriptions open with the first games.",
 };

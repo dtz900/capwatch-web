@@ -650,3 +650,30 @@ describe("claim your profile (unclaimed capper)", () => {
     expect(screen.queryByText("Are you @moneyplayzz?")).toBeNull();
   });
 });
+
+describe("off-season door", () => {
+  // Eligible on MLB with no MLB games on the calendar: the badge stays, the
+  // Subscribe button is replaced by the one line that explains it.
+  const offSeason: VipCapperStatus = {
+    ...status,
+    door_open: false,
+    door_closed_reason: "off_season",
+    in_season_sports: ["NBA", "NFL"],
+    eligibility: [{ ...status.eligibility[0], sport: "MLB", eligible: true }],
+  };
+
+  it("shows the off-season line instead of Subscribe, and tags the badge", async () => {
+    auth.value = { authReady: true, session: null, capper: null };
+    client.getVipCapperStatus.mockResolvedValue(offSeason);
+    render(
+      <VipInitialStatusProvider status={offSeason}>
+        <CapperVipSection capperId={7} handle="moneyplayzz" />
+      </VipInitialStatusProvider>,
+    );
+    expect(await screen.findByText(/season hasn't started/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Subscribe/ })).not.toBeInTheDocument();
+    expect(screen.getByText("off-season")).toBeInTheDocument();
+    expect(screen.getByText("VIP Eligible")).toBeInTheDocument();
+  });
+});
+

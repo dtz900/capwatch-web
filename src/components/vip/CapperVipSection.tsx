@@ -18,7 +18,7 @@ import { OwnerPanel } from "./OwnerPanel";
 import { SubscribeDoor } from "./SubscribeDoor";
 import { useVipInitialStatus } from "./VipInitialStatus";
 import { VipBand, VipGlassCard } from "./VipBand";
-import { exclusivityLine, signedUnits, vipHeadline } from "./format";
+import { exclusivityLine, signedUnits, vipHeadline, withSeason } from "./format";
 import { EYEBROW, INNER_CARD, VIP_GLASS_DIVIDER } from "./styles";
 
 function recordLine(r: VipCapperStatus["vip_record"]): string {
@@ -226,7 +226,7 @@ export function CapperVipSection({
   const ownerPanel = isOwner ? (
     <OwnerPanel
       onChanged={refetch}
-      eligibility={status?.eligibility}
+      eligibility={status ? withSeason(status) : undefined}
       vipRecord={status?.vip_record}
       exclusivity={status ? exclusivityLine(status) : null}
       onDashboard={setOwnerDashboard}
@@ -354,7 +354,7 @@ export function CapperVipView({
               }
             />
             <div className="px-5 sm:px-6 pb-3.5">
-              <EligibilityBadges eligibility={status.eligibility} tiles />
+              <EligibilityBadges eligibility={withSeason(status)} tiles />
             </div>
             {status.claimed === false && !status.viewer.is_owner && (
               <div className={`${VIP_GLASS_DIVIDER} px-5 sm:px-6 py-3.5`}>

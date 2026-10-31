@@ -12,8 +12,7 @@ import {
   DOOR_CLOSED,
   exclusivityLine,
   formatPrice,
-  vipHeadline,
-} from "@/components/vip/format";
+  vipHeadline, withSeason } from "@/components/vip/format";
 import { VIP_GLASS_DIVIDER, VIP_PRIMARY_BTN } from "@/components/vip/styles";
 import { fetchCapperProfile } from "@/lib/api";
 import { API_BASE } from "@/lib/config";
@@ -145,7 +144,7 @@ export default async function SubscribePage({ params }: PageProps) {
               right={seller ? <VipPrice cents={seller.price_cents} /> : null}
             />
             <div className="px-5 sm:px-6 pt-1 pb-5">
-              <EligibilityGroups eligibility={status.eligibility} />
+              <EligibilityGroups eligibility={withSeason(status)} />
             </div>
 
             {/* Picks waiting behind the paywall (only when there are some). */}

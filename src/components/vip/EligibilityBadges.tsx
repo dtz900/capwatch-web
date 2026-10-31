@@ -77,6 +77,11 @@ export function EligibilityStat({ row, tile = false }: { row: VipEligibility; ti
       <span className="text-[11px] text-[var(--color-text-muted)] tabular-nums">
         {row.n_picks ?? 0} picks
       </span>
+      {row.eligible && row.in_season === false && (
+        <span className="text-[10px] uppercase tracking-[0.12em] font-bold text-[var(--color-text-muted)]">
+          off-season
+        </span>
+      )}
     </div>
   );
 }
