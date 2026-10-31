@@ -613,6 +613,18 @@ describe("claim your profile (unclaimed capper)", () => {
     await waitFor(() => expect(linkX).toHaveBeenCalledWith("/cappers/moneyplayzz"));
   });
 
+  it("shows the identity-link error the auth callback sent back to this profile", async () => {
+    // X denied, or the link failed: /auth/callback returns here with ?error=.
+    vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true");
+    vi.stubEnv("NEXT_PUBLIC_X_AUTH_ENABLED", "true");
+    window.history.replaceState(null, "", "/cappers/moneyplayzz?error=X%20denied%20the%20request");
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: null, linkX: vi.fn() };
+    client.getVipCapperStatus.mockResolvedValue(unclaimed);
+    mount();
+    expect(await screen.findByRole("alert")).toHaveTextContent("X denied the request");
+    expect(screen.getByRole("button", { name: "Verify with X to claim" })).toBeInTheDocument();
+  });
+
   it("signed in as another capper's owner: no invitation", async () => {
     auth.value = {
       authReady: true,
