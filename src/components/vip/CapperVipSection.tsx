@@ -166,6 +166,7 @@ export function CapperVipSection({
       vipRecord={status?.vip_record}
       exclusivity={status ? exclusivityLine(status) : null}
       onDashboard={setOwnerDashboard}
+      status={status}
     />
   ) : null;
   const onPull: PullFn | undefined = isOwner

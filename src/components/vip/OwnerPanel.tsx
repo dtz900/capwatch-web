@@ -5,6 +5,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { getVipMe } from "@/lib/vip/client";
 import type { VipCapperStatus, VipEligibility, VipMe } from "@/lib/vip/types";
 import { SellerSetupCard } from "./SellerSetupCard";
+import { PromotePanel } from "./PromotePanel";
 import { SellerStrip } from "./SellerStrip";
 import { PickBuilder } from "./builder/PickBuilder";
 import { EYEBROW, VIP_PRIMARY_BTN } from "./styles";
@@ -18,6 +19,7 @@ export function OwnerPanel({
   vipRecord,
   exclusivity,
   onDashboard,
+  status,
 }: {
   onChanged?: () => void;
   eligibility?: VipEligibility[];
@@ -25,6 +27,8 @@ export function OwnerPanel({
   exclusivity?: string | null;
   /** Told whether the selling dashboard is rendered. */
   onDashboard?: (shown: boolean) => void;
+  /** The public status (Promote cards read it). */
+  status?: VipCapperStatus | null;
 } = {}) {
   const { session } = useAuth();
   const token = session?.access_token ?? null;
@@ -81,6 +85,7 @@ export function OwnerPanel({
       eligibility={eligibility}
       vipRecord={vipRecord}
       exclusivity={exclusivity}
+      status={status}
     />
   );
 }
@@ -117,6 +122,7 @@ export function OwnerPanelView({
   eligibility,
   vipRecord,
   exclusivity,
+  status,
 }: {
   me: VipMe;
   onRefresh: () => void;
@@ -125,6 +131,7 @@ export function OwnerPanelView({
   eligibility?: VipEligibility[];
   vipRecord?: VipCapperStatus["vip_record"] | null;
   exclusivity?: string | null;
+  status?: VipCapperStatus | null;
 }) {
   const { session } = useAuth();
   const token = composerToken ?? session?.access_token ?? null;
@@ -159,6 +166,11 @@ export function OwnerPanelView({
         vipRecord={vipRecord}
         exclusivity={exclusivity}
         postAction={postAction}
+        promote={
+          status && me.capper && me.seller.status === "active" ? (
+            <PromotePanel handle={me.capper.handle} capperId={me.capper.id} status={status} token={token} />
+          ) : null
+        }
       />
       {building && canPost && token && (
         <Builder me={me} token={token} onPosted={onPosted} onClose={() => setBuilding(false)} />

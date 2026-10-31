@@ -13,6 +13,7 @@ import type {
   VipSellerSubscriber,
   VipSubscription,
 } from "./types";
+import type { VipReceipt } from "./promote";
 
 export class VipApiError extends Error {
   readonly status: number;
@@ -55,6 +56,11 @@ export async function vipFetch<T>(path: string, init: VipInit = {}): Promise<T> 
 
 export function getVipCapperStatus(capperId: number | string, token: string | null) {
   return vipFetch<VipCapperStatus>(`/api/vip/cappers/${capperId}`, { token });
+}
+
+/** Revealed winning VIP tickets, newest first (Promote receipts). */
+export function getVipReceipts(capperId: number | string, token: string | null) {
+  return vipFetch<{ receipts: VipReceipt[] }>(`/api/vip/cappers/${capperId}/receipts`, { token });
 }
 
 export function getVipMe(token: string | null) {

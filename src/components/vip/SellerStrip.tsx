@@ -93,6 +93,7 @@ export function SellerStrip({
   vipRecord = null,
   exclusivity = null,
   postAction = null,
+  promote = null,
 }: {
   seller: VipSeller;
   token: string | null;
@@ -105,6 +106,8 @@ export function SellerStrip({
   exclusivity?: string | null;
   /** The band's main action (Post a VIP pick, or a muted hint). */
   postAction?: ReactNode;
+  /** Promote panel, under Subscribers. */
+  promote?: ReactNode;
 }) {
   const price = Math.round(seller.price_cents / 100);
   const book = defaultBook(seller.preferred_book);
@@ -377,6 +380,8 @@ export function SellerStrip({
           </div>
         )}
       </div>
+
+      {promote}
 
       {/* Settings: a quiet footer strip; editors open under it. */}
       <div className="border-t border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 sm:px-6 py-3 flex items-center gap-x-6 gap-y-2 flex-wrap text-[12px]">
