@@ -118,7 +118,7 @@ export function VipBand({
           </p>
         )}
       </div>
-      {right && <div className="shrink-0">{right}</div>}
+      {right && <div className="shrink-0 w-full sm:w-auto">{right}</div>}
     </div>
   );
 }

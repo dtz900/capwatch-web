@@ -272,7 +272,7 @@ export function CapperVipView({
               right={<SubscribeDoor status={status} handle={handle} capperId={capperId} />}
             />
             <div className="px-5 sm:px-6 pb-3.5">
-              <EligibilityBadges eligibility={status.eligibility} />
+              <EligibilityBadges eligibility={status.eligibility} tiles />
             </div>
             {status.locked.length > 0 && (
               <div

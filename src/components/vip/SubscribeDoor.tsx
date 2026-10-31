@@ -65,11 +65,12 @@ export function SubscribeDoor({
     );
   if (!seller || !status.door_open) return null;
   return (
+    // Phone: price left, Subscribe fills the rest of the row.
     <div className="flex items-center gap-4">
       <VipPrice cents={seller.price_cents} />
       <Link
         href={`/cappers/${encodeURIComponent(handle)}/subscribe`}
-        className={VIP_PRIMARY_BTN}
+        className={`${VIP_PRIMARY_BTN} flex-1 sm:flex-none`}
       >
         Subscribe
       </Link>
