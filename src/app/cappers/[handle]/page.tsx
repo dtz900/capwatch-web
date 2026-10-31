@@ -467,6 +467,17 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           <StickyProfileStrip />
           <CapperHeroLive />
 
+          {/* VIP sits above the league and filter controls: none of them
+              apply to it, and under them it read as filtered. */}
+          {capperVipEnabledFor(handle) && (
+            <div className="mb-6">
+              <CapperVipSection
+                capperId={profile.capper.id}
+                handle={handle}
+              />
+            </div>
+          )}
+
           {/* League switch: its own row above the per-view filters, the same
               control as the leaderboard so MLB, NFL and NBA records read apart. */}
           <div className="mb-4">
@@ -487,15 +498,6 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
               <ShareFilteredButton />
             </div>
           </div>
-
-          {capperVipEnabledFor(handle) && (
-            <div className="mb-6">
-              <CapperVipSection
-                capperId={profile.capper.id}
-                handle={handle}
-              />
-            </div>
-          )}
 
           <div className="mb-6">
             <StatBandLive />

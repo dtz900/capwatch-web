@@ -163,7 +163,7 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByRole("region", { name: "Capper VIP" });
-    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your VIP dashboard" })).toBeNull();
     expect(client.getVipMe).not.toHaveBeenCalled();
   });
 
@@ -178,14 +178,14 @@ describe("CapperVipSection", () => {
     });
     client.patchVipSeller.mockResolvedValue({ ...status.seller, price_cents: 3000 });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    expect(await screen.findByText("Your VIP dashboard")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Your VIP dashboard" })).toBeInTheDocument();
     expect(screen.getByText("DraftKings")).toBeInTheDocument();
     // One renewing, one canceled but still in its period.
-    expect(await screen.findByText("active · 1 canceling")).toBeInTheDocument();
+    expect(await screen.findByText("1 canceling")).toBeInTheDocument();
     expect(screen.getByText("$21.25")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Subscribers/ }));
     expect(screen.getByText("@sharpshooter_22")).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Edit price" }));
     fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
@@ -230,7 +230,7 @@ describe("CapperVipSection", () => {
       can_post_sports: [],
     });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    await screen.findByText("Your VIP dashboard");
+    await screen.findByRole("region", { name: "Your VIP dashboard" });
     const hint = screen.queryByText("You can post VIP picks once a sport is eligible.");
     expect(hint !== null).toBe(shown);
   });
@@ -247,7 +247,7 @@ describe("CapperVipSection", () => {
       can_post_sports: ["MLB"],
     });
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    expect(await screen.findByText("Your VIP dashboard")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Your VIP dashboard" })).toBeInTheDocument();
   });
 
   it("section hides the owner panel from a different signed-in capper", async () => {
@@ -255,7 +255,7 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
     await screen.findByRole("region", { name: "Capper VIP" });
-    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your VIP dashboard" })).toBeNull();
     expect(client.getVipMe).not.toHaveBeenCalled();
   });
 
@@ -310,7 +310,7 @@ describe("CapperVipSection", () => {
     await screen.findByRole("region", { name: "Capper VIP" });
     await waitFor(() => expect(client.getVipMe).toHaveBeenCalled());
     await Promise.resolve();
-    expect(screen.queryByText("Your VIP dashboard")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your VIP dashboard" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
   });
 

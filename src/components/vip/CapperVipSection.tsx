@@ -157,7 +157,9 @@ export function CapperVipSection({
   // owner linked without X verification has no claimed capper on the
   // session. The session claim still counts before the status lands.
   const isOwner = capper?.id === capperId || status?.viewer.is_owner === true;
-  const ownerPanel = isOwner ? <OwnerPanel onChanged={refetch} /> : null;
+  const ownerPanel = isOwner ? (
+    <OwnerPanel onChanged={refetch} eligibility={status?.eligibility} vipRecord={status?.vip_record} />
+  ) : null;
   const onPull: PullFn | undefined = isOwner
     ? async (ticketId) => {
         await pullVipPick(ticketId, tokenRef.current);

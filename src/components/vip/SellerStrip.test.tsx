@@ -48,10 +48,13 @@ describe("SellerStrip", () => {
       { username: "c", since: null, renews: false, current_period_end: "2026-11-20T12:00:00Z", status: "canceled" },
     ] });
     renderStrip();
-    expect(await screen.findByText("active · 1 paused · 1 canceling")).toBeInTheDocument();
+    expect(await screen.findByText("1 paused")).toBeInTheDocument();
+    expect(screen.getByText("1 canceling")).toBeInTheDocument();
     // $25 x 1 renewing x seller share: paused subscribers are not billed.
     expect(screen.getByText("$21.25")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    // The list stays closed until asked for.
+    expect(screen.queryByText("Paused")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^Subscribers/ }));
     expect(screen.getByText("Paused")).toBeInTheDocument();
     expect(screen.getByText(/^Renews Nov/)).toBeInTheDocument();
     expect(screen.getByText(/^Ends Nov/)).toBeInTheDocument();
@@ -68,12 +71,16 @@ describe("SellerStrip", () => {
     expect(await screen.findByText("$21.25")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Stop selling" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Stop selling" })[0]);
-    expect(await screen.findByText("active · 1 canceling")).toBeInTheDocument();
+    expect(await screen.findByText("1 canceling")).toBeInTheDocument();
     expect(screen.getByText("$0.00")).toBeInTheDocument();
   });
 
-  it("explains the pause under Subscribers", () => {
+  it("explains the pause when the subscriber list opens", async () => {
+    client.getVipSellerSubscribers.mockResolvedValue({ subscribers: [
+      { username: "a", since: null, renews: true, current_period_end: null, status: "active" }] });
     renderStrip();
+    await screen.findByText("View ▾");
+    fireEvent.click(screen.getByRole("button", { name: /^Subscribers/ }));
     expect(
       screen.getByText(
         "If you go cold, your subscribers stop being charged and their billing dates move out by the days you couldn't post.",
