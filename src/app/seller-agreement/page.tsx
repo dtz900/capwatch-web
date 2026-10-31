@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbNode } from "@/lib/jsonld";
+import { capperVipReachable } from "@/lib/flags";
 import { SELLER_AGREEMENT_VERSION } from "@/lib/vip/terms";
 
 export const metadata = {
@@ -8,7 +10,6 @@ export const metadata = {
   description:
     "The agreement for cappers who sell VIP subscriptions on TailSlips: who sells, fees, payouts, refunds, billing pauses, and what happens when you stop.",
   alternates: { canonical: "/seller-agreement" },
-  robots: { index: true, follow: true },
   openGraph: {
     title: "Seller Agreement · TailSlips",
     description: "The agreement for cappers who sell VIP subscriptions on TailSlips.",
@@ -29,6 +30,8 @@ const LINK = "underline text-[var(--color-text)] hover:text-[var(--color-mint,#5
 /* NOTE FOR FUTURE LAWYER REVIEW: clauses 1 (Who sells), 4 (Refunds and
  * chargebacks) and 9 (Shutoff) carry the most legal risk. */
 export default function SellerAgreement() {
+  if (!capperVipReachable()) notFound();
+
   return (
     <>
       <JsonLd
@@ -92,8 +95,8 @@ export default function SellerAgreement() {
           Subscriptions are non-refundable, but a subscriber can still dispute a charge with their
           bank, or Stripe can refund a payment. When that happens, the amount is taken from your
           Stripe account. TailSlips keeps its 15% fee and does not refund it. You also bear
-          Stripe&apos;s dispute fee. Stripe carries the loss on the platform side, but any money
-          taken back from a payment comes out of your account.
+          Stripe&apos;s dispute fee. Any money taken back from a payment comes out of your Stripe
+          account.
         </p>
 
         <h2 className={H2}>5. Who can sell</h2>
@@ -112,8 +115,8 @@ export default function SellerAgreement() {
 
         <h2 className={H2}>6. Billing pause</h2>
         <p className={P}>
-          If you go cold, meaning you have no eligible sport, or you go silent and post no VIP
-          picks for a stretch, billing pauses. Subscribers are not charged while it is paused, and
+          Billing pauses if you go cold, meaning you have had no eligible sport for 7 days, or if you
+          go silent, meaning you have posted no VIP pick for 14 days. Subscribers are not charged while it is paused, and
           their next billing date moves out by the days they paid for but you could not post. If
           Stripe restricts your account, billing pauses as well. Billing resumes when you are back.
         </p>

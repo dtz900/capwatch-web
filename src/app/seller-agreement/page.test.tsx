@@ -1,7 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({
+  notFound: () => {
+    throw new Error("NEXT_NOT_FOUND");
+  },
   usePathname: () => "/seller-agreement",
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
@@ -11,7 +14,26 @@ import SellerAgreement from "./page";
 import Terms from "../terms/page";
 import { subscriberDisclosure } from "@/lib/vip/terms";
 
+beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true");
+  vi.stubEnv("NEXT_PUBLIC_CAPPER_VIP_ENABLED", "true");
+});
+afterEach(() => vi.unstubAllEnvs());
+
 describe("seller agreement page", () => {
+  it("404 when flag off", () => {
+    vi.stubEnv("NEXT_PUBLIC_CAPPER_VIP_ENABLED", "false");
+    expect(() => render(<SellerAgreement />)).toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("states the pause thresholds and no claim of platform-side loss", () => {
+    const { container } = render(<SellerAgreement />);
+    const t = container.textContent ?? "";
+    expect(t).toMatch(/7 days/);
+    expect(t).toMatch(/14 days/);
+    expect(t).not.toMatch(/Stripe carries the loss/);
+  });
+
   it("has one heading per section, in order", () => {
     const { container } = render(<SellerAgreement />);
     const heads = Array.from(container.querySelectorAll("h2")).map((h) => h.textContent);
