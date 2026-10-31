@@ -66,7 +66,15 @@ export function SubscribeDoor({
         <ManageSubscriptionLink capperId={capperId} />
       </div>
     );
-  if (!seller || !status.door_open) return null;
+  if (!seller) return null;
+  if (!status.door_open)
+    // Only the off-season closure gets a line: it's the one a visitor can't
+    // read off the card (the badge still says eligible) and it has a date.
+    return status.door_closed_reason === "off_season" ? (
+      <span className="text-[12px] leading-snug text-[var(--color-text-muted)] sm:max-w-[260px]">
+        {DOOR_CLOSED.off_season}
+      </span>
+    ) : null;
   return (
     // Phone: price left, Subscribe fills the rest of the row.
     <div className="flex items-center gap-4">

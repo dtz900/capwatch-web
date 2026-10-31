@@ -22,6 +22,10 @@ export interface VipEligibility {
      and consecutive failing nights; optional so older payloads still type. */
   reason?: string | null;
   fail_streak?: number;
+  /** False when the sport has no games on the calendar: the badge stays, the
+   *  door and composer close for it. Derived on the web from
+   *  VipCapperStatus.in_season_sports; absent on older payloads. */
+  in_season?: boolean;
 }
 
 /** GET /api/vip/seller/account. `stage` says where a not-yet-charging account
@@ -107,7 +111,10 @@ export interface VipCapperStatus {
   door_open: boolean;
   /** Why new subscriptions are closed; null when open. Optional so an older
    *  platform build still renders. */
-  door_closed_reason?: "not_selling" | "ineligible" | "silent" | null;
+  door_closed_reason?: "not_selling" | "ineligible" | "silent" | "off_season" | null;
+  /** Public sports with games within ten days. An eligible sport outside this
+   *  list keeps its badge but takes no subscribers. Optional for older platform builds. */
+  in_season_sports?: string[];
   viewer: {
     subscribed: boolean;
     is_owner: boolean;

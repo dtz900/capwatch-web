@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exclusivityLine, formatRevealTime, joinSports, vipHeadline } from "./format";
+import { DOOR_CLOSED, eligibleCopy, exclusivityLine, formatRevealTime, joinSports, vipHeadline, withSeason } from "./format";
 import type { VipCapperStatus, VipEligibility } from "@/lib/vip/types";
 
 describe("formatRevealTime", () => {
@@ -78,5 +78,30 @@ describe("exclusivityLine", () => {
     expect(
       exclusivityLine(st({ eligibility: [el({ eligible: false })], sport_field: { NBA: { qualified: 3, active: 91 } } })),
     ).toBeNull();
+  });
+});
+
+describe("off-season", () => {
+  const row = { sport: "MLB", eligible: true, eligible_since: "2026-09-01", units: 3.3, n_picks: 27,
+    n_floor_picks: 27, run_date: "2026-10-31" };
+  const base = { seller: null, eligibility: [row], door_open: false, viewer: { subscribed: false, is_owner: false },
+    vip_record: { n: 0, wins: 0, losses: 0, pushes: 0, units: 0 }, locked: [] } as unknown as Parameters<typeof withSeason>[0];
+
+  it("withSeason marks each row from the in-season list", () => {
+    const [mlb] = withSeason({ ...base, in_season_sports: ["NBA"] });
+    expect(mlb.in_season).toBe(false);
+    const [mlb2] = withSeason({ ...base, in_season_sports: ["MLB", "NBA"] });
+    expect(mlb2.in_season).toBe(true);
+  });
+
+  it("withSeason leaves rows alone for an older platform payload", () => {
+    const [mlb] = withSeason(base);
+    expect("in_season" in mlb).toBe(false);
+  });
+
+  it("eligibleCopy and the door copy say the season has not started", () => {
+    expect(eligibleCopy({ ...row, in_season: false })).toMatch(/back when the season starts/);
+    expect(eligibleCopy({ ...row, in_season: true })).toMatch(/^Selling MLB VIP/);
+    expect(DOOR_CLOSED.off_season).toMatch(/season hasn't started/);
   });
 });
