@@ -107,29 +107,36 @@ export function SubscribeCheckout({
     tokenRef.current = token;
   }, [token]);
   const [viewer, setViewer] = useState<VipCapperStatus["viewer"] | null>(null);
-  // Bumped when the page comes back from the bfcache: the viewer may have paid
-  // since, so the old status must not offer Subscribe again.
+  // The viewer's own status could not be read: Subscribe is withheld and a
+  // Retry offered, never a guess that this viewer does not already pay.
+  const [viewerFailed, setViewerFailed] = useState(false);
+  // Bumped when the page comes back from the bfcache (the viewer may have paid
+  // since) and by Retry: the old status must not offer Subscribe again.
   const [recheck, setRecheck] = useState(0);
+  // An expired token (a page restored after a sleep) reads as anonymous at the
+  // platform; wait for supabase-js to refresh it before asking.
+  const expired =
+    typeof session?.expires_at === "number" && session.expires_at * 1000 <= Date.now();
   useEffect(() => {
-    if (!authReady || !userId) return;
-    let cancelled = false;
-    // Another user, or a restored page: hold Subscribe until their own status lands.
+    // Another user (or signed out), a restored page, a retry: drop the previous
+    // viewer's state and hold Subscribe until this one's status lands.
     setViewer(null);
     setManage(false);
+    setViewerFailed(false);
+    if (!authReady || !userId || expired) return;
+    let cancelled = false;
     getVipCapperStatus(capperId, tokenRef.current)
       .then((s) => {
         if (!cancelled) setViewer(s.viewer);
       })
       .catch((err: unknown) => {
-        // Fall back to the page's status; the platform still refuses a
-        // second checkout (already_subscribed).
         console.error("VIP viewer status failed", err);
-        if (!cancelled) setViewer(status.viewer);
+        if (!cancelled) setViewerFailed(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [authReady, userId, capperId, status.viewer, recheck]);
+  }, [authReady, userId, capperId, expired, recheck]);
 
   // After location.assign, bfcache Back restores this page with pending stuck
   // and a status from before the payment.
@@ -172,7 +179,7 @@ export function SubscribeCheckout({
     );
   }
   // Signed in, own status still in flight: hold Subscribe.
-  const checking = !!session && viewer === null;
+  const checking = !!session && viewer === null && !viewerFailed;
 
   const signIn = () => {
     document.cookie = `${RETURN_COOKIE}=${encodeURIComponent(subscribePath)}; path=/; max-age=1800; samesite=lax`;
@@ -221,6 +228,23 @@ export function SubscribeCheckout({
         <span className="text-[11px] text-[var(--color-text-muted)]">
           {paymentsOn ? "Sign in to subscribe." : "Checkout opens soon."}
         </span>
+      </div>
+    );
+  }
+
+  if (viewerFailed) {
+    return (
+      <div id="subscribe" ref={blockRef} tabIndex={-1} className="scroll-mt-28 flex flex-col items-start gap-1.5 outline-none">
+        <p className="text-[13px] text-[var(--color-text-soft)]">
+          Could not check your subscription.
+        </p>
+        <button
+          type="button"
+          onClick={() => setRecheck((n) => n + 1)}
+          className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap w-full sm:w-auto`}
+        >
+          Retry
+        </button>
       </div>
     );
   }

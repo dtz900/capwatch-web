@@ -237,20 +237,58 @@ describe("SubscribeCheckout", () => {
     expect(await screen.findByRole("button", { name: /Subscribe ·/ })).toBeEnabled();
   });
 
-  it("a comped subscriber refused at checkout sees no Manage button", async () => {
-    // The page's own status call failed, so the viewer looked anonymous; the
-    // platform refuses (admin comp has access) and the re-check says billing=admin.
+  it("a comped subscriber is told so after a retried check, with no Manage button", async () => {
+    // The first status call failed; Retry says the viewer is comped (billing=admin):
+    // "already subscribed", and no Manage, since an admin comp has no portal.
     client.getVipCapperStatus.mockRejectedValueOnce(new client.VipApiError(500, "boom"));
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "already_subscribed"));
-    await open();
+    render(<SubscribeCheckout status={status({ payments_enabled: true })} handle="sharp" capperId={42} />);
+    const retry = await screen.findByRole("button", { name: "Retry" });
     client.getVipCapperStatus.mockResolvedValue({
       viewer: { subscribed: true, is_owner: false, billing: "admin" },
     });
-    consentAndSubscribe();
+    fireEvent.click(retry);
     expect(await screen.findByText("You are already subscribed.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Manage subscription" })).not.toBeInTheDocument();
     err.mockRestore();
+  });
+
+  it("a failed viewer check offers Retry, never Subscribe", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    client.getVipCapperStatus.mockRejectedValueOnce(new client.VipApiError(500, "boom"));
+    render(<SubscribeCheckout status={status({ payments_enabled: true })} handle="sharp" capperId={42} />);
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    expect(screen.queryByRole("button", { name: /Subscribe ·/ })).not.toBeInTheDocument();
+    client.getVipCapperStatus.mockResolvedValue({ viewer: { subscribed: false, is_owner: false } });
+    fireEvent.click(retry);
+    expect(await screen.findByRole("button", { name: /Subscribe ·/ })).toBeInTheDocument();
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(2);
+    err.mockRestore();
+  });
+
+  it("signing out clears the previous viewer's subscription state", async () => {
+    client.getVipCapperStatus.mockResolvedValue({
+      viewer: { subscribed: true, is_owner: false, billing: "stripe" },
+    });
+    const { rerender } = render(<SubscribeCheckout status={status({ payments_enabled: true })} handle="sharp" capperId={42} />);
+    await screen.findByText("You are already subscribed.");
+    auth.value = { authReady: true, session: null };
+    rerender(<SubscribeCheckout status={status({ payments_enabled: true })} handle="sharp" capperId={42} />);
+    expect(screen.queryByText("You are already subscribed.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage subscription" })).not.toBeInTheDocument();
+    expect(screen.getByText("Sign in to subscribe.")).toBeInTheDocument();
+  });
+
+  it("waits for a refreshed token before checking the viewer", async () => {
+    const past = Math.floor(Date.now() / 1000) - 60;
+    auth.value = { authReady: true, session: { access_token: "stale", user: { id: "u1" }, expires_at: past } };
+    const { rerender } = render(<SubscribeCheckout status={status({ payments_enabled: true })} handle="sharp" capperId={42} />);
+    expect(screen.getByRole("button", { name: "Checking…" })).toBeDisabled();
+    expect(client.getVipCapperStatus).not.toHaveBeenCalled();
+    auth.value = { authReady: true, session: { access_token: "fresh", user: { id: "u1" }, expires_at: past + 7200 } };
+    rerender(<SubscribeCheckout status={status({ payments_enabled: true })} handle="sharp" capperId={42} />);
+    expect(await screen.findByRole("button", { name: /Subscribe ·/ })).toBeInTheDocument();
+    expect(client.getVipCapperStatus).toHaveBeenCalledWith(42, "fresh");
   });
 
   it("payments off keeps Subscribe disabled with no checkout call", async () => {
