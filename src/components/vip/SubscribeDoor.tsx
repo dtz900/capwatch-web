@@ -58,7 +58,7 @@ export function SubscribeDoor({
     return (
       <div className="flex items-center gap-4">
         <span className="text-[12px] font-bold text-[var(--color-vip-text)]">
-          Subscription on hold
+          Payment issue, update your card
         </span>
         <ManageSubscriptionLink capperId={capperId} />
       </div>

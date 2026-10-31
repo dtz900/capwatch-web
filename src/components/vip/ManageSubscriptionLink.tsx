@@ -46,6 +46,10 @@ export function ManageSubscriptionLink({ capperId }: { capperId: number }) {
       >
         Manage subscription
       </button>
+      {/* Stripe's portal never sends people back on its own. */}
+      <span className="text-[11px] text-[var(--color-vip-text)] opacity-70">
+        Opens Stripe. Use the back link at the top to return.
+      </span>
       {error && (
         <span role="status" className={ERROR_TEXT}>
           {error}

@@ -252,7 +252,7 @@ describe("SubscribeDoor manage link", () => {
         capperId={42}
       />,
     );
-    expect(screen.getByText("Subscription on hold")).toBeInTheDocument();
+    expect(screen.getByText("Payment issue, update your card")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Subscribe" })).toBeNull();
   });
