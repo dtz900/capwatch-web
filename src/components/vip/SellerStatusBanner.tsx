@@ -24,6 +24,13 @@ function Row({ children, action, error }: { children: ReactNode; action?: ReactN
   );
 }
 
+/** Drop ?vip= from the address bar so Back or a reload never replays it. */
+function stripVipParam(params: URLSearchParams) {
+  params.delete("vip");
+  const qs = params.toString();
+  window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`);
+}
+
 export function SellerStatusBanner({
   status,
   token,
@@ -63,14 +70,17 @@ export function SellerStatusBanner({
 
   useEffect(() => {
     if (handled.current) return;
-    const vip = new URLSearchParams(window.location.search).get("vip");
+    const params = new URLSearchParams(window.location.search);
+    const vip = params.get("vip");
     if (vip === "onboarded") {
       handled.current = true;
+      stripVipParam(params);
       getVipSellerAccount(tokenRef.current)
         .then((a) => changeRef.current(a.status))
         .catch((err: unknown) => console.error("VIP account refresh failed", err));
-    } else if (vip === "resume" && paymentsEnabled) {
+    } else if (vip === "resume" && paymentsEnabled && (status === "onboarding" || status === "restricted")) {
       handled.current = true;
+      stripVipParam(params);
       startVipOnboarding(tokenRef.current)
         .then(({ url }) => window.location.assign(url))
         .catch((err: unknown) => {
@@ -78,7 +88,7 @@ export function SellerStatusBanner({
           setError("Could not reopen Stripe. Try Continue setup.");
         });
     }
-  }, [paymentsEnabled]);
+  }, [paymentsEnabled, status]);
 
   const restart = async () => {
     if (pending) return;

@@ -63,6 +63,43 @@ describe("SellerStrip", () => {
     expect(screen.queryByText("Stop selling VIP?")).toBeNull();
   });
 
+  it("a 200 that is not stopped shows an error", async () => {
+    client.stopVipSelling.mockResolvedValue({ status: "active", canceled: 0 });
+    renderStrip();
+    fireEvent.click(screen.getByRole("button", { name: "Stop selling" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Stop selling" })[0]);
+    expect(await screen.findByText("Could not stop selling. Try again.")).toBeInTheDocument();
+  });
+
+  it("pluralizes the confirm count and hides it while loading", async () => {
+    client.getVipSellerSubscribers.mockResolvedValue({
+      subscribers: [{ username: "a", since: null, renews: true, current_period_end: null }],
+    });
+    renderStrip();
+    fireEvent.click(screen.getByRole("button", { name: "Stop selling" }));
+    expect(await screen.findByText(/Your 1 current subscriber keeps/)).toBeInTheDocument();
+  });
+
+  it("shows no count before subscribers load", () => {
+    client.getVipSellerSubscribers.mockReturnValue(new Promise(() => {}));
+    renderStrip();
+    fireEvent.click(screen.getByRole("button", { name: "Stop selling" }));
+    expect(screen.getByText(/Your current subscribers keep/)).toBeInTheDocument();
+  });
+
+  it("a newer seller status from /me clears the local override", async () => {
+    client.stopVipSelling.mockResolvedValue({ status: "stopped", canceled: 0 });
+    const view = renderStrip();
+    fireEvent.click(screen.getByRole("button", { name: "Stop selling" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Stop selling" })[0]);
+    await screen.findByText(/You stopped selling\./);
+    view.rerender(
+      <SellerStrip seller={{ ...seller, status: "disabled" }} token="tok" paymentsEnabled onSaved={() => {}} />,
+    );
+    expect(screen.queryByText(/You stopped selling\./)).toBeNull();
+    expect(screen.getByText(/turned off for your account/)).toBeInTheDocument();
+  });
+
   it("keep selling closes the panel", () => {
     renderStrip();
     fireEvent.click(screen.getByRole("button", { name: "Stop selling" }));

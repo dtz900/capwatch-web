@@ -13,7 +13,7 @@ import { SellerStatusBanner } from "./SellerStatusBanner";
 function setLocation(search: string) {
   const assign = vi.fn();
   Object.defineProperty(window, "location", {
-    value: { search, assign, href: "http://localhost/" },
+    value: { search, assign, pathname: "/cappers/moneyplayzz", hash: "#vip", href: "http://localhost/" },
     writable: true,
     configurable: true,
   });
@@ -99,6 +99,32 @@ describe("SellerStatusBanner", () => {
     client.startVipOnboarding.mockResolvedValue({ url: "https://stripe/y" });
     render(<SellerStatusBanner {...base} status="onboarding" />);
     await vi.waitFor(() => expect(assign).toHaveBeenCalledWith("https://stripe/y"));
+  });
+
+  it("strips the vip param (keeping other params and hash) before redirecting", async () => {
+    setLocation("?vip=resume&x=1");
+    const replace = vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
+    client.startVipOnboarding.mockResolvedValue({ url: "https://stripe/z" });
+    render(<SellerStatusBanner {...base} status="restricted" />);
+    expect(replace).toHaveBeenCalledWith(null, "", "/cappers/moneyplayzz?x=1#vip");
+    await vi.waitFor(() => expect(client.startVipOnboarding).toHaveBeenCalled());
+    replace.mockRestore();
+  });
+
+  it("strips the vip param on onboarded", async () => {
+    setLocation("?vip=onboarded");
+    const replace = vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
+    client.getVipSellerAccount.mockResolvedValue({ status: "active", charges_enabled: true });
+    render(<SellerStatusBanner {...base} status="onboarding" />);
+    expect(replace).toHaveBeenCalledWith(null, "", "/cappers/moneyplayzz#vip");
+    await vi.waitFor(() => expect(client.getVipSellerAccount).toHaveBeenCalled());
+    replace.mockRestore();
+  });
+
+  it("?vip=resume ignores a seller that is not onboarding or restricted", () => {
+    setLocation("?vip=resume");
+    render(<SellerStatusBanner {...base} status="stopped" />);
+    expect(client.startVipOnboarding).not.toHaveBeenCalled();
   });
 
   it("?vip=resume does nothing when payments are off", () => {

@@ -56,6 +56,10 @@ export function SellerStrip({
   // Status the API last returned; wins over the prop until /me catches up.
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const status = statusOverride ?? seller.status;
+  // A newer /me status wins over a stale local override.
+  useEffect(() => {
+    setStatusOverride(null);
+  }, [seller.status]);
   // Read at request time: a token refresh must not refetch.
   const tokenRef = useRef(token);
   useEffect(() => {
@@ -104,6 +108,8 @@ export function SellerStrip({
         setStopping(false);
         setStatusOverride("stopped");
         onSaved();
+      } else {
+        setStopError("Could not stop selling. Try again.");
       }
     } catch (err) {
       console.error("VIP stop selling failed", err);
@@ -292,8 +298,12 @@ export function SellerStrip({
             <div className={`${INNER_CARD} flex flex-col gap-2 w-full`}>
               <span className="text-[12px] text-[var(--color-text)] font-bold">Stop selling VIP?</span>
               <span className="text-[12px] text-[var(--color-text-soft)]">
-                New subscriptions close now and nobody renews. Your {renewing ?? 0} current subscribers keep access
-                until their period ends. You can start again anytime.
+                New subscriptions close now and nobody renews. {renewing === null
+                  ? "Your current subscribers keep"
+                  : renewing === 1
+                    ? "Your 1 current subscriber keeps"
+                    : `Your ${renewing} current subscribers keep`}{" "}
+                access until their period ends. You can start again anytime.
               </span>
               <div className="flex gap-2">
                 <button type="button" className={PRIMARY_BTN} disabled={pending} onClick={stop}>
