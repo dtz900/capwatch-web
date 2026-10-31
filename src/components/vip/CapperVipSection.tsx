@@ -11,6 +11,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { VipApiError, getVipCapperStatus, pullVipPick } from "@/lib/vip/client";
 import { stripVipParam } from "@/lib/vip/returnParam";
 import type { VipCapperStatus } from "@/lib/vip/types";
+import { ClaimProfileStrip } from "./ClaimProfileStrip";
 import { EligibilityBadges } from "./EligibilityBadges";
 import { LockedPicks, type PullFn } from "./LockedPicks";
 import { OwnerPanel } from "./OwnerPanel";
@@ -355,6 +356,11 @@ export function CapperVipView({
             <div className="px-5 sm:px-6 pb-3.5">
               <EligibilityBadges eligibility={status.eligibility} tiles />
             </div>
+            {status.claimed === false && !status.viewer.is_owner && (
+              <div className={`${VIP_GLASS_DIVIDER} px-5 sm:px-6 py-3.5`}>
+                <ClaimProfileStrip handle={handle} />
+              </div>
+            )}
             {!viewerPending && status.locked.length > 0 && (
               <div
                 className={`${VIP_GLASS_DIVIDER} relative`}

@@ -96,3 +96,31 @@ describe("AuthProvider verification", () => {
     spy.mockRestore();
   });
 });
+
+function SignOutProbe() {
+  const { signOut } = useAuth();
+  return <button onClick={() => void signOut()}>Sign out</button>;
+}
+
+describe("AuthProvider sign out", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("signs out this device only, never the user's other sessions", async () => {
+    // Supabase's default scope is global: signing out of one window revoked a
+    // subscriber's session in another (2026-10-31 rehearsal). A phone stays
+    // signed in when the laptop signs out.
+    const client = fakeSupabase(session([]), vi.fn());
+    const signOut = vi.fn(async () => ({ error: null }));
+    client.auth.signOut = signOut as unknown as typeof client.auth.signOut;
+    fake.client = client;
+    render(<AuthProvider><SignOutProbe /></AuthProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+    await waitFor(() => expect(signOut).toHaveBeenCalledWith({ scope: "local" }));
+  });
+});
+

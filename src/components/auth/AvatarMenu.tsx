@@ -44,9 +44,18 @@ export function AvatarMenu() {
   }, [open]);
 
   if (!entitlements.isLoggedIn) {
+    // Sign-in returns to the page it started from (/auth/callback and the
+    // emailed-code path both read this cookie), not to My Tails. The login
+    // and auth pages themselves are never a place to come back to.
+    const remember = () => {
+      const here = window.location.pathname + window.location.search;
+      if (/^\/(login|auth)(\/|$)/.test(window.location.pathname)) return;
+      document.cookie = `ts_return_to=${encodeURIComponent(here)}; path=/; max-age=1800; samesite=lax`;
+    };
     return (
       <Link
         href="/login"
+        onClick={remember}
         className="rounded-lg border border-[var(--color-border-h)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text)] hover:bg-white/5"
       >
         Sign in
