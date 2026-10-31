@@ -148,6 +148,7 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
                 className="underline underline-offset-2 text-[var(--color-text)]"
               >
                 Seller Agreement
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </span>
           </label>

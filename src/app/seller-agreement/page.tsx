@@ -95,15 +95,14 @@ export default function SellerAgreement() {
           Subscriptions are non-refundable, but a subscriber can still dispute a charge with their
           bank, or Stripe can refund a payment. When that happens, the amount is taken from your
           Stripe account. TailSlips keeps its 15% fee and does not refund it. You also bear
-          Stripe&apos;s dispute fee. Any money taken back from a payment comes out of your Stripe
-          account.
+          Stripe&apos;s dispute fee.
         </p>
 
         <h2 className={H2}>5. Who can sell</h2>
         <p className={P}>
-          You can start selling only after a winning stretch: over the trailing 30 days, at least
-          20 graded picks staked at 0.5u or more with net units above zero. Once selling, you stay
-          open while the trailing 60 days are positive. Eligibility is checked every night, and two
+          You can start selling in a sport only after a winning stretch there: over the trailing 30
+          days, at least 20 graded picks staked at 0.5u or more with net units above zero. Once
+          selling in a sport, you stay open while its trailing 60 days are positive. Eligibility is checked every night, and two
           failed nights in a row switch selling off. Public and VIP picks are combined in those
           numbers.
         </p>
@@ -123,7 +122,7 @@ export default function SellerAgreement() {
 
         <h2 className={H2}>7. Stop selling</h2>
         <p className={P}>
-          You can stop selling at any time. When you do, all of your subscriptions are cancelled
+          You can stop selling at any time. When you do, all of your subscriptions are canceled
           and nobody is charged again. Every subscriber keeps access through the date they already
           paid for.
         </p>
@@ -154,6 +153,7 @@ export default function SellerAgreement() {
             rel="noopener noreferrer"
           >
             Stripe Connected Account Agreement
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
           . If Stripe closes or restricts your account, that affects your ability to sell here.
         </p>

@@ -50,10 +50,10 @@ describe("SellerStatusBanner", () => {
     render(<SellerStatusBanner {...base} status="restricted" />);
     expect(
       screen.getByText(
-        "Stripe needs more information before you can take payments. Your subscribers are paused until it's sorted.",
+        "Stripe needs more information before you can take payments. Billing for your subscribers is paused until it's sorted.",
       ),
     ).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: "Open Stripe" });
+    const link = screen.getByRole("link", { name: /^Open Stripe/ });
     expect(link).toHaveAttribute("href", "https://dashboard.stripe.com");
     expect(link).toHaveAttribute("target", "_blank");
   });

@@ -60,11 +60,16 @@ export function SellerStrip({
   useEffect(() => {
     setStatusOverride(null);
   }, [seller.status]);
+  const stopPanelRef = useRef<HTMLDivElement>(null);
   // Read at request time: a token refresh must not refetch.
   const tokenRef = useRef(token);
   useEffect(() => {
     tokenRef.current = token;
   }, [token]);
+
+  useEffect(() => {
+    if (stopping) stopPanelRef.current?.focus();
+  }, [stopping]);
 
   useEffect(() => {
     let cancelled = false;
@@ -295,7 +300,13 @@ export function SellerStrip({
               Stop selling
             </button>
           ) : (
-            <div className={`${INNER_CARD} flex flex-col gap-2 w-full`}>
+            <div
+              ref={stopPanelRef}
+              tabIndex={-1}
+              role="group"
+              aria-label="Stop selling VIP"
+              className={`${INNER_CARD} flex flex-col gap-2 w-full outline-none`}
+            >
               <span className="text-[12px] text-[var(--color-text)] font-bold">Stop selling VIP?</span>
               <span className="text-[12px] text-[var(--color-text-soft)]">
                 New subscriptions close now and nobody renews. {renewing === null

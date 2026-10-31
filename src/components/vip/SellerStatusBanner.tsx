@@ -126,10 +126,11 @@ export function SellerStatusBanner({
             className={`${SECONDARY_BTN_SM} no-underline`}
           >
             Open Stripe
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
         }
       >
-        Stripe needs more information before you can take payments. Your subscribers are paused until it&apos;s sorted.
+        Stripe needs more information before you can take payments. Billing for your subscribers is paused until it&apos;s sorted.
       </Row>
     );
   }

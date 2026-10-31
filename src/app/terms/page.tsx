@@ -153,7 +153,7 @@ export default function Terms() {
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Billing pauses if the capper goes cold or silent. You are not charged while it is paused,
           and your next billing date moves out by the days you paid for but the capper could not
-          post. If a capper stops selling, your subscription is cancelled, you are not charged
+          post. If a capper stops selling, your subscription is canceled, you are not charged
           again, and you keep access through the date you already paid for.
         </p>
 
