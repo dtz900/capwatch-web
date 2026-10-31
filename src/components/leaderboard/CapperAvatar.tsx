@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Titan_One } from "next/font/google";
+import { capperVipEnabled } from "@/lib/flags";
 
 // Closest cleanly-licensed match to GTA's Pricedown for the DELETED stamp.
 // Self-hosted by next/font at build time; no runtime font request.
@@ -14,6 +15,25 @@ interface Props {
   /** Capper deleted their whole X account. Dims the avatar and stamps an
    * angled DELETED band over it (GTA-wasted style), scaled to `size`. */
   accountDeleted?: boolean;
+  /** Eligible to sell VIP in any sport: the purple ring, on every surface the
+   * avatar appears (David, 2026-10-31). Dark until the Capper VIP launch flag. */
+  vipEligible?: boolean;
+}
+
+/** Same ring the profile hero wears; tighter offset below 32px so stacked
+ *  slate chips and 26px rows don't bleed into their neighbours. */
+export function vipRingClass(size: number): string {
+  const offset = size >= 32 ? "ring-offset-2" : "ring-offset-1";
+  const glow = size >= 32 ? "shadow-[0_0_18px_rgba(109,40,217,0.45)]" : "shadow-[0_0_10px_rgba(109,40,217,0.45)]";
+  return `ring-2 ring-[var(--color-vip)] ${offset} ring-offset-[var(--color-bg)] ${glow}`;
+}
+
+/** The same ring as a box-shadow list, for the fadeai_ gradient avatar whose
+ *  inline blue glow would otherwise override the Tailwind ring classes. */
+export function vipRingShadow(size: number): string {
+  const offset = size >= 32 ? 2 : 1;
+  const glow = size >= 32 ? "0 0 18px rgba(109,40,217,0.45)" : "0 0 10px rgba(109,40,217,0.45)";
+  return `0 0 0 ${offset}px var(--color-bg), 0 0 0 ${offset + 2}px var(--color-vip), ${glow}`;
 }
 
 export function CapperAvatar({
@@ -23,8 +43,10 @@ export function CapperAvatar({
   className = "",
   apiIntegrated = false,
   accountDeleted = false,
+  vipEligible = false,
 }: Props) {
   const initials = (handle ?? "??").replace(/^@/, "").slice(0, 2).toUpperCase();
+  const vip = vipEligible && capperVipEnabled();
 
   let avatar: React.ReactNode;
   if (apiIntegrated) {
@@ -38,8 +60,7 @@ export function CapperAvatar({
           background:
             "linear-gradient(135deg, #60a5fa 0%, #2563eb 50%, #1e40af 100%)",
           padding: 2,
-          boxShadow:
-            "0 0 12px rgba(37, 99, 235, 0.45), 0 0 28px rgba(29, 78, 216, 0.18)",
+          boxShadow: `${vip ? `${vipRingShadow(size)}, ` : ""}0 0 12px rgba(37, 99, 235, 0.45), 0 0 28px rgba(29, 78, 216, 0.18)`,
         }}
       >
         <div
@@ -60,7 +81,7 @@ export function CapperAvatar({
       </div>
     );
   } else {
-    const wrap = `relative rounded-full overflow-hidden border border-[rgba(255,255,255,0.10)] bg-[#2a2a2e] flex items-center justify-center shrink-0 ${className}`;
+    const wrap = `relative rounded-full overflow-hidden border border-[rgba(255,255,255,0.10)] bg-[#2a2a2e] flex items-center justify-center shrink-0 ${className} ${vip ? vipRingClass(size) : ""}`;
     const dim = { width: size, height: size };
     avatar = (
       <div className={wrap} style={dim}>

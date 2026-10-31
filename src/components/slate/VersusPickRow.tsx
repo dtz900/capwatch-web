@@ -38,7 +38,7 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
         title={tier ? `Elite sharp · top ${pick.capper_rank} on the leaderboard` : undefined}
         style={tier ? { boxShadow: ELITE_RING_SHADOW } : undefined}
       >
-        <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={26} apiIntegrated={isModel} />
+        <CapperAvatar url={pick.profile_image_url} handle={pick.handle} size={26} apiIntegrated={isModel} vipEligible={pick.vip_eligible} />
       </Link>
 
       {/* Top line: rank, handle, action icon */}

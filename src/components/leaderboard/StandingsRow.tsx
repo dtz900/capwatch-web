@@ -31,7 +31,7 @@ export function StandingsRow({ rank, capper, window, sport }: Props) {
 
   const handleNode = (
     <>
-      <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={32} apiIntegrated={isModel} />
+      <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={32} apiIntegrated={isModel} vipEligible={capper.vip_eligible} />
       <div className="leading-[1.2] min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="font-bold truncate">{capper.display_name ?? capper.handle}</span>

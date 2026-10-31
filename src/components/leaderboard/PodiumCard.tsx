@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CapperAvatar } from "./CapperAvatar";
+import { capperVipEnabled } from "@/lib/flags";
 import { RecentPicks } from "./RecentPicks";
 import { StreakBadge } from "./StreakBadge";
 import { BiggestWin } from "./BiggestWin";
@@ -74,6 +75,8 @@ export function PodiumCard({ rank, variant, capper, window, sport }: Props) {
   const padding = isGold ? "pt-7 px-7 pb-7" : "pt-6 px-5 pb-5";
   const nameSize = isGold ? "text-[22px]" : "text-[17px]";
   const avatarSize = isGold ? 56 : 44;
+  // The VIP ring replaces the gold leader ring on the avatar; the bar and pill still mark #1.
+  const vipRing = !!capper.vip_eligible && capperVipEnabled();
 
   const tagline = identityTagline(capper);
   // Mirrors StreakBadge's own render gate (no badge under a 2-day run), so the
@@ -139,8 +142,9 @@ export function PodiumCard({ rank, variant, capper, window, sport }: Props) {
             url={capper.profile_image_url}
             handle={capper.handle}
             size={avatarSize}
-            className={accent.avatarRing}
+            className={vipRing ? "" : accent.avatarRing}
             apiIntegrated={isModel}
+            vipEligible={vipRing}
           />
           <div className="flex-1 min-w-0">
             <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 min-w-0 tracking-[-0.02em] ${nameSize}`}>
@@ -159,8 +163,9 @@ export function PodiumCard({ rank, variant, capper, window, sport }: Props) {
             url={capper.profile_image_url}
             handle={capper.handle}
             size={avatarSize}
-            className={accent.avatarRing}
+            className={vipRing ? "" : accent.avatarRing}
             apiIntegrated={isModel}
+            vipEligible={vipRing}
           />
           <div className="flex-1 min-w-0">
             <div className={`font-extrabold leading-[1.1] mb-1 flex items-center gap-2 min-w-0 tracking-[-0.02em] ${nameSize}`}>

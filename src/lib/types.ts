@@ -68,6 +68,8 @@ export interface CapperRow {
   live_picks_count: number;
   last_picks: LastPick[];
   trajectory_units?: number[];
+  /** Eligible to sell VIP in at least one sport: paints the purple avatar ring. */
+  vip_eligible?: boolean;
 }
 
 /** A capper with pending bets on the live slate/week but no ranked row. */
@@ -83,6 +85,8 @@ export interface PendingCapperRow {
   has_paid_program: boolean;
   account_deleted_at?: string | null;
   live_picks_count: number;
+  /** Eligible to sell VIP in at least one sport: paints the purple avatar ring. */
+  vip_eligible?: boolean;
 }
 
 export interface LeaderboardResponse {
@@ -130,6 +134,8 @@ export interface SlatePick {
   source: string | null;
   outcome: Outcome | null;
   profit_units: number | null;
+  /** Eligible to sell VIP in at least one sport: paints the purple avatar ring. */
+  vip_eligible?: boolean;
 }
 
 export interface DaySummary {
@@ -210,6 +216,8 @@ export interface SlateCapperSummary {
    * the leaderboard snapshot extended with today's graded net). Null when
    * viewing a past slate, where a current streak would be misleading. */
   current_day_streak?: number | null;
+  /** Eligible to sell VIP in at least one sport: paints the purple avatar ring. */
+  vip_eligible?: boolean;
 }
 
 export interface SlateResponse {
