@@ -69,6 +69,16 @@ export function SellerStatusBanner({
     }
   };
 
+  // After location.assign to Stripe, Back restores this page from the bfcache
+  // with pending still true: Continue setup would stay disabled until a reload.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setPending(false);
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
   const live = LIVE_STATUSES.includes(status);
   // Stripe's verdict lands minutes after the capper leaves its form, and a
   // restriction can clear in another tab: re-read until the seller is live.

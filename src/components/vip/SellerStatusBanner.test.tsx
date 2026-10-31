@@ -196,3 +196,27 @@ describe("SellerStatusBanner", () => {
     });
   });
 });
+
+describe("SellerStatusBanner bfcache", () => {
+  beforeEach(() => {
+    client.startVipOnboarding.mockReset();
+    client.getVipSellerAccount.mockReset();
+    client.getVipSellerAccount.mockResolvedValue({ status: "onboarding", charges_enabled: false, stage: "needs_info" });
+  });
+
+  it("Continue setup works again after a bfcache return from Stripe", async () => {
+    const assign = setLocation("");
+    client.startVipOnboarding.mockResolvedValue({ url: "https://stripe/x" });
+    render(<SellerStatusBanner token="tok" paymentsEnabled onStatusChange={() => {}} status="onboarding" />);
+    const btn = await screen.findByRole("button", { name: "Continue setup" });
+    fireEvent.click(btn);
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledWith("https://stripe/x"));
+    expect(btn).toBeDisabled();
+    const ev = new Event("pageshow") as Event & { persisted: boolean };
+    ev.persisted = true;
+    act(() => {
+      window.dispatchEvent(ev);
+    });
+    expect(screen.getByRole("button", { name: "Continue setup" })).toBeEnabled();
+  });
+});
