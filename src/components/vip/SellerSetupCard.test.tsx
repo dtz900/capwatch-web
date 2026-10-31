@@ -88,7 +88,7 @@ describe("SellerSetupCard", () => {
   });
 
   it("submits terms version then redirects to Stripe", async () => {
-    client.postVipSeller.mockResolvedValue({ capper_id: 7, price_cents: 2500, founding: true, status: "onboarding" });
+    client.postVipSeller.mockResolvedValue({ price_cents: 2500, founding: true, status: "onboarding" });
     client.startVipOnboarding.mockResolvedValue({ url: "https://connect.stripe.com/x" });
     const assign = vi.fn();
     const orig = window.location;
@@ -113,7 +113,7 @@ describe("SellerSetupCard", () => {
     fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "25" } });
     fireEvent.change(screen.getByLabelText("Your main book"), { target: { value: "draftkings" } });
     expect(screen.getByRole("button", { name: "Start selling" })).toBeDisabled();
-    const link = screen.getByRole("link", { name: "Seller Agreement" });
+    const link = screen.getByRole("link", { name: /^Seller Agreement/ });
     expect(link).toHaveAttribute("href", "/seller-agreement");
     expect(link).toHaveAttribute("target", "_blank");
   });
@@ -126,7 +126,7 @@ describe("SellerSetupCard", () => {
   });
 
   it("refreshes via onDone when the onboarding link fails after the seller was created", async () => {
-    client.postVipSeller.mockResolvedValue({ capper_id: 7, price_cents: 2500, founding: true, status: "onboarding" });
+    client.postVipSeller.mockResolvedValue({ price_cents: 2500, founding: true, status: "onboarding" });
     client.startVipOnboarding.mockRejectedValue(new client.VipApiError(500, "boom"));
     const onDone = vi.fn();
     render(<SellerSetupCard me={me} onDone={onDone} />);

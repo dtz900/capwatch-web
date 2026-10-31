@@ -217,7 +217,7 @@ export default async function SubscribePage({ params }: PageProps) {
               className={`${VIP_GLASS_DIVIDER} px-5 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4`}
             >
               {seller && doorOpen && status ? (
-                <SubscribeCheckout status={status} handle={handle} />
+                <SubscribeCheckout status={status} handle={handle} capperId={capper.id} />
               ) : (
                 cta
               )}

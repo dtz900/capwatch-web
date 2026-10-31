@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { openVipPortal } from "@/lib/vip/client";
 import { ERROR_TEXT } from "./styles";
@@ -12,6 +12,15 @@ export function ManageSubscriptionLink({ capperId }: { capperId: number }) {
   const token = session?.access_token ?? null;
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // After location.assign, bfcache Back restores this page with pending stuck.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setPending(false);
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
 
   const open = async () => {
     if (pending) return;

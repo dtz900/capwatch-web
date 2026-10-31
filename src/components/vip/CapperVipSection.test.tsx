@@ -24,6 +24,7 @@ const client = vi.hoisted(() => {
     getVipBoardGame: vi.fn(),
     postVipSeller: vi.fn(),
     postVipPick: vi.fn(),
+    openVipPortal: vi.fn(),
     searchVipGames: vi.fn(),
     VipApiError,
   };
@@ -33,7 +34,7 @@ vi.mock("@/lib/vip/client", () => client);
 import { CapperVipSection } from "./CapperVipSection";
 
 const status: VipCapperStatus = {
-  seller: { capper_id: 7, price_cents: 2500, founding: false, status: "active" },
+  seller: { price_cents: 2500, founding: false, status: "active" },
   eligibility: [
     {
       sport: "MLB",
@@ -324,6 +325,36 @@ describe("CapperVipSection", () => {
       const calls = client.getVipCapperStatus.mock.calls.length;
       await vi.advanceTimersByTimeAsync(9000);
       expect(client.getVipCapperStatus.mock.calls.length).toBe(calls);
+    });
+
+    it("a failed poll keeps the last good status on screen", async () => {
+      client.getVipCapperStatus
+        .mockResolvedValueOnce(status)
+        .mockRejectedValueOnce(new Error("blip"));
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(client.getVipCapperStatus.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+    });
+
+    it("manage subscription uses the profile capper id", async () => {
+      client.getVipCapperStatus.mockResolvedValue(paid);
+      client.openVipPortal.mockResolvedValue({ url: "https://billing.stripe.com/p" });
+      render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Manage subscription" }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(client.openVipPortal).toHaveBeenCalledWith(7, expect.anything());
     });
 
     it("stops polling after 30 seconds", async () => {

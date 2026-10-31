@@ -31,7 +31,7 @@ function el(over: Partial<VipEligibility>): VipEligibility {
 
 function st(over: Partial<VipCapperStatus>): VipCapperStatus {
   return {
-    seller: { capper_id: 1, price_cents: 2500, founding: false, status: "active" },
+    seller: { price_cents: 2500, founding: false, status: "active" },
     eligibility: [el({})],
     door_open: true,
     viewer: { subscribed: false, is_owner: false },

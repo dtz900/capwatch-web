@@ -26,7 +26,7 @@ vi.mock("@/lib/vip/client", () => client);
 
 import { SellerStrip } from "./SellerStrip";
 
-const seller: VipSeller = { capper_id: 7, price_cents: 2500, founding: true, status: "active", preferred_book: "draftkings" };
+const seller: VipSeller = { price_cents: 2500, founding: true, status: "active", preferred_book: "draftkings" };
 
 function renderStrip(over: Partial<VipSeller> = {}, paymentsEnabled = true, onSaved = () => {}) {
   return render(

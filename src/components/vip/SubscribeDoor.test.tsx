@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { VipCapperStatus } from "@/lib/vip/types";
 import { subscriberDisclosure, SUBSCRIBER_TERMS_VERSION } from "@/lib/vip/terms";
 
@@ -25,7 +25,7 @@ import { SubscribeCheckout, SubscribeDoor } from "./SubscribeDoor";
 
 function status(over: Partial<VipCapperStatus>): VipCapperStatus {
   return {
-    seller: { capper_id: 7, price_cents: 2500, founding: false, status: "active" },
+    seller: { price_cents: 2500, founding: false, status: "active" },
     eligibility: [
       {
         sport: "MLB",
@@ -47,7 +47,7 @@ function status(over: Partial<VipCapperStatus>): VipCapperStatus {
 
 describe("SubscribeDoor", () => {
   it("door open: big price and a Subscribe button", () => {
-    render(<SubscribeDoor status={status({})} handle="moneyplayzz" />);
+    render(<SubscribeDoor status={status({})} handle="moneyplayzz" capperId={42} />);
     const link = screen.getByRole("link", { name: "Subscribe" });
     expect(link).toHaveAttribute("href", "/cappers/moneyplayzz/subscribe");
     expect(link).toHaveClass("text-[var(--color-vip-deep)]");
@@ -59,36 +59,37 @@ describe("SubscribeDoor", () => {
     render(
       <SubscribeDoor
         status={status({
-          seller: { capper_id: 7, price_cents: 1999, founding: false, status: "active" },
+          seller: { price_cents: 1999, founding: false, status: "active" },
         })}
         handle="moneyplayzz"
+        capperId={42}
       />,
     );
     expect(screen.getByText("$19.99")).toBeInTheDocument();
   });
 
   it("door closed renders nothing (the body explains)", () => {
-    const { container } = render(<SubscribeDoor status={status({ door_open: false })} handle="moneyplayzz" />);
+    const { container } = render(<SubscribeDoor status={status({ door_open: false })} handle="moneyplayzz" capperId={42} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it("no seller renders nothing", () => {
     const { container } = render(
-      <SubscribeDoor status={status({ seller: null, door_open: false })} handle="moneyplayzz" />,
+      <SubscribeDoor status={status({ seller: null, door_open: false })} handle="moneyplayzz" capperId={42} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("door renders nothing for the owner", () => {
     const { container } = render(
-      <SubscribeDoor status={status({ viewer: { subscribed: false, is_owner: true } })} handle="moneyplayzz" />,
+      <SubscribeDoor status={status({ viewer: { subscribed: false, is_owner: true } })} handle="moneyplayzz" capperId={42} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("subscriber sees a Subscribed chip and no link", () => {
     render(
-      <SubscribeDoor status={status({ viewer: { subscribed: true, is_owner: false } })} handle="moneyplayzz" />,
+      <SubscribeDoor status={status({ viewer: { subscribed: true, is_owner: false } })} handle="moneyplayzz" capperId={42} />,
     );
     expect(screen.getByText("Subscribed")).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
@@ -99,6 +100,7 @@ describe("SubscribeDoor", () => {
       <SubscribeDoor
         status={status({ door_open: false, viewer: { subscribed: true, is_owner: false } })}
         handle="moneyplayzz"
+        capperId={42}
       />,
     );
     expect(screen.getByText("Subscribed")).toBeInTheDocument();
@@ -117,7 +119,7 @@ describe("SubscribeCheckout", () => {
     vi.stubGlobal("location", { ...window.location, assign, pathname: "/cappers/sharp/subscribe" });
   });
   const open = (over: Partial<VipCapperStatus> = {}) =>
-    render(<SubscribeCheckout status={status({ payments_enabled: true, ...over })} handle="sharp" />);
+    render(<SubscribeCheckout status={status({ payments_enabled: true, ...over })} handle="sharp" capperId={42} />);
   const consentAndSubscribe = () => {
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: /Subscribe/ }));
@@ -140,14 +142,14 @@ describe("SubscribeCheckout", () => {
     expect(btn).toBeEnabled();
     fireEvent.click(btn);
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.stripe.com/x"));
-    expect(client.startVipCheckout).toHaveBeenCalledWith(7, SUBSCRIBER_TERMS_VERSION, "tok");
+    expect(client.startVipCheckout).toHaveBeenCalledWith(42, SUBSCRIBER_TERMS_VERSION, "tok");
   });
 
   it("disclosure shows price and no refunds", () => {
     open();
     expect(screen.getByText(subscriberDisclosure(2500))).toBeInTheDocument();
     expect(screen.getByText(/No refunds\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+    expect(screen.getByRole("link", { name: /^Terms/ })).toHaveAttribute("href", "/terms");
   });
 
   it("already subscribed shows manage link", async () => {
@@ -178,6 +180,28 @@ describe("SubscribeCheckout", () => {
     expect(await screen.findByText("Something went wrong. Try again.")).toBeInTheDocument();
   });
 
+  it("signed out with payments off: Subscribe disabled and Checkout opens soon", () => {
+    auth.value = { authReady: true, session: null };
+    open({ payments_enabled: false });
+    expect(screen.getByRole("button", { name: /Subscribe/ })).toBeDisabled();
+    expect(screen.getByText("Checkout opens soon.")).toBeInTheDocument();
+  });
+
+  it("pending resets on bfcache pageshow", async () => {
+    client.startVipCheckout.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
+    open();
+    consentAndSubscribe();
+    const btn = screen.getByRole("button", { name: /Subscribe/ });
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(btn).toBeDisabled();
+    const ev = new Event("pageshow") as Event & { persisted: boolean };
+    ev.persisted = true;
+    act(() => {
+      window.dispatchEvent(ev);
+    });
+    expect(btn).toBeEnabled();
+  });
+
   it("payments off keeps Subscribe disabled with no checkout call", () => {
     open({ payments_enabled: false });
     fireEvent.click(screen.getByRole("checkbox"));
@@ -198,10 +222,25 @@ describe("SubscribeDoor manage link", () => {
           viewer: { subscribed: true, is_owner: false, billing: "stripe" },
         })}
         handle="sharp"
+        capperId={42}
       />,
     );
     expect(screen.getByText("Subscribed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
+  });
+
+  it("portal URL uses the capper id prop, not the seller payload", async () => {
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } } };
+    client.openVipPortal.mockResolvedValue({ url: "https://billing.stripe.com/p" });
+    render(
+      <SubscribeDoor
+        status={status({ viewer: { subscribed: true, is_owner: false, billing: "stripe" } })}
+        handle="sharp"
+        capperId={42}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Manage subscription" }));
+    await waitFor(() => expect(client.openVipPortal).toHaveBeenCalledWith(42, "tok"));
   });
 
   it("admin-granted subscriber has no manage link", () => {
@@ -209,6 +248,7 @@ describe("SubscribeDoor manage link", () => {
       <SubscribeDoor
         status={status({ viewer: { subscribed: true, is_owner: false, billing: "admin" } })}
         handle="sharp"
+        capperId={42}
       />,
     );
     expect(screen.queryByRole("button", { name: "Manage subscription" })).toBeNull();

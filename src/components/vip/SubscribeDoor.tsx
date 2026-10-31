@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -15,13 +15,15 @@ import { ERROR_TEXT, VIP_PRIMARY_BTN } from "./styles";
 const RETURN_COOKIE = "ts_return_to";
 
 /** Right slot of the VIP header. Open door: price and Subscribe. Subscriber:
- *  a quiet Subscribed status (cancelling lives in account settings). Owner or closed door: nothing (the body says why). */
+ *  a quiet Subscribed status (canceling happens through Manage subscription, the Stripe portal). Owner or closed door: nothing (the body says why). */
 export function SubscribeDoor({
   status,
   handle,
+  capperId,
 }: {
   status: VipCapperStatus;
   handle: string;
+  capperId: number;
 }) {
   const { seller } = status;
   const { is_owner: isOwner, subscribed } = status.viewer;
@@ -46,7 +48,7 @@ export function SubscribeDoor({
         Subscribed
       </span>
       {status.viewer.billing === "stripe" && seller && (
-        <ManageSubscriptionLink capperId={seller.capper_id} />
+        <ManageSubscriptionLink capperId={capperId} />
       )}
       </div>
     );
@@ -69,9 +71,11 @@ export function SubscribeDoor({
 export function SubscribeCheckout({
   status,
   handle,
+  capperId,
 }: {
   status: VipCapperStatus;
   handle: string;
+  capperId: number;
 }) {
   const { session, authReady } = useAuth();
   const router = useRouter();
@@ -81,6 +85,27 @@ export function SubscribeCheckout({
   const [error, setError] = useState<string | null>(null);
   const [manage, setManage] = useState(false);
   const { seller } = status;
+
+  // After location.assign, bfcache Back restores this page with pending stuck.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setPending(false);
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
+  // The hero #subscribe anchor lands here: move focus to the checkout block.
+  const blockRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const focusIfHash = () => {
+      if (window.location.hash === "#subscribe") blockRef.current?.focus();
+    };
+    focusIfHash();
+    window.addEventListener("hashchange", focusIfHash);
+    return () => window.removeEventListener("hashchange", focusIfHash);
+  }, []);
+
   if (!seller) return null;
 
   const subscribePath = `/cappers/${encodeURIComponent(handle)}/subscribe`;
@@ -89,9 +114,9 @@ export function SubscribeCheckout({
 
   if (manage || status.viewer.billing === "stripe") {
     return (
-      <div id="subscribe" className="flex flex-col items-start gap-1.5">
+      <div id="subscribe" ref={blockRef} tabIndex={-1} className="flex flex-col items-start gap-1.5 outline-none">
         <p className="text-[13px] text-[var(--color-text-soft)]">You are already subscribed.</p>
-        <ManageSubscriptionLink capperId={seller.capper_id} />
+        <ManageSubscriptionLink capperId={capperId} />
       </div>
     );
   }
@@ -106,7 +131,7 @@ export function SubscribeCheckout({
     setPending(true);
     setError(null);
     try {
-      const { url } = await startVipCheckout(seller.capper_id, SUBSCRIBER_TERMS_VERSION, token);
+      const { url } = await startVipCheckout(capperId, SUBSCRIBER_TERMS_VERSION, token);
       window.location.assign(url);
     } catch (err) {
       const detail = err instanceof VipApiError ? err.detail : "";
@@ -123,16 +148,18 @@ export function SubscribeCheckout({
 
   if (!session) {
     return (
-      <div id="subscribe" className="flex flex-col items-start gap-1.5">
+      <div id="subscribe" ref={blockRef} tabIndex={-1} className="flex flex-col items-start gap-1.5 outline-none">
         <button
           type="button"
-          disabled={!authReady}
+          disabled={!authReady || !paymentsOn}
           onClick={signIn}
           className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap`}
         >
           {label}
         </button>
-        <span className="text-[11px] text-[var(--color-text-muted)]">Sign in to subscribe.</span>
+        <span className="text-[11px] text-[var(--color-text-muted)]">
+          {paymentsOn ? "Sign in to subscribe." : "Checkout opens soon."}
+        </span>
       </div>
     );
   }
@@ -140,7 +167,7 @@ export function SubscribeCheckout({
   // Subscribe stays off until the platform enables payments for this capper
   // (payments_enabled), so no checkout call is ever made while dark.
   return (
-    <div id="subscribe" className="flex flex-col items-start gap-3 sm:max-w-[420px]">
+    <div id="subscribe" ref={blockRef} tabIndex={-1} className="flex flex-col items-start gap-3 sm:max-w-[420px] outline-none">
       <p className="text-[12px] leading-snug text-[var(--color-text-soft)]">
         {subscriberDisclosure(seller.price_cents)}
       </p>
@@ -155,6 +182,7 @@ export function SubscribeCheckout({
           I agree to the{" "}
           <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">
             Terms
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>{" "}
           and understand this renews monthly until I cancel.
         </span>

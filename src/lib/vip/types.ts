@@ -3,7 +3,6 @@ export type VipSport = "MLB" | "NFL" | "NBA";
 export type VipSellerStatus = "onboarding" | "active" | "restricted" | "stopped" | "disabled";
 
 export interface VipSeller {
-  capper_id: number;
   price_cents: number;
   founding: boolean;
   status: VipSellerStatus | string;

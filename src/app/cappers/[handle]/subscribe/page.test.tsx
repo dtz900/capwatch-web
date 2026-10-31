@@ -22,7 +22,7 @@ const profile = {
   capper: { id: 7, handle: "sharp", display_name: "Sharp Sam", profile_image_url: null },
 };
 const status = {
-  seller: { capper_id: 7, price_cents: 2500, founding: false, status: "active" },
+  seller: { price_cents: 2500, founding: false, status: "active" },
   eligibility: [],
   door_open: true,
   viewer: { subscribed: false, is_owner: false },

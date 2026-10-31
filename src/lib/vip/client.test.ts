@@ -3,7 +3,9 @@ import { API_BASE } from "@/lib/config";
 import {
   VipApiError,
   getVipCapperStatus,
+  openVipPortal,
   postVipSeller,
+  startVipCheckout,
   vipFetch,
 } from "@/lib/vip/client";
 import { isLockedPick } from "@/lib/vip/types";
@@ -18,6 +20,20 @@ function mockFetch(status: number, body: unknown) {
   vi.stubGlobal("fetch", fn);
   return fn;
 }
+
+describe("checkout and portal URLs", () => {
+  beforeEach(() => vi.unstubAllGlobals());
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("embed the real capper id", async () => {
+    const fn = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ url: "https://x" }), { status: 200 }));
+    vi.stubGlobal("fetch", fn);
+    await startVipCheckout(42, "v1", "t");
+    await openVipPortal(42, "t");
+    expect(fn.mock.calls[0][0]).toBe(`${API_BASE}/api/vip/cappers/42/checkout`);
+    expect(fn.mock.calls[1][0]).toBe(`${API_BASE}/api/vip/cappers/42/portal`);
+  });
+});
 
 describe("vipFetch", () => {
   beforeEach(() => vi.unstubAllGlobals());

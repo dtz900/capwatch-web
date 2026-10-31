@@ -52,6 +52,10 @@ export function CapperVipSection({
   // shows or the poll times out.
   const [returned, setReturned] = useState(false);
   const [polling, setPolling] = useState(false);
+  const pollingRef = useRef(false);
+  useEffect(() => {
+    pollingRef.current = polling;
+  }, [polling]);
   const viewerKey = useRef<string | null>(null);
   // Read at request time so a token refresh (same user, new access_token)
   // neither refetches nor resets the section. Declared before the fetch
@@ -84,7 +88,8 @@ export function CapperVipSection({
         if (!(err instanceof VipApiError && err.status === 404)) {
           console.error("capper VIP status failed", err);
         }
-        if (!cancelled) setStatus(null);
+        // While polling after checkout, one failed request keeps the last good status.
+        if (!cancelled && !pollingRef.current) setStatus(null);
       });
     return () => {
       cancelled = true;
@@ -132,7 +137,7 @@ export function CapperVipSection({
           You&apos;re in. VIP picks show here and arrive by email.
         </div>
       )}
-      <CapperVipView status={status} handle={handle} ownerPanel={ownerPanel} onPull={onPull} />
+      <CapperVipView status={status} handle={handle} capperId={capperId} ownerPanel={ownerPanel} onPull={onPull} />
     </>
   );
 }
@@ -169,11 +174,13 @@ function VipRecord({ record }: { record: VipCapperStatus["vip_record"] }) {
 export function CapperVipView({
   status,
   handle,
+  capperId,
   ownerPanel = null,
   onPull,
 }: {
   status: VipCapperStatus | null;
   handle: string;
+  capperId: number;
   ownerPanel?: ReactNode;
   onPull?: PullFn;
 }) {
@@ -196,7 +203,7 @@ export function CapperVipView({
             <VipBand
               headline={vipHeadline(status)}
               exclusivity={exclusivityLine(status)}
-              right={<SubscribeDoor status={status} handle={handle} />}
+              right={<SubscribeDoor status={status} handle={handle} capperId={capperId} />}
             />
             <div className="px-5 sm:px-6 pb-3.5">
               <EligibilityBadges eligibility={status.eligibility} />
