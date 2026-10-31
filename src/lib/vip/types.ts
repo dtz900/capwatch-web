@@ -1,10 +1,12 @@
 export type VipSport = "MLB" | "NFL" | "NBA";
 
+export type VipSellerStatus = "onboarding" | "active" | "restricted" | "stopped" | "disabled";
+
 export interface VipSeller {
   capper_id: number;
   price_cents: number;
   founding: boolean;
-  status: string;
+  status: VipSellerStatus | string;
   /** Book the builder prefills prices from; "other" = not in the feed. */
   preferred_book?: string | null;
 }
@@ -118,6 +120,8 @@ export interface VipMe {
     fail_streak: number;
   }>;
   can_post_sports: string[];
+  /** False until the capper is allowlisted for Stripe payments (ship dark). */
+  payments_enabled: boolean;
 }
 
 export interface VipSubscription {

@@ -130,12 +130,14 @@ const OWNER_NO_SELLER: VipMe = {
   seller: null,
   eligibility: [{ sport: "MLB", eligible: false, eligible_since: null, fail_streak: 2 }],
   can_post_sports: [],
+  payments_enabled: true,
 };
 const OWNER_SELLER: VipMe = {
   capper: { id: 7, handle: "moneyplayzz" },
   seller: BASE.seller,
   eligibility: [{ sport: "MLB", eligible: true, eligible_since: "2026-10-01", fail_streak: 0 }],
   can_post_sports: ["MLB"],
+  payments_enabled: true,
 };
 
 function capper(id: number, handle: string, name: string) {

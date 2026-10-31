@@ -61,7 +61,12 @@ export function getVipMe(token: string | null) {
 }
 
 export function postVipSeller(
-  body: { price_cents: number; accept_terms: boolean; preferred_book?: string | null },
+  body: {
+    price_cents: number;
+    accept_terms: boolean;
+    terms_version: string;
+    preferred_book?: string | null;
+  },
   token: string | null,
 ) {
   return vipFetch<VipSeller>("/api/vip/seller", {
@@ -80,6 +85,25 @@ export function patchVipSeller(
     body: JSON.stringify(body),
     token,
   });
+}
+
+export function startVipOnboarding(token: string | null) {
+  return vipFetch<{ url: string }>("/api/vip/seller/onboarding", { method: "POST", token });
+}
+
+export function getVipSellerAccount(token: string | null) {
+  return vipFetch<{ status: string; charges_enabled: boolean }>("/api/vip/seller/account", { token });
+}
+
+export function stopVipSelling(token: string | null) {
+  return vipFetch<{ status: string; canceled: number }>("/api/vip/seller/stop", {
+    method: "POST",
+    token,
+  });
+}
+
+export function startVipSelling(token: string | null) {
+  return vipFetch<{ status: string }>("/api/vip/seller/start", { method: "POST", token });
 }
 
 export function getVipSellerSubscribers(token: string | null) {

@@ -15,10 +15,11 @@ const client = vi.hoisted(() => {
       this.detail = detail;
     }
   }
-  return { postVipSeller: vi.fn(), VipApiError };
+  return { postVipSeller: vi.fn(), startVipOnboarding: vi.fn(), VipApiError };
 });
 vi.mock("@/lib/vip/client", () => client);
 
+import { SELLER_AGREEMENT_VERSION } from "@/lib/vip/terms";
 import { SellerSetupCard } from "./SellerSetupCard";
 
 const me: VipMe = {
@@ -26,21 +27,22 @@ const me: VipMe = {
   seller: null,
   eligibility: [{ sport: "MLB", eligible: true, eligible_since: "2026-10-01", fail_streak: 0 }],
   can_post_sports: ["MLB"],
+  payments_enabled: true,
 };
 
-const TERMS =
-  "I understand I can start selling in a sport after a positive last 30 days there and keep selling only while my last 60 days there stay positive, that VIP picks are revealed to everyone 30 minutes after the game starts, and that TailSlips keeps 15% of each subscription, with payment processing fees coming out of the TailSlips share.";
+const TERMS = /I agree to the/;
 
 function fillValid() {
   fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "25" } });
   fireEvent.change(screen.getByLabelText("Your main book"), { target: { value: "draftkings" } });
-  fireEvent.click(screen.getByLabelText(TERMS));
+  fireEvent.click(screen.getByRole("checkbox"));
 }
 
 describe("SellerSetupCard", () => {
   beforeEach(() => {
     auth.value = { session: { access_token: "tok" } };
     client.postVipSeller.mockReset();
+    client.startVipOnboarding.mockReset();
   });
 
   it("start selling disabled until terms and price valid", () => {
@@ -53,7 +55,7 @@ describe("SellerSetupCard", () => {
     fireEvent.change(price, { target: { value: "25" } });
     expect(button).toBeDisabled();
 
-    fireEvent.click(screen.getByLabelText(TERMS));
+    fireEvent.click(screen.getByRole("checkbox"));
     // A main book is required too.
     expect(button).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Your main book"), { target: { value: "fanduel" } });
@@ -79,19 +81,53 @@ describe("SellerSetupCard", () => {
       await screen.findByText("You need a positive 30-day record in at least one sport first."),
     ).toBeInTheDocument();
     expect(client.postVipSeller).toHaveBeenCalledWith(
-      { price_cents: 2500, accept_terms: true, preferred_book: "draftkings" },
+      { price_cents: 2500, accept_terms: true, terms_version: SELLER_AGREEMENT_VERSION, preferred_book: "draftkings" },
       "tok",
     );
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it("setup calls onDone after a successful create", async () => {
-    client.postVipSeller.mockResolvedValue({
-      capper_id: 7,
-      price_cents: 2500,
-      founding: true,
-      status: "active",
-    });
+  it("submits terms version then redirects to Stripe", async () => {
+    client.postVipSeller.mockResolvedValue({ capper_id: 7, price_cents: 2500, founding: true, status: "onboarding" });
+    client.startVipOnboarding.mockResolvedValue({ url: "https://connect.stripe.com/x" });
+    const assign = vi.fn();
+    const orig = window.location;
+    Object.defineProperty(window, "location", { value: { ...orig, assign }, writable: true, configurable: true });
+    try {
+      render(<SellerSetupCard me={me} onDone={() => {}} />);
+      fillValid();
+      fireEvent.click(screen.getByRole("button", { name: "Start selling" }));
+      await vi.waitFor(() => expect(assign).toHaveBeenCalledWith("https://connect.stripe.com/x"));
+      expect(client.postVipSeller).toHaveBeenCalledWith(
+        expect.objectContaining({ terms_version: SELLER_AGREEMENT_VERSION, accept_terms: true }),
+        "tok",
+      );
+      expect(client.startVipOnboarding).toHaveBeenCalledWith("tok");
+    } finally {
+      Object.defineProperty(window, "location", { value: orig, writable: true, configurable: true });
+    }
+  });
+
+  it("cannot confirm without agreeing", () => {
+    render(<SellerSetupCard me={me} onDone={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "25" } });
+    fireEvent.change(screen.getByLabelText("Your main book"), { target: { value: "draftkings" } });
+    expect(screen.getByRole("button", { name: "Start selling" })).toBeDisabled();
+    const link = screen.getByRole("link", { name: "Seller Agreement" });
+    expect(link).toHaveAttribute("href", "/seller-agreement");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("confirm stays disabled while payments are not enabled", () => {
+    render(<SellerSetupCard me={{ ...me, payments_enabled: false }} onDone={() => {}} />);
+    fillValid();
+    expect(screen.getByRole("button", { name: "Start selling" })).toBeDisabled();
+    expect(screen.getByText("Payments aren't open yet.")).toBeInTheDocument();
+  });
+
+  it("refreshes via onDone when the onboarding link fails after the seller was created", async () => {
+    client.postVipSeller.mockResolvedValue({ capper_id: 7, price_cents: 2500, founding: true, status: "onboarding" });
+    client.startVipOnboarding.mockRejectedValue(new client.VipApiError(500, "boom"));
     const onDone = vi.fn();
     render(<SellerSetupCard me={me} onDone={onDone} />);
     fillValid();

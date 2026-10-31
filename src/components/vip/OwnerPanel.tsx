@@ -116,7 +116,7 @@ export function OwnerPanelView({
   return (
     <section className={`${SECTION} flex flex-col gap-4`}>
       <span className={EYEBROW}>Your VIP dashboard</span>
-      <SellerStrip seller={me.seller} token={token} onSaved={onRefresh} />
+      <SellerStrip seller={me.seller} token={token} paymentsEnabled={me.payments_enabled} onSaved={onRefresh} />
       {me.can_post_sports.length === 0 ? (
         <p className="text-[12px] text-[var(--color-text-muted)]">You can post VIP picks once a sport is eligible.</p>
       ) : (

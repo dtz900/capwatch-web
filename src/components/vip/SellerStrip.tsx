@@ -6,11 +6,12 @@
  * Markup from the approved SellerStripMock. */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { getVipSellerSubscribers, patchVipSeller } from "@/lib/vip/client";
+import { VipApiError, getVipSellerSubscribers, patchVipSeller, stopVipSelling } from "@/lib/vip/client";
 import type { VipSeller, VipSellerSubscriber } from "@/lib/vip/types";
 import { BOOKS, OTHER_BOOK, bookName, defaultBook } from "./builder/books";
 import { PriceInput, SELLER_SHARE, parsePriceDollars } from "./SellerSetupCard";
-import { ERROR_TEXT, EYEBROW, INNER_CARD, SECONDARY_BTN_SM } from "./styles";
+import { SellerStatusBanner } from "./SellerStatusBanner";
+import { ERROR_TEXT, EYEBROW, INNER_CARD, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_BTN_SM } from "./styles";
 
 function Tile({ label, children, action }: { label: string; children: ReactNode; action?: ReactNode }) {
   return (
@@ -33,10 +34,12 @@ const shortDate = (iso: string | null) =>
 export function SellerStrip({
   seller,
   token,
+  paymentsEnabled,
   onSaved,
 }: {
   seller: VipSeller;
   token: string | null;
+  paymentsEnabled: boolean;
   onSaved: () => void;
 }) {
   const price = Math.round(seller.price_cents / 100);
@@ -48,6 +51,11 @@ export function SellerStrip({
   const [subs, setSubs] = useState<VipSellerSubscriber[] | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stopping, setStopping] = useState(false);
+  const [stopError, setStopError] = useState<string | null>(null);
+  // Status the API last returned; wins over the prop until /me catches up.
+  const [statusOverride, setStatusOverride] = useState<string | null>(null);
+  const status = statusOverride ?? seller.status;
   // Read at request time: a token refresh must not refetch.
   const tokenRef = useRef(token);
   useEffect(() => {
@@ -86,6 +94,36 @@ export function SellerStrip({
     }
   };
 
+  const stop = async () => {
+    if (pending) return;
+    setPending(true);
+    setStopError(null);
+    try {
+      const r = await stopVipSelling(tokenRef.current);
+      if (r.status === "stopped") {
+        setStopping(false);
+        setStatusOverride("stopped");
+        onSaved();
+      }
+    } catch (err) {
+      console.error("VIP stop selling failed", err);
+      setStopError(
+        err instanceof VipApiError && err.detail === "stop_incomplete"
+          ? "Some subscriptions didn't cancel yet. Try again."
+          : "Could not stop selling. Try again.",
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const changeStatus = (next: string) => {
+    setStatusOverride(next);
+    onSaved();
+  };
+
+  const canStop = status === "active" || status === "restricted" || status === "onboarding";
+
   const edit = (which: "price" | "book") => (
     <button
       type="button"
@@ -103,6 +141,13 @@ export function SellerStrip({
 
   return (
     <div className="flex flex-col gap-2">
+      <SellerStatusBanner
+        status={status}
+        token={token}
+        paymentsEnabled={paymentsEnabled}
+        onStatusChange={changeStatus}
+      />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-border)]">
         <Tile label="Price" action={editing !== "price" && edit("price")}>
           <span className="text-[20px] font-extrabold tabular-nums leading-none text-[var(--color-text)]">
@@ -130,6 +175,10 @@ export function SellerStrip({
           </span>
           <span className="text-[11px] text-[var(--color-text-muted)]">
             active{canceling > 0 ? ` · ${canceling} canceling` : ""}
+          </span>
+          <span className="text-[10px] leading-snug text-[var(--color-text-muted)]">
+            If you go cold, your subscribers stop being charged and their billing dates move out by the days you
+            couldn&apos;t post.
           </span>
         </Tile>
 
@@ -223,6 +272,44 @@ export function SellerStrip({
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {canStop && (
+        <div className="flex items-center gap-3 flex-wrap">
+          {!stopping ? (
+            <button
+              type="button"
+              className={`${linkBtn} ml-auto`}
+              onClick={() => {
+                setStopError(null);
+                setStopping(true);
+              }}
+            >
+              Stop selling
+            </button>
+          ) : (
+            <div className={`${INNER_CARD} flex flex-col gap-2 w-full`}>
+              <span className="text-[12px] text-[var(--color-text)] font-bold">Stop selling VIP?</span>
+              <span className="text-[12px] text-[var(--color-text-soft)]">
+                New subscriptions close now and nobody renews. Your {renewing ?? 0} current subscribers keep access
+                until their period ends. You can start again anytime.
+              </span>
+              <div className="flex gap-2">
+                <button type="button" className={PRIMARY_BTN} disabled={pending} onClick={stop}>
+                  Stop selling
+                </button>
+                <button type="button" className={SECONDARY_BTN} onClick={() => setStopping(false)}>
+                  Keep selling
+                </button>
+              </div>
+              {stopError && (
+                <span role="status" className={ERROR_TEXT}>
+                  {stopError}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
