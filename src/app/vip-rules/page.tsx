@@ -24,6 +24,7 @@ export const metadata = {
 };
 
 const P = "text-[var(--color-text-soft)] leading-relaxed mb-4";
+const UL = "list-disc pl-6 mb-4 space-y-1 text-[var(--color-text-soft)] leading-relaxed";
 const H2 =
   "flex items-center gap-2.5 text-[20px] font-bold mt-9 mb-3 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-sm before:bg-[var(--color-vip)] before:shrink-0";
 const LINK =
@@ -60,18 +61,24 @@ export default function VipRules() {
 
         <h2 className={H2}>Who can sell</h2>
         <p className={P}>
-          A capper can start selling only after a winning stretch. We look at
-          the trailing 30 days and need at least 20 graded picks staked at 0.5u
-          or more, with net units above zero. Once selling, a capper stays open
-          while the trailing 60 days are positive, so one cold week does not
-          switch a proven winner off. Public picks and VIP picks are combined in
-          those numbers, so a seller cannot hide a bad stretch by moving losses
-          into one bucket.
+          Every seller on TailSlips earned it on their record. To start selling
+          a sport, a capper needs these over their last 30 days:
+        </p>
+        <ul className={UL}>
+          <li>30+ graded picks (staked 0.5u or more)</li>
+          <li>5+ wins</li>
+          <li>+3% ROI or better</li>
+        </ul>
+        <p className={P}>
+          After that, they keep selling as long as they&apos;re up over their
+          last 60 days. There&apos;s no pick minimum to stay, so a cold week
+          doesn&apos;t shut down a proven winner. Public and VIP picks count
+          together.
         </p>
         <p className={P}>
-          Eligibility is checked every night. If a capper is at zero or below
-          over the last 60 days two nights in a row, selling in that sport
-          turns off.
+          We check every night. Two nights in a row at zero or below over 60
+          days turns selling off in that sport, and getting back in means
+          passing the 30-day test again.
         </p>
 
         <h2 className={H2}>What a VIP pick is</h2>

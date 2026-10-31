@@ -54,7 +54,7 @@ export function PriceInput({
 }
 
 export const REQUIREMENT_LINE =
-  "Start selling unlocks once a sport is eligible: a positive record over the last 30 days with at least 20 graded picks.";
+  "Start selling unlocks once a sport is eligible: 30+ graded picks, 5+ wins and +3% ROI over the last 30 days.";
 
 export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void }) {
   const { session } = useAuth();
@@ -90,7 +90,7 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
       window.location.assign(url);
     } catch (err) {
       if (err instanceof VipApiError && err.status === 409) {
-        setError("You need a positive 30-day record in at least one sport first.");
+        setError("You need an eligible sport first: 30+ graded picks, 5+ wins and +3% ROI over the last 30 days.");
       } else if (err instanceof VipApiError && err.status === 403 && err.detail === "seller_denylisted") {
         setError("This account cannot sell VIP picks.");
       } else if (created) {

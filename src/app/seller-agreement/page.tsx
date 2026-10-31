@@ -111,8 +111,8 @@ export default function SellerAgreement() {
         <p className={P}>You earn the right to sell VIP one sport at a time.</p>
         <ul className={UL}>
           <li>
-            <strong>Start:</strong> 20+ graded picks in your last 30 days, and up in units over
-            those 30 days.
+            <strong>Start:</strong> in your last 30 days, 30+ graded picks, at least 5 wins, and
+            an ROI of +3% or better.
           </li>
           <li>
             <strong>Keep:</strong> stay up over your last 60 days. We check every night. If you

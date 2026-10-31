@@ -78,7 +78,7 @@ describe("SellerSetupCard", () => {
     fillValid();
     fireEvent.click(screen.getByRole("button", { name: "Start selling" }));
     expect(
-      await screen.findByText("You need a positive 30-day record in at least one sport first."),
+      await screen.findByText("You need an eligible sport first: 30+ graded picks, 5+ wins and +3% ROI over the last 30 days."),
     ).toBeInTheDocument();
     expect(client.postVipSeller).toHaveBeenCalledWith(
       { price_cents: 2500, accept_terms: true, terms_version: SELLER_AGREEMENT_VERSION, preferred_book: "draftkings" },
@@ -144,7 +144,7 @@ describe("SellerSetupCard", () => {
     );
     expect(
       screen.getByText(
-        "Start selling unlocks once a sport is eligible: a positive record over the last 30 days with at least 20 graded picks.",
+        "Start selling unlocks once a sport is eligible: 30+ graded picks, 5+ wins and +3% ROI over the last 30 days.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();

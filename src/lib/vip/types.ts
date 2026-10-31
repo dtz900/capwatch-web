@@ -18,7 +18,7 @@ export interface VipEligibility {
   n_picks: number | null;
   n_floor_picks: number | null;
   run_date: string | null;
-  /* Latest history reason ('ok' | 'below_floor' | 'negative' | 'no_record')
+  /* Latest history reason ('ok' | 'below_floor' | 'few_wins' | 'negative' | 'low_roi' | 'no_record' | 'held_60')
      and consecutive failing nights; optional so older payloads still type. */
   reason?: string | null;
   fail_streak?: number;
