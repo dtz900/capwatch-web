@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getVipCapperStatus } from "@/lib/vip/client";
 
-/** The TailSlips brand crown in VIP purple, fading top to bottom like the
- *  green logo crown (orchid to violet; public/vip-crown-purple.png is the same
- *  fill for share cards). Uses logo-crown-bold.png, a stroke-thickened copy of
- *  logo-crown.png (alpha dilated ~15px at source size) so it reads at 20-28px;
- *  tinted through a CSS mask. `bold` is kept for call-site compatibility. */
-export const VIP_CROWN_GRADIENT = "linear-gradient(180deg, #f5d0fe 0%, #8b7cf6 100%)";
+/** The TailSlips brand crown in VIP purple: the green logo crown's exact
+ *  shape (crown-gradient.png) with the same top-to-bottom fade, orchid to
+ *  violet, baked into public/vip-crown-purple.png. The share cards draw the
+ *  same file. `bold` is kept for call-site compatibility. */
 export function VipCrown({
   className = "w-5 h-5",
   label,
@@ -19,15 +17,10 @@ export function VipCrown({
   bold?: boolean;
 }) {
   const mask: React.CSSProperties = {
-    backgroundImage: VIP_CROWN_GRADIENT,
-    WebkitMaskImage: "url(/logo-crown-bold.png)",
-    maskImage: "url(/logo-crown-bold.png)",
-    WebkitMaskSize: "contain",
-    maskSize: "contain",
-    WebkitMaskRepeat: "no-repeat",
-    maskRepeat: "no-repeat",
-    WebkitMaskPosition: "center",
-    maskPosition: "center",
+    backgroundImage: "url(/vip-crown-purple.png)",
+    backgroundSize: "contain",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "center",
   };
   return (
     <span
