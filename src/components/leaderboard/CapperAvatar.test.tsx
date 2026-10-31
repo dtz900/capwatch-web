@@ -36,7 +36,11 @@ describe("CapperAvatar VIP ring", () => {
     const { container } = render(
       <CapperAvatar url={null} handle="fadeai_" size={32} apiIntegrated vipEligible />,
     );
-    expect(container.innerHTML).toContain(VIP_RING);
+    // That branch carries an inline blue glow that beats any ring class, so
+    // the ring has to ride inside the inline box-shadow itself.
+    const outer = container.firstElementChild as HTMLElement;
+    expect(outer.style.boxShadow).toContain("var(--color-vip)");
+    expect(outer.style.boxShadow).toContain("rgba(37, 99, 235, 0.45)");
   });
 
   it("tightens the offset for small slate chips", () => {

@@ -28,6 +28,14 @@ export function vipRingClass(size: number): string {
   return `ring-2 ring-[var(--color-vip)] ${offset} ring-offset-[var(--color-bg)] ${glow}`;
 }
 
+/** The same ring as a box-shadow list, for the fadeai_ gradient avatar whose
+ *  inline blue glow would otherwise override the Tailwind ring classes. */
+export function vipRingShadow(size: number): string {
+  const offset = size >= 32 ? 2 : 1;
+  const glow = size >= 32 ? "0 0 18px rgba(109,40,217,0.45)" : "0 0 10px rgba(109,40,217,0.45)";
+  return `0 0 0 ${offset}px var(--color-bg), 0 0 0 ${offset + 2}px var(--color-vip), ${glow}`;
+}
+
 export function CapperAvatar({
   url,
   handle,
@@ -38,7 +46,7 @@ export function CapperAvatar({
   vipEligible = false,
 }: Props) {
   const initials = (handle ?? "??").replace(/^@/, "").slice(0, 2).toUpperCase();
-  if (vipEligible && capperVipEnabled()) className = `${className} ${vipRingClass(size)}`;
+  const vip = vipEligible && capperVipEnabled();
 
   let avatar: React.ReactNode;
   if (apiIntegrated) {
@@ -52,8 +60,7 @@ export function CapperAvatar({
           background:
             "linear-gradient(135deg, #60a5fa 0%, #2563eb 50%, #1e40af 100%)",
           padding: 2,
-          boxShadow:
-            "0 0 12px rgba(37, 99, 235, 0.45), 0 0 28px rgba(29, 78, 216, 0.18)",
+          boxShadow: `${vip ? `${vipRingShadow(size)}, ` : ""}0 0 12px rgba(37, 99, 235, 0.45), 0 0 28px rgba(29, 78, 216, 0.18)`,
         }}
       >
         <div
@@ -74,7 +81,7 @@ export function CapperAvatar({
       </div>
     );
   } else {
-    const wrap = `relative rounded-full overflow-hidden border border-[rgba(255,255,255,0.10)] bg-[#2a2a2e] flex items-center justify-center shrink-0 ${className}`;
+    const wrap = `relative rounded-full overflow-hidden border border-[rgba(255,255,255,0.10)] bg-[#2a2a2e] flex items-center justify-center shrink-0 ${className} ${vip ? vipRingClass(size) : ""}`;
     const dim = { width: size, height: size };
     avatar = (
       <div className={wrap} style={dim}>
