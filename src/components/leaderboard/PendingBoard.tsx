@@ -41,7 +41,7 @@ export function PendingBoard({ rows, sport, window, standalone }: Props) {
         const href = r.handle ? buildProfileHref(r.handle, { window, sport }) : null;
         const node = (
           <div className="flex items-center gap-3 min-w-0">
-            <CapperAvatar url={r.profile_image_url} handle={r.handle} size={32} />
+            <CapperAvatar url={r.profile_image_url} handle={r.handle} size={32} vipEligible={r.vip_eligible} />
             <div className="min-w-0">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="font-bold truncate">{r.display_name ?? r.handle}</span>

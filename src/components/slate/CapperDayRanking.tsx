@@ -138,7 +138,7 @@ export function CapperRow({
       <div className="w-7 sm:w-8 shrink-0 text-[var(--color-text-muted)] font-bold tabular-nums text-[12px] sm:text-[13px]">
         {String(rank).padStart(2, "0")}
       </div>
-      <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={prominent ? 28 : 26} apiIntegrated={isModel} />
+      <CapperAvatar url={capper.profile_image_url} handle={capper.handle} size={prominent ? 28 : 26} apiIntegrated={isModel} vipEligible={capper.vip_eligible} />
       <div className="min-w-0 flex-1 flex items-center gap-2">
         <span className="truncate text-[13px] font-semibold text-[var(--color-text)]">
           {handleStr}

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Titan_One } from "next/font/google";
+import { capperVipEnabled } from "@/lib/flags";
 
 // Closest cleanly-licensed match to GTA's Pricedown for the DELETED stamp.
 // Self-hosted by next/font at build time; no runtime font request.
@@ -14,6 +15,17 @@ interface Props {
   /** Capper deleted their whole X account. Dims the avatar and stamps an
    * angled DELETED band over it (GTA-wasted style), scaled to `size`. */
   accountDeleted?: boolean;
+  /** Eligible to sell VIP in any sport: the purple ring, on every surface the
+   * avatar appears (David, 2026-10-31). Dark until the Capper VIP launch flag. */
+  vipEligible?: boolean;
+}
+
+/** Same ring the profile hero wears; tighter offset below 32px so stacked
+ *  slate chips and 26px rows don't bleed into their neighbours. */
+export function vipRingClass(size: number): string {
+  const offset = size >= 32 ? "ring-offset-2" : "ring-offset-1";
+  const glow = size >= 32 ? "shadow-[0_0_18px_rgba(109,40,217,0.45)]" : "shadow-[0_0_10px_rgba(109,40,217,0.45)]";
+  return `ring-2 ring-[var(--color-vip)] ${offset} ring-offset-[var(--color-bg)] ${glow}`;
 }
 
 export function CapperAvatar({
@@ -23,8 +35,10 @@ export function CapperAvatar({
   className = "",
   apiIntegrated = false,
   accountDeleted = false,
+  vipEligible = false,
 }: Props) {
   const initials = (handle ?? "??").replace(/^@/, "").slice(0, 2).toUpperCase();
+  if (vipEligible && capperVipEnabled()) className = `${className} ${vipRingClass(size)}`;
 
   let avatar: React.ReactNode;
   if (apiIntegrated) {

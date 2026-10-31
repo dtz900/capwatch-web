@@ -120,6 +120,7 @@ function AvatarStack({ picks, max = 4 }: { picks: SlatePick[]; max?: number }) {
             handle={p.handle}
             size={22}
             apiIntegrated={p.handle === "fadeai_"}
+            vipEligible={p.vip_eligible}
           />
         </span>
       ))}
@@ -403,6 +404,7 @@ function CapperRow({ picks, ctx }: { picks: SlatePick[]; ctx: Ctx }) {
             handle={first.handle}
             size={24}
             apiIntegrated={first.handle === "fadeai_"}
+            vipEligible={first.vip_eligible}
           />
         </span>
         <span className="min-w-0 flex flex-col leading-tight">
