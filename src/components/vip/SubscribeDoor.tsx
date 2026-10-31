@@ -52,6 +52,17 @@ export function SubscribeDoor({
       )}
       </div>
     );
+  // A live Stripe subscription with no access (a failed card, a billing
+  // pause) still bills: fix it in the portal, never start a second one.
+  if (status.viewer.billing === "stripe")
+    return (
+      <div className="flex items-center gap-4">
+        <span className="text-[12px] font-bold text-[var(--color-vip-text)]">
+          Subscription on hold
+        </span>
+        <ManageSubscriptionLink capperId={capperId} />
+      </div>
+    );
   if (!seller || !status.door_open) return null;
   return (
     <div className="flex items-center gap-4">

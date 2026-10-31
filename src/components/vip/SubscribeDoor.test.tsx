@@ -243,6 +243,20 @@ describe("SubscribeDoor manage link", () => {
     await waitFor(() => expect(client.openVipPortal).toHaveBeenCalledWith(42, "tok"));
   });
 
+  it("live stripe subscription without access (failed card) shows Manage, never Subscribe", () => {
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } } };
+    render(
+      <SubscribeDoor
+        status={status({ viewer: { subscribed: false, is_owner: false, billing: "stripe" } })}
+        handle="sharp"
+        capperId={42}
+      />,
+    );
+    expect(screen.getByText("Subscription on hold")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Subscribe" })).toBeNull();
+  });
+
   it("admin-granted subscriber has no manage link", () => {
     render(
       <SubscribeDoor
