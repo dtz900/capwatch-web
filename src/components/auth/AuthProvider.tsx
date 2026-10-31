@@ -190,7 +190,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     suggestedUsername: claimResult?.status === "no_capper" ? claimResult.suggested_username : null,
     signOut: async () => {
       if (!supabase) return;
-      await supabase.auth.signOut();
+      // This device only. Supabase's default scope is global and would revoke
+      // the user's sessions everywhere (a phone, another window), which is a
+      // different action than signing out here.
+      await supabase.auth.signOut({ scope: "local" });
     },
     refreshProfile: loadProfile,
     linkX,
