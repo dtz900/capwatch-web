@@ -5,7 +5,7 @@ import { useState } from "react";
 /* The short version of /vip-rules, shown in place on the subscribe page so
  * the buyer never leaves checkout. Keep in step with /vip-rules. */
 const RULES = [
-  "Sellers must be up over the last 30 days on 20+ graded picks to start, and stay up over the last 60 days to keep selling. Checked every night.",
+  "Sellers start once they're up over their last 30 days on 20+ graded picks. They stay open as long as their last 30 days or last 60 days are up, checked every night with one day to recover.",
   "Every VIP pick is timestamped before the game and goes public 30 minutes after it starts.",
   "Mistakes can be fixed within 10 minutes, before the game. Subscribers see the original and get a new alert.",
   "Pulled picks stay listed and count as no action.",
