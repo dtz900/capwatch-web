@@ -282,7 +282,7 @@ describe("CapperVipSection", () => {
       can_post_sports: ["MLB"],
     });
     const { rerender } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
-    await screen.findByRole("region", { name: "Capper VIP" });
+    await screen.findByRole("region", { name: "Your VIP dashboard" });
     fireEvent.click(await screen.findByRole("button", { name: "Post a VIP pick" }));
     const draft = screen.getByPlaceholderText('selection text, e.g. "Yankees ML"');
     fireEvent.change(draft, { target: { value: "Draft text" } });
@@ -293,7 +293,9 @@ describe("CapperVipSection", () => {
 
     expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
     expect(client.getVipMe).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Your VIP dashboard" })).toBeInTheDocument();
+    // The selling owner's dashboard replaces the public card.
+    expect(screen.queryByRole("region", { name: "Capper VIP" })).toBeNull();
     expect(screen.getByDisplayValue("Draft text")).toBe(draft);
   });
 
@@ -302,7 +304,8 @@ describe("CapperVipSection", () => {
     client.getVipCapperStatus.mockResolvedValue(status);
     client.getVipMe.mockResolvedValue({
       capper: { id: 7, handle: "FadeAI_" },
-      seller: null,
+      // A seller row on a house account must not blank the section.
+      seller: status.seller,
       eligibility: [{ sport: "MLB", eligible: true, eligible_since: "2026-10-01", fail_streak: 0 }],
       can_post_sports: ["MLB"],
     });
@@ -312,6 +315,7 @@ describe("CapperVipSection", () => {
     await Promise.resolve();
     expect(screen.queryByRole("region", { name: "Your VIP dashboard" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Start selling" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
   });
 
   describe("live access re-check", () => {

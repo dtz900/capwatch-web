@@ -6,11 +6,13 @@
  * and a quiet settings strip (price, book, Stripe, stop). Editors open under
  * the strip. Approved mock 2026-10-30. */
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { VipApiError, getVipSellerSubscribers, patchVipSeller, stopVipSelling } from "@/lib/vip/client";
 import type { VipCapperStatus, VipEligibility, VipSeller, VipSellerSubscriber } from "@/lib/vip/types";
 import { BOOKS, OTHER_BOOK, bookName, defaultBook } from "./builder/books";
 import { PriceInput, SELLER_SHARE, parsePriceDollars } from "./SellerSetupCard";
+import { EligibilityBadges } from "./EligibilityBadges";
 import { SellerStatusBanner } from "./SellerStatusBanner";
 import { signedUnits } from "./format";
 import { ERROR_TEXT, EYEBROW, INNER_CARD, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_BTN_SM } from "./styles";
@@ -41,33 +43,6 @@ function Hero({ label, children }: { label: string; children: ReactNode }) {
     <div className="px-5 sm:px-6 py-5 flex flex-col gap-1 min-w-0">
       <span className={EYEBROW}>{label}</span>
       {children}
-    </div>
-  );
-}
-
-function SportChips({ eligibility }: { eligibility: VipEligibility[] }) {
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {eligibility.map((e) =>
-        e.eligible ? (
-          <span
-            key={e.sport}
-            className="text-[11px] font-bold px-2 py-1 rounded-md bg-[rgba(255,255,255,0.10)] border border-[rgba(255,255,255,0.14)] text-[var(--color-text)]"
-          >
-            {e.sport}{" "}
-            <span className={(e.units ?? 0) >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}>
-              {signedUnits(e.units)}
-            </span>
-          </span>
-        ) : (
-          <span
-            key={e.sport}
-            className="text-[11px] font-semibold px-2 py-1 rounded-md border border-[rgba(255,255,255,0.10)] text-[rgba(247,243,233,0.45)]"
-          >
-            {e.sport} off
-          </span>
-        ),
-      )}
     </div>
   );
 }
@@ -116,6 +91,7 @@ export function SellerStrip({
   onSaved,
   eligibility = [],
   vipRecord = null,
+  exclusivity = null,
   postAction = null,
 }: {
   seller: VipSeller;
@@ -125,6 +101,8 @@ export function SellerStrip({
   /** Per-sport eligibility from the public status (units for the chips). */
   eligibility?: VipEligibility[];
   vipRecord?: VipCapperStatus["vip_record"] | null;
+  /** "1 of 7 eligible NBA cappers", from the public status. */
+  exclusivity?: string | null;
   /** The band's main action (Post a VIP pick, or a muted hint). */
   postAction?: ReactNode;
 }) {
@@ -247,35 +225,48 @@ export function SellerStrip({
       aria-label="Your VIP dashboard"
       className="rounded-xl border border-[var(--color-border-h)] bg-[#0f0f13] overflow-hidden"
     >
-      {/* Status band: are you selling, where, and the one action. */}
+      {/* Status band: are you selling, where you qualify, and the one action. */}
       <div
-        className={`px-5 sm:px-6 py-4 flex items-center gap-4 flex-wrap ${
+        className={`px-5 sm:px-6 py-4 flex flex-col gap-3 ${
           live ? "" : "bg-[rgba(255,255,255,0.03)] border-b border-[var(--color-border)]"
         }`}
         style={live ? { background: "linear-gradient(100deg, #4c1d95 0%, #2e1065 60%, #1e0f3a 100%)" } : undefined}
       >
-        <div className="flex flex-col gap-1.5 min-w-0">
-          <div className="flex items-center gap-2.5">
-            <span
-              className={`text-[11px] font-bold tracking-[0.16em] uppercase ${
-                live ? "text-[var(--color-vip-text)]" : "text-[var(--color-text-muted)]"
-              }`}
-            >
-              Your VIP
-            </span>
-            <span
-              className={`text-[10px] font-extrabold tracking-[0.12em] uppercase px-2 py-0.5 rounded-md ${
-                live
-                  ? "bg-[var(--color-text)] text-[var(--color-vip-deep)]"
-                  : "border border-[var(--color-border-h)] text-[var(--color-text-soft)]"
-              }`}
-            >
-              {STATUS_CHIP[status] ?? status}
-            </span>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex items-center gap-2.5">
+              <span
+                className={`text-[11px] font-bold tracking-[0.16em] uppercase ${
+                  live ? "text-[var(--color-vip-text)]" : "text-[var(--color-text-muted)]"
+                }`}
+              >
+                Your VIP
+              </span>
+              <span
+                className={`text-[10px] font-extrabold tracking-[0.12em] uppercase px-2 py-0.5 rounded-md ${
+                  live
+                    ? "bg-[var(--color-text)] text-[var(--color-vip-deep)]"
+                    : "border border-[var(--color-border-h)] text-[var(--color-text-soft)]"
+                }`}
+              >
+                {STATUS_CHIP[status] ?? status}
+              </span>
+            </div>
+            {live && (
+              <span className="text-[12px] font-semibold text-[var(--color-vip-text)]">
+                {exclusivity && <>{exclusivity} · </>}
+                <Link
+                  href="/vip-rules"
+                  className="text-[var(--color-text-muted)] underline decoration-[rgba(196,181,253,0.4)] underline-offset-[3px] hover:text-[var(--color-vip-text)]"
+                >
+                  What is this?
+                </Link>
+              </span>
+            )}
           </div>
-          {live && eligibility.length > 0 && <SportChips eligibility={eligibility} />}
+          {live && postAction && <div className="ml-auto">{postAction}</div>}
         </div>
-        {live && postAction && <div className="ml-auto">{postAction}</div>}
+        {live && eligibility.length > 0 && <EligibilityBadges eligibility={eligibility} />}
       </div>
 
       {status !== "active" && (

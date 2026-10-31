@@ -157,8 +157,16 @@ export function CapperVipSection({
   // owner linked without X verification has no claimed capper on the
   // session. The session claim still counts before the status lands.
   const isOwner = capper?.id === capperId || status?.viewer.is_owner === true;
+  // Set by the owner panel once its selling dashboard is actually on screen.
+  const [ownerDashboard, setOwnerDashboard] = useState(false);
   const ownerPanel = isOwner ? (
-    <OwnerPanel onChanged={refetch} eligibility={status?.eligibility} vipRecord={status?.vip_record} />
+    <OwnerPanel
+      onChanged={refetch}
+      eligibility={status?.eligibility}
+      vipRecord={status?.vip_record}
+      exclusivity={status ? exclusivityLine(status) : null}
+      onDashboard={setOwnerDashboard}
+    />
   ) : null;
   const onPull: PullFn | undefined = isOwner
     ? async (ticketId) => {
@@ -173,7 +181,14 @@ export function CapperVipSection({
           You&apos;re in. VIP picks show here and arrive by email.
         </div>
       )}
-      <CapperVipView status={status} handle={handle} capperId={capperId} ownerPanel={ownerPanel} onPull={onPull} />
+      <CapperVipView
+        status={status}
+        handle={handle}
+        capperId={capperId}
+        ownerPanel={ownerPanel}
+        ownerDashboard={isOwner && ownerDashboard}
+        onPull={onPull}
+      />
     </>
   );
 }
@@ -212,18 +227,32 @@ export function CapperVipView({
   handle,
   capperId,
   ownerPanel = null,
+  ownerDashboard = false,
   onPull,
 }: {
   status: VipCapperStatus | null;
   handle: string;
   capperId: number;
   ownerPanel?: ReactNode;
+  /** The owner's selling dashboard is rendered: skip the public card. */
+  ownerDashboard?: boolean;
   onPull?: PullFn;
 }) {
   if (!status || isEmpty(status)) {
     return ownerPanel ? (
       <div className="flex flex-col gap-3">{ownerPanel}</div>
     ) : null;
+  }
+
+  // A selling owner's dashboard carries the eligibility band and record, so the
+  // public card would repeat it; their posted picks (with Pull) stay below.
+  if (ownerPanel && ownerDashboard) {
+    return (
+      <div className="flex flex-col gap-3">
+        {ownerPanel}
+        {status.locked.length > 0 && <LockedPicks status={status} onPull={onPull} />}
+      </div>
+    );
   }
 
   const showCard = status.seller !== null || status.eligibility.length > 0;

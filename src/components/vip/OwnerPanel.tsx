@@ -16,10 +16,15 @@ export function OwnerPanel({
   onChanged,
   eligibility,
   vipRecord,
+  exclusivity,
+  onDashboard,
 }: {
   onChanged?: () => void;
   eligibility?: VipEligibility[];
   vipRecord?: VipCapperStatus["vip_record"] | null;
+  exclusivity?: string | null;
+  /** Told whether the selling dashboard is rendered. */
+  onDashboard?: (shown: boolean) => void;
 } = {}) {
   const { session } = useAuth();
   const token = session?.access_token ?? null;
@@ -59,9 +64,14 @@ export function OwnerPanel({
   }, [userId, tick]);
 
   const me = userId && loaded?.userId === userId ? loaded.me : null;
-  if (!me || !me.capper) return null;
   // House accounts never sell (the platform denylists them too).
-  if (DENYLISTED_HANDLES.has(me.capper.handle.toLowerCase())) return null;
+  const denied = !!me?.capper && DENYLISTED_HANDLES.has(me.capper.handle.toLowerCase());
+  // The selling dashboard is on screen: the section drops the public card it repeats.
+  const dashboard = !!me?.capper && !denied && me.seller !== null;
+  useEffect(() => {
+    onDashboard?.(dashboard);
+  }, [dashboard, onDashboard]);
+  if (!me || !me.capper || denied) return null;
 
   return (
     <OwnerPanelView
@@ -70,6 +80,7 @@ export function OwnerPanel({
       onPosted={() => onChanged?.()}
       eligibility={eligibility}
       vipRecord={vipRecord}
+      exclusivity={exclusivity}
     />
   );
 }
@@ -105,6 +116,7 @@ export function OwnerPanelView({
   composerToken,
   eligibility,
   vipRecord,
+  exclusivity,
 }: {
   me: VipMe;
   onRefresh: () => void;
@@ -112,6 +124,7 @@ export function OwnerPanelView({
   composerToken?: string;
   eligibility?: VipEligibility[];
   vipRecord?: VipCapperStatus["vip_record"] | null;
+  exclusivity?: string | null;
 }) {
   const { session } = useAuth();
   const token = composerToken ?? session?.access_token ?? null;
@@ -144,6 +157,7 @@ export function OwnerPanelView({
         onSaved={onRefresh}
         eligibility={eligibility}
         vipRecord={vipRecord}
+        exclusivity={exclusivity}
         postAction={postAction}
       />
       {building && canPost && token && (
