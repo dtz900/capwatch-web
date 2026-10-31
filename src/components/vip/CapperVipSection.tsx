@@ -54,7 +54,11 @@ export function CapperVipSection({
   const refetch = useCallback(() => setReload((n) => n + 1), []);
   // True after returning from Stripe Checkout (?vip=subscribed), until access
   // shows or the poll times out.
+  // Back from Checkout: `returned` until this viewer's access has been seen once
+  // (`confirmed`); `timedOut` when the post-checkout poll gave up before that.
   const [returned, setReturned] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
   const [polling, setPolling] = useState(false);
   const pollingRef = useRef(false);
   useEffect(() => {
@@ -123,6 +127,14 @@ export function CapperVipSection({
     // reload keeps the current payload on screen until the new one lands.
     const key = `${capperId}:${userId ?? ""}`;
     if (viewerKey.current !== key) {
+      if (viewerKey.current !== null) {
+        // A different viewer (a sign-out after checkout): the return marker and
+        // its poll were the previous viewer's, not this one's.
+        setReturned(false);
+        setPolling(false);
+        setConfirmed(false);
+        setTimedOut(false);
+      }
       viewerKey.current = key;
       appliedRef.current = seqRef.current;
       setStatus(null);
@@ -183,15 +195,28 @@ export function CapperVipSection({
       return;
     }
     const tick = setInterval(refetch, CHECKOUT_POLL_MS);
-    const stop = setTimeout(() => setPolling(false), CHECKOUT_POLL_MAX_MS);
+    const stop = setTimeout(() => {
+      setPolling(false);
+      setTimedOut(true);
+    }, CHECKOUT_POLL_MAX_MS);
     return () => {
       clearInterval(tick);
       clearTimeout(stop);
     };
   }, [polling, hasAccess, refetch]);
+  useEffect(() => {
+    if (returned && hasAccess) {
+      setConfirmed(true);
+      setTimedOut(false);
+    }
+  }, [returned, hasAccess]);
   // Just back from Checkout and access not showing yet: never offer Subscribe
-  // beside "You're in" (the webhook may simply be late).
-  const holdDoor = viewerPending || (returned && !hasAccess);
+  // beside "You're in" (the webhook may simply be late). Once access has been
+  // seen the door is the viewer's again: a later pause must still show Manage.
+  // A signed-in viewer whose own lookup failed is unresolved, not anonymous: the
+  // public card shows, the purchase link does not (the re-check keeps trying).
+  const unresolved = clientFailed && userId !== null;
+  const holdDoor = viewerPending || (returned && !confirmed && !hasAccess) || unresolved;
   // Set by the owner panel once its selling dashboard is actually on screen.
   const [ownerDashboard, setOwnerDashboard] = useState(false);
   const ownerPanel = isOwner ? (
@@ -212,9 +237,15 @@ export function CapperVipSection({
     : undefined;
   return (
     <>
-      {returned && (
+      {returned && (hasAccess || (!confirmed && !timedOut)) && (
         <div className={`${INNER_CARD} mb-3 text-[13px] text-[var(--color-text-soft)]`} role="status">
           You&apos;re in. VIP picks show here and arrive by email.
+        </div>
+      )}
+      {returned && !confirmed && timedOut && (
+        <div className={`${INNER_CARD} mb-3 text-[13px] text-[var(--color-text-soft)]`} role="status">
+          Still confirming your subscription. This page updates on its own, and your
+          receipt is on its way by email.
         </div>
       )}
       <CapperVipView

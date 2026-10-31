@@ -524,7 +524,21 @@ describe("CapperVipSection", () => {
       expect(screen.queryByRole("link", { name: "Subscribe" })).not.toBeInTheDocument();
     });
 
-    it("a failed client call falls back to the public card instead of freezing", async () => {
+    it("a failed client call falls back to the public card, without Subscribe for a signed-in viewer", async () => {
+      // Signed in: their own status is unknown, not "not subscribed". The card
+      // shows (no freeze) but the purchase link waits for the re-check.
+      client.getVipCapperStatus.mockRejectedValue(new client.VipApiError(500, "boom"));
+      render(
+        <VipInitialStatusProvider status={status}>
+          <CapperVipSection capperId={7} handle="moneyplayzz" />
+        </VipInitialStatusProvider>,
+      );
+      expect(await screen.findByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Subscribe" })).toBeNull();
+    });
+
+    it("a failed client call for an anonymous viewer still offers Subscribe", async () => {
+      auth.value = { authReady: true, session: null };
       client.getVipCapperStatus.mockRejectedValue(new client.VipApiError(500, "boom"));
       render(
         <VipInitialStatusProvider status={status}>

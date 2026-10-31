@@ -347,7 +347,7 @@ describe("SubscribeDoor manage link", () => {
     await waitFor(() => expect(client.openVipPortal).toHaveBeenCalledWith(42, "tok"));
   });
 
-  it("live stripe subscription without access (failed card) shows Manage, never Subscribe", () => {
+  it("live stripe subscription without access (failed card, a pause) shows Manage, never Subscribe", () => {
     auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } } };
     render(
       <SubscribeDoor
@@ -356,7 +356,8 @@ describe("SubscribeDoor manage link", () => {
         capperId={42}
       />,
     );
-    expect(screen.getByText("Payment issue, update your card")).toBeInTheDocument();
+    // No cause is named: the payload cannot tell a failed card from a pause.
+    expect(screen.getByText("Subscription paused")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Subscribe" })).toBeNull();
   });

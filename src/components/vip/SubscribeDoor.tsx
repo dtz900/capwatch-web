@@ -53,13 +53,15 @@ export function SubscribeDoor({
       )}
       </div>
     );
-  // A live Stripe subscription with no access (a failed card, a billing
-  // pause) still bills: fix it in the portal, never start a second one.
+  // A live Stripe subscription with no access still exists at Stripe: manage it
+  // in the portal, never start a second one. The payload carries no reason (a
+  // failed card, a seller restriction, a cold or silent pause all look the same
+  // here), so the copy names the state, not a cause the viewer cannot fix.
   if (status.viewer.billing === "stripe")
     return (
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
         <span className="text-[12px] font-bold text-[var(--color-vip-text)]">
-          Payment issue, update your card
+          Subscription paused
         </span>
         <ManageSubscriptionLink capperId={capperId} />
       </div>
