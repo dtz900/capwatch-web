@@ -565,3 +565,76 @@ describe("CapperVipSection", () => {
     });
   });
 });
+
+describe("claim your profile (unclaimed capper)", () => {
+  const unclaimed: VipCapperStatus = {
+    ...status,
+    seller: null,
+    door_open: false,
+    door_closed_reason: "not_selling",
+    claimed: false,
+  };
+
+  function mount() {
+    render(
+      <VipInitialStatusProvider status={unclaimed}>
+        <CapperVipSection capperId={7} handle="moneyplayzz" />
+      </VipInitialStatusProvider>,
+    );
+  }
+
+  beforeEach(() => {
+    document.cookie = "ts_return_to=; path=/; max-age=0";
+    window.history.replaceState(null, "", "/cappers/moneyplayzz");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("signed out: invites the capper to claim and sends them to sign in, back here", () => {
+    auth.value = { authReady: true, session: null, capper: null };
+    client.getVipCapperStatus.mockResolvedValue(unclaimed);
+    mount();
+    expect(screen.getByText("Are you @moneyplayzz?")).toBeInTheDocument();
+    expect(screen.getByText("Claim your profile and begin selling.")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Sign in to claim" });
+    expect(link).toHaveAttribute("href", "/login?next=%2Fcappers%2Fmoneyplayzz");
+    fireEvent.click(link);
+    expect(document.cookie).toContain("ts_return_to=%2Fcappers%2Fmoneyplayzz");
+  });
+
+  it("signed in without a capper: offers Verify with X, returning to this profile", async () => {
+    vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true"); // X verification needs accounts on
+    vi.stubEnv("NEXT_PUBLIC_X_AUTH_ENABLED", "true");
+    const linkX = vi.fn().mockResolvedValue(null);
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: null, linkX };
+    client.getVipCapperStatus.mockResolvedValue(unclaimed);
+    mount();
+    expect(await screen.findByText("Are you @moneyplayzz?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Verify with X to claim" }));
+    await waitFor(() => expect(linkX).toHaveBeenCalledWith("/cappers/moneyplayzz"));
+  });
+
+  it("signed in as another capper's owner: no invitation", async () => {
+    auth.value = {
+      authReady: true,
+      session: { access_token: "tok", user: { id: "u1" } },
+      capper: { id: 99, handle: "someoneelse", avatar_url: null },
+    };
+    client.getVipCapperStatus.mockResolvedValue(unclaimed);
+    mount();
+    expect(await screen.findByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+    expect(screen.queryByText("Are you @moneyplayzz?")).toBeNull();
+  });
+
+  it("a claimed capper shows no invitation", async () => {
+    auth.value = { authReady: true, session: null, capper: null };
+    const claimed = { ...unclaimed, claimed: true };
+    client.getVipCapperStatus.mockResolvedValue(claimed);
+    render(
+      <VipInitialStatusProvider status={claimed}>
+        <CapperVipSection capperId={7} handle="moneyplayzz" />
+      </VipInitialStatusProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+    expect(screen.queryByText("Are you @moneyplayzz?")).toBeNull();
+  });
+});

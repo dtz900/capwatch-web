@@ -74,3 +74,24 @@ describe("AvatarMenu profile link", () => {
     expect(screen.queryByRole("link", { name: "My profile" })).toBeNull();
   });
 });
+
+describe("AvatarMenu signed out", () => {
+  it("Sign in remembers the current page so sign-in returns here, not My Tails", () => {
+    auth.value = { session: null, entitlements: { isLoggedIn: false, isVip: false }, capper: null, profile: null };
+    document.cookie = "ts_return_to=; path=/; max-age=0";
+    window.history.replaceState(null, "", "/cappers/zz_viptest?range=last30");
+    render(<AvatarMenu />);
+    const link = screen.getByRole("link", { name: "Sign in" });
+    fireEvent.click(link);
+    expect(document.cookie).toContain("ts_return_to=%2Fcappers%2Fzz_viptest%3Frange%3Dlast30");
+  });
+
+  it("Sign in from the login page itself remembers nothing", () => {
+    auth.value = { session: null, entitlements: { isLoggedIn: false, isVip: false }, capper: null, profile: null };
+    document.cookie = "ts_return_to=; path=/; max-age=0";
+    window.history.replaceState(null, "", "/login");
+    render(<AvatarMenu />);
+    fireEvent.click(screen.getByRole("link", { name: "Sign in" }));
+    expect(document.cookie).not.toContain("ts_return_to=%2F");
+  });
+});

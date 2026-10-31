@@ -116,6 +116,9 @@ export interface VipCapperStatus {
   };
   /** False until the capper is allowlisted for Stripe payments (ship dark). Optional for older platform builds. */
   payments_enabled?: boolean;
+  /** False when no account has claimed this capper yet: the profile invites
+   *  them to claim and sell. Optional for older platform builds (then hidden). */
+  claimed?: boolean;
   vip_record: {
     n: number;
     wins: number;
