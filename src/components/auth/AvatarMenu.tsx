@@ -58,6 +58,15 @@ export function AvatarMenu() {
           <div className="px-3 py-1.5 text-xs text-[var(--color-text-muted)] truncate">
             {username ? `@${username}` : session?.user?.email}
           </div>
+          {capper?.handle && (
+            <Link
+              href={`/cappers/${encodeURIComponent(capper.handle)}`}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-1.5 text-sm text-[var(--color-text)] hover:bg-white/5"
+            >
+              My profile
+            </Link>
+          )}
           {vipTierEnabled() &&
             (entitlements.isVip ? (
               <div className="px-3 py-1.5 text-sm font-semibold text-[var(--color-gold)]">VIP</div>

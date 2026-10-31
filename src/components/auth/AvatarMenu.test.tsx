@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 const auth = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
 vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => auth.value }));
@@ -40,5 +40,21 @@ describe("AvatarMenu avatar", () => {
     const button = screen.getByRole("button", { name: "Account menu" });
     expect(button.querySelector("img")).toBeNull();
     expect(button).toHaveTextContent("T");
+  });
+});
+
+describe("AvatarMenu profile link", () => {
+  it("links a claimed capper to their own profile", () => {
+    auth.value = signedIn({ capper: { id: 325, handle: "zz_viptest", avatar_url: null } });
+    render(<AvatarMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+    expect(screen.getByRole("link", { name: "My profile" })).toHaveAttribute("href", "/cappers/zz_viptest");
+  });
+
+  it("has no profile link without a claimed capper", () => {
+    auth.value = signedIn({});
+    render(<AvatarMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+    expect(screen.queryByRole("link", { name: "My profile" })).toBeNull();
   });
 });
