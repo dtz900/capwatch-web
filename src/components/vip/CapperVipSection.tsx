@@ -68,6 +68,16 @@ export function CapperVipSection({
   useEffect(() => {
     tokenRef.current = token;
   }, [token]);
+  // When the stored token expires (a laptop asleep past its lifetime), the
+  // platform's lenient auth treats it as anonymous and would answer "not
+  // subscribed" for a payer. Hold re-checks until supabase-js has refreshed it.
+  const expiresAt = session?.expires_at ?? null;
+  const expiresRef = useRef<number | null>(expiresAt);
+  useEffect(() => {
+    expiresRef.current = expiresAt;
+  }, [expiresAt]);
+  const tokenExpired = () =>
+    tokenRef.current !== null && expiresRef.current !== null && expiresRef.current * 1000 <= Date.now();
 
   // Every status request takes a number; a response lands only if nothing
   // newer has, so a slow re-check can never undo a fresher answer (e.g. flip
@@ -143,13 +153,15 @@ export function CapperVipSection({
 
   // Background re-check: success replaces the status (picks go the moment access
   // ends); a failure keeps what is on screen rather than blanking the section.
+  // Also runs after a failed first fetch, so the public card is retried rather
+  // than hidden for the whole visit.
   const showing = shown !== null && !isEmpty(shown);
   useEffect(() => {
-    if (!showing) return;
+    if (!showing && !clientFailed) return;
     const key = viewerKey.current;
     if (key === null) return;
     const recheck = () => {
-      if (document.visibilityState === "hidden") return;
+      if (document.visibilityState === "hidden" || tokenExpired()) return;
       fetchStatus(key, "keep");
     };
     const tick = setInterval(recheck, ACCESS_RECHECK_MS);
@@ -161,7 +173,7 @@ export function CapperVipSection({
       clearInterval(tick);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [showing, capperId, userId, fetchStatus]);
+  }, [showing, clientFailed, capperId, userId, fetchStatus]);
 
   const hasAccess = status?.viewer.subscribed === true;
   useEffect(() => {

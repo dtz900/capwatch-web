@@ -107,9 +107,15 @@ export function SubscribeCheckout({
     tokenRef.current = token;
   }, [token]);
   const [viewer, setViewer] = useState<VipCapperStatus["viewer"] | null>(null);
+  // Bumped when the page comes back from the bfcache: the viewer may have paid
+  // since, so the old status must not offer Subscribe again.
+  const [recheck, setRecheck] = useState(0);
   useEffect(() => {
     if (!authReady || !userId) return;
     let cancelled = false;
+    // Another user, or a restored page: hold Subscribe until their own status lands.
+    setViewer(null);
+    setManage(false);
     getVipCapperStatus(capperId, tokenRef.current)
       .then((s) => {
         if (!cancelled) setViewer(s.viewer);
@@ -123,12 +129,15 @@ export function SubscribeCheckout({
     return () => {
       cancelled = true;
     };
-  }, [authReady, userId, capperId, status.viewer]);
+  }, [authReady, userId, capperId, status.viewer, recheck]);
 
-  // After location.assign, bfcache Back restores this page with pending stuck.
+  // After location.assign, bfcache Back restores this page with pending stuck
+  // and a status from before the payment.
   useEffect(() => {
     const onShow = (e: PageTransitionEvent) => {
-      if (e.persisted) setPending(false);
+      if (!e.persisted) return;
+      setPending(false);
+      setRecheck((n) => n + 1);
     };
     window.addEventListener("pageshow", onShow);
     return () => window.removeEventListener("pageshow", onShow);
@@ -179,8 +188,16 @@ export function SubscribeCheckout({
       window.location.assign(url);
     } catch (err) {
       const detail = err instanceof VipApiError ? err.detail : "";
-      if (detail === "already_subscribed") setManage(true);
-      else if (detail === "not_selling") setError(DOOR_CLOSED.not_selling);
+      if (detail === "already_subscribed") {
+        // The viewer's own status was unknown (its call failed) or stale. Ask
+        // again: Manage subscription only exists for a Stripe subscriber; an
+        // admin comp has no portal to open.
+        try {
+          setViewer((await getVipCapperStatus(capperId, tokenRef.current)).viewer);
+        } catch {
+          setManage(true);
+        }
+      } else if (detail === "not_selling") setError(DOOR_CLOSED.not_selling);
       else if (detail === "own_capper") setError("This is your own VIP.");
       else {
         console.error("VIP checkout failed", err);

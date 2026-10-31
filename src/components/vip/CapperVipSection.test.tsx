@@ -300,6 +300,46 @@ describe("CapperVipSection", () => {
     expect(screen.getByDisplayValue("Draft text")).toBe(draft);
   });
 
+  it("re-check skips an expired token so a sleeping subscriber is not shown the paywall", async () => {
+    const fresh = { access_token: "tok", user: { id: "u1" }, expires_at: Math.floor(Date.now() / 1000) + 3600 };
+    auth.value = { authReady: true, session: fresh };
+    client.getVipCapperStatus.mockResolvedValue({ ...status, viewer: { subscribed: true, is_owner: false, billing: "stripe" } });
+    const { rerender } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await screen.findByRole("region", { name: "Capper VIP" });
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+
+    // Laptop wakes: the stored token has expired and supabase-js has not refreshed it yet.
+    auth.value = { authReady: true, session: { ...fresh, expires_at: Math.floor(Date.now() / 1000) - 60 } };
+    rerender(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(1);
+
+    // The refresh lands (same user, new token): the next re-check goes out with it.
+    auth.value = { authReady: true, session: { ...fresh, access_token: "tok2" } };
+    rerender(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(2);
+    expect(client.getVipCapperStatus).toHaveBeenLastCalledWith(7, "tok2");
+  });
+
+  it("keeps re-checking after the first client fetch failed", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    client.getVipCapperStatus.mockRejectedValueOnce(new client.VipApiError(500, "boom"));
+    client.getVipCapperStatus.mockResolvedValue(status);
+    const { container } = render(<CapperVipSection capperId={7} handle="moneyplayzz" />);
+    await waitFor(() => expect(err).toHaveBeenCalled());
+    expect(container).toBeEmptyDOMElement();
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(await screen.findByRole("region", { name: "Capper VIP" })).toBeInTheDocument();
+    err.mockRestore();
+  });
+
   it("owner panel hidden for denylisted handle", async () => {
     auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "FadeAI_" } };
     client.getVipCapperStatus.mockResolvedValue(status);

@@ -157,9 +157,20 @@ describe("SubscribeCheckout", () => {
     expect(screen.getByRole("link", { name: /^Terms/ })).toHaveAttribute("href", "/terms");
   });
 
-  it("already subscribed shows manage link", async () => {
+  it("already subscribed re-checks the viewer and shows Manage for a Stripe subscriber", async () => {
     client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "already_subscribed"));
     await open();
+    client.getVipCapperStatus.mockResolvedValue({
+      viewer: { subscribed: true, is_owner: false, billing: "stripe" },
+    });
+    consentAndSubscribe();
+    expect(await screen.findByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
+  });
+
+  it("already subscribed with the re-check failing still offers Manage", async () => {
+    client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "already_subscribed"));
+    await open();
+    client.getVipCapperStatus.mockRejectedValue(new client.VipApiError(500, "boom"));
     consentAndSubscribe();
     expect(await screen.findByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
   });
@@ -192,19 +203,54 @@ describe("SubscribeCheckout", () => {
     expect(screen.getByText("Checkout opens soon.")).toBeInTheDocument();
   });
 
-  it("pending resets on bfcache pageshow", async () => {
+  it("bfcache pageshow re-checks the viewer before Subscribe is offered again", async () => {
     client.startVipCheckout.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
     await open();
     consentAndSubscribe();
-    const btn = screen.getByRole("button", { name: /Subscribe/ });
     await waitFor(() => expect(assign).toHaveBeenCalled());
-    expect(btn).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Subscribe/ })).toBeDisabled();
+    // Back from Stripe after paying: the restored page must not trust its old status.
+    client.getVipCapperStatus.mockResolvedValue({
+      viewer: { subscribed: true, is_owner: false, billing: "stripe" },
+    });
     const ev = new Event("pageshow") as Event & { persisted: boolean };
     ev.persisted = true;
     act(() => {
       window.dispatchEvent(ev);
     });
-    expect(btn).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Checking…" })).toBeDisabled();
+    expect(await screen.findByText("You are already subscribed.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Subscribe ·/ })).not.toBeInTheDocument();
+    expect(client.getVipCapperStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it("bfcache pageshow with no change offers Subscribe again", async () => {
+    client.startVipCheckout.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
+    await open();
+    consentAndSubscribe();
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    const ev = new Event("pageshow") as Event & { persisted: boolean };
+    ev.persisted = true;
+    act(() => {
+      window.dispatchEvent(ev);
+    });
+    expect(await screen.findByRole("button", { name: /Subscribe ·/ })).toBeEnabled();
+  });
+
+  it("a comped subscriber refused at checkout sees no Manage button", async () => {
+    // The page's own status call failed, so the viewer looked anonymous; the
+    // platform refuses (admin comp has access) and the re-check says billing=admin.
+    client.getVipCapperStatus.mockRejectedValueOnce(new client.VipApiError(500, "boom"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "already_subscribed"));
+    await open();
+    client.getVipCapperStatus.mockResolvedValue({
+      viewer: { subscribed: true, is_owner: false, billing: "admin" },
+    });
+    consentAndSubscribe();
+    expect(await screen.findByText("You are already subscribed.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage subscription" })).not.toBeInTheDocument();
+    err.mockRestore();
   });
 
   it("payments off keeps Subscribe disabled with no checkout call", async () => {
