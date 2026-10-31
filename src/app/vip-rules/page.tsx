@@ -69,12 +69,9 @@ export default function VipRules() {
           into one bucket.
         </p>
         <p className={P}>
-          Every night we check each sport a capper sells. They stay open if
-          either their last 30 days pass the test above, or their last 60 days
-          are up in units. If both fail, they get one day to recover. If both
-          still fail the next night, selling in that sport turns off. Losing
-          days do not matter on their own; only these totals do. Once off, a
-          capper can sell again the first night they pass the 30-day test.
+          Eligibility is checked every night. If a capper is at zero or below
+          over the last 60 days two nights in a row, selling in that sport
+          turns off.
         </p>
 
         <h2 className={H2}>What a VIP pick is</h2>

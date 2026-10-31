@@ -108,27 +108,18 @@ export default function SellerAgreement() {
         </p>
 
         <h2 className={H2}>5. Who can sell</h2>
-        <p className={P}>
-          You earn the right to sell VIP one sport at a time. To start selling in a sport, over the
-          last 30 days you need:
-        </p>
+        <p className={P}>You earn the right to sell VIP one sport at a time.</p>
         <ul className={UL}>
-          <li>at least 20 graded picks of 0.5 units or more, and</li>
-          <li>more units won than lost.</li>
+          <li>
+            <strong>Start:</strong> 20+ graded picks in your last 30 days, and up in units over
+            those 30 days.
+          </li>
+          <li>
+            <strong>Keep:</strong> stay up over your last 60 days. We check every night. If you
+            are at zero or below two nights in a row, selling in that sport turns off.
+          </li>
         </ul>
-        <p className={P}>
-          <strong>Staying open.</strong> Every night we check two things for each sport you sell:
-        </p>
-        <ul className={UL}>
-          <li>your last 30 days: at least 20 graded picks of 0.5 units or more, and up in units, or</li>
-          <li>your last 60 days: up in units.</li>
-        </ul>
-        <p className={P}>
-          If either one is true, you stay open. If both fail, you get one day to recover. If both
-          still fail the next night, selling in that sport turns off. Losing days do not matter on
-          their own; only these totals do. Your public and VIP picks both count. Once off, you can
-          sell again the first night you pass the 30-day test.
-        </p>
+        <p className={P}>Your public and VIP picks both count.</p>
         <p className={P}>
           <strong>How VIP picks are shown.</strong>
         </p>
