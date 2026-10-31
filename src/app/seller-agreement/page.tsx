@@ -25,6 +25,7 @@ export const metadata = {
 
 const H2 = "text-[20px] font-bold mt-9 mb-3";
 const P = "text-[var(--color-text-soft)] leading-relaxed mb-4";
+const UL = "list-disc pl-6 mb-4 space-y-1 text-[var(--color-text-soft)] leading-relaxed";
 const LINK = "underline text-[var(--color-text)] hover:text-[var(--color-mint,#5eead4)]";
 
 /* NOTE FOR FUTURE LAWYER REVIEW: clauses 1 (Who sells), 4 (Refunds and
@@ -92,25 +93,53 @@ export default function SellerAgreement() {
         {/* LAWYER REVIEW: clause 4 */}
         <h2 className={H2}>4. Refunds and chargebacks</h2>
         <p className={P}>
-          Subscriptions are non-refundable, but a subscriber can still dispute a charge with their
-          bank, or Stripe can refund a payment. When that happens, the amount is taken from your
-          Stripe account. TailSlips keeps its 15% fee and does not refund it. You also bear
-          Stripe&apos;s dispute fee.
+          Subscriptions are not refundable through TailSlips. Money can still go back to a
+          subscriber in three ways:
+        </p>
+        <ul className={UL}>
+          <li>You refund them yourself from your Stripe Dashboard.</li>
+          <li>They dispute the charge with their bank and win.</li>
+          <li>Stripe refunds the payment, for example over suspected fraud.</li>
+        </ul>
+        <p className={P}>
+          In each case the money comes out of your Stripe account. TailSlips keeps its 15% fee
+          either way. If a subscriber disputes a charge, Stripe also charges a dispute fee, and that
+          fee is yours.
         </p>
 
         <h2 className={H2}>5. Who can sell</h2>
         <p className={P}>
-          You can start selling in a sport only after a winning stretch there: over the trailing 30
-          days, at least 20 graded picks staked at 0.5u or more with net units above zero. Once
-          selling in a sport, you stay open while its trailing 60 days are positive. Eligibility is checked every night, and two
-          failed nights in a row switch selling off. Public and VIP picks are combined in those
-          numbers.
+          You earn the right to sell VIP one sport at a time. To start selling in a sport, over the
+          last 30 days you need:
+        </p>
+        <ul className={UL}>
+          <li>at least 20 graded picks of 0.5 units or more, and</li>
+          <li>more units won than lost.</li>
+        </ul>
+        <p className={P}>
+          <strong>Staying open.</strong> Every night we check two things for each sport you sell:
+        </p>
+        <ul className={UL}>
+          <li>your last 30 days: at least 20 graded picks of 0.5 units or more, and up in units, or</li>
+          <li>your last 60 days: up in units.</li>
+        </ul>
+        <p className={P}>
+          If either one is true, you stay open. If both fail, you get one day to recover. If both
+          still fail the next night, selling in that sport turns off. Losing days do not matter on
+          their own; only these totals do. Your public and VIP picks both count. Once off, you can
+          sell again the first night you pass the 30-day test.
         </p>
         <p className={P}>
-          Your VIP picks are shown only to your subscribers until 30 minutes after the scheduled
-          start. After that everyone can see them. Every pick is graded publicly by the same code
-          as every other capper, and counts on the leaderboard.
+          <strong>How VIP picks are shown.</strong>
         </p>
+        <ul className={UL}>
+          <li>At first, only your subscribers can see a VIP pick.</li>
+          <li>30 minutes after the game&apos;s scheduled start, everyone can see it.</li>
+          <li>
+            Every pick is graded publicly, the same way as every other capper&apos;s, and counts on
+            the leaderboard.
+          </li>
+        </ul>
 
         <h2 className={H2}>6. Billing pause</h2>
         <p className={P}>
