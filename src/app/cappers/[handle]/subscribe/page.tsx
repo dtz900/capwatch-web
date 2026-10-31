@@ -259,7 +259,7 @@ const PERK_TILE =
 const PERKS = [
   {
     title: "First look",
-    body: "Every pick the second it posts. Everyone else sees it after the game starts.",
+    body: "Every pick the second it posts. Everyone else sees it 30 minutes after the game starts.",
     icon: "M13 2 4 14h7l-1 8 9-12h-7l1-8Z",
   },
   {

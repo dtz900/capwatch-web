@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { VipApiError, startVipCheckout } from "@/lib/vip/client";
+import { VipApiError, getVipCapperStatus, startVipCheckout } from "@/lib/vip/client";
 import { SUBSCRIBER_TERMS_VERSION, subscriberDisclosure } from "@/lib/vip/terms";
 import type { VipCapperStatus } from "@/lib/vip/types";
 import { ManageSubscriptionLink } from "./ManageSubscriptionLink";
@@ -98,6 +98,32 @@ export function SubscribeCheckout({
   const [error, setError] = useState<string | null>(null);
   const [manage, setManage] = useState(false);
   const { seller } = status;
+  // The page's status is fetched without a token, so it never knows this
+  // viewer pays. Ask with their token before offering Subscribe: a payer
+  // must never be one click from a second subscription.
+  const userId = session?.user?.id ?? null;
+  const tokenRef = useRef(token);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
+  const [viewer, setViewer] = useState<VipCapperStatus["viewer"] | null>(null);
+  useEffect(() => {
+    if (!authReady || !userId) return;
+    let cancelled = false;
+    getVipCapperStatus(capperId, tokenRef.current)
+      .then((s) => {
+        if (!cancelled) setViewer(s.viewer);
+      })
+      .catch((err: unknown) => {
+        // Fall back to the page's status; the platform still refuses a
+        // second checkout (already_subscribed).
+        console.error("VIP viewer status failed", err);
+        if (!cancelled) setViewer(status.viewer);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, userId, capperId, status.viewer]);
 
   // After location.assign, bfcache Back restores this page with pending stuck.
   useEffect(() => {
@@ -127,14 +153,17 @@ export function SubscribeCheckout({
   const paymentsOn = status.payments_enabled === true;
   const label = `Subscribe · $${formatPrice(seller.price_cents)}/mo`;
 
-  if (manage || status.viewer.billing === "stripe") {
+  const billing = viewer?.billing ?? status.viewer.billing;
+  if (manage || billing === "stripe" || viewer?.subscribed) {
     return (
       <div id="subscribe" ref={blockRef} tabIndex={-1} className="scroll-mt-28 flex flex-col items-start gap-1.5 outline-none">
         <p className="text-[13px] text-[var(--color-text-soft)]">You are already subscribed.</p>
-        <ManageSubscriptionLink capperId={capperId} />
+        {(manage || billing === "stripe") && <ManageSubscriptionLink capperId={capperId} />}
       </div>
     );
   }
+  // Signed in, own status still in flight: hold Subscribe.
+  const checking = !!session && viewer === null;
 
   const signIn = () => {
     document.cookie = `${RETURN_COOKIE}=${encodeURIComponent(subscribePath)}; path=/; max-age=1800; samesite=lax`;
@@ -142,7 +171,7 @@ export function SubscribeCheckout({
   };
 
   const subscribe = async () => {
-    if (pending || !paymentsOn || !agreed) return;
+    if (pending || !paymentsOn || !agreed || checking) return;
     setPending(true);
     setError(null);
     try {
@@ -204,11 +233,11 @@ export function SubscribeCheckout({
       </label>
       <button
         type="button"
-        disabled={!agreed || pending || !paymentsOn}
+        disabled={!agreed || pending || !paymentsOn || checking}
         onClick={subscribe}
         className={`${VIP_PRIMARY_BTN} h-12 px-8 text-[12px] whitespace-nowrap w-full sm:w-auto`}
       >
-        {label}
+        {checking ? "Checking…" : label}
       </button>
       {!paymentsOn && (
         <span className="text-[11px] text-[var(--color-text-muted)]">Checkout opens soon.</span>

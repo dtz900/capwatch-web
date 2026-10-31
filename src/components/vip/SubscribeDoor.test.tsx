@@ -17,7 +17,7 @@ const client = vi.hoisted(() => {
       this.detail = detail;
     }
   }
-  return { startVipCheckout: vi.fn(), openVipPortal: vi.fn(), VipApiError };
+  return { startVipCheckout: vi.fn(), openVipPortal: vi.fn(), getVipCapperStatus: vi.fn(), VipApiError };
 });
 vi.mock("@/lib/vip/client", () => client);
 
@@ -115,19 +115,24 @@ describe("SubscribeCheckout", () => {
     router.push.mockReset();
     client.startVipCheckout.mockReset();
     client.openVipPortal.mockReset();
+    client.getVipCapperStatus.mockReset();
+    client.getVipCapperStatus.mockResolvedValue({ viewer: { subscribed: false, is_owner: false } });
     assign.mockReset();
     vi.stubGlobal("location", { ...window.location, assign, pathname: "/cappers/sharp/subscribe" });
   });
-  const open = (over: Partial<VipCapperStatus> = {}) =>
+  // Signed in, Subscribe waits for the viewer's own status: settle it first.
+  const open = async (over: Partial<VipCapperStatus> = {}) => {
     render(<SubscribeCheckout status={status({ payments_enabled: true, ...over })} handle="sharp" capperId={42} />);
+    if (auth.value.session) await screen.findByRole("button", { name: /Subscribe ·/ });
+  };
   const consentAndSubscribe = () => {
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: /Subscribe/ }));
   };
 
-  it("signed out goes to sign in with next", () => {
+  it("signed out goes to sign in with next", async () => {
     auth.value = { authReady: true, session: null };
-    open();
+    await open();
     fireEvent.click(screen.getByRole("button", { name: /Subscribe/ }));
     expect(router.push).toHaveBeenCalledWith("/login?next=%2Fcappers%2Fsharp%2Fsubscribe");
     expect(client.startVipCheckout).not.toHaveBeenCalled();
@@ -135,7 +140,7 @@ describe("SubscribeCheckout", () => {
 
   it("subscribe disabled until consent", async () => {
     client.startVipCheckout.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
-    open();
+    await open();
     const btn = screen.getByRole("button", { name: /Subscribe/ });
     expect(btn).toBeDisabled();
     fireEvent.click(screen.getByRole("checkbox"));
@@ -145,8 +150,8 @@ describe("SubscribeCheckout", () => {
     expect(client.startVipCheckout).toHaveBeenCalledWith(42, SUBSCRIBER_TERMS_VERSION, "tok");
   });
 
-  it("disclosure shows price and no refunds", () => {
-    open();
+  it("disclosure shows price and no refunds", async () => {
+    await open();
     expect(screen.getByText(subscriberDisclosure(2500))).toBeInTheDocument();
     expect(screen.getByText(/No refunds\./)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^Terms/ })).toHaveAttribute("href", "/terms");
@@ -154,42 +159,42 @@ describe("SubscribeCheckout", () => {
 
   it("already subscribed shows manage link", async () => {
     client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "already_subscribed"));
-    open();
+    await open();
     consentAndSubscribe();
     expect(await screen.findByRole("button", { name: "Manage subscription" })).toBeInTheDocument();
   });
 
   it("not_selling shows the door-closed copy", async () => {
     client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "not_selling"));
-    open();
+    await open();
     consentAndSubscribe();
     expect(await screen.findByText("Not taking subscribers right now.")).toBeInTheDocument();
   });
 
   it("own_capper uses plain copy", async () => {
     client.startVipCheckout.mockRejectedValue(new client.VipApiError(409, "own_capper"));
-    open();
+    await open();
     consentAndSubscribe();
     expect(await screen.findByText("This is your own VIP.")).toBeInTheDocument();
   });
 
   it("unexpected error says try again", async () => {
     client.startVipCheckout.mockRejectedValue(new Error("boom"));
-    open();
+    await open();
     consentAndSubscribe();
     expect(await screen.findByText("Something went wrong. Try again.")).toBeInTheDocument();
   });
 
-  it("signed out with payments off: Subscribe disabled and Checkout opens soon", () => {
+  it("signed out with payments off: Subscribe disabled and Checkout opens soon", async () => {
     auth.value = { authReady: true, session: null };
-    open({ payments_enabled: false });
+    await open({ payments_enabled: false });
     expect(screen.getByRole("button", { name: /Subscribe/ })).toBeDisabled();
     expect(screen.getByText("Checkout opens soon.")).toBeInTheDocument();
   });
 
   it("pending resets on bfcache pageshow", async () => {
     client.startVipCheckout.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
-    open();
+    await open();
     consentAndSubscribe();
     const btn = screen.getByRole("button", { name: /Subscribe/ });
     await waitFor(() => expect(assign).toHaveBeenCalled());
@@ -202,13 +207,28 @@ describe("SubscribeCheckout", () => {
     expect(btn).toBeEnabled();
   });
 
-  it("payments off keeps Subscribe disabled with no checkout call", () => {
-    open({ payments_enabled: false });
+  it("payments off keeps Subscribe disabled with no checkout call", async () => {
+    await open({ payments_enabled: false });
     fireEvent.click(screen.getByRole("checkbox"));
     const btn = screen.getByRole("button", { name: /Subscribe/ });
     expect(btn).toBeDisabled();
     fireEvent.click(btn);
     expect(client.startVipCheckout).not.toHaveBeenCalled();
+  });
+  it("holds Subscribe while the viewer's status is in flight", () => {
+    client.getVipCapperStatus.mockReturnValue(new Promise(() => {}));
+    render(<SubscribeCheckout status={status({ payments_enabled: true })} handle="sharp" capperId={42} />);
+    expect(screen.getByRole("button", { name: "Checking…" })).toBeDisabled();
+  });
+
+  it("a paying subscriber is told they already subscribe, never offered checkout", async () => {
+    client.getVipCapperStatus.mockResolvedValue({
+      viewer: { subscribed: true, is_owner: false, billing: "stripe" },
+    });
+    render(<SubscribeCheckout status={status({ payments_enabled: true })} handle="sharp" capperId={42} />);
+    expect(await screen.findByText("You are already subscribed.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Subscribe ·/ })).not.toBeInTheDocument();
+    expect(client.getVipCapperStatus).toHaveBeenCalledWith(42, "tok");
   });
 });
 

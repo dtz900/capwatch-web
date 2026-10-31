@@ -484,6 +484,17 @@ describe("CapperVipSection", () => {
       expect(screen.queryByRole("link", { name: "Subscribe" })).not.toBeInTheDocument();
     });
 
+    it("a failed client call falls back to the public card instead of freezing", async () => {
+      client.getVipCapperStatus.mockRejectedValue(new client.VipApiError(500, "boom"));
+      render(
+        <VipInitialStatusProvider status={status}>
+          <CapperVipSection capperId={7} handle="moneyplayzz" />
+        </VipInitialStatusProvider>,
+      );
+      expect(await screen.findByRole("link", { name: "Subscribe" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "VIP Eligible" })).toBeInTheDocument();
+    });
+
     it("a subscriber goes straight to Subscribed, never Subscribe", async () => {
       client.getVipCapperStatus.mockResolvedValue({
         ...status,

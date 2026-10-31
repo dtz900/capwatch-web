@@ -35,5 +35,10 @@ describe("signInReturnPath", () => {
   it("rejects anything that is not a same-origin path", () => {
     expect(signInReturnPath(`ts_return_to=${encodeURIComponent("//evil.com")}`)).toBe("/my-tails");
     expect(signInReturnPath(`ts_return_to=${encodeURIComponent("https://evil.com")}`)).toBe("/my-tails");
+    expect(signInReturnPath(`ts_return_to=${encodeURIComponent("/\\evil.com")}`)).toBe("/my-tails");
+  });
+
+  it("a malformed cookie falls back instead of throwing", () => {
+    expect(signInReturnPath("ts_return_to=%E0%A4%A")).toBe("/my-tails");
   });
 });

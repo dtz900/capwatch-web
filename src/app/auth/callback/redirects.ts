@@ -22,6 +22,14 @@ export function signInReturnPath(cookieHeader: string): string {
     .find((c) => c.startsWith("ts_return_to="))
     ?.slice("ts_return_to=".length);
   if (!raw) return "/my-tails";
-  const decoded = decodeURIComponent(raw);
-  return decoded.startsWith("/") && !decoded.startsWith("//") ? decoded : "/my-tails";
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    return "/my-tails";
+  }
+  // Browsers read "/\" like "//" (another host), so a backslash never passes.
+  return decoded.startsWith("/") && !decoded.startsWith("//") && !decoded.includes("\\")
+    ? decoded
+    : "/my-tails";
 }

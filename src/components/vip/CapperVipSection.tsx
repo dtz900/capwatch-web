@@ -69,36 +69,57 @@ export function CapperVipSection({
     tokenRef.current = token;
   }, [token]);
 
+  // Every status request takes a number; a response lands only if nothing
+  // newer has, so a slow re-check can never undo a fresher answer (e.g. flip
+  // Subscribed back to Subscribe) and the checkout poll never cancels itself.
+  const seqRef = useRef(0);
+  const appliedRef = useRef(0);
+  // The browser's own call failed: show the public card rather than freezing
+  // on the held-back first paint; the re-check keeps trying.
+  const [clientFailed, setClientFailed] = useState(false);
+  const fetchStatus = useCallback(
+    (key: string, onError: "hide" | "keep") => {
+      const seq = ++seqRef.current;
+      getVipCapperStatus(capperId, tokenRef.current)
+        .then((s) => {
+          if (viewerKey.current !== key || seq <= appliedRef.current) return;
+          appliedRef.current = seq;
+          setStatus(s);
+          setClientFailed(false);
+        })
+        .catch((err: unknown) => {
+          // A VIP outage must never break the public profile: log and hide.
+          // 404 (capper or route not found) is an expected "nothing to show".
+          if (!(err instanceof VipApiError && err.status === 404)) {
+            console.error("capper VIP status failed", err);
+          }
+          if (onError === "keep" || viewerKey.current !== key || seq <= appliedRef.current) return;
+          // While polling after checkout, one failed request keeps the last good status.
+          if (pollingRef.current) return;
+          appliedRef.current = seq;
+          setStatus(null);
+          setClientFailed(true);
+        });
+    },
+    [capperId],
+  );
+
   useEffect(() => {
     // Before the first getSession() lands every viewer looks anonymous;
     // wait so a subscriber is not served the locked summary first.
     if (!authReady) return;
-    let cancelled = false;
     // Drop the previous viewer's payload (e.g. a subscriber who just signed
     // out) while the refetch for the new user is in flight. An owner-panel
     // reload keeps the current payload on screen until the new one lands.
     const key = `${capperId}:${userId ?? ""}`;
     if (viewerKey.current !== key) {
       viewerKey.current = key;
+      appliedRef.current = seqRef.current;
       setStatus(null);
+      setClientFailed(false);
     }
-    getVipCapperStatus(capperId, tokenRef.current)
-      .then((s) => {
-        if (!cancelled) setStatus(s);
-      })
-      .catch((err: unknown) => {
-        // A VIP outage must never break the public profile: log and hide.
-        // 404 (capper or route not found) is an expected "nothing to show".
-        if (!(err instanceof VipApiError && err.status === 404)) {
-          console.error("capper VIP status failed", err);
-        }
-        // While polling after checkout, one failed request keeps the last good status.
-        if (!cancelled && !pollingRef.current) setStatus(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [capperId, userId, authReady, reload]);
+    fetchStatus(key, "hide");
+  }, [capperId, userId, authReady, reload, fetchStatus]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -108,24 +129,28 @@ export function CapperVipSection({
     setPolling(true);
   }, []);
 
+  // The platform's word on ownership (cappers.claimed_by_user_id) wins: an
+  // owner linked without X verification has no claimed capper on the
+  // session. The session claim still counts before the status lands.
+  const isOwner = capper?.id === capperId || status?.viewer.is_owner === true;
+  // Until this viewer's own status lands, paint the server's anonymous one
+  // with the viewer-specific parts (Subscribe/Subscribed, picks) held back.
+  // Not for a known owner: their dashboard replaces the public card.
+  const initial = useVipInitialStatus();
+  const viewerPending =
+    status === null && initial !== null && !clientFailed && capper?.id !== capperId;
+  const shown = status ?? (viewerPending || clientFailed ? initial : null);
+
   // Background re-check: success replaces the status (picks go the moment access
   // ends); a failure keeps what is on screen rather than blanking the section.
-  const showing = status !== null && !isEmpty(status);
+  const showing = shown !== null && !isEmpty(shown);
   useEffect(() => {
     if (!showing) return;
-    let cancelled = false;
     const key = viewerKey.current;
+    if (key === null) return;
     const recheck = () => {
       if (document.visibilityState === "hidden") return;
-      getVipCapperStatus(capperId, tokenRef.current)
-        .then((s) => {
-          if (!cancelled && viewerKey.current === key) setStatus(s);
-        })
-        .catch((err: unknown) => {
-          if (!(err instanceof VipApiError && err.status === 404)) {
-            console.error("capper VIP re-check failed", err);
-          }
-        });
+      fetchStatus(key, "keep");
     };
     const tick = setInterval(recheck, ACCESS_RECHECK_MS);
     const onVisible = () => {
@@ -133,11 +158,10 @@ export function CapperVipSection({
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
-      cancelled = true;
       clearInterval(tick);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [showing, capperId, userId]);
+  }, [showing, capperId, userId, fetchStatus]);
 
   const hasAccess = status?.viewer.subscribed === true;
   useEffect(() => {
@@ -153,17 +177,9 @@ export function CapperVipSection({
       clearTimeout(stop);
     };
   }, [polling, hasAccess, refetch]);
-
-  // The platform's word on ownership (cappers.claimed_by_user_id) wins: an
-  // owner linked without X verification has no claimed capper on the
-  // session. The session claim still counts before the status lands.
-  const isOwner = capper?.id === capperId || status?.viewer.is_owner === true;
-  // Until this viewer's own status lands, paint the server's anonymous one
-  // with the viewer-specific parts (Subscribe/Subscribed, picks) held back.
-  // Not for a known owner: their dashboard replaces the public card.
-  const initial = useVipInitialStatus();
-  const viewerPending = status === null && initial !== null && capper?.id !== capperId;
-  const shown = status ?? (viewerPending ? initial : null);
+  // Just back from Checkout and access not showing yet: never offer Subscribe
+  // beside "You're in" (the webhook may simply be late).
+  const holdDoor = viewerPending || (returned && !hasAccess);
   // Set by the owner panel once its selling dashboard is actually on screen.
   const [ownerDashboard, setOwnerDashboard] = useState(false);
   const ownerPanel = isOwner ? (
@@ -196,7 +212,7 @@ export function CapperVipSection({
         ownerPanel={ownerPanel}
         ownerDashboard={isOwner && ownerDashboard}
         onPull={onPull}
-        viewerPending={viewerPending}
+        viewerPending={holdDoor}
       />
     </>
   );
