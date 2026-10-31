@@ -5,11 +5,27 @@ import { vipTierEnabled } from "@/lib/flags";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
+import { getVipMe } from "@/lib/vip/client";
 
 export function AvatarMenu() {
   const { session, profile, entitlements, capper, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // An owner linked in the database (not through X) has no capper on the
+  // session; ask the platform once, the first time the menu opens.
+  // Tagged with the user it belongs to, so an account switch asks again.
+  const [owned, setOwned] = useState<{ userId: string; handle: string | null } | null>(null);
+  const asked = useRef<string | null>(null);
+  const userId = session?.user?.id ?? null;
+  const token = session?.access_token ?? null;
+  useEffect(() => {
+    if (!open || capper || !userId || asked.current === userId) return;
+    asked.current = userId;
+    getVipMe(token)
+      .then((m) => setOwned({ userId, handle: m.capper?.handle ?? null }))
+      .catch((err: unknown) => console.warn("owned capper lookup failed", err));
+  }, [open, capper, userId, token]);
+  const profileHandle = capper?.handle ?? (owned?.userId === userId ? owned.handle : null);
 
   useEffect(() => {
     if (!open) return;
@@ -58,9 +74,9 @@ export function AvatarMenu() {
           <div className="px-3 py-1.5 text-xs text-[var(--color-text-muted)] truncate">
             {username ? `@${username}` : session?.user?.email}
           </div>
-          {capper?.handle && (
+          {profileHandle && (
             <Link
-              href={`/cappers/${encodeURIComponent(capper.handle)}`}
+              href={`/cappers/${encodeURIComponent(profileHandle)}`}
               onClick={() => setOpen(false)}
               className="block px-3 py-1.5 text-sm text-[var(--color-text)] hover:bg-white/5"
             >
