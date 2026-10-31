@@ -31,7 +31,8 @@ export function SubscribeDoor({
   if (isOwner) return null;
   if (subscribed)
     return (
-      <div className="flex items-center gap-4">
+      // Phone: stacked, so the portal hint gets the full width.
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
       <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--color-vip-text)]">
         <svg
           aria-hidden="true"
@@ -56,7 +57,7 @@ export function SubscribeDoor({
   // pause) still bills: fix it in the portal, never start a second one.
   if (status.viewer.billing === "stripe")
     return (
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
         <span className="text-[12px] font-bold text-[var(--color-vip-text)]">
           Payment issue, update your card
         </span>
