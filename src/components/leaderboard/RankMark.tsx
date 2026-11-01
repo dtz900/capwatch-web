@@ -51,8 +51,10 @@ export function RankMark({ rank, size = "md" }: { rank: number | null | undefine
       href={RANK_BOARD_HREF}
       title={label}
       aria-label={label}
+      // No click handler: this renders from Server Components (/cappers), and
+      // a function prop on next/link would not cross that boundary (Codex on
+      // #238). The directory rows stack the mark above their overlay link.
       className="inline-flex items-center gap-1.5 shrink-0 leading-none hover:opacity-90 transition-opacity"
-      onClick={(e) => e.stopPropagation()}
     >
       {metal ? (
         <Laurel rank={rank} ink={metal.ink} glow={metal.glow} height={h} />
