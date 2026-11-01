@@ -129,7 +129,11 @@ describe("TofHero", () => {
   it("says today when the next deck is later today", () => {
     mockAuth.current = { session: null, profile: null, entitlements: { isLoggedIn: false, isVip: false } };
     const todayPT = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-    render(<TofHero initial={{ hand: null, no_hand_reason: "no hand yet", next_deal: { date: todayPT, expected_at: `${todayPT}T11:00:00-07:00` } }} />);
+    // Pacific is -07:00 in daylight time and -08:00 in standard time; a
+    // hardcoded offset broke this test the morning DST ended (2026-11-01).
+    const ptOffset = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "longOffset" })
+      .formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value.replace("GMT", "") ?? "-08:00";
+    render(<TofHero initial={{ hand: null, no_hand_reason: "no hand yet", next_deal: { date: todayPT, expected_at: `${todayPT}T11:00:00${ptOffset}` } }} />);
     expect(screen.getByText("Today's deck hasn't dropped yet.")).toBeInTheDocument();
     expect(screen.getByText("Deck drops today at 11:00 AM PT")).toBeInTheDocument();
   });

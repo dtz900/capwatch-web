@@ -4,7 +4,8 @@ import { TopNav } from "@/components/nav/TopNav";
 import { CapperAvatar } from "@/components/leaderboard/CapperAvatar";
 import { PaidProgramPill } from "@/components/leaderboard/PaidProgramPill";
 import { StatusPill } from "@/components/leaderboard/StatusPill";
-import { DeletedPicksPill } from "@/components/leaderboard/DeletedPicksPill";
+import { KeptMark } from "@/components/leaderboard/KeptMark";
+import { RankMark } from "@/components/leaderboard/RankMark";
 import { LivePicksIndicator } from "@/components/leaderboard/LivePicksIndicator";
 import { LivePicksProvider } from "@/components/leaderboard/LivePicksContext";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
@@ -187,7 +188,7 @@ function CapperIndexRow({
 
   return (
     // Overlay-link row: the anchor is an absolutely positioned sibling, not a
-    // wrapper, because DeletedPicksPill renders a <button> (with a dialog) and
+    // wrapper, because KeptMark renders a <button> (with a dialog) and
     // nested interactive elements inside an <a> are invalid for browsers and
     // assistive tech (Codex #68). Interactive children re-stack above the
     // overlay with relative z-10.
@@ -207,6 +208,7 @@ function CapperIndexRow({
             <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
               {c.display_name ?? c.handle}
             </span>
+            <span className="relative z-10 inline-flex"><RankMark rank={c.rank_straights_all_time} size="sm" /></span>
             {c.has_paid_program && <PaidProgramPill />}
             <StreakBadge streak={c.current_day_streak} />
           </div>
@@ -214,7 +216,7 @@ function CapperIndexRow({
             <span className="truncate">{c.handle ? formatHandle(c.handle) : ""}</span>
             {c.activity_status !== "active" && <StatusPill status={c.activity_status} />}
             <span className="relative z-10">
-              <DeletedPicksPill count={c.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
+              <KeptMark deletedCount={c.deleted_picks_count ?? 0} tweetsParsed={c.tweets_parsed} picksCount={c.picks_count} handle={c.handle ?? undefined} size="sm" />
             </span>
             <LivePicksIndicator capperId={c.capper_id} initialCount={c.live_picks_count} />
           </div>
@@ -244,6 +246,7 @@ function CapperIndexRow({
               <span className="font-bold text-[15px] truncate text-[var(--color-text)] tracking-[-0.01em]">
                 {c.display_name ?? c.handle}
               </span>
+              <span className="relative z-10 inline-flex"><RankMark rank={c.rank_straights_all_time} size="sm" /></span>
               {c.has_paid_program && <PaidProgramPill />}
               <StreakBadge streak={c.current_day_streak} />
             </div>
@@ -251,7 +254,7 @@ function CapperIndexRow({
               <span className="truncate">{c.handle ? formatHandle(c.handle) : ""}</span>
               {c.activity_status !== "active" && <StatusPill status={c.activity_status} />}
               <span className="relative z-10">
-                <DeletedPicksPill count={c.deleted_picks_count ?? 0} handle={c.handle ?? undefined} />
+                <KeptMark deletedCount={c.deleted_picks_count ?? 0} tweetsParsed={c.tweets_parsed} picksCount={c.picks_count} handle={c.handle ?? undefined} size="sm" />
               </span>
               <LivePicksIndicator capperId={c.capper_id} initialCount={c.live_picks_count} />
             </div>

@@ -70,6 +70,8 @@ export interface CapperRow {
   trajectory_units?: number[];
   /** Eligible to sell VIP in at least one sport: paints the purple avatar ring. */
   vip_eligible?: boolean;
+  /** All-time straights rank by units ("Show: All"); null below the floor. The one rank worn next to the name. */
+  rank_straights_all_time?: number | null;
 }
 
 /** A capper with pending bets on the live slate/week but no ranked row. */
@@ -87,6 +89,8 @@ export interface PendingCapperRow {
   live_picks_count: number;
   /** Eligible to sell VIP in at least one sport: paints the purple avatar ring. */
   vip_eligible?: boolean;
+  /** All-time straights rank by units ("Show: All"); null below the floor. The one rank worn next to the name. */
+  rank_straights_all_time?: number | null;
 }
 
 export interface LeaderboardResponse {
@@ -367,6 +371,8 @@ export interface CapperProfile {
     account_deleted_at?: string | null;
     /** Signed per-day hot/cold streak; mirrors the leaderboard StreakBadge. */
     current_day_streak?: number;
+    /** All-time straights rank by units; null below the floor. */
+    rank_straights_all_time?: number | null;
   };
   aggregates: Partial<Record<Window, CapperAggregate>>;
   pending: HistoryPick[];
