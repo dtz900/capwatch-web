@@ -58,6 +58,7 @@ export function StableCard({
   capper,
   onUntail,
   todayPicks = [],
+  todayDate = null,
   scopes = [],
   scopeStats = [],
   onUntailMarket,
@@ -65,7 +66,10 @@ export function StableCard({
 }: {
   capper: CapperRow;
   onUntail: () => void;
+  /** Every pick the feed returned for this capper: today's games plus the
+      upcoming window. Split here off game_date against todayDate. */
   todayPicks?: TodayPickEntry[];
+  todayDate?: string | null;
   scopes?: string[];
   scopeStats?: ScopeStat[];
   onUntailMarket?: (market: string) => void;
@@ -74,6 +78,24 @@ export function StableCard({
 }) {
   const slip = useBetSlip();
   const [openParlays, setOpenParlays] = useState<Set<number>>(new Set());
+  // TODAY keeps its old meaning (today's games, finished or not). Anything
+  // the feed dates later files under UPCOMING: NFL cappers post the week on
+  // Tuesday and those spreads used to stay invisible until each game day.
+  // A pick with no game date cannot be proven upcoming and stays in TODAY.
+  const { dayPicks, upcomingPicks } = useMemo(() => {
+    const day: TodayPickEntry[] = [];
+    const up: TodayPickEntry[] = [];
+    for (const p of todayPicks) {
+      if (todayDate && p.game_date && p.game_date > todayDate) up.push(p);
+      else day.push(p);
+    }
+    up.sort(
+      (a, b) =>
+        (a.game_date ?? "").localeCompare(b.game_date ?? "") ||
+        (a.posted_at ?? "").localeCompare(b.posted_at ?? "")
+    );
+    return { dayPicks: day, upcomingPicks: up };
+  }, [todayPicks, todayDate]);
   // Per-capper "hide the lifetime block" toggle. A capper can win a night by
   // 19u while sitting red for the season, and the season figure sitting above
   // that night is both off-message and unkind to the capper, so the eye folds
@@ -333,17 +355,58 @@ export function StableCard({
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
               Today
             </span>
-            {todayPicks.length > 0 && (
+            {dayPicks.length > 0 && (
               <span className="text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
-                {todayPicks.length} pick{todayPicks.length === 1 ? "" : "s"}
+                {dayPicks.length} pick{dayPicks.length === 1 ? "" : "s"}
               </span>
             )}
           </div>
-          {todayPicks.length === 0 ? (
+          {dayPicks.length === 0 ? (
             <p className="mt-2 text-xs text-[var(--color-text-muted)]">No picks yet today.</p>
           ) : (
             <ul className="mt-2 space-y-2">
-              {todayPicks.map((p, i) => {
+              {dayPicks.map((p, i) => renderPick(p, i, false))}
+            </ul>
+          )}
+          {upcomingPicks.length > 0 && (
+            <>
+              <div className="mt-3 flex items-baseline justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                  Upcoming
+                </span>
+                <span className="text-[10px] font-bold tabular-nums text-[var(--color-text-soft)]">
+                  {upcomingPicks.length} pick{upcomingPicks.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <ul className="mt-2 space-y-2">
+                {upcomingPicks.map((p, i) => renderPick(p, i, true))}
+              </ul>
+            </>
+          )}
+          {/* Day P&L across the graded picks shown on this card, footered
+              like the bet slip's tally. Today's games only; upcoming picks
+              have nothing to tally yet. */}
+          {dayPicks.some((p) => p.profit_units != null) && (
+            <div className="mt-3 flex items-baseline justify-between border-t border-[var(--color-border)] pt-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                Day P&L
+              </span>
+              <span
+                className={`text-[17px] font-extrabold tabular-nums leading-none ${
+                  dayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0) >= 0
+                    ? "text-[var(--color-pos)]"
+                    : "text-[var(--color-neg)]"
+                }`}
+              >
+                {formatUnits(dayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0))}u
+              </span>
+            </div>
+          )}
+        </div>
+    </div>
+  );
+
+  function renderPick(p: TodayPickEntry, i: number, upcoming: boolean) {
                 const expandable =
                   p.kind === "parlay" && p.parlay_id != null && (p.legs?.length ?? 0) > 0;
                 const open = expandable && openParlays.has(p.parlay_id as number);
@@ -387,7 +450,12 @@ export function StableCard({
                       )}
                     </div>
                     <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] truncate">
-                      {p.matchup ?? (p.kind === "parlay" ? "Multi-game" : "")}
+                      {[
+                        upcoming ? shortDay(p.game_date) : null,
+                        p.matchup ?? (p.kind === "parlay" ? "Multi-game" : null),
+                      ]
+                        .filter(Boolean)
+                        .join(" \u00b7 ")}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -491,28 +559,19 @@ export function StableCard({
                 )}
                 </li>
                 );
-              })}
-            </ul>
-          )}
-          {/* Day P&L across the graded picks shown on this card, footered
-              like the bet slip's tally. */}
-          {todayPicks.some((p) => p.profit_units != null) && (
-            <div className="mt-3 flex items-baseline justify-between border-t border-[var(--color-border)] pt-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-                Day P&L
-              </span>
-              <span
-                className={`text-[17px] font-extrabold tabular-nums leading-none ${
-                  todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0) >= 0
-                    ? "text-[var(--color-pos)]"
-                    : "text-[var(--color-neg)]"
-                }`}
-              >
-                {formatUnits(todayPicks.reduce((n, p) => n + (p.profit_units ?? 0), 0))}u
-              </span>
-            </div>
-          )}
-        </div>
-    </div>
-  );
+  }
+}
+
+/** "Thu 10/29" for an upcoming pick's slate date. The date is an ET
+ * calendar day, so noon UTC keeps the same day in every viewer timezone. */
+function shortDay(gameDate: string | null | undefined): string | null {
+  if (!gameDate) return null;
+  const d = new Date(`${gameDate}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "numeric",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }

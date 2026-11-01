@@ -489,6 +489,10 @@ export interface TodayPickEntry {
   /** Scheduled start of the pick's game, once the feed serves it. Used to
       keep a started game off the Tail or Fade stable card. */
   commence_time?: string | null;
+  /** Slate date (ET, YYYY-MM-DD) of the pick's game once the feed serves it.
+      The My Tails card files a pick under TODAY or UPCOMING off this and the
+      bet slip stamps a tail with it. */
+  game_date?: string | null;
   /** The capper's own posted stake in units; the slip's default when the
       user has no per-capper stake assigned. */
   units?: number | null;
