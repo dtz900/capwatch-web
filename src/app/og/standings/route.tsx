@@ -1,5 +1,6 @@
 import { fetchSlate, fetchWeekStandings } from "@/lib/api";
 import type { SlateCapperSummary } from "@/lib/types";
+import { capperVipEnabled } from "@/lib/flags";
 import { renderStandingsCard, type StandingsCardRow } from "../_standings-card";
 
 /**
@@ -91,6 +92,7 @@ export async function GET(request: Request): Promise<Response> {
     pushes: c.pushes,
     graded: c.graded_count,
     netUnits: c.net_units,
+    vipEligible: capperVipEnabled() && !!c.vip_eligible,
   }));
 
   return renderStandingsCard({

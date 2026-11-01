@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 
 /**
@@ -29,6 +30,9 @@ const OFF_FAINT = "rgba(247, 243, 233, 0.35)";
 const HAIR = "rgba(247, 243, 233, 0.10)";
 const POS = "#4ade80";
 const NEG = "#f87171";
+// Capper VIP ring, the same purple and glow the site's CapperAvatar wears.
+const VIP = "#6d28d9";
+const VIP_GLOW = "rgba(109, 40, 217, 0.45)";
 
 export interface StandingsCardRow {
   key: string | number;
@@ -40,6 +44,8 @@ export interface StandingsCardRow {
   pushes: number;
   graded: number;
   netUnits: number;
+  /** Eligible to sell Capper VIP: drawn with the purple ring. */
+  vipEligible?: boolean;
 }
 
 export interface StandingsCardOptions {
@@ -139,8 +145,22 @@ export async function renderStandingsCard(opts: StandingsCardOptions): Promise<R
     handle: string | null,
     size: number,
     border = `1px solid ${HAIR}`,
-  ) =>
-    uri ? (
+    vip = false,
+  ): ReactElement =>
+    vip ? (
+      // Ring outside the avatar with a dark gap, like the site's ring-offset.
+      <div
+        style={{
+          display: "flex",
+          padding: size >= 32 ? 3 : 2,
+          borderRadius: size,
+          border: `${size >= 100 ? 4 : 2}px solid ${VIP}`,
+          boxShadow: `0 0 ${size >= 100 ? 28 : 10}px ${VIP_GLOW}`,
+        }}
+      >
+        {circle(uri, handle, size, "none")}
+      </div>
+    ) : uri ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={uri} alt="" width={size} height={size} style={{ borderRadius: size, border }} />
     ) : (
@@ -205,7 +225,9 @@ export async function renderStandingsCard(opts: StandingsCardOptions): Promise<R
               }}
             >
               <div style={{ display: "flex", position: "relative" }}>
-                {circle(heroAvatar, hero.handle, 210, `4px solid ${opts.accent ?? unitColor(hero.netUnits)}`)}
+                {hero.vipEligible
+                  ? circle(heroAvatar, hero.handle, 202, "none", true)
+                  : circle(heroAvatar, hero.handle, 210, `4px solid ${opts.accent ?? unitColor(hero.netUnits)}`)}
                 {crown3d && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={crown3d} alt="" width={122} style={{ position: "absolute", top: -56, right: -6 }} />
@@ -246,7 +268,7 @@ export async function renderStandingsCard(opts: StandingsCardOptions): Promise<R
                   <span style={{ fontSize: 15, fontWeight: 800, color: OFF_FAINT, width: 32 }}>
                     {String(i + 2).padStart(2, "0")}
                   </span>
-                  {circle(avatars[i], c.handle, 30)}
+                  {c.vipEligible ? circle(avatars[i], c.handle, 22, "none", true) : circle(avatars[i], c.handle, 30)}
                   <span style={{ fontSize: 19, fontWeight: 700, color: OFF }}>
                     @{c.handle ?? c.displayName ?? "capper"}
                   </span>
