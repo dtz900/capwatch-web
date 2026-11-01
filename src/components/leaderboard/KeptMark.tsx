@@ -4,12 +4,59 @@ import { useEffect, useRef, useState } from "react";
 import { fetchDeletedPicks, type DeletedPick, type DeletedPicksResponse } from "@/lib/api";
 
 interface Props {
-  count: number;
+  /** Deleted slips (tweets that had parsed picks), repost-replaced ones excluded. */
+  deletedCount: number;
+  /** Slips parsed for this capper, all time. */
+  tweetsParsed: number | null | undefined;
+  /** Graded picks in the row's window; the mark needs 20 to mean anything. */
+  picksCount: number | null | undefined;
   /** Capper handle (no @). Required to lazy-load the deleted-picks list. */
   handle?: string;
+  size?: "sm" | "md";
 }
 
-export function DeletedPicksPill({ count, handle }: Props) {
+/** Kept rate, floored to one decimal so one deletion never rounds up to 100. */
+export function keptRate(deletedCount: number, tweetsParsed: number): number {
+  const kept = Math.max(0, tweetsParsed - deletedCount) / tweetsParsed;
+  return Math.floor(kept * 1000) / 10;
+}
+
+export const KEPT_MIN_PICKS = 20;
+export const KEPT_NEAR_MIN = 95;
+
+type KeptState = "full" | "near" | "low";
+
+export function keptState(deletedCount: number, tweetsParsed: number): KeptState {
+  if (deletedCount <= 0) return "full";
+  return keptRate(deletedCount, tweetsParsed) >= KEPT_NEAR_MIN ? "near" : "low";
+}
+
+/** The bet-slip mark: solid green at 100% kept, hollow and muted from 95% up,
+ *  red with the rate as text below that. Icon only until it's bad. */
+function SlipIcon({ state, size }: { state: KeptState; size: number }) {
+  const stroke = state === "full" ? "var(--color-pos)" : state === "near" ? "var(--color-text-muted)" : "var(--color-neg)";
+  const fill = state === "full" ? "var(--color-pos)" : "none";
+  const ink = state === "full" ? "#06270f" : stroke;
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      style={state === "full" ? { filter: "drop-shadow(0 0 5px rgba(25,245,124,0.45))", overflow: "visible" } : { overflow: "visible" }}
+    >
+      <path d="M5 1.5h10v15.5l-1.7-1.3-1.6 1.3-1.7-1.3-1.7 1.3-1.6-1.3L5 17z" fill={fill} stroke={stroke} strokeWidth={state === "full" ? 1 : 1.6} />
+      {state === "low" ? (
+        <path d="M7.5 7.5l5 5M12.5 7.5l-5 5" fill="none" stroke={ink} strokeWidth={2} strokeLinecap="round" />
+      ) : (
+        <path d="M7.2 9.4l1.9 1.9 3.8-4" fill="none" stroke={ink} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
+  );
+}
+
+export function KeptMark({ deletedCount, tweetsParsed, picksCount, handle, size = "md" }: Props) {
+  const count = deletedCount;
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<DeletedPicksResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,47 +96,50 @@ export function DeletedPicksPill({ count, handle }: Props) {
     };
   }, [open]);
 
-  if (!count || count <= 0) return null;
+  const parsed = tweetsParsed ?? 0;
+  if ((picksCount ?? 0) < KEPT_MIN_PICKS || parsed <= 0) return null;
 
+  const state = keptState(count, parsed);
+  const px = size === "md" ? 18 : 15;
   // The count is SLIPS (deleted tweets that had parsed picks), not
   // individual picks: a deleted 15-leg parlay slip counts once.
-  // Without a handle we fall back to the original tooltip-only pill (e.g.
-  // older call sites that don't yet pass it). The clickable variant only
-  // activates when the caller can route to a specific capper.
-  if (!handle) {
+  const tip =
+    state === "full"
+      ? `100% kept: all ${parsed} slips still up.`
+      : `${keptRate(count, parsed)}% kept: ${count} of ${parsed} slips deleted from X after the picks were parsed. Deleted picks stay graded.`;
+
+  if (state === "full" || !handle) {
     return (
-      <span
-        title={`${count} slip${count === 1 ? "" : "s"} deleted from X after the picks were parsed.`}
-        className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.12em]
-                   bg-[rgba(239,68,68,0.10)] text-[var(--color-neg)]
-                   border border-[rgba(239,68,68,0.30)]
-                   px-1.5 py-0.5 rounded cursor-help"
-      >
-        <span className="leading-none">×</span>
-        <span>{count} deleted</span>
+      <span title={tip} aria-label={tip} className="inline-flex items-center shrink-0 cursor-help leading-none">
+        <SlipIcon state={state} size={px} />
       </span>
     );
   }
 
+  const lowCls = size === "md" ? "text-[11px]" : "text-[10px]";
   return (
     <>
       <button
         type="button"
-        aria-label={`${count} deleted slips. Click for details.`}
+        title={tip}
+        aria-label={`${tip} Click for details.`}
         onClick={(e) => {
-          // Both guards matter: the pill renders inside whole-row <Link>
+          // Both guards matter: the mark renders inside whole-row <Link>
           // anchors on /cappers, where an unprevented click navigates.
           e.preventDefault();
           e.stopPropagation();
           setOpen(true);
         }}
-        className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.12em]
-                   bg-[rgba(239,68,68,0.10)] text-[var(--color-neg)]
-                   border border-[rgba(239,68,68,0.30)]
-                   px-1.5 py-0.5 rounded hover:bg-[rgba(239,68,68,0.18)] cursor-pointer"
+        className={
+          state === "low"
+            ? `inline-flex items-center gap-1 ${lowCls} font-extrabold tracking-[0.02em]
+               bg-[rgba(239,68,68,0.08)] text-[var(--color-neg)] border border-[rgba(239,68,68,0.45)]
+               pl-1 pr-2 py-0.5 rounded-full hover:bg-[rgba(239,68,68,0.16)] cursor-pointer leading-none`
+            : "inline-flex items-center shrink-0 leading-none cursor-pointer hover:opacity-80"
+        }
       >
-        <span className="leading-none">×</span>
-        <span>{count} deleted</span>
+        <SlipIcon state={state} size={px} />
+        {state === "low" && <span>{keptRate(count, parsed)}% kept</span>}
       </button>
 
       {open && (

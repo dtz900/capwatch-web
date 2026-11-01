@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { CapperAvatar } from "./CapperAvatar";
-import { PickTiles } from "./PickTiles";
 import { StreakBadge } from "./StreakBadge";
 import { StatusPill } from "./StatusPill";
 import { PaidProgramPill } from "./PaidProgramPill";
-import { DeletedPicksPill } from "./DeletedPicksPill";
+import { KeptMark } from "./KeptMark";
+import { FormTicks, FORM_TICKS } from "./FormTicks";
 import { LivePicksIndicator } from "./LivePicksIndicator";
 import { Sparkline } from "./Sparkline";
 import { XIcon } from "@/components/icons/XIcon";
@@ -16,9 +16,7 @@ import type { CapperRow, Window, SportFilter } from "@/lib/types";
 interface Props { rank: number; capper: CapperRow; window?: Window; sport?: SportFilter }
 
 const DESKTOP_COLS =
-  "hidden sm:grid grid-cols-[40px_minmax(180px,1fr)_minmax(220px,1.4fr)_64px_64px_70px_80px_92px_44px] items-center gap-3 px-[22px] min-h-[60px] border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
-
-const ROW_PICK_TILES = 4;
+  "hidden sm:grid grid-cols-[40px_minmax(220px,1.6fr)_76px_64px_64px_70px_80px_120px_44px] items-center gap-3 px-[22px] min-h-[60px] border-b border-[rgba(255,255,255,0.03)] text-sm font-semibold last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative";
 
 const MOBILE_CARD =
   "sm:hidden block px-4 py-3.5 border-b border-[rgba(255,255,255,0.03)] last:border-0";
@@ -41,7 +39,7 @@ export function StandingsRow({ rank, capper, window, sport }: Props) {
         <div className="text-xs text-[var(--color-text-muted)] font-medium flex items-center gap-1.5 flex-wrap">
           {capper.handle ? formatHandle(capper.handle) : ""}
           {capper.activity_status !== "active" && <StatusPill status={capper.activity_status} />}
-          <DeletedPicksPill count={capper.deleted_picks_count ?? 0} handle={capper.handle ?? undefined} />
+          <KeptMark deletedCount={capper.deleted_picks_count ?? 0} tweetsParsed={capper.tweets_parsed} picksCount={capper.picks_count} handle={capper.handle ?? undefined} size="sm" />
           <LivePicksIndicator capperId={capper.capper_id} initialCount={capper.live_picks_count} />
         </div>
       </div>
@@ -63,18 +61,18 @@ export function StandingsRow({ rank, capper, window, sport }: Props) {
           <div className="flex items-center gap-3 min-w-0">{handleNode}</div>
         )}
         <div className="min-w-0 relative">
-          {/* PickTiles is a client component: everything passed here ships in
-              the RSC payload. The API sends 10 recent picks per capper and the
-              tiles show 4, so pass 4 (the other 6 were ~60% of the board's
-              per-row payload). */}
-          <PickTiles picks={capper.last_picks.slice(0, ROW_PICK_TILES)} limit={ROW_PICK_TILES} />
+          {/* Form: the last six graded as ticks (the Recent Picks chips
+              truncated to "Pr… -1" at this width and said nothing; David,
+              2026-11-01). Pass only the six the ticks use: the RSC payload
+              carried every pick passed here. */}
+          <FormTicks picks={capper.last_picks.slice(0, FORM_TICKS)} />
         </div>
         <div className="text-right">{capper.picks_count}</div>
         <div className="text-right">{formatWinRate(capper.win_rate)}</div>
         <div className={`text-right ${unitsCls}`}>{formatUnits(capper.units_profit)}</div>
         <div className={`text-right ${roiCls}`}>{formatRoi(capper.roi_pct)}</div>
         <div className="flex justify-end">
-          <Sparkline values={capper.trajectory_units ?? []} />
+          <Sparkline values={capper.trajectory_units ?? []} width={112} height={28} />
         </div>
         <div className="text-right relative">
           <XProfileLink
