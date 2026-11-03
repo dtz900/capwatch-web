@@ -341,16 +341,16 @@ describe("CapperVipSection", () => {
   });
 
   it("owner panel hidden for denylisted handle", async () => {
-    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "FadeAI_" } };
+    auth.value = { authReady: true, session: { access_token: "tok", user: { id: "u1" } }, capper: { id: 7, handle: "TailSlips" } };
     client.getVipCapperStatus.mockResolvedValue(status);
     client.getVipMe.mockResolvedValue({
-      capper: { id: 7, handle: "FadeAI_" },
+      capper: { id: 7, handle: "TailSlips" },
       // A seller row on a house account must not blank the section.
       seller: status.seller,
       eligibility: [{ sport: "MLB", eligible: true, eligible_since: "2026-10-01", fail_streak: 0 }],
       can_post_sports: ["MLB"],
     });
-    render(<CapperVipSection capperId={7} handle="FadeAI_" />);
+    render(<CapperVipSection capperId={7} handle="TailSlips" />);
     await screen.findByRole("region", { name: "Capper VIP" });
     await waitFor(() => expect(client.getVipMe).toHaveBeenCalled());
     await Promise.resolve();
