@@ -9,12 +9,14 @@ import { buildCapperShareParams } from "@/lib/capperFilters";
  * in sync with the page URL by the provider), so the OG card the recipient
  * sees reflects exactly the filtered view being shared. */
 export function ShareFilteredButton({ prominent = false }: { prominent?: boolean }) {
-  const { handle, sport, window, betType, market, outcome, range } = useCapperFilters();
+  const { handle, sport, window, betType, market, outcome, range, defaultView } = useCapperFilters();
   return (
     <ShareLinkButton
       basePath={`/cappers/${handle}`}
       prominent={prominent}
-      queryParams={buildCapperShareParams({ sport, window, betType, market, outcome, range })}
+      queryParams={buildCapperShareParams({
+        sport, window, betType, market, outcome, range, explicit: defaultView !== null,
+      })}
     />
   );
 }

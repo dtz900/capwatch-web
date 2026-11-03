@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { fetchCapperSlice } from "@/lib/capperClient";
+import { isCapperView, type DefaultView } from "@/lib/capperView";
 import {
   buildMarketOptions,
   marketSliceToAggregate,
@@ -63,6 +64,10 @@ interface FilterContextValue {
   setMarket: (m: string) => void;
   setOutcome: (o: string) => void;
   loadMore: () => void;
+  /** The capper's chosen landing view, if any. */
+  defaultView: DefaultView | null;
+  /** The view on screen is the capper's chosen one ("Capper's view"). */
+  capperView: boolean;
 }
 
 const Ctx = createContext<FilterContextValue | null>(null);
@@ -89,6 +94,7 @@ export function CapperFilterProvider({
   initialOutcome,
   initialRange = null,
   initialSport = "all",
+  defaultView = null,
   children,
 }: {
   handle: string;
@@ -101,6 +107,7 @@ export function CapperFilterProvider({
   initialMarket: string;
   initialOutcome: string;
   initialRange?: { start: string; end: string } | null;
+  defaultView?: DefaultView | null;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -150,11 +157,14 @@ export function CapperFilterProvider({
   const syncUrl = useCallback(
     (w: Window, bt: BetTypeFilter, mk: string, oc: string, rg: { start: string; end: string } | null) => {
       const params = new URLSearchParams();
-      if (sport !== "all") params.set("sport", sport);
+      // With a capper default, a bare URL means the capper's view, so the
+      // visitor's own choice must ride on the URL even when it is the site
+      // default (All, Season), or a reload snaps back to the capper's view.
+      if (sport !== "all" || defaultView) params.set("sport", sport);
       if (rg) {
         params.set("start", rg.start);
         params.set("end", rg.end);
-      } else if (w !== DEFAULT_WINDOW) {
+      } else if (w !== DEFAULT_WINDOW || defaultView) {
         params.set("window", w);
       }
       if (bt !== "all") params.set("bet_type", bt);
@@ -164,7 +174,7 @@ export function CapperFilterProvider({
       const path = `/cappers/${encodeURIComponent(handle)}`;
       router.replace(qs ? `${path}?${qs}` : path, { scroll: false });
     },
-    [handle, router, sport],
+    [handle, router, sport, defaultView],
   );
 
   const applyFilters = useCallback(
@@ -339,6 +349,8 @@ export function CapperFilterProvider({
     setMarket: (m) => applyFilters({ market: m }),
     setOutcome: (o) => applyFilters({ outcome: o }),
     loadMore,
+    defaultView,
+    capperView: isCapperView(defaultView, sport, window, range !== null),
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

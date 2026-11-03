@@ -41,6 +41,8 @@ import { fetchPublicVipStatus } from "@/lib/vip/server";
 import { VipInitialStatusProvider } from "@/components/vip/VipInitialStatus";
 import { CapperVipSection } from "@/components/vip/CapperVipSection";
 import { VipEdgesPanel } from "@/components/capper/VipEdgesPanel";
+import { CapperDefaultView } from "@/components/capper/CapperDefaultView";
+import { viewFromDefault } from "@/lib/capperView";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
@@ -355,7 +357,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   const { handle } = await params;
   const sp = await searchParams;
 
-  const window: Window = VALID_WINDOWS.includes(sp.window as Window)
+  let window: Window = VALID_WINDOWS.includes(sp.window as Window)
     ? (sp.window as Window)
     : DEFAULT_WINDOW;
   const betType: BetTypeFilter = VALID_BET_TYPES.includes(sp.bet_type as BetTypeFilter)
@@ -374,7 +376,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
   // effective bet type for the initial history slice is "straights".
   if (betType === "parlays") market = "";
   const effBetType: BetTypeFilter = market ? "straights" : betType;
-  const sport = parseSport(sp.sport);
+  let sport = parseSport(sp.sport);
 
   let profile;
   let sportsbooks;
@@ -403,6 +405,27 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
     profile = profileResult;
     sportsbooks = sportsbooksResult;
     leaderboardRows = leaderboardResult.leaderboard;
+
+    // The capper's chosen landing view fills what the URL leaves out. A
+    // different league is a second fetch, paid only by cappers who chose one.
+    const fromDefault = viewFromDefault(
+      { sport: sp.sport, window: sp.window, hasRange: initialRange !== null },
+      profile.capper.default_view,
+    );
+    if (fromDefault.window) window = fromDefault.window;
+    if (fromDefault.sport && fromDefault.sport !== sport) {
+      sport = fromDefault.sport;
+      profile = await fetchCapperProfile(handle, {
+        sport,
+        history_limit: PAGE_SIZE,
+        history_offset: 0,
+        market: market || undefined,
+        outcome: outcome || undefined,
+        bet_type: effBetType !== "all" ? effBetType : undefined,
+        start: initialRange?.start,
+        end: initialRange?.end,
+      });
+    }
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "not_found") notFound();
     // Skip ISR cache on the transient-failure render so the next refresh
@@ -473,6 +496,7 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
           initialOutcome={outcome}
           initialRange={initialRange}
           initialSport={sport}
+          defaultView={profile.capper.default_view ?? null}
         >
           <StickyProfileStrip />
           <CapperHeroLive />
@@ -490,8 +514,9 @@ export default async function CapperPage({ params, searchParams }: PageProps) {
 
           {/* League switch: its own row above the per-view filters, the same
               control as the leaderboard so MLB, NFL and NBA records read apart. */}
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
             <SportTabs current={sport} basePath={`/cappers/${encodeURIComponent(handle)}`} />
+            <CapperDefaultView />
           </div>
 
           {/* Tail control lives in the stat band's top-right (StatBandLive),
