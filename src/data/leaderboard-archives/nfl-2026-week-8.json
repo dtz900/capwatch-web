@@ -6,15 +6,15 @@
  "season": 2026,
  "week": 8,
  "dateIso": null,
- "frozenAt": "2026-11-02",
+ "frozenAt": "2026-11-03",
  "games": 14,
  "totals": {
-  "graded": 1247,
-  "wins": 575,
-  "losses": 657,
+  "graded": 1250,
+  "wins": 576,
+  "losses": 659,
   "pushes": 1,
   "voids": 14,
-  "netUnits": -125.14,
+  "netUnits": -118.14,
   "unpriced": 41
  },
  "liveHref": "/slate?sport=nfl&week=8",
@@ -34,6 +34,19 @@
   },
   {
    "rank": 2,
+   "handle": "eliteewagers",
+   "displayName": "EliteWagers",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/1940022699054505985/p26xCozj.jpg",
+   "wins": 15,
+   "losses": 14,
+   "pushes": 0,
+   "voids": 1,
+   "graded": 30,
+   "netUnits": 10.6,
+   "unpriced": 0
+  },
+  {
+   "rank": 3,
    "handle": "cinematicc",
    "displayName": "Alex",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2085465637535821824/C3xP0Hwi.jpg",
@@ -46,7 +59,7 @@
    "unpriced": 0
   },
   {
-   "rank": 3,
+   "rank": 4,
    "handle": "bookitwithtrent",
    "displayName": "Trent Attyah",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1423478203100717059/epqKNm6g.jpg",
@@ -59,7 +72,7 @@
    "unpriced": 0
   },
   {
-   "rank": 4,
+   "rank": 5,
    "handle": "pocketparlay",
    "displayName": "Pocket Parlay",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1751984705803554816/0a26HQzX.jpg",
@@ -72,7 +85,7 @@
    "unpriced": 0
   },
   {
-   "rank": 5,
+   "rank": 6,
    "handle": "gavinmchughh",
    "displayName": "Gavin Mchugh",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1509786725333225509/yLB6P7dJ.jpg",
@@ -85,7 +98,7 @@
    "unpriced": 0
   },
   {
-   "rank": 6,
+   "rank": 7,
    "handle": "g5jake",
    "displayName": "G5 Jake",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2085076749558202368/_S7giA01.jpg",
@@ -98,7 +111,7 @@
    "unpriced": 1
   },
   {
-   "rank": 7,
+   "rank": 8,
    "handle": "joes_picks",
    "displayName": "Joe’s Picks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1833664941468876800/hA6lCzgR.jpg",
@@ -108,19 +121,6 @@
    "voids": 0,
    "graded": 10,
    "netUnits": 4.96,
-   "unpriced": 0
-  },
-  {
-   "rank": 8,
-   "handle": "eliteewagers",
-   "displayName": "EliteWagers",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/1940022699054505985/p26xCozj.jpg",
-   "wins": 14,
-   "losses": 12,
-   "pushes": 0,
-   "voids": 1,
-   "graded": 27,
-   "netUnits": 3.6,
    "unpriced": 0
   },
   {
