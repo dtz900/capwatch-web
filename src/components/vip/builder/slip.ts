@@ -3,6 +3,12 @@ import type { BoardSide, BoardSlateGame, ManualLegInput, VipPickBody } from "@/l
 import { fmtPrice, parsePrice, pays, toAmerican, toDecimal, type Fmt } from "./odds";
 
 export const OTHER_BOOK = "other";
+/* Named books the capture feed does not carry (UK sellers, platform
+ * OFF_FEED_BOOKS): like "other", the capper types the price. */
+export const OFF_FEED_BOOKS: ReadonlySet<string> = new Set(["betfair", "bet365"]);
+
+/** Whether the board can quote this book at all. */
+export const isPricedBook = (book: string) => book !== OTHER_BOOK && !OFF_FEED_BOOKS.has(book);
 export const MAX_LEGS = 10;
 
 export interface SlipLeg {
@@ -23,7 +29,7 @@ export interface SlipLeg {
 
 /** That book's price at this exact rung, or null if it doesn't hang it. */
 export function quoteAt(side: BoardSide, book: string): number | null {
-  if (book === OTHER_BOOK) return null;
+  if (!isPricedBook(book)) return null;
   return side.quotes[book] ?? null;
 }
 

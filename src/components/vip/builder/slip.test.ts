@@ -8,6 +8,7 @@ import {
   combinedPrice,
   isSgp,
   pairKey,
+  isPricedBook,
   quoteAt,
   rebook,
   reformat,
@@ -53,6 +54,15 @@ describe("slip", () => {
     expect(quoteAt(side(), "other")).toBeNull();
     expect(quoteAt(side(), "betmgm")).toBeNull();
     expect(quoteAt(side(), "fanduel")).toBe(-105);
+  });
+
+  it("off-feed books never quote and never read as missing", () => {
+    expect(quoteAt(side(), "betfair")).toBeNull();
+    expect(quoteAt(side(), "bet365")).toBeNull();
+    expect(isPricedBook("betfair")).toBe(false);
+    expect(isPricedBook("bet365")).toBe(false);
+    expect(isPricedBook("other")).toBe(false);
+    expect(isPricedBook("fanduel")).toBe(true);
   });
 
   it("tapping prefills the book price, tapping again removes", () => {

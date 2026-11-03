@@ -8,7 +8,7 @@ import { TeamLogo } from "@/components/slate/TeamLogo";
 import { VIP_GLASS, VIP_GLASS_SHEEN } from "@/components/vip/styles";
 import type { BoardSide, VipSport } from "@/lib/vip/types";
 import { teamName, type Period } from "./adapt";
-import { OTHER_BOOK, bookName } from "./books";
+import { bookName, isPricedBook } from "./books";
 import { fmtPrice, type Fmt } from "./odds";
 import { quoteAt, type SlipLeg } from "./slip";
 
@@ -24,7 +24,7 @@ export function PriceButton({ side: sd, selected, onTap }: { side: BoardSide; se
   const book = useContext(BookCtx);
   const quote = quoteAt(sd, book);
   const shown = quote ?? sd.price;
-  const notHere = quote === null && book !== OTHER_BOOK;
+  const notHere = quote === null && isPricedBook(book);
   return (
     <button
       type="button"
