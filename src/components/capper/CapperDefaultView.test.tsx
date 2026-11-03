@@ -1,0 +1,67 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+
+const filters = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+const auth = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+const refresh = vi.hoisted(() => vi.fn());
+const save = vi.hoisted(() => vi.fn());
+
+vi.mock("./CapperFilterProvider", () => ({ useCapperFilters: () => filters.value }));
+vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => auth.value }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+vi.mock("@/lib/capperView", () => ({ saveDefaultView: save }));
+
+import { CapperDefaultView } from "./CapperDefaultView";
+
+const base = {
+  sport: "nba",
+  window: "season",
+  range: null,
+  profile: { capper: { id: 7 } },
+  capperView: false,
+  defaultView: null,
+};
+
+describe("CapperDefaultView", () => {
+  beforeEach(() => {
+    refresh.mockReset();
+    save.mockReset();
+    auth.value = { session: { access_token: "tok" }, capper: null };
+  });
+
+  it("labels the capper's chosen view for everyone", () => {
+    filters.value = { ...base, capperView: true, defaultView: { sport: "nba", window: "season" } };
+    render(<CapperDefaultView />);
+    expect(screen.getByText("Capper's view")).toBeInTheDocument();
+  });
+
+  it("shows nothing to a visitor on another view", () => {
+    filters.value = base;
+    const { container } = render(<CapperDefaultView />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("the owner saves the view on screen", async () => {
+    filters.value = base;
+    auth.value = { session: { access_token: "tok" }, capper: { id: 7, handle: "fadeai_" } };
+    save.mockResolvedValue({ ok: true });
+    render(<CapperDefaultView />);
+    fireEvent.click(screen.getByRole("button", { name: "Make this my default view" }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith("tok", { sport: "nba", window: "season" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  it("no save control in date-range mode", () => {
+    filters.value = { ...base, range: { start: "2026-10-01", end: "2026-10-31" } };
+    auth.value = { session: { access_token: "tok" }, capper: { id: 7, handle: "fadeai_" } };
+    const { container } = render(<CapperDefaultView />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("someone else's profile gets no save control", () => {
+    filters.value = base;
+    auth.value = { session: { access_token: "tok" }, capper: { id: 99, handle: "other" } };
+    const { container } = render(<CapperDefaultView />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});

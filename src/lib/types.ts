@@ -373,6 +373,8 @@ export interface CapperProfile {
     current_day_streak?: number;
     /** All-time straights rank by units; null below the floor. */
     rank_straights_all_time?: number | null;
+    /** The capper's chosen landing view (null = site default: all, season). */
+    default_view?: { sport: SportFilter | null; window: Window | null } | null;
   };
   aggregates: Partial<Record<Window, CapperAggregate>>;
   pending: HistoryPick[];
