@@ -46,9 +46,20 @@ describe("CapperDefaultView", () => {
     auth.value = { session: { access_token: "tok" }, capper: { id: 7, handle: "fadeai_" } };
     save.mockResolvedValue({ ok: true });
     render(<CapperDefaultView />);
-    fireEvent.click(screen.getByRole("button", { name: "Make this my default view" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show visitors this view first" }));
     await waitFor(() => expect(save).toHaveBeenCalledWith("tok", { sport: "nba", window: "season" }));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  it("the owner sees what visitors land on until a view is saved", () => {
+    filters.value = base;
+    auth.value = { session: { access_token: "tok" }, capper: { id: 7, handle: "fadeai_" } };
+    const { rerender } = render(<CapperDefaultView />);
+    expect(screen.getByText(/Visitors land on All/)).toBeInTheDocument();
+    filters.value = { ...base, sport: "all", defaultView: { sport: "nba", window: "season" } };
+    rerender(<CapperDefaultView />);
+    expect(screen.queryByText(/Visitors land on All/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Show visitors this view first" })).toBeInTheDocument();
   });
 
   it("no save control in date-range mode", () => {

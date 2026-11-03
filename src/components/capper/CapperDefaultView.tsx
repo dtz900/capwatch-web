@@ -1,6 +1,6 @@
 "use client";
 
-/* "Capper's view" tag and the owner's "Make this my default view" control
+/* "Capper's view" tag and the owner's "Show visitors this view first" control
  * (David, 2026-11-03). Sits beside the league chips: the tag tells a visitor
  * the capper chose what they landed on, the control lets the owner save the
  * view they are looking at. */
@@ -44,14 +44,22 @@ export function CapperDefaultView() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={save}
-      disabled={state === "saving"}
-      className={`${TAG} hover:text-[var(--color-text)] hover:border-[rgba(255,255,255,0.28)] transition-colors disabled:opacity-60`}
-      title={defaultView ? "Replace your current default view" : "Visitors land on this view"}
-    >
-      {state === "saving" ? "Saving" : state === "error" ? "Couldn't save, try again" : "Make this my default view"}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={save}
+        disabled={state === "saving"}
+        className={`${TAG} hover:text-[var(--color-text)] hover:border-[rgba(255,255,255,0.28)] transition-colors disabled:opacity-60`}
+        title={defaultView ? "Replaces the view visitors see first now" : "Visitors land on this view"}
+      >
+        {state === "saving" ? "Saving" : state === "error" ? "Couldn't save, try again" : "Show visitors this view first"}
+      </button>
+      {/* Owner only, until a view is saved: what visitors land on today. */}
+      {!defaultView && (
+        <p className="basis-full text-[12px] text-[var(--color-text-muted)]">
+          Visitors land on All &middot; Season. Pick a league and window, then save it as your view.
+        </p>
+      )}
+    </>
   );
 }
