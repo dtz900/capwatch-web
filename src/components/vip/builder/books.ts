@@ -1,6 +1,7 @@
-/* Books in the capture feed (platform BOARD_BOOKS). "other" covers books the
- * feed does not carry: market prefill, the capper types the price. */
-import { OTHER_BOOK } from "./slip";
+/* Seller books (platform BOARD_BOOKS). Betfair and bet365 are not in the
+ * capture feed (OFF_FEED_BOOKS): like "other", market prefill and the capper
+ * types the price, but the book is named on the slip. */
+import { OTHER_BOOK, isPricedBook } from "./slip";
 
 export const BOOKS: Array<{ id: string; name: string }> = [
   { id: "fanduel", name: "FanDuel" },
@@ -18,9 +19,11 @@ export const BOOKS: Array<{ id: string; name: string }> = [
   { id: "betus", name: "BetUS" },
   { id: "novig", name: "Novig" },
   { id: "prophetx", name: "ProphetX" },
+  { id: "betfair", name: "Betfair" },
+  { id: "bet365", name: "bet365" },
 ];
 
-export { OTHER_BOOK };
+export { OTHER_BOOK, isPricedBook };
 
 export const bookName = (id: string | null | undefined) =>
   id === "pinnacle" ? "Pinnacle" : BOOKS.find((b) => b.id === id)?.name ?? "Other book";

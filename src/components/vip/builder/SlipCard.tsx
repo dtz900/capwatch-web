@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { VipCrown } from "@/components/vip/VipCrown";
 import { VIP_GLASS, VIP_GLASS_SHEEN, VIP_PRIMARY_BTN, VIP_WORDMARK } from "@/components/vip/styles";
 import { dayLabel, timeLabel } from "./adapt";
-import { OTHER_BOOK, bookName } from "./books";
+import { OTHER_BOOK, bookName, isPricedBook } from "./books";
 import { fmtPrice, parsePrice, toDecimal } from "./odds";
 import { betterThanBest, combinedPrice, isSgp, legPrice, legSports, quoteAt, type SlipLeg } from "./slip";
 import { BookCtx, FmtCtx, LegLogo } from "./ui";
@@ -60,7 +60,7 @@ function SlipLegRow({
   const best = leg.manual ? null : betterThanBest(leg);
   const where = leg.manual
     ? "Checked before it counts"
-    : book !== OTHER_BOOK && quoteAt(leg.side, book) === null
+    : isPricedBook(book) && quoteAt(leg.side, book) === null
       ? `Not at ${bookName(book)}, market price`
       : null;
   return (
