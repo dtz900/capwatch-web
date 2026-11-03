@@ -10,7 +10,8 @@ import { SellerStrip } from "./SellerStrip";
 import { PickBuilder } from "./builder/PickBuilder";
 import { EYEBROW, VIP_PRIMARY_BTN } from "./styles";
 
-const DENYLISTED_HANDLES = new Set(["fadeai_", "tailslips"]);
+// House account only; fadeai_ sells like any capper (David, 2026-11-03).
+const DENYLISTED_HANDLES = new Set(["tailslips"]);
 
 /** Owner-only panel on a capper's own profile: start selling, or the price line + composer. */
 export function OwnerPanel({
