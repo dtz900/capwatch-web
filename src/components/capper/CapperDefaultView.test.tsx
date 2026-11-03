@@ -9,7 +9,10 @@ const save = vi.hoisted(() => vi.fn());
 vi.mock("./CapperFilterProvider", () => ({ useCapperFilters: () => filters.value }));
 vi.mock("@/components/auth/AuthProvider", () => ({ useAuth: () => auth.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
-vi.mock("@/lib/capperView", () => ({ saveDefaultView: save }));
+vi.mock("@/lib/capperView", async (orig) => ({
+  ...(await orig<typeof import("@/lib/capperView")>()),
+  saveDefaultView: save,
+}));
 
 import { CapperDefaultView } from "./CapperDefaultView";
 
@@ -48,7 +51,8 @@ describe("CapperDefaultView", () => {
     render(<CapperDefaultView />);
     fireEvent.click(screen.getByRole("button", { name: "Show visitors this view first" }));
     await waitFor(() => expect(save).toHaveBeenCalledWith("tok", { sport: "nba", window: "season" }));
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    // The tag shows at once, before the cached profile catches up.
+    await waitFor(() => expect(screen.getByText("Capper's view")).toBeInTheDocument());
   });
 
   it("the owner sees what visitors land on until a view is saved", () => {

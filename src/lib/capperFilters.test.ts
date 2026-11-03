@@ -8,6 +8,15 @@ import {
 } from "./capperFilters";
 
 describe("buildCapperShareParams", () => {
+  it("writes site-default sport and window when the capper set a default", () => {
+    const view = { sport: "all" as const, window: "season" as const, betType: "all" as const,
+                   market: "", outcome: "", range: null };
+    expect(buildCapperShareParams(view).sport).toBeUndefined();
+    const out = buildCapperShareParams({ ...view, explicit: true });
+    expect(out.sport).toBe("all");
+    expect(out.window).toBe("season");
+  });
+
   const base = {
     sport: "all" as const,
     window: "season" as const,

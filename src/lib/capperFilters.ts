@@ -10,15 +10,19 @@ export function buildCapperShareParams(view: {
   market: string;
   outcome: string;
   range: { start: string; end: string } | null;
+  /** The capper set a default view, so a bare link opens that view: the
+   *  shared sport and window must be written even when they are the site
+   *  defaults (All, Season). */
+  explicit?: boolean;
 }): Record<string, string | undefined> {
-  const { sport, window, betType, market, outcome, range } = view;
+  const { sport, window, betType, market, outcome, range, explicit = false } = view;
   // A specific market implies straights, as in the filter bar and OG renderer.
   const effBetType = market ? "straights" : betType;
   return {
-    sport: sport !== "all" ? sport : undefined,
+    sport: sport !== "all" || explicit ? sport : undefined,
     start: range?.start,
     end: range?.end,
-    window: !range && window !== "season" ? window : undefined,
+    window: !range && (window !== "season" || explicit) ? window : undefined,
     bet_type: effBetType !== "all" ? effBetType : undefined,
     market: market || undefined,
     outcome: outcome || undefined,
