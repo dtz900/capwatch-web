@@ -109,7 +109,7 @@ describe("buildEdgeCells", () => {
     expect(c.timing.tone).toBe("muted");
     const short = buildEdgeCells({ ...base, median_lead_minutes: LEAD_WARN_MINUTES - 3 });
     expect(short.timing.tone).toBe("warn");
-    expect(short.timing.sub).toBe("posts near first pitch");
+    expect(short.timing.sub).toBe("posts near game start");
   });
 });
 

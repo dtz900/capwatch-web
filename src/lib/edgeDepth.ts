@@ -103,7 +103,7 @@ function timingCell(row: EdgeRow): EdgeCell {
   const warn = m < LEAD_WARN_MINUTES;
   return {
     value: `${fmtLead(m)} pre-pitch`,
-    sub: warn ? "posts near first pitch" : "median post to first pitch",
+    sub: warn ? "posts near game start" : "median post to game start",
     tone: warn ? "warn" : "muted",
   };
 }

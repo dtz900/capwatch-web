@@ -196,7 +196,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
                          text-[9px] uppercase tracking-[0.12em] font-bold
                          bg-[rgba(25,245,124,0.10)] border border-[rgba(25,245,124,0.45)]
                          text-[var(--color-pos)]"
-              title="Live entry: posted after first pitch at in-game odds."
+              title="Live entry: posted after the game started, at in-game odds."
             >
               Live
             </span>
@@ -209,7 +209,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
                          text-[#ef4444]"
               title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
             >
-              Deleted after first pitch
+              Deleted after game start
             </span>
           )}
           {pick.was_deleted_on_x && !pick.deleted_after_game_start && (
@@ -263,7 +263,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
         <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
           {pick.deleted_after_game_start ? (
             <span
-              aria-label="Tweet deleted after first pitch"
+              aria-label="Tweet deleted after game start"
               title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
               className="inline-flex w-7 h-7 items-center justify-center rounded-md
                          bg-[rgba(239,68,68,0.10)] text-[#ef4444] opacity-90"
@@ -364,7 +364,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
                            text-[9px] uppercase tracking-[0.12em] font-bold
                            bg-[rgba(25,245,124,0.10)] border border-[rgba(25,245,124,0.45)]
                            text-[var(--color-pos)]"
-                title="Live entry: posted after first pitch at in-game odds."
+                title="Live entry: posted after the game started, at in-game odds."
               >
                 Live
               </span>
@@ -377,7 +377,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
                            text-[#ef4444]"
                 title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
               >
-                Deleted after first pitch
+                Deleted after game start
               </span>
             ) : pick.was_deleted_on_x ? (
               <span
@@ -418,7 +418,7 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           {!isOutcomeOnly && <span>{unitsValue}u</span>}
           {pick.deleted_after_game_start ? (
             <span
-              aria-label="Tweet deleted after first pitch"
+              aria-label="Tweet deleted after game start"
               title="The capper deleted this tweet AFTER the game started. TailSlips kept the receipt."
               onClick={(e) => e.stopPropagation()}
               className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md
