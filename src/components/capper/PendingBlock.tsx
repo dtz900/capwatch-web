@@ -130,7 +130,7 @@ function PendingRow({
                            text-[#ef4444]"
                 title="The capper deleted this tweet AFTER the game started. TailSlips still grades the pick."
               >
-                Deleted after first pitch
+                Deleted after game start
               </span>
             )}
           </div>
@@ -200,7 +200,7 @@ export function PendingBlock({
             className="text-[10px] uppercase tracking-[0.14em] text-[#f59e0b] font-bold"
             title={
               afterStartCount > 0
-                ? `${afterStartCount} of these were deleted after first pitch`
+                ? `${afterStartCount} of these were deleted after the game started`
                 : undefined
             }
           >

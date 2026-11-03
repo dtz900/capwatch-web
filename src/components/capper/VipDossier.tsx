@@ -197,7 +197,7 @@ export function VipDossier({
               <div className={big} style={{ color: strip.lead.warn ? AMBER : INK }}>
                 {fmtLead(strip.lead.minutes)}
               </div>
-              <div className="mt-0.5 text-[10px]" style={{ color: SOFT }}>typical post to first pitch</div>
+              <div className="mt-0.5 text-[10px]" style={{ color: SOFT }}>typical post to game start</div>
             </>
           ) : (
             <div className={big} style={{ color: FAINT }}>n/a</div>
