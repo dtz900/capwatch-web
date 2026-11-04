@@ -582,7 +582,7 @@ export interface TofBoardRow {
 }
 
 export interface TofBoardResponse {
-  window: "month" | "season";
+  window: "week" | "month" | "season";
   min_plays: number;
   rows: TofBoardRow[];
 }
@@ -600,7 +600,7 @@ export interface TofPlay {
 
 /** A row of tof_tailer_stats (RLS: own rows). */
 export interface TofStats {
-  window: "month" | "season";
+  window: "week" | "month" | "season";
   plays: number;
   wins: number;
   losses: number;

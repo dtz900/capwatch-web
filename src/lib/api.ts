@@ -1075,7 +1075,7 @@ export async function fetchTofHand(): Promise<TofHandResponse> {
   return res.json();
 }
 
-export async function fetchTofBoard(window: "month" | "season" = "month"): Promise<TofBoardResponse> {
+export async function fetchTofBoard(window: "week" | "month" | "season" = "month"): Promise<TofBoardResponse> {
   const res = await fetchWithTimeout(`${API_BASE}/api/public/tof/board?window=${window}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`tof board fetch failed: ${res.status}`);
   return res.json();
