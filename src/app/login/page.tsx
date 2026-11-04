@@ -101,6 +101,10 @@ function LoginInner() {
               Check your email. Tap the sign-in link, or enter the code from the email
               below.
             </p>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Not in your inbox? Check your spam or junk folder for an email from
+              noreply@tailslips.com, and mark it as not spam so the next one lands in your inbox.
+            </p>
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
