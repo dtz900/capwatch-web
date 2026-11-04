@@ -11,6 +11,9 @@ export const OFF_FEED_BOOKS: ReadonlySet<string> = new Set(["betfair", "bet365"]
 export const isPricedBook = (book: string) => book !== OTHER_BOOK && !OFF_FEED_BOOKS.has(book);
 export const MAX_LEGS = 10;
 
+/** Two or more legs post as one parlay, or as one straight each. */
+export type SlipMode = "parlay" | "straights";
+
 export interface SlipLeg {
   side: BoardSide;
   game: BoardSlateGame;
@@ -130,6 +133,10 @@ export function toPickBody(legs: SlipLeg[], units: string, sgpPrice: string): Vi
     legs: legs.map((l) => legInput(l, multi, !sgp)),
   };
 }
+
+/** Straights mode posts one single-leg ticket per leg, each at its own price. */
+export const toStraightBodies = (legs: SlipLeg[], units: string): VipPickBody[] =>
+  legs.map((l) => toPickBody([l], units, ""));
 
 function dayKey(d: Date, tz: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);

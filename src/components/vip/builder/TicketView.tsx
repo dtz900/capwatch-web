@@ -126,6 +126,41 @@ function useNow(on: boolean): number {
   return now;
 }
 
+/** Fix with its live countdown; "Fix closed" once the window is up. */
+function FixButton({ left, busy, onFix }: { left: number; busy: boolean; onFix: () => void }) {
+  return (
+    <button type="button" className={SECONDARY_BTN} disabled={left <= 0 || busy} onClick={onFix}>
+      {left > 0 ? (
+        <>
+          Fix · <span className="tabular-nums">{mmss(left)}</span>
+        </>
+      ) : (
+        "Fix closed"
+      )}
+    </button>
+  );
+}
+
+/** The inline "Pull this pick?" confirm, shared by the single and batch views. */
+function PullConfirm({ busy, onConfirm, onCancel }: { busy: boolean; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="rounded-xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] px-4 py-4 flex flex-col gap-3">
+      <span className="text-[14px] font-bold text-[var(--color-text)]">Pull this pick?</span>
+      <span className="text-[12px] text-[var(--color-text-soft)]">
+        Subscribers get an alert. It stays on your record as Pulled and counts as no action. This can&apos;t be undone.
+      </span>
+      <div className="flex gap-2">
+        <button type="button" className={PRIMARY_BTN} disabled={busy} onClick={onConfirm}>
+          Pull pick
+        </button>
+        <button type="button" className={SECONDARY_BTN} onClick={onCancel}>
+          Keep it
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function PostedView({
   posted,
   fmt,
@@ -190,28 +225,14 @@ export function PostedView({
       </GlassCard>
 
       {!posted.pulled && confirmPull && (
-        <div className="rounded-xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] px-4 py-4 flex flex-col gap-3">
-          <span className="text-[14px] font-bold text-[var(--color-text)]">Pull this pick?</span>
-          <span className="text-[12px] text-[var(--color-text-soft)]">
-            Subscribers get an alert. It stays on your record as Pulled and counts as no action. This can&apos;t be undone.
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={PRIMARY_BTN}
-              disabled={busy}
-              onClick={() => {
-                onPull();
-                setConfirmPull(false);
-              }}
-            >
-              Pull pick
-            </button>
-            <button type="button" className={SECONDARY_BTN} onClick={() => setConfirmPull(false)}>
-              Keep it
-            </button>
-          </div>
-        </div>
+        <PullConfirm
+          busy={busy}
+          onConfirm={() => {
+            onPull();
+            setConfirmPull(false);
+          }}
+          onCancel={() => setConfirmPull(false)}
+        />
       )}
 
       {/* Phones: Fix and Pull share a row, Post another spans below.
@@ -219,15 +240,7 @@ export function PostedView({
       <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
         {!posted.pulled && !confirmPull && (
           <>
-            <button type="button" className={SECONDARY_BTN} disabled={fixLeft <= 0 || busy} onClick={onFix}>
-              {fixLeft > 0 ? (
-                <>
-                  Fix · <span className="tabular-nums">{mmss(fixLeft)}</span>
-                </>
-              ) : (
-                "Fix closed"
-              )}
-            </button>
+            <FixButton left={fixLeft} busy={busy} onFix={onFix} />
             <button type="button" className={SECONDARY_BTN} disabled={busy} onClick={() => setConfirmPull(true)}>
               Pull
             </button>
@@ -245,6 +258,134 @@ export function PostedView({
       {!posted.pulled && (
         <p className="text-[11px] text-[var(--color-text-muted)]">
           {fixLeft > 0
+            ? "Fix within 10 minutes of posting. Pull anytime before the first game starts."
+            : "The fix window has closed. You can still pull before the first game starts."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** One straight in the batch view: its card, then its own Fix and Pull. */
+function BatchRow({
+  posted,
+  now,
+  fmt,
+  onFix,
+  onPull,
+  busy,
+}: {
+  posted: Posted;
+  now: number;
+  fmt: Fmt;
+  onFix: () => void;
+  onPull: () => void;
+  busy: boolean;
+}) {
+  const [confirmPull, setConfirmPull] = useState(false);
+  return (
+    <div className="flex flex-col gap-2">
+      <GlassCard>
+        <div className="flex items-center gap-2 pb-1">
+          <VipCrown className="w-4 h-4" />
+          <span className={VIP_WORDMARK}>{posted.pulled ? "PULLED" : posted.original ? "FIXED" : "LIVE FOR SUBSCRIBERS"}</span>
+        </div>
+        <TicketView ticket={posted} fmt={fmt} struck={posted.pulled} clamped={posted.clamped} />
+        {posted.original && (
+          <div className="mt-3 rounded-lg bg-[rgba(0,0,0,0.25)] px-3 py-2 text-[12px] text-[rgba(247,243,233,0.55)]">
+            Original: <span className="line-through">{summary(posted.original, fmt)}</span>
+          </div>
+        )}
+      </GlassCard>
+      {!posted.pulled && confirmPull && (
+        <PullConfirm
+          busy={busy}
+          onConfirm={() => {
+            onPull();
+            setConfirmPull(false);
+          }}
+          onCancel={() => setConfirmPull(false)}
+        />
+      )}
+      {!posted.pulled && !confirmPull && (
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <FixButton left={posted.fixDeadline - now} busy={busy} onFix={onFix} />
+          <button type="button" className={SECONDARY_BTN} disabled={busy} onClick={() => setConfirmPull(true)}>
+            Pull
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Straights mode after the post: one card per ticket, each fixed and pulled
+ *  on its own, under a single "sent" header. */
+export function BatchPostedView({
+  batch,
+  fmt,
+  onFix,
+  onPull,
+  onAnother,
+  error,
+  busy,
+}: {
+  batch: Posted[];
+  fmt: Fmt;
+  onFix: (idx: number) => void;
+  onPull: (idx: number) => void;
+  onAnother: () => void;
+  error: string | null;
+  busy: boolean;
+}) {
+  const live = batch.filter((p) => !p.pulled);
+  const now = useNow(live.length > 0);
+  const anyFixOpen = live.some((p) => p.fixDeadline - now > 0);
+  return (
+    <div className="mx-auto w-full max-w-[580px] flex flex-col gap-4 py-2">
+      <div className="flex items-center gap-3">
+        <div
+          className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center ${
+            live.length === 0
+              ? "bg-[rgba(255,255,255,0.06)] text-[var(--color-text-muted)]"
+              : "bg-[linear-gradient(160deg,#6d28d9_0%,#4c1d95_100%)] text-[var(--color-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+          }`}
+        >
+          <svg aria-hidden="true" viewBox="0 0 16 16" className="w-5 h-5">
+            {live.length === 0 ? (
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            ) : (
+              <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            )}
+          </svg>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[18px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
+            {live.length === 0 ? "Picks pulled" : `${batch.length} picks sent to your subscribers`}
+          </span>
+          <span className="text-[12px] text-[var(--color-text-muted)]">
+            {live.length === 0
+              ? "Subscribers were alerted. They stay on your record as Pulled and count as no action."
+              : "One email went out with all of them."}
+          </span>
+        </div>
+      </div>
+
+      {batch.map((p, i) => (
+        <BatchRow key={p.ticketId} posted={p} now={now} fmt={fmt} busy={busy} onFix={() => onFix(i)} onPull={() => onPull(i)} />
+      ))}
+
+      <button type="button" className={`${PRIMARY_BTN} h-11 sm:h-10 sm:self-end`} onClick={onAnother}>
+        Post another
+      </button>
+      {error && (
+        <span role="status" className={ERROR_TEXT}>
+          {error}
+        </span>
+      )}
+      {live.length > 0 && (
+        <p className="text-[11px] text-[var(--color-text-muted)]">
+          {anyFixOpen
             ? "Fix within 10 minutes of posting. Pull anytime before the first game starts."
             : "The fix window has closed. You can still pull before the first game starts."}
         </p>

@@ -16,6 +16,7 @@ const client = vi.hoisted(() => {
     getVipBoardSlate: vi.fn(),
     getVipBoardGame: vi.fn(),
     postVipPick: vi.fn(),
+    postVipPicks: vi.fn(),
     fixVipPick: vi.fn(),
     pullVipPick: vi.fn(),
     searchVipGames: vi.fn(),
@@ -307,5 +308,134 @@ describe("PickBuilder review fixes", () => {
     await screen.findByRole("button", { name: "Bet not on the board?" });
     fireEvent.click(screen.getByRole("button", { name: "MLB pick?" }));
     expect(screen.getByRole("button", { name: "List games" })).toBeInTheDocument();
+  });
+});
+
+
+describe("PickBuilder straights mode", () => {
+  const deadline = () => new Date(Date.now() + 600_000).toISOString();
+  const batchResult = () => ({
+    ok: true,
+    tickets: [
+      { ok: true, created_pick_ids: [51], parlay_id: null, ticket_id: 51, reveal_at: START, fix_deadline: deadline() },
+      { ok: true, created_pick_ids: [52], parlay_id: null, ticket_id: 52, reveal_at: START, fix_deadline: deadline() },
+    ],
+  });
+
+  async function twoLegs() {
+    renderBuilder();
+    await tapPrice(/^\+1\.5/);
+    await tapPrice(/^O 220\.5/);
+  }
+
+  async function postStraights() {
+    client.postVipPicks.mockResolvedValue(batchResult());
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review 2 picks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post 2 picks to subscribers" }));
+    await screen.findByText("2 picks sent to your subscribers");
+  }
+
+  it("offers the mode toggle only with two or more legs", async () => {
+    renderBuilder();
+    await tapPrice(/^\+1\.5/);
+    expect(screen.queryByRole("button", { name: "Straights" })).toBeNull();
+    await tapPrice(/^O 220\.5/);
+    expect(screen.getByRole("button", { name: "Parlay" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Straights" })).toBeInTheDocument();
+  });
+
+  it("switches the slip to per-pick totals and hides the parlay price", async () => {
+    await twoLegs();
+    // Two legs from one game read as a same game parlay until Straights.
+    expect(screen.getByLabelText("Same game parlay price")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    expect(screen.getByText("STRAIGHTS · 2")).toBeInTheDocument();
+    expect(screen.getByText("Units each")).toBeInTheDocument();
+    expect(screen.getByText("2 straights")).toBeInTheDocument();
+    expect(screen.getByText(/Risk 2\.00u/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Same game parlay price")).toBeNull();
+    expect(screen.queryByText("Parlay odds")).toBeNull();
+    expect(screen.getByRole("button", { name: "Review 2 picks" })).toBeEnabled();
+  });
+
+  it("posts one single-leg ticket per leg in a single request", async () => {
+    await postStraights();
+    expect(client.postVipPicks).toHaveBeenCalledTimes(1);
+    expect(client.postVipPick).not.toHaveBeenCalled();
+    const [bodies, token] = client.postVipPicks.mock.calls[0];
+    expect(token).toBe("tok");
+    expect(bodies).toHaveLength(2);
+    expect(bodies.every((b: { legs: unknown[]; combined_odds: unknown }) => b.legs.length === 1 && b.combined_odds === null)).toBe(true);
+    expect(screen.getByText("One email went out with all of them.")).toBeInTheDocument();
+  });
+
+  it("pulls one straight without touching the other", async () => {
+    client.pullVipPick.mockResolvedValue(undefined);
+    await postStraights();
+    fireEvent.click(screen.getAllByRole("button", { name: "Pull" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Pull pick" }));
+    await waitFor(() => expect(client.pullVipPick).toHaveBeenCalledWith(52, "tok"));
+    expect(await screen.findByText("PULLED")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Pull" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^Fix/ })).toHaveLength(1);
+  });
+
+  it("fixes one straight alone and returns to the batch with the rest intact", async () => {
+    client.fixVipPick.mockResolvedValue({
+      ok: true, created_pick_ids: [53], parlay_id: null, ticket_id: 53, reveal_at: START, fix_deadline: deadline(),
+    });
+    await postStraights();
+    fireEvent.click(screen.getAllByRole("button", { name: /^Fix/ })[0]);
+    // One leg in the slip, and no mode toggle while fixing.
+    expect(priceInput("CHA +1.5")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Price for CHA/WSH Over 220.5")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Straights" })).toBeNull();
+    fireEvent.change(priceInput("CHA +1.5"), { target: { value: "-102" } });
+    fireEvent.click(screen.getByRole("button", { name: "Review fix" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save fix" }));
+    expect(await screen.findByText("2 picks sent to your subscribers")).toBeInTheDocument();
+    expect(client.fixVipPick.mock.calls[0][0]).toBe(51);
+    expect(client.postVipPick).not.toHaveBeenCalled();
+    expect(screen.getByText("FIXED")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^Fix/ })).toHaveLength(2);
+  });
+
+  it("a fix can be abandoned and the batch stands", async () => {
+    await postStraights();
+    fireEvent.click(screen.getAllByRole("button", { name: /^Fix/ })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Keep the posted pick" }));
+    expect(await screen.findByText("2 picks sent to your subscribers")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Pull" })).toHaveLength(2);
+  });
+
+  it("Post another clears the batch and returns to Parlay", async () => {
+    await postStraights();
+    fireEvent.click(screen.getByRole("button", { name: "Post another" }));
+    expect(screen.queryByText("2 picks sent to your subscribers")).toBeNull();
+    await tapPrice(/^\+1\.5/);
+    await tapPrice(/^O 220\.5/);
+    expect(screen.getByText("SAME GAME PARLAY · 2")).toBeInTheDocument();
+  });
+
+  it("drops the started legs when the batch is refused", async () => {
+    client.postVipPicks.mockRejectedValue(new client.VipApiError(409, "game_started"));
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review 2 picks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post 2 picks to subscribers" }));
+    expect(await screen.findByText("This game has started.")).toBeInTheDocument();
+  });
+
+  it("keeps Parlay mode on one post with the combined price", async () => {
+    client.postVipPick.mockResolvedValue({ ok: true, created_pick_ids: [70], parlay_id: 3, ticket_id: 70, reveal_at: START });
+    await twoLegs();
+    fireEvent.change(screen.getByLabelText("Same game parlay price"), { target: { value: "+260" } });
+    fireEvent.click(screen.getByRole("button", { name: "Review pick" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post to subscribers" }));
+    expect(await screen.findByText("Sent to your subscribers")).toBeInTheDocument();
+    expect(client.postVipPicks).not.toHaveBeenCalled();
+    expect(client.postVipPick).toHaveBeenCalledTimes(1);
   });
 });

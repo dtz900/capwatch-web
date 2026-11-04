@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { VipCrown } from "@/components/vip/VipCrown";
 import { ERROR_TEXT, EYEBROW, VIP_PRIMARY_BTN, VIP_WORDMARK } from "@/components/vip/styles";
-import { fixVipPick, postVipPick, pullVipPick } from "@/lib/vip/client";
+import { fixVipPick, postVipPick, postVipPicks, pullVipPick } from "@/lib/vip/client";
 import type { BoardSide, BoardSport, VipClamp, VipSport } from "@/lib/vip/types";
 import { bookCount, type Period } from "./adapt";
 import { Board } from "./Board";
@@ -17,8 +17,11 @@ import { ManualEntry } from "./ManualEntry";
 import { OffBoardEntry } from "./OffBoardEntry";
 import { fmtPrice, type Fmt } from "./odds";
 import { Slip, slipTotals } from "./SlipCard";
-import { MAX_LEGS, combinedPrice, isSgp, rebook, reformat, toPickBody, toggleLeg, typed, unlockAt, type SlipLeg } from "./slip";
-import { PostedView, TicketView, summary, type Posted, type Ticket } from "./TicketView";
+import {
+  MAX_LEGS, combinedPrice, isSgp, legPrice, rebook, reformat, toPickBody, toStraightBodies, toggleLeg, typed, unlockAt,
+  type SlipLeg, type SlipMode,
+} from "./slip";
+import { BatchPostedView, PostedView, TicketView, summary, type Posted, type Ticket } from "./TicketView";
 import { BookCtx, FmtCtx, GlassCard, PeriodCtx, Segmented } from "./ui";
 import { useBoards } from "./useBoards";
 
@@ -98,6 +101,11 @@ export function PickBuilder({
   const [period, setPeriod] = useState<Period>("Game");
   const [posted, setPosted] = useState<Posted | null>(null);
   const [fixing, setFixing] = useState(false);
+  const [mode, setMode] = useState<SlipMode>("parlay");
+  // Straights posted in one go, one entry per ticket; fixIdx is the entry
+  // being fixed (the fix itself runs on `posted`, as a single ticket).
+  const [batch, setBatch] = useState<Posted[] | null>(null);
+  const [fixIdx, setFixIdx] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isLg = useIsLg();
@@ -126,7 +134,9 @@ export function PickBuilder({
 
   const allGames = useMemo(() => Object.values(boards.games).flat(), [boards.games]);
   const selected = new Set(legs.map((l) => l.side.key));
-  const totals = slipTotals(legs, units, sgpPrice);
+  // Straights only with 2+ legs, and never while fixing: a fix is one ticket.
+  const straights = mode === "straights" && legs.length >= 2 && !fixing;
+  const totals = slipTotals(legs, units, sgpPrice, straights ? "straights" : "parlay");
 
   const tap = (side: BoardSide, gameId: string) => {
     const g = allGames.find((x) => x.id === gameId && x.sport === side.leg.sport);
@@ -180,11 +190,54 @@ export function PickBuilder({
   /** Leave a fix without saving: the posted ticket stands as it was. */
   const cancelFix = () => {
     setFixing(false);
+    if (fixIdx !== null) {
+      setPosted(null);
+      setFixIdx(null);
+    }
     setStage("posted");
     toBuilderTop();
   };
 
+  /** Straights: one request, one ticket per leg, one subscriber email. */
+  const postStraights = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await postVipPicks(toStraightBodies(legs, units), token);
+      if (res.tickets.length !== legs.length) throw new Error("batch_size_mismatch");
+      const fallback = Date.now() + FIX_WINDOW_MS;
+      setBatch(
+        legs.map((leg, i) => {
+          const r = res.tickets[i];
+          const clamped = r.clamped ?? [];
+          const ticket = applyClamps({ legs: [leg], units, combined: legPrice(leg), book }, clamped, fmt);
+          return {
+            ...ticket,
+            ticketId: r.ticket_id ?? r.created_pick_ids[0],
+            original: null,
+            pulled: false,
+            fixDeadline: r.fix_deadline ? Date.parse(r.fix_deadline) : fallback,
+            clamped,
+          };
+        }),
+      );
+      setPosted(null);
+      setStage("posted");
+      toBuilderTop();
+      onPosted?.();
+    } catch (err) {
+      setError(builderError(err));
+      if (isGameStarted(err)) {
+        updateLegs(dropStarted(legs, Date.now()));
+        setStage("build");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const post = async () => {
+    if (straights) return postStraights();
     setBusy(true);
     setError(null);
     const body = toPickBody(legs, units, sgpPrice);
@@ -194,7 +247,7 @@ export function PickBuilder({
       // recorded price, not the one typed.
       const ticket = applyClamps({ legs, units, combined: totals.combined, book }, res.clamped ?? [], fmt);
       const deadline = res.fix_deadline ? Date.parse(res.fix_deadline) : Date.now() + FIX_WINDOW_MS;
-      setPosted({
+      const next: Posted = {
         ...ticket,
         ticketId: res.ticket_id ?? res.created_pick_ids[0],
         original: fixing && posted
@@ -203,7 +256,16 @@ export function PickBuilder({
         pulled: false,
         fixDeadline: fixing && posted ? posted.fixDeadline : deadline,
         clamped: res.clamped ?? [],
-      });
+      };
+      if (fixIdx !== null) {
+        // One straight of a batch was fixed: it replaces its row, and the
+        // rest of the batch stands.
+        setBatch((b) => b && b.map((row, i) => (i === fixIdx ? next : row)));
+        setPosted(null);
+        setFixIdx(null);
+      } else {
+        setPosted(next);
+      }
       setFixing(false);
       setStage("posted");
       toBuilderTop();
@@ -238,21 +300,43 @@ export function PickBuilder({
     }
   };
 
-  const startFix = () => {
-    if (!posted) return;
-    setLegs(posted.legs);
-    setUnits(posted.units);
+  /** Start a fix on one posted ticket: the single post (idx null) or one
+   *  straight of a batch. */
+  const startFixFor = (p: Posted, idx: number | null) => {
+    setPosted(p);
+    setFixIdx(idx);
+    setLegs(p.legs);
+    setUnits(p.units);
     // A same game parlay carries its book price on the ticket, not the legs.
     // American text reads back exactly; decimal would round (1.63 -> -159).
-    setSgpPrice(isSgp(posted.legs) && posted.combined !== null ? fmtPrice(posted.combined, "american") : "");
+    setSgpPrice(isSgp(p.legs) && p.combined !== null ? fmtPrice(p.combined, "american") : "");
     setError(null);
     setFixing(true);
     setStage("build");
     toBuilderTop();
   };
 
+  const pullAt = async (idx: number) => {
+    const row = batch?.[idx];
+    if (!row) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await pullVipPick(row.ticketId, token);
+      setBatch((b) => b && b.map((r, i) => (i === idx ? { ...r, pulled: true } : r)));
+      onPosted?.();
+    } catch (err) {
+      setError(builderError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const postAnother = () => {
     setPosted(null);
+    setBatch(null);
+    setFixIdx(null);
+    setMode("parlay");
     updateLegs([]);
     setUnits("1");
     setSgpPrice("");
@@ -285,7 +369,7 @@ export function PickBuilder({
                   <span className={VIP_WORDMARK}>VIP</span>
                 </div>
                 <h3 className="text-[24px] leading-none font-extrabold tracking-[-0.02em] text-[var(--color-text)]">
-                  {stage === "posted" ? "Your VIP pick" : fixing ? "Fix your pick" : "New VIP pick"}
+                  {stage === "posted" ? (batch ? "Your VIP picks" : "Your VIP pick") : fixing ? "Fix your pick" : "New VIP pick"}
                 </h3>
                 {stage !== "posted" && (
                   <p className="text-[12px] text-[var(--color-text-muted)]">
@@ -372,6 +456,8 @@ export function PickBuilder({
                       onRemove={(i) => updateLegs(legs.filter((_, j) => j !== i))}
                       onClear={() => updateLegs([])}
                       onReview={review}
+                      mode={mode}
+                      onMode={setMode}
                       fixing={fixing}
                       onCancelFix={cancelFix}
                       isLg={isLg}
@@ -393,24 +479,43 @@ export function PickBuilder({
                             <span className={VIP_WORDMARK}>{fixing ? "PREVIEW FIX" : "PREVIEW"}</span>
                           </div>
                           <p className="text-[13px] font-semibold text-[var(--color-text)]">
-                            {fixing ? "Your subscribers get this change, next to the original." : "This is exactly what your subscribers get."}
+                            {straights
+                              ? `These go out as ${legs.length} separate picks.`
+                              : fixing ? "Your subscribers get this change, next to the original." : "This is exactly what your subscribers get."}
                           </p>
                           {fixing && posted && (
                             <div className="rounded-lg bg-[rgba(0,0,0,0.25)] px-3 py-2 text-[12px] text-[rgba(247,243,233,0.55)]">
                               Replaces: <span className="line-through">{summary(posted.original ?? posted, fmt)}</span>
                             </div>
                           )}
-                          <TicketView ticket={{ legs, units, combined: totals.combined, book }} fmt={fmt} />
+                          {straights ? (
+                            legs.map((l) => (
+                              <div key={l.side.key} className="rounded-lg bg-[rgba(0,0,0,0.2)] px-3 pb-3">
+                                <TicketView ticket={{ legs: [l], units, combined: legPrice(l), book }} fmt={fmt} />
+                              </div>
+                            ))
+                          ) : (
+                            <TicketView ticket={{ legs, units, combined: totals.combined, book }} fmt={fmt} />
+                          )}
                           <div className="flex items-center gap-2 rounded-lg bg-[rgba(0,0,0,0.25)] px-3 py-2.5">
                             <svg aria-hidden="true" viewBox="0 0 16 16" className="w-3.5 h-3.5 shrink-0 text-[var(--color-vip-text)]">
                               <path fill="currentColor" d="M5 7V5a3 3 0 1 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 13.5v-5A1.5 1.5 0 0 1 4.5 7H5Zm1.5 0h3V5a1.5 1.5 0 0 0-3 0v2Z" />
                             </svg>
                             <span className="text-[12px] text-[rgba(247,243,233,0.8)]">
-                              Only your subscribers see this until <span className="font-bold text-[var(--color-text)]">{unlockAt(legs)}</span>. Then everyone can.
+                              {straights ? (
+                                <>
+                                  Each unlocks to everyone 30 minutes after its game starts.
+                                  {unlockAt(legs) && <> The first at <span className="font-bold text-[var(--color-text)]">{unlockAt(legs)}</span>.</>}
+                                </>
+                              ) : (
+                                <>
+                                  Only your subscribers see this until <span className="font-bold text-[var(--color-text)]">{unlockAt(legs)}</span>. Then everyone can.
+                                </>
+                              )}
                             </span>
                           </div>
                           <button type="button" className={`${VIP_PRIMARY_BTN} w-full h-11`} disabled={busy} onClick={post}>
-                            {fixing ? "Save fix" : "Post to subscribers"}
+                            {fixing ? "Save fix" : straights ? `Post ${legs.length} picks to subscribers` : "Post to subscribers"}
                           </button>
                           {error && (
                             <span role="status" className={ERROR_TEXT}>
@@ -432,8 +537,19 @@ export function PickBuilder({
               </div>
             )}
 
-            {stage === "posted" && posted && (
-              <PostedView posted={posted} fmt={fmt} onFix={startFix} onPull={pull} onAnother={postAnother} error={error} busy={busy} />
+            {stage === "posted" && batch && (
+              <BatchPostedView
+                batch={batch}
+                fmt={fmt}
+                onFix={(i) => startFixFor(batch[i], i)}
+                onPull={pullAt}
+                onAnother={postAnother}
+                error={error}
+                busy={busy}
+              />
+            )}
+            {stage === "posted" && !batch && posted && (
+              <PostedView posted={posted} fmt={fmt} onFix={() => startFixFor(posted, null)} onPull={pull} onAnother={postAnother} error={error} busy={busy} />
             )}
           </section>
         </PeriodCtx.Provider>

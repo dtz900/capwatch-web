@@ -7,8 +7,8 @@ import { VIP_GLASS, VIP_GLASS_SHEEN, VIP_PRIMARY_BTN, VIP_WORDMARK } from "@/com
 import { dayLabel, timeLabel } from "./adapt";
 import { OTHER_BOOK, bookName, isPricedBook } from "./books";
 import { fmtPrice, parsePrice, toDecimal } from "./odds";
-import { betterThanBest, combinedPrice, isSgp, legPrice, legSports, quoteAt, type SlipLeg } from "./slip";
-import { BookCtx, FmtCtx, LegLogo } from "./ui";
+import { betterThanBest, combinedPrice, isSgp, legPrice, legSports, quoteAt, type SlipLeg, type SlipMode } from "./slip";
+import { BookCtx, FmtCtx, LegLogo, Segmented } from "./ui";
 
 export interface SlipTotals {
   allPriced: boolean;
@@ -19,20 +19,37 @@ export interface SlipTotals {
   sports: string[];
   combined: number | null;
   toWin: number | null;
+  /** Straights mode with 2+ legs: one ticket per leg, no combined price. */
+  straights: boolean;
+  /** Units each times legs; straights only. */
+  risk: number | null;
 }
 
-export function slipTotals(legs: SlipLeg[], units: string, sgpPrice: string): SlipTotals {
+export function slipTotals(legs: SlipLeg[], units: string, sgpPrice: string, mode: SlipMode = "parlay"): SlipTotals {
   const allPriced = legs.length > 0 && legs.every((l) => legPrice(l) !== null);
   const unitsN = Number(units);
   const unitsOk = units.trim() !== "" && unitsN >= 0.1 && unitsN <= 10;
-  const sameGame = isSgp(legs);
   const sports = legSports(legs);
+  if (mode === "straights" && legs.length >= 2) {
+    // Each leg is its own ticket at its own price, so nothing is combined.
+    const prices = legs.map(legPrice);
+    const priced = prices.every((p) => p !== null);
+    return {
+      allPriced, unitsOk, sports, combined: null,
+      isParlay: false, sameGame: false, multiSport: false, straights: true,
+      risk: unitsOk ? unitsN * legs.length : null,
+      toWin: priced && unitsOk ? prices.reduce<number>((sum, p) => sum + unitsN * (toDecimal(p as number) - 1), 0) : null,
+    };
+  }
+  const sameGame = isSgp(legs);
   // A same game parlay is priced by the book, not by multiplying legs.
   const combined = sameGame ? parsePrice(sgpPrice) : combinedPrice(legs);
   return {
     allPriced, unitsOk, sameGame, sports, combined,
     isParlay: legs.length > 1,
     multiSport: sports.length > 1,
+    straights: false,
+    risk: null,
     toWin: combined !== null && unitsOk ? unitsN * (toDecimal(combined) - 1) : null,
   };
 }
@@ -164,6 +181,9 @@ export interface SlipProps {
   onRemove: (i: number) => void;
   onClear: () => void;
   onReview: () => void;
+  /** The capper's choice; the slip only offers it with 2+ legs. */
+  mode: SlipMode;
+  onMode: (m: SlipMode) => void;
   fixing: boolean;
   /** Leave the fix; the posted ticket stands. */
   onCancelFix: () => void;
@@ -198,7 +218,9 @@ export function Slip(p: SlipProps) {
         <div className="flex items-center gap-2 pb-1">
           <VipCrown className="w-4 h-4" />
           <span className={VIP_WORDMARK}>
-            {t.isParlay
+            {t.straights
+              ? `STRAIGHTS · ${legs.length}`
+              : t.isParlay
               ? `${t.multiSport ? "MULTI-SPORT PARLAY" : t.sameGame ? "SAME GAME PARLAY" : "PARLAY"} · ${legs.length}`
               : "VIP PICK"}
           </span>
@@ -224,6 +246,16 @@ export function Slip(p: SlipProps) {
             </div>
           )}
         </div>
+        {legs.length >= 2 && !p.fixing && (
+          <div className="pb-1">
+            <Segmented<SlipMode>
+              size="sm"
+              value={p.mode}
+              onChange={p.onMode}
+              options={[["parlay", "Parlay"], ["straights", "Straights"]]}
+            />
+          </div>
+        )}
         {p.fixing && (
           <p className="pb-1 text-[11px] text-[rgba(247,243,233,0.7)]">
             Fixing your posted pick. Subscribers see the original next to the change and get a new alert.
@@ -251,14 +283,18 @@ export function Slip(p: SlipProps) {
             <div className="mt-1 pt-4 border-t border-[rgba(255,255,255,0.12)] flex flex-col gap-4">
               <div className="flex items-end justify-between gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[rgba(247,243,233,0.55)]">Units</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[rgba(247,243,233,0.55)]">{t.straights ? "Units each" : "Units"}</span>
                   <UnitsStepper value={p.units} onChange={p.onUnits} />
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[rgba(247,243,233,0.55)]">
-                    {t.sameGame ? "Book's SGP price" : t.isParlay ? "Parlay odds" : "Odds"}
+                    {t.straights ? "Total" : t.sameGame ? "Book's SGP price" : t.isParlay ? "Parlay odds" : "Odds"}
                   </span>
-                  {t.sameGame ? (
+                  {t.straights ? (
+                    <span className="text-[24px] leading-none font-extrabold tabular-nums tracking-[-0.02em] text-[var(--color-text)]">
+                      {legs.length} straights
+                    </span>
+                  ) : t.sameGame ? (
                     <input
                       aria-label="Same game parlay price"
                       inputMode="decimal"
@@ -273,7 +309,11 @@ export function Slip(p: SlipProps) {
                     </span>
                   )}
                   <span className="text-[12px] font-semibold tabular-nums text-[rgba(247,243,233,0.7)]">
-                    {book !== OTHER_BOOK && <>at {bookName(book)} · </>}
+                    {t.straights ? (
+                      <>Risk {t.risk !== null ? `${t.risk.toFixed(2)}u` : "--"} · </>
+                    ) : (
+                      book !== OTHER_BOOK && <>at {bookName(book)} · </>
+                    )}
                     To win {t.toWin !== null ? `${t.toWin.toFixed(2)}u` : "--"}
                   </span>
                 </div>
@@ -293,10 +333,10 @@ export function Slip(p: SlipProps) {
               <button
                 type="button"
                 className={`${VIP_PRIMARY_BTN} w-full h-11`}
-                disabled={!t.allPriced || !t.unitsOk || t.combined === null}
+                disabled={!t.allPriced || !t.unitsOk || (!t.straights && t.combined === null)}
                 onClick={p.onReview}
               >
-                {p.fixing ? "Review fix" : "Review pick"}
+                {p.fixing ? "Review fix" : t.straights ? `Review ${legs.length} picks` : "Review pick"}
               </button>
             </div>
           )}
@@ -319,7 +359,7 @@ export function Slip(p: SlipProps) {
     <>
       {p.open && <div aria-hidden="true" onClick={() => p.onOpen(false)} className="fixed inset-0 z-[58] bg-[rgba(0,0,0,0.55)]" />}
       {!p.open && (
-        <SlipRibbon count={legs.length} price={t.combined !== null ? fmtPrice(t.combined, fmt) : null} onOpen={() => p.onOpen(true)} />
+        <SlipRibbon count={legs.length} price={!t.straights && t.combined !== null ? fmtPrice(t.combined, fmt) : null} onOpen={() => p.onOpen(true)} />
       )}
       {card}
     </>,

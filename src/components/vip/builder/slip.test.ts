@@ -13,6 +13,7 @@ import {
   rebook,
   reformat,
   toPickBody,
+  toStraightBodies,
   toggleLeg,
   typed,
   unlockAt,
@@ -223,5 +224,38 @@ describe("manual leg labels", () => {
     expect(manualLabel({ selection: "NYY", stat_name: "spread", line: 1.5 })).toBe("NYY +1.5");
     expect(manualLabel({ selection: "NYY -1.5", stat_name: "spread", line: -1.5 })).toBe("NYY -1.5");
     expect(manualLabel({ selection: "Yankees ML", stat_name: "win" })).toBe("Yankees ML");
+  });
+});
+
+describe("toStraightBodies", () => {
+  const two = () => {
+    const a = toggleLeg([], side(), GAME, "fanduel", "american");
+    return toggleLeg(a, side({ key: "n1:ml", label: "DEN ML", leg: { sport: "NFL", game_id: "n1", stat_name: "moneyline", selection: "DEN", line: null } }), NFL, "fanduel", "american");
+  };
+
+  it("posts one single-leg body per leg with its own odds", () => {
+    const [first, second] = two();
+    const bodies = toStraightBodies([typed(first, "-120"), second], "2");
+    expect(bodies).toHaveLength(2);
+    for (const b of bodies) {
+      expect(b.legs).toHaveLength(1);
+      expect(b.units).toBe(2);
+      expect(b.combined_odds).toBeNull();
+    }
+    expect(bodies[0].legs[0].odds).toBe(-120);
+    expect(bodies[1].legs[0].odds).toBeDefined();
+  });
+
+  it("tags each body with its own sport, never Multi", () => {
+    const bodies = toStraightBodies(two(), "1");
+    expect(bodies.map((b) => b.sport)).toEqual(["NBA", "NFL"]);
+  });
+
+  it("keeps two legs from one game as two priced straights", () => {
+    const a = toggleLeg([], side(), GAME, "fanduel", "american");
+    const both = toggleLeg(a, side({ key: "g1:to:o", label: "Over 220.5", leg: { stat_name: "total", selection: "Over", line: 220.5, direction: "over" } }), GAME, "fanduel", "american");
+    const bodies = toStraightBodies(both, "1");
+    expect(bodies).toHaveLength(2);
+    expect(bodies.every((b) => b.combined_odds === null && b.legs[0].odds !== undefined)).toBe(true);
   });
 });

@@ -3,6 +3,7 @@ import type {
   BoardGame,
   BoardSlateGame,
   BoardSport,
+  VipBatchResult,
   VipCapperStatus,
   VipGameResult,
   VipMe,
@@ -131,6 +132,15 @@ export function postVipPick(body: VipPickBody, token: string | null) {
   return vipFetch<VipPickResult>("/api/vip/picks", {
     method: "POST",
     body: JSON.stringify(body),
+    token,
+  });
+}
+
+/* Several straights in one post: one request, one subscriber email. */
+export function postVipPicks(bodies: VipPickBody[], token: string | null) {
+  return vipFetch<VipBatchResult>("/api/vip/picks/batch", {
+    method: "POST",
+    body: JSON.stringify({ tickets: bodies }),
     token,
   });
 }
