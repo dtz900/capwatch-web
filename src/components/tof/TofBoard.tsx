@@ -4,7 +4,7 @@ import { unitsLabel } from "@/lib/tof/deck";
 import Link from "next/link";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { BoardAvatar } from "./BoardAvatar";
-import type { TofPrize } from "@/lib/tof/prize";
+import { WEEK_MIN_PLAYS, type TofPrize } from "@/lib/tof/prize";
 
 const RANK_COLOR = ["#f5c54a", "#d4d4d8", "#c8814a"];
 
@@ -18,7 +18,7 @@ export interface TofBoardMe {
 const START_LABEL = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
 
 /** The sponsored weekly prize, on top of the board it is decided by. */
-function PrizeBanner({ prize, live }: { prize: TofPrize; live: boolean }) {
+function PrizeBanner({ prize, live, minPlays }: { prize: TofPrize; live: boolean; minPlays: number }) {
   const starts = START_LABEL.format(new Date(`${prize.starts}T12:00:00Z`));
   return (
     <div className="mb-3 rounded-lg border border-[rgba(245,197,74,0.35)] bg-[rgba(245,197,74,0.07)] px-3 py-2.5">
@@ -26,7 +26,7 @@ function PrizeBanner({ prize, live }: { prize: TofPrize; live: boolean }) {
         {live ? `${prize.amount} to this week's top player` : `${prize.amount} weekly prize starts ${starts}`}
       </div>
       <div className="mt-0.5 text-[11px] leading-snug text-[var(--color-text-soft)]">
-        Most units wins. Min {prize.min_plays} plays, Tuesday through Monday. Free to play.
+        Most units wins. Min {minPlays} plays, Tuesday through Monday. Free to play.
       </div>
       <div className="mt-1 text-[10px] font-bold text-[var(--color-text-muted)]">
         Sponsored by{" "}
@@ -46,7 +46,7 @@ export function TofBoard({ rows, me, minPlays, period = "month", prize = null }:
   const meOnBoard = me ? rows.some((r) => r.username === me.username) : false;
   return (
     <div className="rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-4">
-      {prize && <PrizeBanner prize={prize.prize} live={prize.live} />}
+      {prize && <PrizeBanner prize={prize.prize} live={prize.live} minPlays={prize.live ? minPlays : WEEK_MIN_PLAYS} />}
       <div className="flex items-baseline justify-between">
         <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Tailers · this {period}</div>
         <div className="text-[10px] font-bold text-[#52525b]">min {minPlays} plays</div>

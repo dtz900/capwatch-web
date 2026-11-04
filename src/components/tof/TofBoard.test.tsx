@@ -23,7 +23,7 @@ describe("TofBoard avatars", () => {
   });
 
   it("shows the sponsored prize and the week label when the prize is live", () => {
-    const prize = { enabled: true, amount: "$25", sponsor_handle: "doctorsportshq", min_plays: 15, starts: "2026-11-10", ends: null };
+    const prize = { enabled: true, amount: "$25", sponsor_handle: "doctorsportshq", starts: "2026-11-10", ends: null };
     render(<TofBoard rows={[]} me={null} minPlays={15} period="week" prize={{ prize, live: true }} />);
     expect(screen.getByText("$25 to this week's top player")).toBeInTheDocument();
     expect(screen.getByText("Tailers · this week")).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe("TofBoard avatars", () => {
   });
 
   it("announces an upcoming prize by its start date", () => {
-    const prize = { enabled: true, amount: "$25", sponsor_handle: "doctorsportshq", min_plays: 15, starts: "2026-11-10", ends: null };
+    const prize = { enabled: true, amount: "$25", sponsor_handle: "doctorsportshq", starts: "2026-11-10", ends: null };
     render(<TofBoard rows={[]} me={null} minPlays={10} prize={{ prize, live: false }} />);
     expect(screen.getByText("$25 weekly prize starts Tue, Nov 10")).toBeInTheDocument();
     expect(screen.getByText("Tailers · this month")).toBeInTheDocument();

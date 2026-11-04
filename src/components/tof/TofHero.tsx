@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -20,6 +20,7 @@ import { activePrize, type TofPrize } from "@/lib/tof/prize";
 import prizeJson from "../../../public/tof-prize.json";
 
 const RETURN_COOKIE = "ts_return_to";
+const noopSubscribe = () => () => {};
 
 const FELT = "radial-gradient(ellipse 62% 120% at 50% 40%, #12432f 0%, #0c2f22 45%, #071c15 72%, #0a0a0c 100%)";
 const REFETCH_MS = 60_000;
@@ -108,7 +109,10 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [toast, setToast] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   // The sponsored weekly prize. While it is live the rail ranks the week.
-  const prize = activePrize(prizeJson as TofPrize, now);
+  // Client-only: the page is ISR, so HTML baked before a start or end date
+  // must not hydrate against a different answer.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const prize = hydrated ? activePrize(prizeJson as TofPrize, now) : null;
   const boardWindow: "week" | "month" = prize?.live ? "week" : "month";
   // Signed-out passes have nowhere to persist: there is no tof_plays row to
   // write. Without this the deck would re-deal the same top card forever.
