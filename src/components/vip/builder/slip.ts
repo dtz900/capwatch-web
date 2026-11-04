@@ -11,6 +11,9 @@ export const OFF_FEED_BOOKS: ReadonlySet<string> = new Set(["betfair", "bet365"]
 export const isPricedBook = (book: string) => book !== OTHER_BOOK && !OFF_FEED_BOOKS.has(book);
 export const MAX_LEGS = 10;
 
+/** Two or more legs post as one parlay, or as one straight each. */
+export type SlipMode = "parlay" | "straights";
+
 export interface SlipLeg {
   side: BoardSide;
   game: BoardSlateGame;
@@ -25,6 +28,9 @@ export interface SlipLeg {
   american?: number;
   /** Off-board leg from the structured editor: posted exactly as built. */
   manual?: ManualLegInput;
+  /** This straight's own units. Only Straights mode reads it; a parlay uses
+   *  the ticket's single value. Kept across a switch back to Parlay. */
+  units?: string;
 }
 
 /** That book's price at this exact rung, or null if it doesn't hang it. */
@@ -63,7 +69,10 @@ export function toggleLeg(
   const pair = pairKey(side);
   const kept = legs.filter((l) => pairKey(l.side) !== pair);
   if (kept.length >= MAX_LEGS) return legs;
-  return [...kept, { side, game, ...prefilled(side, book, fmt) }];
+  // Flipping a side keeps the units the capper set on the one it replaces.
+  const replaced = legs.find((l) => pairKey(l.side) === pair);
+  const carry = replaced?.units !== undefined ? { units: replaced.units } : {};
+  return [...kept, { side, game, ...prefilled(side, book, fmt), ...carry }];
 }
 
 /** Re-prefill the legs the capper hasn't typed over. */
@@ -129,6 +138,24 @@ export function toPickBody(legs: SlipLeg[], units: string, sgpPrice: string): Vi
     combined_odds: sgp ? parsePrice(sgpPrice) : null,
     legs: legs.map((l) => legInput(l, multi, !sgp)),
   };
+}
+
+/** Straights mode posts one single-leg ticket per leg, each at its own price
+ *  and its own units (the slip's value when a leg has none). */
+export const toStraightBodies = (legs: SlipLeg[], units: string): VipPickBody[] =>
+  legs.map((l) => toPickBody([l], l.units ?? units, ""));
+
+/** Give each leg without units a value: the previous leg's, else `fallback`.
+ *  A leg that already has units keeps them. */
+export function seedUnits(legs: SlipLeg[], fallback: string): SlipLeg[] {
+  let last = fallback;
+  return legs.map((l) => {
+    if (l.units !== undefined) {
+      last = l.units;
+      return l;
+    }
+    return { ...l, units: last };
+  });
 }
 
 function dayKey(d: Date, tz: string): string {

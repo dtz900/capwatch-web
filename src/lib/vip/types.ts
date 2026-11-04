@@ -220,6 +220,12 @@ export interface VipPickResult {
   clamped?: VipClamp[];
 }
 
+/** POST /api/vip/picks/batch: one result per ticket, in request order. */
+export interface VipBatchResult {
+  ok: true;
+  tickets: VipPickResult[];
+}
+
 /* ---------- pick builder board (GET /api/vip/board/...) ---------- */
 
 export type BoardSport = "NBA" | "NFL";
