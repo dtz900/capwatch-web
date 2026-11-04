@@ -69,7 +69,10 @@ export function toggleLeg(
   const pair = pairKey(side);
   const kept = legs.filter((l) => pairKey(l.side) !== pair);
   if (kept.length >= MAX_LEGS) return legs;
-  return [...kept, { side, game, ...prefilled(side, book, fmt) }];
+  // Flipping a side keeps the units the capper set on the one it replaces.
+  const replaced = legs.find((l) => pairKey(l.side) === pair);
+  const carry = replaced?.units !== undefined ? { units: replaced.units } : {};
+  return [...kept, { side, game, ...prefilled(side, book, fmt), ...carry }];
 }
 
 /** Re-prefill the legs the capper hasn't typed over. */

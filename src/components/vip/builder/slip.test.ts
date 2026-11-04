@@ -272,4 +272,16 @@ describe("toStraightBodies", () => {
     expect(out.map((l) => l.units)).toEqual(["3", "3"]);
     expect(seedUnits([first, second], "2").map((l) => l.units)).toEqual(["2", "2"]);
   });
+
+  it("flipping a side carries the replaced leg's units", () => {
+    const a = side();
+    const flip = side({ key: "g1:Game:sp:HOME:-1", label: "WSH -1", leg: { selection: "WSH", line: -1 } });
+    const [first, second] = two();
+    const withUnits = [{ ...first, units: "3" }, second];
+    const out = toggleLeg(withUnits, flip, GAME, "fanduel", "american");
+    expect(out.find((l) => l.side.key === flip.key)?.units).toBe("3");
+    expect(out.find((l) => l.side.key === a.key)).toBeUndefined();
+    // No units set: nothing is invented.
+    expect("units" in toggleLeg(two(), flip, GAME, "fanduel", "american")[1]).toBe(false);
+  });
 });

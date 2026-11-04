@@ -33,6 +33,14 @@ export function builderError(err: unknown): string {
   return "Could not post the pick. Try again.";
 }
 
+/** A batch post: a duplicate means nothing at all was sent. */
+export function batchError(err: unknown): string {
+  if (err instanceof VipApiError && err.status === 409 && err.detail === "duplicate_pick") {
+    return "One of these picks is already posted, or is on the slip twice. Nothing was sent.";
+  }
+  return builderError(err);
+}
+
 export const isFixClosed = (err: unknown) =>
   err instanceof VipApiError && err.status === 409 && err.detail === "fix_window_closed";
 

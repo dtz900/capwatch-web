@@ -12,7 +12,7 @@ import type { BoardSide, BoardSport, VipClamp, VipSport } from "@/lib/vip/types"
 import { bookCount, type Period } from "./adapt";
 import { Board } from "./Board";
 import { BOOKS, OTHER_BOOK, defaultBook } from "./books";
-import { builderError, isFixClosed, isGameStarted } from "./errors";
+import { batchError, builderError, isFixClosed, isGameStarted } from "./errors";
 import { ManualEntry } from "./ManualEntry";
 import { OffBoardEntry } from "./OffBoardEntry";
 import { fmtPrice, type Fmt } from "./odds";
@@ -138,9 +138,25 @@ export function PickBuilder({
   const straights = mode === "straights" && legs.length >= 2 && !fixing;
   const totals = slipTotals(legs, units, sgpPrice, straights ? "straights" : "parlay");
 
-  /** In Straights mode a new leg takes the last leg's units (the slip's if
-   *  the slip was empty). With one leg the shared stepper rules, so wait. */
-  const seedNew = (next: SlipLeg[]) => (mode === "straights" && next.length >= 2 ? seedUnits(next, units) : next);
+  /** Every change to the slip's legs goes through here, so the shared units
+   *  and the per-leg units agree across the one-leg boundary. */
+  const applyLegs = (next: SlipLeg[]) => {
+    let out = next;
+    if (next.length === 0) {
+      setMode("parlay");
+    } else if (mode === "straights") {
+      if (straights && next.length === 1) {
+        // One leg left posts as a plain pick at the shared stepper: hand it
+        // the units that leg had.
+        setUnits(next[0].units ?? units);
+      } else if (next.length >= 2) {
+        // Growing from one leg, the shared stepper is the truth, so the old
+        // leg's stored value is stale. Past that, a new leg takes the last leg's.
+        out = seedUnits(legs.length >= 2 ? next : next.map((l) => ({ ...l, units: undefined })), units);
+      }
+    }
+    updateLegs(out);
+  };
 
   const switchMode = (next: SlipMode) => {
     setMode(next);
@@ -152,7 +168,7 @@ export function PickBuilder({
     const g = allGames.find((x) => x.id === gameId && x.sport === side.leg.sport);
     if (!g) return;
     setStage("build");
-    updateLegs(seedNew(toggleLeg(legs, side, g.slate, book, fmt)));
+    applyLegs(toggleLeg(legs, side, g.slate, book, fmt));
   };
 
   /** False (and nothing added) when the batch would pass the leg limit, so
@@ -164,7 +180,7 @@ export function PickBuilder({
     }
     setError(null);
     setStage("build");
-    setLegs(seedNew([...legs, ...more]));
+    applyLegs([...legs, ...more]);
     return true;
   };
 
@@ -214,7 +230,12 @@ export function PickBuilder({
     setError(null);
     try {
       const res = await postVipPicks(toStraightBodies(legs, units), token);
-      if (res.tickets.length !== legs.length) throw new Error("batch_size_mismatch");
+      if (res.tickets.length !== legs.length) {
+        // The server committed but the answer does not line up: do not invite a retry.
+        setError("Your picks may have posted. Refresh to check before posting again.");
+        onPosted?.();
+        return;
+      }
       const fallback = Date.now() + FIX_WINDOW_MS;
       setBatch(
         legs.map((leg, i) => {
@@ -236,9 +257,9 @@ export function PickBuilder({
       toBuilderTop();
       onPosted?.();
     } catch (err) {
-      setError(builderError(err));
+      setError(batchError(err));
       if (isGameStarted(err)) {
-        updateLegs(dropStarted(legs, Date.now()));
+        applyLegs(dropStarted(legs, Date.now()));
         setStage("build");
       }
     } finally {
@@ -463,8 +484,8 @@ export function PickBuilder({
                       sgpPrice={sgpPrice}
                       onSgpPrice={setSgpPrice}
                       onPrice={(i, v) => setLegs(legs.map((x, j) => (j === i ? typed(x, v) : x)))}
-                      onRemove={(i) => updateLegs(legs.filter((_, j) => j !== i))}
-                      onClear={() => updateLegs([])}
+                      onRemove={(i) => applyLegs(legs.filter((_, j) => j !== i))}
+                      onClear={() => applyLegs([])}
                       onReview={review}
                       mode={mode}
                       onMode={switchMode}

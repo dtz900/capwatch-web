@@ -476,4 +476,80 @@ describe("PickBuilder straights mode", () => {
     fireEvent.click(screen.getByRole("button", { name: "Straights" }));
     expect(screen.getByLabelText("Units for CHA/WSH Over 220.5")).toHaveValue("3");
   });
+
+  it("a straight left alone keeps its units, and posts them", async () => {
+    client.postVipPick.mockResolvedValue({ ok: true, created_pick_ids: [80], parlay_id: null, ticket_id: 80, reveal_at: START });
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.change(screen.getByLabelText("Units for CHA +1.5"), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Remove CHA/WSH Over 220.5" }));
+    expect(screen.getByLabelText("Units")).toHaveValue("3");
+    fireEvent.click(screen.getByRole("button", { name: "Review pick" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post to subscribers" }));
+    await waitFor(() => expect(client.postVipPick).toHaveBeenCalled());
+    expect(client.postVipPick.mock.calls[0][0].units).toBe(3);
+  });
+
+  it("the shared units seed both legs when a one-leg slip grows back", async () => {
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove CHA/WSH Over 220.5" }));
+    fireEvent.change(screen.getByLabelText("Units"), { target: { value: "3" } });
+    await tapPrice(/^O 220\.5/);
+    expect(screen.getByLabelText("Units for CHA +1.5")).toHaveValue("3");
+    expect(screen.getByLabelText("Units for CHA/WSH Over 220.5")).toHaveValue("3");
+  });
+
+  it("keeps the surviving leg's units when a started game is dropped", async () => {
+    const G2_START = new Date(Date.parse(START) + 10 * 60 * 1000).toISOString();
+    const spread2 = side("g2:sp:a", "BOS +3.5", "+3.5", -110, { fanduel: -105 },
+      { game_id: "g2", selection: "BOS", line: 3.5 });
+    const spread2h = side("g2:sp:h", "NYK -3.5", "-3.5", -110, { fanduel: -115 },
+      { game_id: "g2", selection: "NYK", line: -3.5 });
+    const BOARD2: BoardGame = {
+      ...BOARD, game_id: "g2", away: "BOS", home: "NYK", commence_time: G2_START,
+      periods: { Game: { ...BOARD.periods.Game!, spread: [spread2, spread2h], total: null } }, props: [],
+    };
+    client.getVipBoardSlate.mockResolvedValue({ games: [BOARD, BOARD2] });
+    client.getVipBoardGame.mockImplementation(async (_s: string, id: string) => (id === "g2" ? BOARD2 : BOARD));
+    client.postVipPicks.mockRejectedValue(new client.VipApiError(409, "game_started"));
+    renderBuilder();
+    await tapPrice(/^\+1\.5/);
+    await tapPrice(/^\+3\.5/);
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.change(screen.getByLabelText("Units for BOS +3.5"), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Review 2 picks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post 2 picks to subscribers" }));
+    expect(await screen.findByText("This game has started.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Price for CHA +1.5")).toBeNull();
+    expect(screen.getByLabelText("Units")).toHaveValue("3");
+  });
+
+  it("says nothing was sent when the batch has a duplicate", async () => {
+    client.postVipPicks.mockRejectedValue(new client.VipApiError(409, "duplicate_pick"));
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review 2 picks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post 2 picks to subscribers" }));
+    expect(await screen.findByText(/Nothing was sent\./)).toBeInTheDocument();
+  });
+
+  it("does not invite a retry when the batch answer does not match", async () => {
+    client.postVipPicks.mockResolvedValue({ ok: true, tickets: [] });
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review 2 picks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post 2 picks to subscribers" }));
+    expect(await screen.findByText(/may have posted/)).toBeInTheDocument();
+    expect(screen.queryByText(/Try again/)).toBeNull();
+  });
+
+  it("Clear returns the slip to Parlay", async () => {
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    await tapPrice(/^\+1\.5/);
+    await tapPrice(/^O 220\.5/);
+    expect(screen.getByText("SAME GAME PARLAY · 2")).toBeInTheDocument();
+  });
 });
