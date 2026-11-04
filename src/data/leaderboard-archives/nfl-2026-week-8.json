@@ -9,12 +9,12 @@
  "frozenAt": "2026-11-03",
  "games": 14,
  "totals": {
-  "graded": 1250,
-  "wins": 576,
+  "graded": 1252,
+  "wins": 578,
   "losses": 659,
   "pushes": 1,
   "voids": 14,
-  "netUnits": -118.14,
+  "netUnits": -116.22,
   "unpriced": 41
  },
  "liveHref": "/slate?sport=nfl&week=8",
@@ -112,6 +112,19 @@
   },
   {
    "rank": 8,
+   "handle": "buffdaddybets",
+   "displayName": "Buff Daddy",
+   "avatarUrl": "https://pbs.twimg.com/profile_images/2114776320336973824/F49hkhKj.jpg",
+   "wins": 8,
+   "losses": 5,
+   "pushes": 0,
+   "voids": 0,
+   "graded": 13,
+   "netUnits": 5.16,
+   "unpriced": 0
+  },
+  {
+   "rank": 9,
    "handle": "joes_picks",
    "displayName": "Joe’s Picks",
    "avatarUrl": "https://pbs.twimg.com/profile_images/1833664941468876800/hA6lCzgR.jpg",
@@ -124,7 +137,7 @@
    "unpriced": 0
   },
   {
-   "rank": 9,
+   "rank": 10,
    "handle": "spreadwizard",
    "displayName": "SpreadWizard",
    "avatarUrl": "https://pbs.twimg.com/profile_images/566810650152685570/2jewUzVS.jpeg",
@@ -137,7 +150,7 @@
    "unpriced": 0
   },
   {
-   "rank": 10,
+   "rank": 11,
    "handle": "robotbets",
    "displayName": "RobotBots",
    "avatarUrl": "https://pbs.twimg.com/profile_images/2072440113486065664/dkbZNlSW.jpg",
@@ -147,19 +160,6 @@
    "voids": 0,
    "graded": 7,
    "netUnits": 3.36,
-   "unpriced": 0
-  },
-  {
-   "rank": 11,
-   "handle": "buffdaddybets",
-   "displayName": "Buff Daddy",
-   "avatarUrl": "https://pbs.twimg.com/profile_images/2114776320336973824/F49hkhKj.jpg",
-   "wins": 6,
-   "losses": 5,
-   "pushes": 0,
-   "voids": 0,
-   "graded": 11,
-   "netUnits": 3.24,
    "unpriced": 0
   },
   {
