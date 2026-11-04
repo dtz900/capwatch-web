@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { errorRedirectTarget } from "./redirects";
 
 const RETURN_COOKIE = "ts_return_to";
@@ -23,7 +24,14 @@ const LINK_RETURN_COOKIE = "ts_link_return";
  * it makes Supabase answer flow_state_not_found. That is not a bug the user
  * can diagnose from a silent bounce, so failures now land on /login with a
  * specific message and the option to request a fresh link from this browser.
+ *
+ * The Magic Link email can also link here directly with ?token_hash=&type=
+ * (template: {{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=magiclink).
+ * That keeps the emailed link on tailslips.com instead of a supabase.co
+ * verify URL, which spam filters read as phishing, and it needs no PKCE
+ * verifier cookie, so it works in any browser.
  */
+const TOKEN_HASH_TYPES = new Set<EmailOtpType>(["magiclink", "email", "signup"]);
 /** A failure lands on the page the user left (identity link) or /login (sign-in). */
 async function errorRedirect(origin: string, message: string): Promise<NextResponse> {
   const jar = await cookies();
@@ -44,7 +52,19 @@ export async function GET(request: Request) {
     return errorRedirect(origin, providerErrorDesc || providerError);
   }
 
-  if (code) {
+  const tokenHash = searchParams.get("token_hash");
+  const tokenType = searchParams.get("type") as EmailOtpType | null;
+
+  if (tokenHash) {
+    if (!tokenType || !TOKEN_HASH_TYPES.has(tokenType)) {
+      return errorRedirect(origin, "That sign-in link is not valid. Request a new one.");
+    }
+    const supabase = await createServerSupabase();
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: tokenType });
+    if (error) {
+      return errorRedirect(origin, `Sign-in failed: ${error.message}. Request a new link.`);
+    }
+  } else if (code) {
     const supabase = await createServerSupabase();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
