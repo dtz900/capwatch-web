@@ -17,10 +17,20 @@ vi.mock("next/headers", () => ({
   }),
 }));
 
-const supa = vi.hoisted(() => ({ exchangeError: null as null | { message: string; code?: string } }));
+const supa = vi.hoisted(() => ({
+  exchangeError: null as null | { message: string; code?: string },
+  verifyError: null as null | { message: string },
+  verifyCalls: [] as unknown[],
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabase: async () => ({
-    auth: { exchangeCodeForSession: async () => ({ error: supa.exchangeError }) },
+    auth: {
+      exchangeCodeForSession: async () => ({ error: supa.exchangeError }),
+      verifyOtp: async (args: unknown) => {
+        supa.verifyCalls.push(args);
+        return { error: supa.verifyError };
+      },
+    },
   }),
 }));
 
@@ -36,6 +46,8 @@ describe("auth callback error routing", () => {
     jarState.cookies.clear();
     jarState.deleted.length = 0;
     supa.exchangeError = null;
+    supa.verifyError = null;
+    supa.verifyCalls.length = 0;
   });
   afterEach(() => vi.restoreAllMocks());
 
@@ -65,5 +77,24 @@ describe("auth callback error routing", () => {
     jarState.cookies.set("ts_return_to", encodeURIComponent("/cappers/bigbuckbets"));
     const loc = await location("https://tailslips.com/auth/callback?code=abc");
     expect(loc).toBe("https://tailslips.com/cappers/bigbuckbets");
+  });
+
+  it("a token_hash link verifies on tailslips.com and returns to the sign-in page", async () => {
+    jarState.cookies.set("ts_return_to", encodeURIComponent("/cappers/bigbuckbets"));
+    const loc = await location("https://tailslips.com/auth/callback?token_hash=th1&type=magiclink");
+    expect(supa.verifyCalls).toEqual([{ token_hash: "th1", type: "magiclink" }]);
+    expect(loc).toBe("https://tailslips.com/cappers/bigbuckbets");
+  });
+
+  it("a failed token_hash verify lands on /login with a message", async () => {
+    supa.verifyError = { message: "Email link is invalid or has expired" };
+    const loc = await location("https://tailslips.com/auth/callback?token_hash=th1&type=magiclink");
+    expect(loc.startsWith("https://tailslips.com/login?error=")).toBe(true);
+  });
+
+  it("rejects a token_hash with an unexpected type without calling Supabase", async () => {
+    const loc = await location("https://tailslips.com/auth/callback?token_hash=th1&type=recovery");
+    expect(supa.verifyCalls).toHaveLength(0);
+    expect(loc.startsWith("https://tailslips.com/login?error=")).toBe(true);
   });
 });
