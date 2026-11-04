@@ -18,7 +18,7 @@ import { OffBoardEntry } from "./OffBoardEntry";
 import { fmtPrice, type Fmt } from "./odds";
 import { Slip, slipTotals } from "./SlipCard";
 import {
-  MAX_LEGS, combinedPrice, isSgp, legPrice, rebook, reformat, toPickBody, toStraightBodies, toggleLeg, typed, unlockAt,
+  MAX_LEGS, combinedPrice, isSgp, legPrice, rebook, reformat, toPickBody, seedUnits, toStraightBodies, toggleLeg, typed, unlockAt,
   type SlipLeg, type SlipMode,
 } from "./slip";
 import { BatchPostedView, PostedView, TicketView, summary, type Posted, type Ticket } from "./TicketView";
@@ -138,11 +138,21 @@ export function PickBuilder({
   const straights = mode === "straights" && legs.length >= 2 && !fixing;
   const totals = slipTotals(legs, units, sgpPrice, straights ? "straights" : "parlay");
 
+  /** In Straights mode a new leg takes the last leg's units (the slip's if
+   *  the slip was empty). With one leg the shared stepper rules, so wait. */
+  const seedNew = (next: SlipLeg[]) => (mode === "straights" && next.length >= 2 ? seedUnits(next, units) : next);
+
+  const switchMode = (next: SlipMode) => {
+    setMode(next);
+    // Every leg starts at the slip's units; Parlay keeps them for the way back.
+    if (next === "straights") setLegs(seedUnits(legs, units));
+  };
+
   const tap = (side: BoardSide, gameId: string) => {
     const g = allGames.find((x) => x.id === gameId && x.sport === side.leg.sport);
     if (!g) return;
     setStage("build");
-    updateLegs(toggleLeg(legs, side, g.slate, book, fmt));
+    updateLegs(seedNew(toggleLeg(legs, side, g.slate, book, fmt)));
   };
 
   /** False (and nothing added) when the batch would pass the leg limit, so
@@ -154,7 +164,7 @@ export function PickBuilder({
     }
     setError(null);
     setStage("build");
-    setLegs([...legs, ...more]);
+    setLegs(seedNew([...legs, ...more]));
     return true;
   };
 
@@ -210,7 +220,7 @@ export function PickBuilder({
         legs.map((leg, i) => {
           const r = res.tickets[i];
           const clamped = r.clamped ?? [];
-          const ticket = applyClamps({ legs: [leg], units, combined: legPrice(leg), book }, clamped, fmt);
+          const ticket = applyClamps({ legs: [leg], units: leg.units ?? units, combined: legPrice(leg), book }, clamped, fmt);
           return {
             ...ticket,
             ticketId: r.ticket_id ?? r.created_pick_ids[0],
@@ -457,7 +467,8 @@ export function PickBuilder({
                       onClear={() => updateLegs([])}
                       onReview={review}
                       mode={mode}
-                      onMode={setMode}
+                      onMode={switchMode}
+                      onLegUnits={(i, v) => setLegs(legs.map((x, j) => (j === i ? { ...x, units: v } : x)))}
                       fixing={fixing}
                       onCancelFix={cancelFix}
                       isLg={isLg}
@@ -491,7 +502,7 @@ export function PickBuilder({
                           {straights ? (
                             legs.map((l) => (
                               <div key={l.side.key} className="rounded-lg bg-[rgba(0,0,0,0.2)] px-3 pb-3">
-                                <TicketView ticket={{ legs: [l], units, combined: legPrice(l), book }} fmt={fmt} />
+                                <TicketView ticket={{ legs: [l], units: l.units ?? units, combined: legPrice(l), book }} fmt={fmt} />
                               </div>
                             ))
                           ) : (

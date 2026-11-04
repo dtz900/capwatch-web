@@ -352,7 +352,9 @@ describe("PickBuilder straights mode", () => {
     expect(screen.getByLabelText("Same game parlay price")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Straights" }));
     expect(screen.getByText("STRAIGHTS · 2")).toBeInTheDocument();
-    expect(screen.getByText("Units each")).toBeInTheDocument();
+    expect(screen.queryByText("Units each")).toBeNull();
+    expect(screen.getByLabelText("Units for CHA +1.5")).toHaveValue("1");
+    expect(screen.getByLabelText("Units for CHA/WSH Over 220.5")).toHaveValue("1");
     expect(screen.getByText("2 straights")).toBeInTheDocument();
     expect(screen.getByText(/Risk 2\.00u/)).toBeInTheDocument();
     expect(screen.queryByLabelText("Same game parlay price")).toBeNull();
@@ -437,5 +439,41 @@ describe("PickBuilder straights mode", () => {
     expect(await screen.findByText("Sent to your subscribers")).toBeInTheDocument();
     expect(client.postVipPicks).not.toHaveBeenCalled();
     expect(client.postVipPick).toHaveBeenCalledTimes(1);
+  });
+
+  it("posts each straight at its own units and totals the risk", async () => {
+    client.postVipPicks.mockResolvedValue(batchResult());
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.change(screen.getByLabelText("Units for CHA/WSH Over 220.5"), { target: { value: "2.5" } });
+    expect(screen.getByText(/Risk 3\.50u/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Review 2 picks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post 2 picks to subscribers" }));
+    await screen.findByText("2 picks sent to your subscribers");
+    const bodies = client.postVipPicks.mock.calls[0][0];
+    expect(bodies.map((b: { units: number }) => b.units)).toEqual([1, 2.5]);
+    expect(screen.getByText("2.5u at FanDuel")).toBeInTheDocument();
+  });
+
+  it("one invalid units value blocks the review", async () => {
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.change(screen.getByLabelText("Units for CHA +1.5"), { target: { value: "11" } });
+    expect(screen.getByRole("button", { name: "Review 2 picks" })).toBeDisabled();
+    expect(screen.getByText("Units between 0.1 and 10 on every pick.")).toBeInTheDocument();
+  });
+
+  it("a leg added in Straights takes the last leg's units, and Parlay keeps one stepper", async () => {
+    await twoLegs();
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    fireEvent.change(screen.getByLabelText("Units for CHA/WSH Over 220.5"), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Player props" }));
+    await tapPrice(/^30\+/);
+    expect(screen.getByLabelText("Units for LaMelo Ball 30+ Points")).toHaveValue("3");
+    fireEvent.click(screen.getByRole("button", { name: "Parlay" }));
+    expect(screen.queryByLabelText("Units for CHA +1.5")).toBeNull();
+    expect(screen.getAllByLabelText("Units")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Straights" }));
+    expect(screen.getByLabelText("Units for CHA/WSH Over 220.5")).toHaveValue("3");
   });
 });

@@ -31,14 +31,19 @@ export function slipTotals(legs: SlipLeg[], units: string, sgpPrice: string, mod
   const unitsOk = units.trim() !== "" && unitsN >= 0.1 && unitsN <= 10;
   const sports = legSports(legs);
   if (mode === "straights" && legs.length >= 2) {
-    // Each leg is its own ticket at its own price, so nothing is combined.
+    // Each leg is its own ticket at its own price and units, so nothing is
+    // combined and every leg's units must be valid.
+    const legUnits = legs.map((l) => (l.units ?? units).trim() === "" ? NaN : Number(l.units ?? units));
+    const allUnitsOk = legUnits.every((n) => n >= 0.1 && n <= 10);
     const prices = legs.map(legPrice);
     const priced = prices.every((p) => p !== null);
     return {
-      allPriced, unitsOk, sports, combined: null,
+      allPriced, unitsOk: allUnitsOk, sports, combined: null,
       isParlay: false, sameGame: false, multiSport: false, straights: true,
-      risk: unitsOk ? unitsN * legs.length : null,
-      toWin: priced && unitsOk ? prices.reduce<number>((sum, p) => sum + unitsN * (toDecimal(p as number) - 1), 0) : null,
+      risk: allUnitsOk ? legUnits.reduce((a, n) => a + n, 0) : null,
+      toWin: priced && allUnitsOk
+        ? prices.reduce<number>((sum, p, i) => sum + legUnits[i] * (toDecimal(p as number) - 1), 0)
+        : null,
     };
   }
   const sameGame = isSgp(legs);
@@ -65,11 +70,16 @@ function SlipLegRow({
   onPrice,
   onRemove,
   showSport = false,
+  units,
+  onUnits,
 }: {
   leg: SlipLeg;
   onPrice: (v: string) => void;
   onRemove: () => void;
   showSport?: boolean;
+  /** Straights mode: this leg's own units, with a stepper under the label. */
+  units?: string;
+  onUnits?: (v: string) => void;
 }) {
   const fmt = useContext(FmtCtx);
   const book = useContext(BookCtx);
@@ -110,6 +120,12 @@ function SlipLegRow({
           </svg>
         </button>
       </div>
+      {units !== undefined && onUnits && (
+        <div className="pl-12 flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[rgba(247,243,233,0.55)]">Units</span>
+          <UnitsStepper value={units} onChange={onUnits} compact ariaLabel={`Units for ${leg.side.label}`} />
+        </div>
+      )}
       {price === null && (
         <span className="pl-12 text-[11px] text-[rgba(247,243,233,0.7)]">Enter a price like -110, +150, 1.91 or 2.50.</span>
       )}
@@ -122,7 +138,17 @@ function SlipLegRow({
   );
 }
 
-function UnitsStepper({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function UnitsStepper({
+  value,
+  onChange,
+  compact = false,
+  ariaLabel = "Units",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  compact?: boolean;
+  ariaLabel?: string;
+}) {
   const n = Number(value);
   const step = (d: number) => {
     const base = Number.isFinite(n) ? n : 1;
@@ -130,18 +156,18 @@ function UnitsStepper({ value, onChange }: { value: string; onChange: (v: string
     onChange(String(next));
   };
   const btn =
-    "h-10 w-9 flex items-center justify-center text-[16px] font-bold text-[rgba(247,243,233,0.7)] hover:text-[var(--color-text)] hover:bg-[rgba(255,255,255,0.06)] transition-colors";
+    `${compact ? "h-8 w-8" : "h-10 w-9"} flex items-center justify-center text-[16px] font-bold text-[rgba(247,243,233,0.7)] hover:text-[var(--color-text)] hover:bg-[rgba(255,255,255,0.06)] transition-colors`;
   return (
     <div className="inline-flex items-center rounded-lg border border-[rgba(255,255,255,0.10)] bg-[rgba(0,0,0,0.28)] overflow-hidden">
       <button type="button" aria-label="Fewer units" className={btn} onClick={() => step(-0.5)}>
         −
       </button>
       <input
-        aria-label="Units"
+        aria-label={ariaLabel}
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-12 h-10 text-center text-[15px] font-extrabold tabular-nums bg-transparent text-[var(--color-text)] focus:outline-none"
+        className={`${compact ? "w-10 h-8 text-[14px]" : "w-12 h-10 text-[15px]"} text-center font-extrabold tabular-nums bg-transparent text-[var(--color-text)] focus:outline-none`}
       />
       <button type="button" aria-label="More units" className={btn} onClick={() => step(0.5)}>
         +
@@ -175,6 +201,8 @@ export interface SlipProps {
   totals: SlipTotals;
   units: string;
   onUnits: (v: string) => void;
+  /** Straights mode: set one leg's own units. */
+  onLegUnits: (i: number, v: string) => void;
   sgpPrice: string;
   onSgpPrice: (v: string) => void;
   onPrice: (i: number, v: string) => void;
@@ -274,6 +302,8 @@ export function Slip(p: SlipProps) {
                 key={l.side.key}
                 leg={l}
                 showSport={t.multiSport}
+                units={t.straights ? l.units ?? p.units : undefined}
+                onUnits={t.straights ? (v) => p.onLegUnits(i, v) : undefined}
                 onPrice={(v) => p.onPrice(i, v)}
                 onRemove={() => p.onRemove(i)}
               />
@@ -281,11 +311,13 @@ export function Slip(p: SlipProps) {
           </div>
           {legs.length > 0 && (
             <div className="mt-1 pt-4 border-t border-[rgba(255,255,255,0.12)] flex flex-col gap-4">
-              <div className="flex items-end justify-between gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[rgba(247,243,233,0.55)]">{t.straights ? "Units each" : "Units"}</span>
-                  <UnitsStepper value={p.units} onChange={p.onUnits} />
-                </div>
+              <div className={`flex items-end gap-3 ${t.straights ? "justify-end" : "justify-between"}`}>
+                {!t.straights && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[rgba(247,243,233,0.55)]">Units</span>
+                    <UnitsStepper value={p.units} onChange={p.onUnits} />
+                  </div>
+                )}
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[rgba(247,243,233,0.55)]">
                     {t.straights ? "Total" : t.sameGame ? "Book's SGP price" : t.isParlay ? "Parlay odds" : "Odds"}
@@ -327,7 +359,7 @@ export function Slip(p: SlipProps) {
                       when the first game starts.
                     </span>
                   )}
-                  {!t.unitsOk && <span>Units between 0.1 and 10.</span>}
+                  {!t.unitsOk && <span>{t.straights ? "Units between 0.1 and 10 on every pick." : "Units between 0.1 and 10."}</span>}
                 </div>
               )}
               <button

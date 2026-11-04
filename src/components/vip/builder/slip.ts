@@ -28,6 +28,9 @@ export interface SlipLeg {
   american?: number;
   /** Off-board leg from the structured editor: posted exactly as built. */
   manual?: ManualLegInput;
+  /** This straight's own units. Only Straights mode reads it; a parlay uses
+   *  the ticket's single value. Kept across a switch back to Parlay. */
+  units?: string;
 }
 
 /** That book's price at this exact rung, or null if it doesn't hang it. */
@@ -134,9 +137,23 @@ export function toPickBody(legs: SlipLeg[], units: string, sgpPrice: string): Vi
   };
 }
 
-/** Straights mode posts one single-leg ticket per leg, each at its own price. */
+/** Straights mode posts one single-leg ticket per leg, each at its own price
+ *  and its own units (the slip's value when a leg has none). */
 export const toStraightBodies = (legs: SlipLeg[], units: string): VipPickBody[] =>
-  legs.map((l) => toPickBody([l], units, ""));
+  legs.map((l) => toPickBody([l], l.units ?? units, ""));
+
+/** Give each leg without units a value: the previous leg's, else `fallback`.
+ *  A leg that already has units keeps them. */
+export function seedUnits(legs: SlipLeg[], fallback: string): SlipLeg[] {
+  let last = fallback;
+  return legs.map((l) => {
+    if (l.units !== undefined) {
+      last = l.units;
+      return l;
+    }
+    return { ...l, units: last };
+  });
+}
 
 function dayKey(d: Date, tz: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);

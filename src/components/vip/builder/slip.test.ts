@@ -12,6 +12,7 @@ import {
   quoteAt,
   rebook,
   reformat,
+  seedUnits,
   toPickBody,
   toStraightBodies,
   toggleLeg,
@@ -257,5 +258,18 @@ describe("toStraightBodies", () => {
     const bodies = toStraightBodies(both, "1");
     expect(bodies).toHaveLength(2);
     expect(bodies.every((b) => b.combined_odds === null && b.legs[0].odds !== undefined)).toBe(true);
+  });
+
+  it("uses each leg's own units and falls back to the shared value", () => {
+    const [first, second] = two();
+    const bodies = toStraightBodies([{ ...first, units: "2.5" }, second], "1");
+    expect(bodies.map((b) => b.units)).toEqual([2.5, 1]);
+  });
+
+  it("seedUnits fills gaps from the previous leg and keeps set values", () => {
+    const [first, second] = two();
+    const out = seedUnits([{ ...first, units: "3" }, second], "1");
+    expect(out.map((l) => l.units)).toEqual(["3", "3"]);
+    expect(seedUnits([first, second], "2").map((l) => l.units)).toEqual(["2", "2"]);
   });
 });
