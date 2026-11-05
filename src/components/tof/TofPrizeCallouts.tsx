@@ -10,32 +10,47 @@ function SponsorLogo({ src, size }: { src: string | null; size: number }) {
   return <img src={src} alt="" width={size} height={size} className="shrink-0 rounded-[5px]" style={{ width: size, height: size }} />;
 }
 
-/** Two small stickers on the Tail or Fade title's corners: the amount on
-    TAIL's top-left, the sponsor on FADE's top-right. Decoration inside the
-    title button (the whole title still toggles the table); the panel's
-    contest box carries the sponsor link. */
+const AMOUNT_TAG = "tof-prize-glow pointer-events-none inline-block rotate-[-10deg] rounded-md border-[1.5px] border-[rgba(245,197,74,0.85)] bg-[#0b0d0c] px-1.5 pb-0.5 pt-1 font-[family-name:var(--font-display)] text-[18px] leading-none tracking-[0.02em] text-[var(--color-gold)] xl:text-[22px]";
+const SPONSOR_TAG = "tof-prize-glow pointer-events-none flex rotate-[6deg] items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-0.5 pl-0.5 pr-2 font-[family-name:var(--font-sans)] text-[10px] font-bold leading-none tracking-normal text-[var(--color-text-soft)] xl:text-[11px]";
+
+function Tags({ active }: { active: Active }) {
+  const s = sponsorDisplay(active.prize);
+  return {
+    amount: <span className={AMOUNT_TAG} style={{ textShadow: "0 2px 0 #6b4e10" }}>{active.prize.amount}</span>,
+    sponsor: (
+      <span className={SPONSOR_TAG} style={{ textShadow: "none" }}>
+        <SponsorLogo src={s.logo} size={16} />
+        <span className="py-1">Sponsored by <span className="font-extrabold text-[var(--color-text)]">{s.name}</span></span>
+      </span>
+    ),
+    label: `${active.prize.amount} weekly prize, sponsored by ${s.name}`,
+  };
+}
+
+/** Prize tags beside the Tail or Fade title on wide screens: the amount left
+    of TAIL, the sponsor right of FADE, clear of the lettering. Decoration
+    inside the title button (the whole title still toggles the table); the
+    panel's contest box carries the sponsor link. Render inside the
+    relatively positioned title row. */
 export function TofPrizeStickers({ active }: { active: Active }) {
-  const { prize } = active;
-  const s = sponsorDisplay(prize);
+  const t = Tags({ active });
   return (
     <>
-      <span
-        aria-hidden="true"
-        className="tof-prize-glow pointer-events-none absolute -left-7 -top-3 rotate-[-12deg] rounded-md border-[1.5px] border-[rgba(245,197,74,0.85)] bg-[#0b0d0c] px-1.5 pb-0.5 pt-1 text-[17px] leading-none text-[var(--color-gold)] sm:-left-9 sm:-top-3 sm:text-[21px]"
-        style={{ textShadow: "0 2px 0 #6b4e10" }}
-      >
-        {prize.amount}
-      </span>
-      <span
-        aria-hidden="true"
-        className="tof-prize-glow pointer-events-none absolute -right-8 -top-3 flex rotate-[7deg] items-center gap-1 rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-0.5 pl-0.5 pr-2 font-[family-name:var(--font-sans)] text-[9px] font-bold tracking-normal text-[var(--color-text-soft)] sm:-right-12 sm:-top-4 sm:text-[10.5px]"
-        style={{ textShadow: "none" }}
-      >
-        <SponsorLogo src={s.logo} size={16} />
-        <span>Sponsored by <span className="font-extrabold text-[var(--color-text)]">{s.name}</span></span>
-      </span>
-      <span className="sr-only">{`${prize.amount} weekly prize, sponsored by ${s.name}`}</span>
+      <span aria-hidden="true" className="absolute right-full top-1/2 mr-4 hidden -translate-y-1/2 xl:block">{t.amount}</span>
+      <span aria-hidden="true" className="absolute left-full top-1/2 ml-4 hidden -translate-y-1/2 xl:block">{t.sponsor}</span>
+      <span className="sr-only">{t.label}</span>
     </>
+  );
+}
+
+/** The same tags as a small row under the title where there is no room beside it. */
+export function TofPrizeStickerRow({ active }: { active: Active }) {
+  const t = Tags({ active });
+  return (
+    <span aria-hidden="true" className="mt-2.5 flex items-center justify-center gap-3 xl:hidden">
+      {t.amount}
+      {t.sponsor}
+    </span>
   );
 }
 
