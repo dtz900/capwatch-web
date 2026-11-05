@@ -28,6 +28,8 @@ export interface LastPick {
   selection: string | null;
   line: number | null;
   odds_taken: number | null;
+  grading_odds_source?: GradingOddsSource | null;
+  posted_odds?: number | null;
   outcome: FormOutcome;
   posted_at: string | null;
   profit_units: number | null;
@@ -132,6 +134,8 @@ export interface SlatePick {
   player_id?: number | null;
   player_name?: string | null;
   odds_taken: number | null;
+  grading_odds_source?: GradingOddsSource | null;
+  posted_odds?: number | null;
   stake_units: number;
   posted_at: string | null;
   tweet_url: string | null;
@@ -237,6 +241,7 @@ export interface SlateResponse {
 export type GradingOddsSource =
   | "posted"
   | "posted_capped"
+  | "live_market_at_post"
   | "pinnacle_close"
   | "pinnacle_at_post"
   | "consensus_at_post"
@@ -273,6 +278,9 @@ export interface HistoryPick {
   odds_taken: number | null;
   grading_odds?: number | null;
   grading_odds_source?: GradingOddsSource | null;
+  /** The capper's own price when the pick was re-priced at the live market
+      (grading_odds_source live_market_at_post). */
+  posted_odds?: number | null;
   units: number | null;
   outcome: FormOutcome | null;
   profit_units: number | null;
@@ -488,6 +496,8 @@ export interface TodayPickEntry {
   /** The price the platform actually grades this pick at. Present once the
       feed serves it; prefer it over odds_taken wherever a payout is scored. */
   grading_odds?: number | null;
+  grading_odds_source?: GradingOddsSource | null;
+  posted_odds?: number | null;
   /** Scheduled start of the pick's game, once the feed serves it. Used to
       keep a started game off the Tail or Fade stable card. */
   commence_time?: string | null;

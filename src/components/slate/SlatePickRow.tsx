@@ -7,6 +7,8 @@ import { formatPickText } from "@/lib/bet-format";
 import { trimUnits } from "@/lib/formatters";
 import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
 import type { SlatePick } from "@/lib/types";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import { isLiveMarketPick } from "@/lib/live-market";
 
 const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
 
@@ -102,6 +104,9 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
           style={tier ? { color: tier.color } : undefined}
         >
           {betText}
+          {isLiveMarketPick(pick) && (
+            <MarketOddsTag postedOdds={pick.posted_odds} className="ml-1.5 align-middle" />
+          )}
         </div>
 
         <div className="shrink-0 text-right flex items-center justify-end gap-1.5">
@@ -155,11 +160,14 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
         </div>
 
         <div className="flex items-baseline justify-between gap-2 min-w-0">
-          <span
-            className={`tabular-nums truncate ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
-            style={tier ? { color: tier.color } : undefined}
-          >
-            {betText}
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={`tabular-nums truncate ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
+              style={tier ? { color: tier.color } : undefined}
+            >
+              {betText}
+            </span>
+            {isLiveMarketPick(pick) && <MarketOddsTag postedOdds={pick.posted_odds} />}
           </span>
           <span className="shrink-0 text-[11px] tabular-nums flex items-center gap-1.5">
             {pick.outcome ? (

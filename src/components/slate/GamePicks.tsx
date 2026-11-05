@@ -12,6 +12,8 @@ import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
 import { teamColor } from "@/lib/teams";
 import { groupByCapper, groupByMarket, propStat, propStatSummary, toBets, type PlayerGroup } from "@/lib/slate-groups";
 import type { SlatePick, Sport } from "@/lib/types";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import { isLiveMarketPick } from "@/lib/live-market";
 
 // Rows shown before a section folds the rest behind "N more".
 const SIDE_CAP = 4;
@@ -350,8 +352,11 @@ function CompactPickLine({ pick, ctx }: { pick: SlatePick; ctx: Ctx }) {
   const isHeavy = pick.stake_units >= 2;
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto_1.25rem] items-center gap-x-3 py-1 text-[12.5px]">
-      <span className={`truncate tabular-nums text-[var(--color-text)] ${isHeavy ? "font-extrabold" : "font-semibold"}`}>
-        {formatPickText({ pick, awayTeam: ctx.awayTeam, homeTeam: ctx.homeTeam })}
+      <span className="flex items-center gap-1.5 min-w-0">
+        <span className={`truncate tabular-nums text-[var(--color-text)] ${isHeavy ? "font-extrabold" : "font-semibold"}`}>
+          {formatPickText({ pick, awayTeam: ctx.awayTeam, homeTeam: ctx.homeTeam })}
+        </span>
+        {isLiveMarketPick(pick) && <MarketOddsTag postedOdds={pick.posted_odds} />}
       </span>
       <span className="flex items-center justify-end gap-1.5 text-[11px] tabular-nums">
         {pick.outcome ? (

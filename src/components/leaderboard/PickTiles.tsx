@@ -4,6 +4,8 @@ import type { LastPick } from "@/lib/types";
 import { formatMarketLabel, normalizeMarket } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import { XIcon } from "@/components/icons/XIcon";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import { isLiveMarketPick } from "@/lib/live-market";
 
 interface Props {
   picks: LastPick[];
@@ -184,7 +186,8 @@ function PickDetails({ pick }: { pick: LastPick }) {
           {selectionBare}
         </span>
         {oddsStr && (
-          <span className="shrink-0 text-[15px] font-extrabold tabular-nums tracking-[-0.01em] text-[var(--color-text-soft)]">
+          <span className="shrink-0 flex items-center gap-1.5 text-[15px] font-extrabold tabular-nums tracking-[-0.01em] text-[var(--color-text-soft)]">
+            {isLiveMarketPick(pick) && <MarketOddsTag postedOdds={pick.posted_odds} />}
             {oddsStr}
           </span>
         )}
