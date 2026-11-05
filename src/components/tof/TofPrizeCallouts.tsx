@@ -7,11 +7,13 @@ const START_LABEL = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday:
 
 /** The sponsor's wordmark at a given height (width follows the image), or
     their name in text when no logo is configured. */
-function SponsorMark({ prize, height, textClass }: { prize: TofPrize; height: number; textClass: string }) {
+function SponsorMark({ prize, height, textClass, full = false }: { prize: TofPrize; height: number; textClass: string; full?: boolean }) {
   const s = sponsorDisplay(prize);
-  if (!s.logo) return <span className={textClass}>{s.name}</span>;
+  const src = full ? s.logoFull : s.logo;
+  if (!src) return <span className={textClass}>{s.name}</span>;
+  // Logos ship on black; screen blending drops the black so only the mark shows.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={s.logo} alt={s.name} className="max-w-none shrink-0" style={{ height, width: "auto" }} />;
+  return <img src={src} alt={s.name} className="max-w-none shrink-0 mix-blend-screen" style={{ height, width: "auto" }} />;
 }
 
 const AMOUNT_TAG = "tof-prize-glow pointer-events-none inline-block rounded-md border-[1.5px] border-[rgba(245,197,74,0.85)] bg-[#0b0d0c] px-1.5 pb-0.5 pt-1 font-[family-name:var(--font-display)] text-[22px] leading-none tracking-[0.02em] text-[var(--color-gold)]";
@@ -88,7 +90,7 @@ export function TofPrizeDetails({ active }: { active: Active }) {
       </ul>
       <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[rgba(255,255,255,0.07)] pt-2.5 hover:underline">
         <span className="whitespace-nowrap text-[11px] font-bold text-[var(--color-text-muted)]">Sponsored by</span>
-        <SponsorMark prize={prize} height={14} textClass="text-[11px] font-bold text-[var(--color-text)]" />
+        <SponsorMark prize={prize} height={34} full textClass="text-[11px] font-bold text-[var(--color-text)]" />
         <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-muted)]">@{prize.sponsor_handle}</span>
       </a>
     </div>
