@@ -41,6 +41,7 @@ vi.mock("@/lib/supabase/client", () => ({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const chain: any = {
           eq: () => chain,
+          in: () => chain,
           maybeSingle: () => Promise.resolve(selectResult.current[table] ?? { data: null, error: null }),
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           then: (resolve: any) => resolve(selectResult.current[table] ?? { data: [], error: null }),
@@ -303,7 +304,7 @@ describe("TofHero", () => {
 
   it("shows graded results on the summary and reads stats from time_window", async () => {
     selectResult.current["tof_plays"] = { data: [{ id: 9, hand_id: 7, card_id: 1, stable_pick_id: null, choice: "tail", outcome: "loss", units: -1 }], error: null };
-    selectResult.current["tof_tailer_stats"] = { data: { time_window: "month", plays: 4, wins: 1, losses: 3, pushes: 0, units: "-2.2857", day_streak: -1, best_day_streak: 0 }, error: null };
+    selectResult.current["tof_tailer_stats"] = { data: [{ time_window: "month", plays: 4, wins: 1, losses: 3, pushes: 0, units: "-2.2857", day_streak: -1, best_day_streak: 0 }], error: null };
     mockAuth.current = SIGNED_IN;
     render(<TofHero initial={HAND} />);
     expect(await screen.findByLabelText("loss, -1.00u")).toBeInTheDocument();

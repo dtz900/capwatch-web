@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -16,8 +16,11 @@ import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
 import { shouldLandOpen } from "@/lib/tof/first-visit";
 import { replayGuestPicks } from "@/lib/tof/replay";
+import { activePrize, WEEK_MIN_PLAYS, type TofPrize } from "@/lib/tof/prize";
+import prizeJson from "../../../public/tof-prize.json";
 
 const RETURN_COOKIE = "ts_return_to";
+const noopSubscribe = () => () => {};
 
 const FELT = "radial-gradient(ellipse 62% 120% at 50% 40%, #12432f 0%, #0c2f22 45%, #071c15 72%, #0a0a0c 100%)";
 const REFETCH_MS = 60_000;
@@ -101,9 +104,16 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [plays, setPlays] = useState<TofPlay[]>([]);
   const [stable, setStable] = useState<StableDeckCard | null>(null);
   const [stats, setStats] = useState<TofStats | null>(null);
-  const [board, setBoard] = useState<{ rows: TofBoardRow[]; minPlays: number }>({ rows: [], minPlays: 10 });
+  const [weekStats, setWeekStats] = useState<TofStats | null>(null);
+  const [board, setBoard] = useState<{ window: "week" | "month"; rows: TofBoardRow[]; minPlays: number }>({ window: "month", rows: [], minPlays: 10 });
   const [toast, setToast] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
+  // The sponsored weekly prize. While it is live the rail ranks the week.
+  // Client-only: the page is ISR, so HTML baked before a start or end date
+  // must not hydrate against a different answer.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const prize = hydrated ? activePrize(prizeJson as TofPrize, now) : null;
+  const boardWindow: "week" | "month" = prize?.live ? "week" : "month";
   // Signed-out passes have nowhere to persist: there is no tof_plays row to
   // write. Without this the deck would re-deal the same top card forever.
   // Guest choices never reach the database; they still drive the deck and the dots.
@@ -240,8 +250,12 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     // Re-read when the hand's status changes too: once grading lands the
     // board's ranks and units move with it, and the rail next to the user's
     // own fresh stats should not be a snapshot from before.
-    fetchTofBoard("month").then((b) => setBoard({ rows: b.rows, minPlays: b.min_plays })).catch(() => { /* rail stays empty */ });
-  }, [handStatus]);
+    // A slower answer for the previous window (month before hydration flips
+    // the rail to the prize week) must not overwrite the current one.
+    let current = true;
+    fetchTofBoard(boardWindow).then((b) => { if (current) setBoard({ window: boardWindow, rows: b.rows, minPlays: b.min_plays }); }).catch(() => { /* rail stays empty */ });
+    return () => { current = false; };
+  }, [handStatus, boardWindow]);
 
   // Signed-in loads: plays for this hand, month stats, the stable card.
   useEffect(() => {
@@ -249,7 +263,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     // derived-state reset for this branch, not an external-system sync; same
     // pattern as AuthProvider's loadProfile() (pre-existing lint debt here).
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!supabase || !userId || handId == null) { setPlays([]); setStats(null); setStable(null); return; }
+    if (!supabase || !userId || handId == null) { setPlays([]); setStats(null); setWeekStats(null); setStable(null); return; }
     let cancelled = false;
     (async () => {
       const { data: rows, error: playsError } = await supabase.from("tof_plays").select("id, hand_id, card_id, stable_pick_id, choice, outcome, units")
@@ -267,13 +281,18 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       // The column is time_window ("window" is reserved in Postgres); the
       // app-side shape keeps `window`.
       const { data: st, error: statsError } = await supabase.from("tof_tailer_stats").select("time_window, plays, wins, losses, pushes, units, day_streak, best_day_streak")
-        .eq("user_id", userId).eq("time_window", "month").maybeSingle();
+        .eq("user_id", userId).in("time_window", ["month", "week"]);
       if (statsError) {
         // Cosmetic: a missing stats rail is not worth a toast.
         console.error("tof: tailer stats load failed", statsError);
       } else if (!cancelled) {
-        const row = st as (Omit<TofStats, "window"> & { time_window: TofStats["window"] }) | null;
-        setStats(row ? { window: row.time_window, plays: row.plays, wins: row.wins, losses: row.losses, pushes: row.pushes, units: Number(row.units), day_streak: row.day_streak, best_day_streak: row.best_day_streak } : null);
+        const rows = (st ?? []) as (Omit<TofStats, "window"> & { time_window: TofStats["window"] })[];
+        const pick = (w: TofStats["window"]): TofStats | null => {
+          const row = rows.find((r) => r.time_window === w);
+          return row ? { window: row.time_window, plays: row.plays, wins: row.wins, losses: row.losses, pushes: row.pushes, units: Number(row.units), day_streak: row.day_streak, best_day_streak: row.best_day_streak } : null;
+        };
+        setStats(pick("month"));
+        setWeekStats(pick("week"));
       }
       const { data: follows, error: followsError } = await supabase.from("capper_follows").select("capper_id, market").eq("user_id", userId);
       if (followsError) {
@@ -479,8 +498,11 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     })();
   }, [userId, handId, hand, playsLoadedFor, playedIds, requireUsername, writePlay]);
 
-  const me = profile?.username && stats
-    ? { username: profile.username, stats, avatar_url: displayAvatar(profile, capper), capper_handle: capper?.handle ?? null }
+  const boardStats = boardWindow === "week" ? weekStats : stats;
+  // Rows loaded for the other window never render under this one's label.
+  const shownBoard = board.window === boardWindow ? board : { rows: [], minPlays: boardWindow === "week" ? WEEK_MIN_PLAYS : 10 };
+  const me = profile?.username && boardStats
+    ? { username: profile.username, stats: boardStats, avatar_url: displayAvatar(profile, capper), capper_handle: capper?.handle ?? null }
     : null;
   const state: "loading" | "no-hand" | "playable" | "spectator" = data === null ? "loading" : !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
@@ -589,7 +611,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               </div>
             </div>
           )}
-          <TofBoard rows={board.rows} me={me} minPlays={board.minPlays} />
+          <TofBoard rows={shownBoard.rows} me={me} minPlays={shownBoard.minPlays} period={boardWindow} prize={prize} />
         </aside>
       </div>
       </div>

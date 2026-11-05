@@ -4,6 +4,7 @@ import { unitsLabel } from "@/lib/tof/deck";
 import Link from "next/link";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { BoardAvatar } from "./BoardAvatar";
+import { WEEK_MIN_PLAYS, type TofPrize } from "@/lib/tof/prize";
 
 const RANK_COLOR = ["#f5c54a", "#d4d4d8", "#c8814a"];
 
@@ -14,12 +15,40 @@ export interface TofBoardMe {
   capper_handle: string | null;
 }
 
-export function TofBoard({ rows, me, minPlays }: { rows: TofBoardRow[]; me: TofBoardMe | null; minPlays: number }) {
+const START_LABEL = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
+
+/** The sponsored weekly prize, on top of the board it is decided by. */
+function PrizeBanner({ prize, live, minPlays }: { prize: TofPrize; live: boolean; minPlays: number }) {
+  const starts = START_LABEL.format(new Date(`${prize.starts}T12:00:00Z`));
+  return (
+    <div className="mb-3 rounded-lg border border-[rgba(245,197,74,0.35)] bg-[rgba(245,197,74,0.07)] px-3 py-2.5">
+      <div className="text-[14px] font-extrabold text-[var(--color-gold)]">
+        {live ? `${prize.amount} to this week's top player` : `${prize.amount} weekly prize starts ${starts}`}
+      </div>
+      <div className="mt-0.5 text-[11px] leading-snug text-[var(--color-text-soft)]">
+        Most units wins. Min {minPlays} plays, Tuesday through Monday. Free to play.
+      </div>
+      <div className="mt-1 text-[10px] font-bold text-[var(--color-text-muted)]">
+        Sponsored by{" "}
+        <a href={`https://x.com/${prize.sponsor_handle}`} target="_blank" rel="noopener noreferrer" className="text-[var(--color-text)] hover:underline">@{prize.sponsor_handle}</a>
+      </div>
+    </div>
+  );
+}
+
+export function TofBoard({ rows, me, minPlays, period = "month", prize = null }: {
+  rows: TofBoardRow[];
+  me: TofBoardMe | null;
+  minPlays: number;
+  period?: "week" | "month";
+  prize?: { prize: TofPrize; live: boolean } | null;
+}) {
   const meOnBoard = me ? rows.some((r) => r.username === me.username) : false;
   return (
     <div className="rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-4">
+      {prize && <PrizeBanner prize={prize.prize} live={prize.live} minPlays={prize.live ? minPlays : WEEK_MIN_PLAYS} />}
       <div className="flex items-baseline justify-between">
-        <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Tailers · this month</div>
+        <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Tailers · this {period}</div>
         <div className="text-[10px] font-bold text-[#52525b]">min {minPlays} plays</div>
       </div>
       {rows.length === 0 ? (
