@@ -256,6 +256,11 @@ export interface HistoryPickLeg {
   selection: string | null;
   line: number | null;
   odds_taken: number | null;
+  /** Price the leg graded at; for a live_market_at_post leg this is the market
+      price and odds_taken is still the capper's own. */
+  grading_odds?: number | null;
+  grading_odds_source?: GradingOddsSource | null;
+  posted_odds?: number | null;
   /** W / L / P / V, or null when the leg is still undecided (live parlay).
    * V appears when the leg was voided per book rules (e.g. a pre-
    * postponement bet on a game that got rescheduled). The parlay still

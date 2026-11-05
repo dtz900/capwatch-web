@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchCapperProfileAdmin } from "@/lib/api";
 import { formatBetDescriptor } from "@/lib/markets";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import { displayedOdds, isLiveMarketPick, withDisplayedOdds } from "@/lib/live-market";
 import { formatUnitsSmart, formatPickDate } from "@/lib/formatters";
 import type { CapperAggregate, HistoryPick } from "@/lib/types";
 import { EditCapperPanel } from "./EditCapperPanel";
@@ -199,12 +201,9 @@ function PicksTable({ rows }: { rows: HistoryPick[] }) {
 }
 
 function PicksRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
+  const shownOdds = displayedOdds(pick);
   const oddsText =
-    pick.odds_taken == null
-      ? ""
-      : pick.odds_taken > 0
-        ? `+${pick.odds_taken}`
-        : String(pick.odds_taken);
+    shownOdds == null ? "" : shownOdds > 0 ? `+${shownOdds}` : String(shownOdds);
 
   return (
     <div
@@ -229,14 +228,18 @@ function PicksRow({ pick, isLast }: { pick: HistoryPick; isLast: boolean }) {
             market: pick.market,
             selection: pick.selection,
             line: pick.line,
-            odds_taken: pick.odds_taken,
+            odds_taken: withDisplayedOdds(pick).odds_taken,
+            strip_odds: withDisplayedOdds(pick).strip_odds,
           })}
         </span>
       </div>
       <div className="text-right tabular-nums text-[var(--color-text-soft)]">
         {pick.line ?? ""}
       </div>
-      <div className="text-right tabular-nums text-[var(--color-text-soft)]">{oddsText}</div>
+      <div className="text-right tabular-nums text-[var(--color-text-soft)]">
+        {isLiveMarketPick(pick) && <MarketOddsTag postedOdds={pick.posted_odds} className="mr-1" />}
+        {oddsText}
+      </div>
       <div className={`text-right tabular-nums font-extrabold ${
         pick.profit_units == null
           ? "text-[var(--color-text-muted)]"

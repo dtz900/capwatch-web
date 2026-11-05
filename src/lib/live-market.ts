@@ -49,7 +49,7 @@ export function strippableOdds(pick: {
 /** The pick with odds_taken swapped for the displayed price, for formatters
  * that read odds_taken, plus strip_odds so the original prices are still
  * stripped from the selection text. Returns the pick itself when nothing
- * changes. */
+ * changes and the pick is not repriced. */
 export function withDisplayedOdds<
   T extends {
     grading_odds_source?: string | null;
@@ -59,8 +59,25 @@ export function withDisplayedOdds<
   },
 >(pick: T): T & { strip_odds?: number[] } {
   const odds = displayedOdds(pick);
-  if (odds === (pick.odds_taken ?? null)) return pick;
+  // A repriced straight has odds_taken equal to the market price, but its
+  // selection text can still embed the capper's price, so it always strips.
+  if (!isLiveMarketPick(pick) && odds === (pick.odds_taken ?? null)) return pick;
   return { ...pick, odds_taken: odds, strip_odds: strippableOdds(pick) };
+}
+
+/** A parlay leg's selection text. A repriced leg drops the capper's own prices
+ * the text may embed, so only the market price (shown beside the tag) appears. */
+export function legSelectionText(leg: {
+  selection?: string | null;
+  grading_odds_source?: string | null;
+  odds_taken?: number | null;
+  posted_odds?: number | null;
+}): string {
+  let sel = leg.selection ?? "";
+  if (isLiveMarketPick(leg)) {
+    for (const v of strippableOdds(leg)) sel = removeOddsToken(sel, v);
+  }
+  return sel;
 }
 
 /** American odds with an explicit plus sign: +210, -335. */

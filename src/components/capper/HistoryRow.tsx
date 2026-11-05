@@ -9,7 +9,13 @@ import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
 import { VipCrown } from "@/components/vip/VipCrown";
 import { MarketOddsTag } from "@/components/common/MarketOddsTag";
-import { isLiveMarketPick, liveMarketPostedLine, LIVE_MARKET_WARNING } from "@/lib/live-market";
+import {
+  displayedOdds as marketDisplayedOdds,
+  isLiveMarketPick,
+  liveMarketPostedLine,
+  strippableOdds,
+  LIVE_MARKET_WARNING,
+} from "@/lib/live-market";
 
 // Odds column is 108px so the "NO ODDS GIVEN" stamp fits on one line
 // (Codex on #158); the header row shares this constant, so it stays aligned.
@@ -128,7 +134,8 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           market: pick.market,
           selection: pick.selection,
           line: pick.line,
-          odds_taken: pick.odds_taken,
+          odds_taken: isLiveMarketPick(pick) ? marketDisplayedOdds(pick) : pick.odds_taken,
+          strip_odds: isLiveMarketPick(pick) ? strippableOdds(pick) : undefined,
         })}
       </span>
       {isParlay && pick.legs && pick.legs.length > 0 && (

@@ -42,3 +42,28 @@ describe("live market helpers", () => {
     expect(withDisplayedOdds(plain)).toBe(plain);
   });
 });
+
+describe("repriced selection text", () => {
+  it("withDisplayedOdds strips the capper's price even when odds_taken already equals the market price", async () => {
+    const { withDisplayedOdds } = await import("./live-market");
+    const out = withDisplayedOdds({
+      grading_odds_source: "live_market_at_post",
+      grading_odds: -120,
+      odds_taken: -120,
+      posted_odds: 150,
+    });
+    expect(out.strip_odds).toEqual([-120, 150]);
+  });
+
+  it("legSelectionText drops embedded capper prices only for repriced legs", async () => {
+    const { legSelectionText } = await import("./live-market");
+    const live = {
+      selection: "Heat ML +150",
+      grading_odds_source: "live_market_at_post",
+      odds_taken: -120,
+      posted_odds: 150,
+    };
+    expect(legSelectionText(live)).toBe("Heat ML");
+    expect(legSelectionText({ ...live, grading_odds_source: "posted" })).toBe("Heat ML +150");
+  });
+});

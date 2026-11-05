@@ -105,3 +105,27 @@ describe("HistoryRow live market rows", () => {
     expect(screen.queryByText("Market odds")).toBeNull();
   });
 });
+
+describe("HistoryRow repriced selection text", () => {
+  const live: HistoryPick = {
+    ...base,
+    market: "moneyline",
+    selection: "Heat ML +150",
+    line: null,
+    odds_taken: -120,
+    grading_odds: -120,
+    grading_odds_source: "live_market_at_post",
+    posted_odds: 150,
+    outcome: "W",
+    profit_units: 0.8,
+  };
+
+  it("never shows the capper's original price beside the tag, desktop or mobile", () => {
+    const { container } = render(<HistoryRow pick={live} isLast />);
+    expect(screen.getAllByText("Market odds")).toHaveLength(2);
+    // The tooltip carries "+150" in a title attribute, so check visible text only.
+    const visible = container.textContent ?? "";
+    expect(visible).not.toMatch(/Heat ML \+150/);
+    expect(screen.getAllByText("Heat ML -120").length).toBeGreaterThan(0);
+  });
+});

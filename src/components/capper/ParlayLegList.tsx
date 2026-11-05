@@ -1,9 +1,7 @@
 import type { HistoryPickLeg } from "@/lib/types";
+import { LegOdds } from "@/components/common/LegOdds";
+import { legSelectionText } from "@/lib/live-market";
 
-function formatOdds(odds: number | null): string {
-  if (odds == null) return "";
-  return odds > 0 ? `+${odds}` : String(odds);
-}
 
 function GlyphFor({ outcome }: { outcome: HistoryPickLeg["outcome"] }) {
   const cls =
@@ -33,9 +31,9 @@ export function ParlayLegList({ legs }: { legs: HistoryPickLeg[] }) {
           className="grid grid-cols-[18px_minmax(0,1fr)_auto_90px] gap-3 items-center py-1 text-[var(--color-text-soft)]"
         >
           <GlyphFor outcome={leg.outcome} />
-          <span className="truncate">{leg.selection ?? ""}</span>
-          <span className="tabular-nums text-[var(--color-text-muted)] text-[11px]">
-            {formatOdds(leg.odds_taken)}
+          <span className="truncate">{legSelectionText(leg)}</span>
+          <span className="inline-flex items-center justify-end gap-1.5">
+            <LegOdds leg={leg} className="tabular-nums text-[var(--color-text-muted)] text-[11px]" />
           </span>
           <span className="text-right text-[10px] text-[var(--color-text-muted)]">
             {leg.game_label ?? ""}
