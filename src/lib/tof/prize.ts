@@ -18,6 +18,8 @@ export type TofPrize = {
   sponsor_name?: string;
   /** Site-relative logo path under /sponsors/; anything else is ignored. */
   sponsor_logo?: string;
+  /** Full logo (with the brand's ring) for roomier spots; same rule. */
+  sponsor_logo_full?: string;
   /** YYYY-MM-DD (a Tuesday): the first prize week. */
   starts: string;
   /** YYYY-MM-DD, last day the prize runs; null means open ended. */
@@ -39,10 +41,13 @@ export function slateDate(now: Date): string {
 
 /** How the sponsor is named and pictured. The logo must be one of our own
     files under /sponsors/, so a bad JSON edit cannot hotlink anything. */
-export function sponsorDisplay(prize: TofPrize): { name: string; logo: string | null; url: string } {
+const SPONSOR_ASSET = /^\/sponsors\/[a-z0-9_-]+\.(png|jpe?g|webp)$/i;
+
+export function sponsorDisplay(prize: TofPrize): { name: string; logo: string | null; logoFull: string | null; url: string } {
   const name = prize.sponsor_name?.trim() || `@${prize.sponsor_handle}`;
-  const logo = prize.sponsor_logo && /^\/sponsors\/[a-z0-9_-]+\.(png|jpe?g|webp)$/i.test(prize.sponsor_logo) ? prize.sponsor_logo : null;
-  return { name, logo, url: `https://x.com/${prize.sponsor_handle}` };
+  const logo = prize.sponsor_logo && SPONSOR_ASSET.test(prize.sponsor_logo) ? prize.sponsor_logo : null;
+  const logoFull = prize.sponsor_logo_full && SPONSOR_ASSET.test(prize.sponsor_logo_full) ? prize.sponsor_logo_full : logo;
+  return { name, logo, logoFull, url: `https://x.com/${prize.sponsor_handle}` };
 }
 
 /** The prize to show, or null. `live` is false while announced but not yet
