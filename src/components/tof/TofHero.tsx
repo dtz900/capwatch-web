@@ -11,7 +11,7 @@ import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, re
 import type { TofBoardRow, TofCard, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
-import { TofPrizeBadge, TofPrizeDetails } from "@/components/tof/TofPrizeCallouts";
+import { TofPrizeDetails, TofPrizeStickers } from "@/components/tof/TofPrizeCallouts";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
@@ -509,10 +509,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   return (
     <section className="w-full border-b border-[var(--color-border)] px-[max(16px,calc(50%-620px))] pb-3 pt-3 transition-[padding] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
-      <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
-        <TofTitle open={unfolded} onToggle={toggleFold} />
-        {prize && <TofPrizeBadge active={prize} />}
-      </div>
+      <TofTitle open={unfolded} onToggle={toggleFold} prize={prize} />
 
       <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
       <div>
@@ -628,14 +625,14 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 /** The game's title: stencil block caps, set straight, with a small "or"
     between the two big words. It is the fold's handle: it bobs while the
     table is closed and opens it on a tap. */
-function TofTitle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+function TofTitle({ open, onToggle, prize }: { open: boolean; onToggle: () => void; prize: { prize: TofPrize; live: boolean } | null }) {
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-expanded={open}
       aria-controls="tof-table"
-      className="group flex cursor-pointer select-none flex-col items-center bg-transparent p-0 focus-visible:outline-none"
+      className="group mx-auto flex cursor-pointer select-none flex-col items-center bg-transparent p-0 focus-visible:outline-none"
     >
       {open && (
         <span className="pp-rise mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
@@ -643,10 +640,11 @@ function TofTitle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6.5 5 3.5 8 6.5" /></svg>
         </span>
       )}
-      <h2 className={`flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98] ${open ? "" : "tof-bob"}`} style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
+      <h2 className={`relative flex items-baseline ${prize && !open ? "mt-3" : ""} justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98] ${open ? "" : "tof-bob"}`} style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
         <span className="text-[46px] tracking-[0.01em] text-[var(--color-pos)] sm:text-[60px]">TAIL</span>
         <span className="text-[22px] tracking-[0.06em] text-white sm:text-[28px]">OR</span>
         <span className="text-[46px] tracking-[0.01em] text-[var(--color-neg)] sm:text-[60px]">FADE</span>
+        {prize && <TofPrizeStickers active={prize} />}
       </h2>
       {!open && (
         <span className="tof-hint mt-1 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">

@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { TofPrizeBadge, TofPrizeDetails } from "./TofPrizeCallouts";
+import { TofPrizeDetails, TofPrizeStickers } from "./TofPrizeCallouts";
 import { sponsorDisplay, type TofPrize } from "@/lib/tof/prize";
 
 const prize: TofPrize = { enabled: true, amount: "$25", sponsor_handle: "doctorsportshq", sponsor_name: "DSHQ",
   sponsor_logo: "/sponsors/dshq.jpg", starts: "2026-11-03", ends: null };
 
 describe("Tail or Fade prize callouts", () => {
-  it("badge shows the $25 and names the sponsor with a link to their X", () => {
-    render(<TofPrizeBadge active={{ prize, live: true }} />);
+  it("title stickers show the amount and the sponsor, and read out for screen readers", () => {
+    render(<TofPrizeStickers active={{ prize, live: true }} />);
     expect(screen.getByText("$25")).toBeInTheDocument();
-    expect(screen.getByText("Weekly prize")).toBeInTheDocument();
     expect(screen.getByText("DSHQ")).toBeInTheDocument();
-    expect(screen.getByRole("link")).toHaveAttribute("href", "https://x.com/doctorsportshq");
+    expect(screen.getByText("$25 weekly prize, sponsored by DSHQ")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();     // inside the title button: no nested link
   });
 
   it("details list the contest rules and the sponsor", () => {
