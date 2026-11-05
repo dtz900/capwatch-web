@@ -250,7 +250,11 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     // Re-read when the hand's status changes too: once grading lands the
     // board's ranks and units move with it, and the rail next to the user's
     // own fresh stats should not be a snapshot from before.
-    fetchTofBoard(boardWindow).then((b) => setBoard({ rows: b.rows, minPlays: b.min_plays })).catch(() => { /* rail stays empty */ });
+    // A slower answer for the previous window (month before hydration flips
+    // the rail to the prize week) must not overwrite the current one.
+    let current = true;
+    fetchTofBoard(boardWindow).then((b) => { if (current) setBoard({ rows: b.rows, minPlays: b.min_plays }); }).catch(() => { /* rail stays empty */ });
+    return () => { current = false; };
   }, [handStatus, boardWindow]);
 
   // Signed-in loads: plays for this hand, month stats, the stable card.
