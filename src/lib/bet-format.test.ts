@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatPickText, inferMarketBucket } from "./bet-format";
+import { withDisplayedOdds } from "./live-market";
 
 const NE_SEA = { awayTeam: "NE", homeTeam: "SEA" };
 const SF_LAD = { awayTeam: "SF", homeTeam: "LAD" };
@@ -84,5 +85,26 @@ describe("inferMarketBucket with basketball stat words", () => {
   it("keeps compact game totals as totals", () => {
     expect(inferMarketBucket(null, "o221.5")).toBe("Total");
     expect(inferMarketBucket(null, "STL o8.5")).toBe("Total");
+  });
+});
+
+describe("formatPickText: repriced live-market picks", () => {
+  it("strips the original price from the selection and shows the market price once", () => {
+    const text = formatPickText({
+      pick: withDisplayedOdds({
+        kind: "straight",
+        market: "spread",
+        selection: "Heat +9.5 -104",
+        line: 9.5,
+        odds_taken: -104,
+        posted_odds: -104,
+        grading_odds: -335,
+        grading_odds_source: "live_market_at_post",
+      }),
+      awayTeam: "MIA",
+      homeTeam: "BOS",
+    });
+    expect(text).toContain("-335");
+    expect(text).not.toContain("-104");
   });
 });

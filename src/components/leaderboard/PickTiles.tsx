@@ -5,7 +5,7 @@ import { formatMarketLabel, normalizeMarket } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import { XIcon } from "@/components/icons/XIcon";
 import { MarketOddsTag } from "@/components/common/MarketOddsTag";
-import { displayedOdds, isLiveMarketPick } from "@/lib/live-market";
+import { displayedOdds, isLiveMarketPick, strippableOdds } from "@/lib/live-market";
 
 interface Props {
   picks: LastPick[];
@@ -232,10 +232,11 @@ function strippedSelection(pick: LastPick): string {
   const sel = (pick.selection ?? "").trim();
   if (!sel) return pick.market || "Pick";
   const out = sel;
-  const shown = displayedOdds(pick);
-  if (shown != null) {
-    const sign = shown > 0 ? "+" : "";
-    const oddsStr = `${sign}${shown}`;
+  // Strip the displayed price and the capper's original one: a repriced
+  // pick's selection can still end with the price it was posted at.
+  for (const v of [displayedOdds(pick), ...strippableOdds(pick)]) {
+    if (v == null) continue;
+    const oddsStr = `${v > 0 ? "+" : ""}${v}`;
     if (out.endsWith(oddsStr)) return out.slice(0, -oddsStr.length).trim();
   }
   return out;

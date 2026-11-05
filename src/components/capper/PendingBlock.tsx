@@ -12,7 +12,7 @@ import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
 import { VipCrown } from "@/components/vip/VipCrown";
 import { MarketOddsTag } from "@/components/common/MarketOddsTag";
-import { displayedOdds, isLiveMarketPick } from "@/lib/live-market";
+import { displayedOdds, isLiveMarketPick, strippableOdds } from "@/lib/live-market";
 
 function formatStakeUnits(u: number | null): string | null {
   if (u == null || u <= 0) return null;
@@ -77,6 +77,7 @@ function PendingRow({
                 selection: pick.selection,
                 line: pick.line,
                 odds_taken: displayedOdds(pick),
+                strip_odds: strippableOdds(pick),
               })}
             </span>
             {pick.game_label && (
@@ -94,6 +95,7 @@ function PendingRow({
               selection: pick.selection,
               line: pick.line,
               odds_taken: displayedOdds(pick),
+                strip_odds: strippableOdds(pick),
             })}
             {isParlay && pick.legs && pick.legs.length > 0 && (
               <>

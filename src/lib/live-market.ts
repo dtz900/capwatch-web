@@ -24,17 +24,33 @@ export function displayedOdds(pick: {
   return pick.odds_taken ?? null;
 }
 
+/** Prices a selection string may still embed: the capper's own odds_taken and
+ * posted_odds. Formatters strip these from the selection text so the original
+ * price never shows beside the displayed market price. */
+export function strippableOdds(pick: {
+  odds_taken?: number | null;
+  posted_odds?: number | null;
+}): number[] {
+  return [pick.odds_taken, pick.posted_odds].filter(
+    (o): o is number => typeof o === "number",
+  );
+}
+
 /** The pick with odds_taken swapped for the displayed price, for formatters
- * that read odds_taken. Returns the pick itself when nothing changes. */
+ * that read odds_taken, plus strip_odds so the original prices are still
+ * stripped from the selection text. Returns the pick itself when nothing
+ * changes. */
 export function withDisplayedOdds<
   T extends {
     grading_odds_source?: string | null;
     grading_odds?: number | null;
     odds_taken?: number | null;
+    posted_odds?: number | null;
   },
->(pick: T): T {
+>(pick: T): T & { strip_odds?: number[] } {
   const odds = displayedOdds(pick);
-  return odds === (pick.odds_taken ?? null) ? pick : { ...pick, odds_taken: odds };
+  if (odds === (pick.odds_taken ?? null)) return pick;
+  return { ...pick, odds_taken: odds, strip_odds: strippableOdds(pick) };
 }
 
 /** American odds with an explicit plus sign: +210, -335. */
