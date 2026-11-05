@@ -16,7 +16,7 @@ import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
 import { shouldLandOpen } from "@/lib/tof/first-visit";
 import { replayGuestPicks } from "@/lib/tof/replay";
-import { activePrize, type TofPrize } from "@/lib/tof/prize";
+import { activePrize, WEEK_MIN_PLAYS, type TofPrize } from "@/lib/tof/prize";
 import prizeJson from "../../../public/tof-prize.json";
 
 const RETURN_COOKIE = "ts_return_to";
@@ -105,7 +105,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [stable, setStable] = useState<StableDeckCard | null>(null);
   const [stats, setStats] = useState<TofStats | null>(null);
   const [weekStats, setWeekStats] = useState<TofStats | null>(null);
-  const [board, setBoard] = useState<{ rows: TofBoardRow[]; minPlays: number }>({ rows: [], minPlays: 10 });
+  const [board, setBoard] = useState<{ window: "week" | "month"; rows: TofBoardRow[]; minPlays: number }>({ window: "month", rows: [], minPlays: 10 });
   const [toast, setToast] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   // The sponsored weekly prize. While it is live the rail ranks the week.
@@ -253,7 +253,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
     // A slower answer for the previous window (month before hydration flips
     // the rail to the prize week) must not overwrite the current one.
     let current = true;
-    fetchTofBoard(boardWindow).then((b) => { if (current) setBoard({ rows: b.rows, minPlays: b.min_plays }); }).catch(() => { /* rail stays empty */ });
+    fetchTofBoard(boardWindow).then((b) => { if (current) setBoard({ window: boardWindow, rows: b.rows, minPlays: b.min_plays }); }).catch(() => { /* rail stays empty */ });
     return () => { current = false; };
   }, [handStatus, boardWindow]);
 
@@ -499,6 +499,8 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   }, [userId, handId, hand, playsLoadedFor, playedIds, requireUsername, writePlay]);
 
   const boardStats = boardWindow === "week" ? weekStats : stats;
+  // Rows loaded for the other window never render under this one's label.
+  const shownBoard = board.window === boardWindow ? board : { rows: [], minPlays: boardWindow === "week" ? WEEK_MIN_PLAYS : 10 };
   const me = profile?.username && boardStats
     ? { username: profile.username, stats: boardStats, avatar_url: displayAvatar(profile, capper), capper_handle: capper?.handle ?? null }
     : null;
@@ -609,7 +611,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               </div>
             </div>
           )}
-          <TofBoard rows={board.rows} me={me} minPlays={board.minPlays} period={boardWindow} prize={prize} />
+          <TofBoard rows={shownBoard.rows} me={me} minPlays={shownBoard.minPlays} period={boardWindow} prize={prize} />
         </aside>
       </div>
       </div>
