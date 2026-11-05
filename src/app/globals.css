@@ -140,6 +140,12 @@ html, body {
   50% { transform: translateY(4px); opacity: 1; }
 }
 .tof-hint { animation: tof-hint 1.3s ease-in-out infinite; }
+/* Sponsored weekly prize badge next to the Tail or Fade title. */
+@keyframes tof-prize-glow {
+  0%, 100% { box-shadow: 0 0 18px rgba(245, 197, 74, 0.35), 0 0 46px rgba(245, 197, 74, 0.16); }
+  50% { box-shadow: 0 0 28px rgba(245, 197, 74, 0.6), 0 0 70px rgba(245, 197, 74, 0.28); }
+}
+.tof-prize-glow { animation: tof-prize-glow 2.4s ease-in-out infinite; box-shadow: 0 0 22px rgba(245, 197, 74, 0.45), 0 0 56px rgba(245, 197, 74, 0.2); }
 .tof-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .55s cubic-bezier(.2,.8,.2,1); }
 .tof-fold[data-open="true"] { grid-template-rows: 1fr; }
 .tof-fold > div { overflow: hidden; min-height: 0; }
@@ -147,6 +153,6 @@ html, body {
 .tof-fold-inner { opacity: 0; transform: translateY(-18px); transition: opacity .4s ease .1s, transform .55s cubic-bezier(.2,.8,.2,1); }
 .tof-fold[data-open="true"] .tof-fold-inner { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
-  .tof-bob, .tof-hint { animation: none; }
+  .tof-bob, .tof-hint, .tof-prize-glow { animation: none; }
   .tof-fold, .tof-fold-inner { transition: none; }
 }

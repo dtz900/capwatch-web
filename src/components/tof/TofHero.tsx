@@ -11,6 +11,7 @@ import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, re
 import type { TofBoardRow, TofCard, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
+import { TofPrizeDetails, TofPrizeHintRow, TofPrizeStickers } from "@/components/tof/TofPrizeCallouts";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
@@ -508,7 +509,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   return (
     <section className="w-full border-b border-[var(--color-border)] px-[max(16px,calc(50%-620px))] pb-3 pt-3 transition-[padding] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
-      <TofTitle open={unfolded} onToggle={toggleFold} />
+      <TofTitle open={unfolded} onToggle={toggleFold} prize={prize} />
 
       <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
       <div>
@@ -522,8 +523,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               Your calls get graded the same way theirs do, and you land on the tailer board right next to them.
             </p>
             <p className="mt-2 text-[11.5px] leading-snug text-[var(--color-text-muted)]">
-              Free to play. Nothing is wagered and nothing pays out. Units are just how we keep score.
+              {prize ? "Free to play. Nothing is wagered. Units are how we keep score." : "Free to play. Nothing is wagered and nothing pays out. Units are just how we keep score."}
             </p>
+            {prize && <TofPrizeDetails active={prize} />}
             <p className="mt-2 text-[11.5px] font-bold leading-snug text-[var(--color-text-soft)]">
               New deck at 11 AM PT on weekdays, 9 AM PT on weekends.
             </p>
@@ -623,7 +625,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 /** The game's title: stencil block caps, set straight, with a small "or"
     between the two big words. It is the fold's handle: it bobs while the
     table is closed and opens it on a tap. */
-function TofTitle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+function TofTitle({ open, onToggle, prize }: { open: boolean; onToggle: () => void; prize: { prize: TofPrize; live: boolean } | null }) {
   return (
     <button
       type="button"
@@ -633,21 +635,26 @@ function TofTitle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
       className="group mx-auto flex cursor-pointer select-none flex-col items-center bg-transparent p-0 focus-visible:outline-none"
     >
       {open && (
-        <span className="pp-rise mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
-          Tap to close
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6.5 5 3.5 8 6.5" /></svg>
-        </span>
+        <TofPrizeHintRow active={prize} className="mb-2">
+          <span className="pp-rise flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
+            Tap to close
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6.5 5 3.5 8 6.5" /></svg>
+          </span>
+        </TofPrizeHintRow>
       )}
-      <h2 className={`flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98] ${open ? "" : "tof-bob"}`} style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
+      <h2 className={`relative flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98] ${open ? "" : "tof-bob"}`} style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
         <span className="text-[46px] tracking-[0.01em] text-[var(--color-pos)] sm:text-[60px]">TAIL</span>
         <span className="text-[22px] tracking-[0.06em] text-white sm:text-[28px]">OR</span>
         <span className="text-[46px] tracking-[0.01em] text-[var(--color-neg)] sm:text-[60px]">FADE</span>
+        {prize && <TofPrizeStickers active={prize} />}
       </h2>
       {!open && (
-        <span className="tof-hint mt-1 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
-          Tap to play
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
-        </span>
+        <TofPrizeHintRow active={prize} className="mt-1">
+          <span className="tof-hint flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
+            Tap to play
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
+          </span>
+        </TofPrizeHintRow>
       )}
     </button>
   );
