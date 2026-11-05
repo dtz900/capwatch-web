@@ -5,24 +5,26 @@ type Active = { prize: TofPrize; live: boolean };
 
 const START_LABEL = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
 
-function SponsorLogo({ src, size }: { src: string | null; size: number }) {
-  if (!src) return null;
+/** The sponsor's wordmark at a given height (width follows the image), or
+    their name in text when no logo is configured. */
+function SponsorMark({ prize, height, textClass }: { prize: TofPrize; height: number; textClass: string }) {
+  const s = sponsorDisplay(prize);
+  if (!s.logo) return <span className={textClass}>{s.name}</span>;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" width={size} height={size} className="shrink-0 rounded-[5px]" style={{ width: size, height: size }} />;
+  return <img src={s.logo} alt={s.name} className="max-w-none shrink-0" style={{ height, width: "auto" }} />;
 }
 
 const AMOUNT_TAG = "tof-prize-glow pointer-events-none inline-block rounded-md border-[1.5px] border-[rgba(245,197,74,0.85)] bg-[#0b0d0c] px-1.5 pb-0.5 pt-1 font-[family-name:var(--font-display)] text-[22px] leading-none tracking-[0.02em] text-[var(--color-gold)]";
-const SPONSOR_TAG = "tof-prize-glow pointer-events-none flex items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-0.5 pl-0.5 pr-2 font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal normal-case text-[var(--color-text-soft)]";
+const SPONSOR_TAG = "tof-prize-glow pointer-events-none flex items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-1 px-2.5 font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal normal-case text-[var(--color-text-soft)]";
 /* Compact versions for the hint line: no taller than the hint itself. */
 const AMOUNT_CHIP = "tof-prize-glow pointer-events-none inline-block rounded border border-[rgba(245,197,74,0.85)] bg-[#0b0d0c] px-1 pb-px pt-0.5 font-[family-name:var(--font-display)] text-[12px] leading-none tracking-[0.02em] text-[var(--color-gold)]";
-const SPONSOR_CHIP = "tof-prize-glow pointer-events-none flex items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-px pl-px pr-1.5 font-[family-name:var(--font-sans)] text-[9.5px] font-bold leading-none tracking-normal normal-case text-[var(--color-text-soft)]";
+const SPONSOR_CHIP = "tof-prize-glow pointer-events-none flex items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-0.5 px-1.5 font-[family-name:var(--font-sans)] text-[9.5px] font-bold leading-none tracking-normal normal-case text-[var(--color-text-soft)]";
 
 function SponsorBody({ prize, logo }: { prize: TofPrize; logo: number }) {
-  const s = sponsorDisplay(prize);
   return (
     <>
-      <SponsorLogo src={s.logo} size={logo} />
-      <span>Sponsored by <span className="font-extrabold text-[var(--color-text)]">{s.name}</span></span>
+      <span>Sponsored by</span>
+      <SponsorMark prize={prize} height={logo} textClass="font-extrabold text-[var(--color-text)]" />
     </>
   );
 }
@@ -40,7 +42,7 @@ export function TofPrizeStickers({ active }: { active: Active }) {
         <span className={AMOUNT_TAG} style={{ textShadow: "0 2px 0 #6b4e10" }}>{active.prize.amount}</span>
       </span>
       <span aria-hidden="true" className="absolute left-full top-1/2 ml-4 hidden -translate-y-1/2 xl:block">
-        <span className={SPONSOR_TAG} style={{ textShadow: "none" }}><SponsorBody prize={active.prize} logo={18} /></span>
+        <span className={SPONSOR_TAG} style={{ textShadow: "none" }}><SponsorBody prize={active.prize} logo={13} /></span>
       </span>
       <span className="sr-only">{`${active.prize.amount} weekly prize, sponsored by ${s.name}`}</span>
     </>
@@ -55,7 +57,7 @@ export function TofPrizeHintRow({ active, className = "", children }: { active: 
     <span className={`flex items-center justify-center gap-2.5 ${className}`}>
       <span aria-hidden="true" className={`${AMOUNT_CHIP} -my-0.5 xl:hidden`}>{active.prize.amount}</span>
       {children}
-      <span aria-hidden="true" className={`${SPONSOR_CHIP} -my-0.5 xl:hidden`}><SponsorBody prize={active.prize} logo={13} /></span>
+      <span aria-hidden="true" className={`${SPONSOR_CHIP} -my-0.5 xl:hidden`}><SponsorBody prize={active.prize} logo={9} /></span>
     </span>
   );
 }
@@ -84,11 +86,10 @@ export function TofPrizeDetails({ active }: { active: Active }) {
           </li>
         ))}
       </ul>
-      <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-2.5 flex items-center gap-2 border-t border-[rgba(255,255,255,0.07)] pt-2.5 hover:underline">
-        <SponsorLogo src={s.logo} size={26} />
-        <span className="text-[11px] font-bold text-[var(--color-text-muted)]">
-          Sponsored by <span className="text-[var(--color-text)]">{s.name}</span> <span className="font-semibold">@{prize.sponsor_handle}</span>
-        </span>
+      <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[rgba(255,255,255,0.07)] pt-2.5 hover:underline">
+        <span className="whitespace-nowrap text-[11px] font-bold text-[var(--color-text-muted)]">Sponsored by</span>
+        <SponsorMark prize={prize} height={14} textClass="text-[11px] font-bold text-[var(--color-text)]" />
+        <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-muted)]">@{prize.sponsor_handle}</span>
       </a>
     </div>
   );
