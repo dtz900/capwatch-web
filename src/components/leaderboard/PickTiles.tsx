@@ -5,7 +5,7 @@ import { formatMarketLabel, normalizeMarket } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
 import { XIcon } from "@/components/icons/XIcon";
 import { MarketOddsTag } from "@/components/common/MarketOddsTag";
-import { isLiveMarketPick } from "@/lib/live-market";
+import { displayedOdds, isLiveMarketPick } from "@/lib/live-market";
 
 interface Props {
   picks: LastPick[];
@@ -160,8 +160,9 @@ function PickDetails({ pick }: { pick: LastPick }) {
   const outcomeBg = pick.outcome === "W" ? "bg-[var(--color-pos-soft)] text-[var(--color-pos)]" :
                     pick.outcome === "L" ? "bg-[var(--color-neg-soft)] text-[var(--color-neg)]" :
                     "bg-[rgba(255,255,255,0.04)] text-[var(--color-text-muted)]";
-  const oddsStr = pick.kind !== "parlay" && pick.odds_taken != null
-    ? `${pick.odds_taken > 0 ? "+" : ""}${pick.odds_taken}`
+  const shownOdds = displayedOdds(pick);
+  const oddsStr = pick.kind !== "parlay" && shownOdds != null
+    ? `${shownOdds > 0 ? "+" : ""}${shownOdds}`
     : null;
   const selectionBare = pick.kind === "parlay"
     ? (pick.leg_count ? `${pick.leg_count}-leg parlay` : "Parlay")
@@ -231,9 +232,10 @@ function strippedSelection(pick: LastPick): string {
   const sel = (pick.selection ?? "").trim();
   if (!sel) return pick.market || "Pick";
   const out = sel;
-  if (pick.odds_taken != null) {
-    const sign = pick.odds_taken > 0 ? "+" : "";
-    const oddsStr = `${sign}${pick.odds_taken}`;
+  const shown = displayedOdds(pick);
+  if (shown != null) {
+    const sign = shown > 0 ? "+" : "";
+    const oddsStr = `${sign}${shown}`;
     if (out.endsWith(oddsStr)) return out.slice(0, -oddsStr.length).trim();
   }
   return out;
@@ -265,6 +267,7 @@ const MARKET_LABEL: Record<string, string> = {
 };
 
 function oddsText(pick: LastPick): string {
-  if (pick.odds_taken == null) return "";
-  return `${pick.odds_taken > 0 ? "+" : ""}${pick.odds_taken}`;
+  const shown = displayedOdds(pick);
+  if (shown == null) return "";
+  return `${shown > 0 ? "+" : ""}${shown}`;
 }

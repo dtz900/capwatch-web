@@ -8,7 +8,7 @@ import { trimUnits } from "@/lib/formatters";
 import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
 import type { SlatePick } from "@/lib/types";
 import { MarketOddsTag } from "@/components/common/MarketOddsTag";
-import { isLiveMarketPick } from "@/lib/live-market";
+import { isLiveMarketPick, withDisplayedOdds } from "@/lib/live-market";
 
 const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
 
@@ -37,7 +37,7 @@ export function SlatePickRow({ pick, awayTeam, homeTeam }: Props) {
   const isParlayLeg = pick.kind === "parlay_leg" && (pick.leg_count ?? 0) > 1;
   const posted = formatPostedAt(pick.posted_at);
   const isHeavy = pick.stake_units >= 2;
-  const betText = formatPickText({ pick, awayTeam, homeTeam });
+  const betText = formatPickText({ pick: withDisplayedOdds(pick), awayTeam, homeTeam });
   const handleStr = pick.handle ? `@${pick.handle}` : "";
   const rankStr = pick.capper_rank != null && pick.capper_rank <= 99 ? `#${pick.capper_rank}` : null;
   const tier = sharpTier(pick.capper_rank);

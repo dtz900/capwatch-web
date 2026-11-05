@@ -11,7 +11,7 @@ import { formatUnits, formatUnitsSmart, trimUnits } from "@/lib/formatters";
 import { StableVipPicks, vipStatusLine } from "@/components/my-tails/StableVipPicks";
 import { VipCrown } from "@/components/vip/VipCrown";
 import { MarketOddsTag } from "@/components/common/MarketOddsTag";
-import { isLiveMarketPick } from "@/lib/live-market";
+import { displayedOdds, isLiveMarketPick } from "@/lib/live-market";
 import type { VipSubscription } from "@/lib/vip/types";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 
@@ -401,13 +401,13 @@ export function StableCard({
                         {p.units}u
                       </span>
                     )}
-                    {p.odds_taken != null && isLiveMarketPick(p) && (
+                    {displayedOdds(p) != null && isLiveMarketPick(p) && (
                       <MarketOddsTag postedOdds={p.posted_odds} />
                     )}
-                    {p.odds_taken != null && (
+                    {displayedOdds(p) != null && (
                       <span className="text-xs font-semibold tabular-nums text-[var(--color-text-soft)]">
-                        {p.odds_taken > 0 ? "+" : ""}
-                        {p.odds_taken}
+                        {(displayedOdds(p) as number) > 0 ? "+" : ""}
+                        {displayedOdds(p)}
                       </span>
                     )}
                     {(p.outcome === "W" || p.outcome === "L") && p.profit_units != null && (

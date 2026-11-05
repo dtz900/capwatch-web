@@ -28,6 +28,7 @@ export interface LastPick {
   selection: string | null;
   line: number | null;
   odds_taken: number | null;
+  grading_odds?: number | null;
   grading_odds_source?: GradingOddsSource | null;
   posted_odds?: number | null;
   outcome: FormOutcome;
@@ -134,6 +135,7 @@ export interface SlatePick {
   player_id?: number | null;
   player_name?: string | null;
   odds_taken: number | null;
+  grading_odds?: number | null;
   grading_odds_source?: GradingOddsSource | null;
   posted_odds?: number | null;
   stake_units: number;

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   LIVE_MARKET_WARNING,
   formatAmericanOdds,
+  displayedOdds,
   isLiveMarketPick,
+  withDisplayedOdds,
   liveMarketPostedLine,
   liveMarketTooltip,
 } from "./live-market";
@@ -28,5 +30,15 @@ describe("live market helpers", () => {
       `Posted at -104 after the line moved. Graded at the live market price when posted.\n${LIVE_MARKET_WARNING}`,
     );
     expect(liveMarketTooltip(null)).toBe(LIVE_MARKET_WARNING);
+  });
+
+  it("shows the market price next to the tag, the capper price otherwise", () => {
+    const live = { grading_odds_source: "live_market_at_post", grading_odds: -335, odds_taken: -104 };
+    expect(displayedOdds(live)).toBe(-335);
+    expect(withDisplayedOdds(live).odds_taken).toBe(-335);
+    expect(displayedOdds({ ...live, grading_odds: null })).toBe(-104);
+    const plain = { grading_odds_source: "pinnacle_close", grading_odds: -120, odds_taken: -104 };
+    expect(displayedOdds(plain)).toBe(-104);
+    expect(withDisplayedOdds(plain)).toBe(plain);
   });
 });
