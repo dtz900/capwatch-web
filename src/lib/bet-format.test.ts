@@ -130,3 +130,22 @@ describe("formatPickText: price that is a prefix of the posted price", () => {
     expect(text).not.toContain("1500");
   });
 });
+
+describe("formatPickText: repriced moneyline with an unresolved team", () => {
+  it("strips the capper's embedded price before the moneyline branch", () => {
+    const out = formatPickText({
+      pick: withDisplayedOdds({
+        market: "moneyline",
+        selection: "Heat ML +150",
+        odds_taken: -120,
+        grading_odds: -120,
+        grading_odds_source: "live_market_at_post",
+        posted_odds: 150,
+      }),
+      awayTeam: "MIA",
+      homeTeam: "BOS",
+    });
+    expect(out).not.toContain("+150");
+    expect(out).toContain("-120");
+  });
+});

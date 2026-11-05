@@ -382,7 +382,7 @@ export function StableCard({
                           VIP
                         </span>
                       )}
-                      {p.selection}
+                      {legSelectionText(p)}
                       {expandable && (
                         <span className="ml-1.5 text-[10px] text-[var(--color-text-muted)]">
                           {open ? "▾" : "▸"}

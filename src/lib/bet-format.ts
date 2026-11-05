@@ -405,7 +405,11 @@ export function formatPickText(ctx: FormatContext): string {
     return pick.leg_count ? `${pick.leg_count}-leg parlay` : "Parlay";
   }
 
-  const selection = (pick.selection ?? "").trim();
+  let selection = (pick.selection ?? "").trim();
+  // A repriced pick's selection can embed the capper's own price; drop it up
+  // front so no market branch (moneyline included) renders it beside the
+  // market price.
+  for (const v of pick.strip_odds ?? []) selection = removeOddsToken(selection, v);
   if (!selection && !pick.market) return "Pick";
 
   const odds = fmtOdds(pick.odds_taken);
