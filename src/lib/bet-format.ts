@@ -1,6 +1,7 @@
 import { NFL_TEAM_NAMES } from "@/lib/nfl-teams";
 import { NBA_TEAM_NAMES, NBA_EXTRA_ALIASES } from "@/lib/nba-teams";
 import type { Sport } from "@/lib/types";
+import { removeOddsToken } from "@/lib/live-market";
 
 /**
  * Canonical bet-line formatter for the slate page.
@@ -392,8 +393,7 @@ function stripEmbeddedOdds(
   let out = text;
   for (const v of [oddsValue, ...(extra ?? [])]) {
     if (v == null) continue;
-    const oddsStr = `${v > 0 ? "+" : ""}${v}`;
-    out = out.replace(oddsStr, "").replace(/\s+/g, " ").trim();
+    out = removeOddsToken(out, v);
   }
   return out;
 }

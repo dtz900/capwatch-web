@@ -1,3 +1,5 @@
+import { removeOddsToken } from "@/lib/live-market";
+
 /**
  * Collapse parser-level market labels into reader-friendly categories.
  * Five buckets: Moneyline, Spread, Total, Player prop, Game prop.
@@ -63,7 +65,7 @@ export function formatBetDescriptor(pick: PickLike): string {
 
   let sel = (pick.selection ?? "").trim();
   for (const v of pick.strip_odds ?? []) {
-    sel = sel.replace(`${v > 0 ? "+" : ""}${v}`, "").replace(/\s+/g, " ").trim();
+    sel = removeOddsToken(sel, v);
   }
   const out: string[] = [];
   if (sel) out.push(sel);

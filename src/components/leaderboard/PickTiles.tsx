@@ -237,7 +237,9 @@ function strippedSelection(pick: LastPick): string {
   for (const v of [displayedOdds(pick), ...strippableOdds(pick)]) {
     if (v == null) continue;
     const oddsStr = `${v > 0 ? "+" : ""}${v}`;
-    if (out.endsWith(oddsStr)) return out.slice(0, -oddsStr.length).trim();
+    if (out.endsWith(oddsStr) && !/\d$/.test(out.slice(0, -oddsStr.length))) {
+      return out.slice(0, -oddsStr.length).trim();
+    }
   }
   return out;
 }

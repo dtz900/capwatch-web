@@ -108,3 +108,25 @@ describe("formatPickText: repriced live-market picks", () => {
     expect(text).not.toContain("-104");
   });
 });
+
+describe("formatPickText: price that is a prefix of the posted price", () => {
+  it("does not leave a stray digit when stripping +150 from +1500", () => {
+    const text = formatPickText({
+      pick: withDisplayedOdds({
+        kind: "straight",
+        market: "spread",
+        selection: "Heat +9.5 +1500",
+        line: 9.5,
+        odds_taken: 1500,
+        posted_odds: 1500,
+        grading_odds: 150,
+        grading_odds_source: "live_market_at_post",
+      }),
+      awayTeam: "MIA",
+      homeTeam: "BOS",
+    });
+    expect(text).toContain("+150");
+    expect(text).not.toMatch(/\b0\b/);
+    expect(text).not.toContain("1500");
+  });
+});

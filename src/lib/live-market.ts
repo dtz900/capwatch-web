@@ -24,6 +24,16 @@ export function displayedOdds(pick: {
   return pick.odds_taken ?? null;
 }
 
+/** Remove one American price from selection text, matching the whole token so
+ * stripping +150 never eats the front of +1500. */
+export function removeOddsToken(text: string, odds: number): string {
+  const token = `${odds > 0 ? "+" : ""}${odds}`.replace("+", "\\+");
+  return text
+    .replace(new RegExp(`(?<![\\d.])${token}(?![\\d.])`), "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Prices a selection string may still embed: the capper's own odds_taken and
  * posted_odds. Formatters strip these from the selection text so the original
  * price never shows beside the displayed market price. */
