@@ -24,7 +24,7 @@ describe("TofBoard avatars", () => {
 
   it("shows the sponsored prize and the week label when the prize is live", () => {
     const prize = { enabled: true, amount: "$25", sponsor_handle: "doctorsportshq", starts: "2026-11-10", ends: null };
-    render(<TofBoard rows={[]} me={null} minPlays={15} period="week" prize={{ prize, live: true }} />);
+    render(<TofBoard rows={[]} me={null} minPlays={10} period="week" prize={{ prize, live: true }} />);
     expect(screen.getByText("$25 to this week's top player")).toBeInTheDocument();
     expect(screen.getByText("Tailers · this week")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "@doctorsportshq" })).toHaveAttribute("href", "https://x.com/doctorsportshq");

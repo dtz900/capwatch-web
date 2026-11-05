@@ -21,7 +21,7 @@ export type TofPrize = {
 };
 
 /** Enforced by the platform (core/tof_weekly_prize.WEEK_MIN_PLAYS); keep in sync. */
-export const WEEK_MIN_PLAYS = 15;
+export const WEEK_MIN_PLAYS = 10;
 
 const ET_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
 const X_HANDLE = /^[A-Za-z0-9_]{1,15}$/;
