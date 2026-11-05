@@ -11,6 +11,7 @@ import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, re
 import type { TofBoardRow, TofCard, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
+import { TofPrizeBadge, TofPrizeDetails } from "@/components/tof/TofPrizeCallouts";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
@@ -508,7 +509,10 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
   return (
     <section className="w-full border-b border-[var(--color-border)] px-[max(16px,calc(50%-620px))] pb-3 pt-3 transition-[padding] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
-      <TofTitle open={unfolded} onToggle={toggleFold} />
+      <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
+        <TofTitle open={unfolded} onToggle={toggleFold} />
+        {prize && <TofPrizeBadge active={prize} />}
+      </div>
 
       <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
       <div>
@@ -522,8 +526,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
               Your calls get graded the same way theirs do, and you land on the tailer board right next to them.
             </p>
             <p className="mt-2 text-[11.5px] leading-snug text-[var(--color-text-muted)]">
-              Free to play. Nothing is wagered and nothing pays out. Units are just how we keep score.
+              {prize ? "Free to play. Nothing is wagered. Units are how we keep score." : "Free to play. Nothing is wagered and nothing pays out. Units are just how we keep score."}
             </p>
+            {prize && <TofPrizeDetails active={prize} />}
             <p className="mt-2 text-[11.5px] font-bold leading-snug text-[var(--color-text-soft)]">
               New deck at 11 AM PT on weekdays, 9 AM PT on weekends.
             </p>
@@ -630,7 +635,7 @@ function TofTitle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
       onClick={onToggle}
       aria-expanded={open}
       aria-controls="tof-table"
-      className="group mx-auto flex cursor-pointer select-none flex-col items-center bg-transparent p-0 focus-visible:outline-none"
+      className="group flex cursor-pointer select-none flex-col items-center bg-transparent p-0 focus-visible:outline-none"
     >
       {open && (
         <span className="pp-rise mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">

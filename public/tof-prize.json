@@ -2,6 +2,8 @@
   "enabled": true,
   "amount": "$25",
   "sponsor_handle": "doctorsportshq",
+  "sponsor_name": "DSHQ",
+  "sponsor_logo": "/sponsors/dshq.jpg",
   "starts": "2026-11-03",
   "ends": null
 }
