@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatPickText, inferMarketBucket } from "./bet-format";
+import { withDisplayedOdds } from "./live-market";
 
 const NE_SEA = { awayTeam: "NE", homeTeam: "SEA" };
 const SF_LAD = { awayTeam: "SF", homeTeam: "LAD" };
@@ -84,5 +85,67 @@ describe("inferMarketBucket with basketball stat words", () => {
   it("keeps compact game totals as totals", () => {
     expect(inferMarketBucket(null, "o221.5")).toBe("Total");
     expect(inferMarketBucket(null, "STL o8.5")).toBe("Total");
+  });
+});
+
+describe("formatPickText: repriced live-market picks", () => {
+  it("strips the original price from the selection and shows the market price once", () => {
+    const text = formatPickText({
+      pick: withDisplayedOdds({
+        kind: "straight",
+        market: "spread",
+        selection: "Heat +9.5 -104",
+        line: 9.5,
+        odds_taken: -104,
+        posted_odds: -104,
+        grading_odds: -335,
+        grading_odds_source: "live_market_at_post",
+      }),
+      awayTeam: "MIA",
+      homeTeam: "BOS",
+    });
+    expect(text).toContain("-335");
+    expect(text).not.toContain("-104");
+  });
+});
+
+describe("formatPickText: price that is a prefix of the posted price", () => {
+  it("does not leave a stray digit when stripping +150 from +1500", () => {
+    const text = formatPickText({
+      pick: withDisplayedOdds({
+        kind: "straight",
+        market: "spread",
+        selection: "Heat +9.5 +1500",
+        line: 9.5,
+        odds_taken: 1500,
+        posted_odds: 1500,
+        grading_odds: 150,
+        grading_odds_source: "live_market_at_post",
+      }),
+      awayTeam: "MIA",
+      homeTeam: "BOS",
+    });
+    expect(text).toContain("+150");
+    expect(text).not.toMatch(/\b0\b/);
+    expect(text).not.toContain("1500");
+  });
+});
+
+describe("formatPickText: repriced moneyline with an unresolved team", () => {
+  it("strips the capper's embedded price before the moneyline branch", () => {
+    const out = formatPickText({
+      pick: withDisplayedOdds({
+        market: "moneyline",
+        selection: "Heat ML +150",
+        odds_taken: -120,
+        grading_odds: -120,
+        grading_odds_source: "live_market_at_post",
+        posted_odds: 150,
+      }),
+      awayTeam: "MIA",
+      homeTeam: "BOS",
+    });
+    expect(out).not.toContain("+150");
+    expect(out).toContain("-120");
   });
 });

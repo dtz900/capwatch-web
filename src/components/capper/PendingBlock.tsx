@@ -11,6 +11,8 @@ import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
 import { VipCrown } from "@/components/vip/VipCrown";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import { displayedOdds, isLiveMarketPick, strippableOdds } from "@/lib/live-market";
 
 function formatStakeUnits(u: number | null): string | null {
   if (u == null || u <= 0) return null;
@@ -74,7 +76,8 @@ function PendingRow({
                 market: pick.market,
                 selection: pick.selection,
                 line: pick.line,
-                odds_taken: pick.odds_taken,
+                odds_taken: displayedOdds(pick),
+                strip_odds: strippableOdds(pick),
               })}
             </span>
             {pick.game_label && (
@@ -82,6 +85,7 @@ function PendingRow({
                 {pick.game_label}
               </span>
             )}
+            {isLiveMarketPick(pick) && <MarketOddsTag postedOdds={pick.posted_odds} />}
           </div>
           <div className="text-[12px] font-semibold text-[var(--color-text)] truncate">
             {formatBetDescriptor({
@@ -90,7 +94,8 @@ function PendingRow({
               market: pick.market,
               selection: pick.selection,
               line: pick.line,
-              odds_taken: pick.odds_taken,
+              odds_taken: displayedOdds(pick),
+                strip_odds: strippableOdds(pick),
             })}
             {isParlay && pick.legs && pick.legs.length > 0 && (
               <>

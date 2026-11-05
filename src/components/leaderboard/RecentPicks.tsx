@@ -1,6 +1,8 @@
 import type { LastPick } from "@/lib/types";
 import { formatBetDescriptor } from "@/lib/markets";
 import { formatUnitsSmart } from "@/lib/formatters";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import { isLiveMarketPick, withDisplayedOdds } from "@/lib/live-market";
 
 interface Props {
   picks: LastPick[];
@@ -54,8 +56,9 @@ export function RecentPicks({ picks, limit = 5 }: Props) {
               {pick.outcome}
             </span>
             <span className="flex-1 min-w-0 truncate text-[11px] font-semibold text-[var(--color-text)]">
-              {formatBetDescriptor(pick)}
+              {formatBetDescriptor(withDisplayedOdds(pick))}
             </span>
+            {isLiveMarketPick(pick) && <MarketOddsTag postedOdds={pick.posted_odds} />}
             {pick.outcome === "P" ? (
               <span className="shrink-0 text-[10px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
                 Push
@@ -85,7 +88,7 @@ export function RecentPicks({ picks, limit = 5 }: Props) {
                 href={pick.tweet_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`View pick on X: ${formatBetDescriptor(pick)}`}
+                aria-label={`View pick on X: ${formatBetDescriptor(withDisplayedOdds(pick))}`}
                 className={`${rowClass} hover:bg-[rgba(255,255,255,0.04)] cursor-pointer`}
               >
                 {inner}

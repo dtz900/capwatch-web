@@ -10,6 +10,9 @@ import { StatusPill } from "@/components/my-tails/StatusPill";
 import { formatUnits, formatUnitsSmart, trimUnits } from "@/lib/formatters";
 import { StableVipPicks, vipStatusLine } from "@/components/my-tails/StableVipPicks";
 import { VipCrown } from "@/components/vip/VipCrown";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import { displayedOdds, isLiveMarketPick, legSelectionText } from "@/lib/live-market";
+import { LegOdds } from "@/components/common/LegOdds";
 import type { VipSubscription } from "@/lib/vip/types";
 import { useBetSlip } from "@/components/my-tails/BetSlipContext";
 
@@ -379,7 +382,7 @@ export function StableCard({
                           VIP
                         </span>
                       )}
-                      {p.selection}
+                      {legSelectionText(p)}
                       {expandable && (
                         <span className="ml-1.5 text-[10px] text-[var(--color-text-muted)]">
                           {open ? "▾" : "▸"}
@@ -399,10 +402,13 @@ export function StableCard({
                         {p.units}u
                       </span>
                     )}
-                    {p.odds_taken != null && (
+                    {displayedOdds(p) != null && isLiveMarketPick(p) && (
+                      <MarketOddsTag postedOdds={p.posted_odds} />
+                    )}
+                    {displayedOdds(p) != null && (
                       <span className="text-xs font-semibold tabular-nums text-[var(--color-text-soft)]">
-                        {p.odds_taken > 0 ? "+" : ""}
-                        {p.odds_taken}
+                        {(displayedOdds(p) as number) > 0 ? "+" : ""}
+                        {displayedOdds(p)}
                       </span>
                     )}
                     {(p.outcome === "W" || p.outcome === "L") && p.profit_units != null && (
@@ -458,19 +464,17 @@ export function StableCard({
                       <li key={leg.leg_index} className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <div className="text-xs font-semibold leading-tight text-[var(--color-text-soft)] truncate">
-                            {leg.selection}
+                            {legSelectionText(leg)}
                           </div>
                           <div className="text-[9px] uppercase tracking-wider text-[var(--color-text-muted)] truncate">
                             {[leg.game_label, leg.market].filter(Boolean).join(" · ")}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {leg.odds_taken != null && (
-                            <span className="text-[11px] font-semibold tabular-nums text-[var(--color-text-muted)]">
-                              {leg.odds_taken > 0 ? "+" : ""}
-                              {leg.odds_taken}
-                            </span>
-                          )}
+                          <LegOdds
+                            leg={leg}
+                            className="text-[11px] font-semibold tabular-nums text-[var(--color-text-muted)]"
+                          />
                           {leg.outcome != null && (
                             <span
                               className={`text-[11px] font-bold ${

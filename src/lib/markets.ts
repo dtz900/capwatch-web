@@ -1,3 +1,5 @@
+import { removeOddsToken } from "@/lib/live-market";
+
 /**
  * Collapse parser-level market labels into reader-friendly categories.
  * Five buckets: Moneyline, Spread, Total, Player prop, Game prop.
@@ -33,6 +35,8 @@ interface PickLike {
   selection?: string | null;
   line?: number | null;
   odds_taken?: number | null;
+  /** Original prices to strip from the selection (see bet-format). */
+  strip_odds?: number[] | null;
   leg_count?: number | null;
 }
 
@@ -59,7 +63,10 @@ export function formatBetDescriptor(pick: PickLike): string {
     return pick.leg_count ? `${pick.leg_count}-leg parlay` : "Parlay";
   }
 
-  const sel = (pick.selection ?? "").trim();
+  let sel = (pick.selection ?? "").trim();
+  for (const v of pick.strip_odds ?? []) {
+    sel = removeOddsToken(sel, v);
+  }
   const out: string[] = [];
   if (sel) out.push(sel);
 

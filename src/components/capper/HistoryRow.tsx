@@ -8,6 +8,14 @@ import type { HistoryPick } from "@/lib/types";
 import { ParlayLegGlyphs } from "@/components/capper/ParlayLegGlyphs";
 import { ParlayLegList } from "@/components/capper/ParlayLegList";
 import { VipCrown } from "@/components/vip/VipCrown";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import {
+  displayedOdds as marketDisplayedOdds,
+  isLiveMarketPick,
+  liveMarketPostedLine,
+  strippableOdds,
+  LIVE_MARKET_WARNING,
+} from "@/lib/live-market";
 
 // Odds column is 108px so the "NO ODDS GIVEN" stamp fits on one line
 // (Codex on #158); the header row shares this constant, so it stays aligned.
@@ -76,6 +84,10 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
   // proxy (player props, or ML where Pinnacle is missing). Hide the odds
   // and units cells; the profit cell carries a W/L/P stamp instead.
   const isOutcomeOnly = pick.grading_odds_source === "no_close_available";
+  // Graded at the live market price from post time, not the price the capper
+  // posted. displayedOdds is already the market price (grading_odds first).
+  const isLiveMarket = isLiveMarketPick(pick);
+  const livePostedLine = isLiveMarket ? liveMarketPostedLine(pick.posted_odds) : null;
   const outcomeStamp =
     pick.outcome === "W" ? (
       <span className="text-[var(--color-pos)]">W</span>
@@ -122,7 +134,8 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
           market: pick.market,
           selection: pick.selection,
           line: pick.line,
-          odds_taken: pick.odds_taken,
+          odds_taken: isLiveMarketPick(pick) ? marketDisplayedOdds(pick) : pick.odds_taken,
+          strip_odds: isLiveMarketPick(pick) ? strippableOdds(pick) : undefined,
         })}
       </span>
       {isParlay && pick.legs && pick.legs.length > 0 && (
@@ -238,7 +251,14 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
             </span>
           ) : (
             <>
-              {oddsText}
+              {isLiveMarket ? (
+                <span className="inline-flex items-center justify-end gap-1.5">
+                  {oddsText}
+                  <MarketOddsTag postedOdds={pick.posted_odds} />
+                </span>
+              ) : (
+                oddsText
+              )}
               {isDerivedOdds && (
                 <span
                   className="ml-1 text-[10px] text-[var(--color-text-muted)] font-medium"
@@ -403,8 +423,9 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
               no odds given
             </span>
           ) : oddsText ? (
-            <span>
+            <span className="inline-flex items-center gap-1.5">
               {oddsText}
+              {isLiveMarket && <MarketOddsTag postedOdds={pick.posted_odds} />}
               {isDerivedOdds && (
                 <span
                   className="ml-1 text-[10px] opacity-75"
@@ -450,6 +471,12 @@ export function HistoryRow({ pick, isLast }: { pick: HistoryPick; isLast: boolea
             </a>
           ) : null}
         </div>
+        {isLiveMarket && (
+          <div className="mt-1.5 text-[11px] leading-snug text-[var(--color-text-muted)] font-medium">
+            {livePostedLine && <div>{livePostedLine}</div>}
+            <div>{LIVE_MARKET_WARNING}</div>
+          </div>
+        )}
         {hasExpandableLegs && expanded && (
           <div className="-mx-4 mt-2 sm:hidden">
             <ParlayLegList legs={pick.legs!} />

@@ -7,6 +7,8 @@ import { formatPickText } from "@/lib/bet-format";
 import { trimUnits } from "@/lib/formatters";
 import { sharpTier, ELITE_RING_SHADOW } from "@/lib/sharp-tier";
 import type { SlatePick } from "@/lib/types";
+import { MarketOddsTag } from "@/components/common/MarketOddsTag";
+import { isLiveMarketPick, withDisplayedOdds } from "@/lib/live-market";
 
 const FADEAI_SIGNALS_URL = "https://app.fadeai.bet/signals";
 
@@ -27,7 +29,7 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
   const handleStr = pick.handle ? `@${pick.handle}` : "";
   const rankStr = pick.capper_rank != null && pick.capper_rank <= 99 ? `#${pick.capper_rank}` : null;
   const tier = sharpTier(pick.capper_rank);
-  const betText = formatPickText({ pick, awayTeam, homeTeam });
+  const betText = formatPickText({ pick: withDisplayedOdds(pick), awayTeam, homeTeam });
 
   return (
     <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0 py-2 text-[12px] items-start">
@@ -85,11 +87,14 @@ export function VersusPickRow({ pick, awayTeam, homeTeam }: Props) {
 
       {/* Bottom line: bet text + units (or outcome badge once graded) */}
       <div className="flex items-baseline justify-between gap-2 mt-0.5 min-w-0">
-        <span
-          className={`tabular-nums truncate ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
-          style={tier ? { color: tier.color } : undefined}
-        >
-          {betText}
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span
+            className={`tabular-nums truncate ${isHeavy ? "font-extrabold" : "font-semibold"} ${tier ? "" : "text-[var(--color-text)]"}`}
+            style={tier ? { color: tier.color } : undefined}
+          >
+            {betText}
+          </span>
+          {isLiveMarketPick(pick) && <MarketOddsTag postedOdds={pick.posted_odds} />}
         </span>
         <span className="shrink-0 text-[11px] tabular-nums flex items-center gap-1.5">
           {pick.outcome ? (

@@ -1,6 +1,7 @@
 import { NFL_TEAM_NAMES } from "@/lib/nfl-teams";
 import { NBA_TEAM_NAMES, NBA_EXTRA_ALIASES } from "@/lib/nba-teams";
 import type { Sport } from "@/lib/types";
+import { removeOddsToken } from "@/lib/live-market";
 
 /**
  * Canonical bet-line formatter for the slate page.
@@ -18,6 +19,9 @@ interface PickInput {
   selection?: string | null;
   line?: number | null;
   odds_taken?: number | null;
+  /** Original prices (capper odds_taken, posted_odds) to strip from the
+   * selection when odds_taken holds the market price. */
+  strip_odds?: number[] | null;
   leg_count?: number | null;
 }
 
@@ -381,11 +385,17 @@ function stripEmbeddedLine(text: string, line: number | null): string {
     .trim();
 }
 
-function stripEmbeddedOdds(text: string, oddsValue: number | null | undefined): string {
-  if (oddsValue == null) return text;
-  const sign = oddsValue > 0 ? "+" : "";
-  const oddsStr = `${sign}${oddsValue}`;
-  return text.replace(oddsStr, "").replace(/\s+/g, " ").trim();
+function stripEmbeddedOdds(
+  text: string,
+  oddsValue: number | null | undefined,
+  extra?: number[] | null,
+): string {
+  let out = text;
+  for (const v of [oddsValue, ...(extra ?? [])]) {
+    if (v == null) continue;
+    out = removeOddsToken(out, v);
+  }
+  return out;
 }
 
 export function formatPickText(ctx: FormatContext): string {
@@ -395,7 +405,11 @@ export function formatPickText(ctx: FormatContext): string {
     return pick.leg_count ? `${pick.leg_count}-leg parlay` : "Parlay";
   }
 
-  const selection = (pick.selection ?? "").trim();
+  let selection = (pick.selection ?? "").trim();
+  // A repriced pick's selection can embed the capper's own price; drop it up
+  // front so no market branch (moneyline included) renders it beside the
+  // market price.
+  for (const v of pick.strip_odds ?? []) selection = removeOddsToken(selection, v);
   if (!selection && !pick.market) return "Pick";
 
   const odds = fmtOdds(pick.odds_taken);
@@ -431,7 +445,7 @@ export function formatPickText(ctx: FormatContext): string {
     if (pick.line != null) {
       const lineStr = pick.line > 0 ? `+${pick.line}` : `${pick.line}`;
       const label = stripEmbeddedLine(
-        stripEmbeddedOdds(selection, pick.odds_taken).replace(/\bspread\b/gi, ""),
+        stripEmbeddedOdds(selection, pick.odds_taken, pick.strip_odds).replace(/\bspread\b/gi, ""),
         pick.line,
       );
       return [`${prefix}${label}`.trim(), lineStr, odds].filter(Boolean).join(" ");
@@ -444,7 +458,7 @@ export function formatPickText(ctx: FormatContext): string {
 
   // Default fallback: clean selection, dedupe line/odds, append.
   let cleaned = selection;
-  cleaned = stripEmbeddedOdds(cleaned, pick.odds_taken);
+  cleaned = stripEmbeddedOdds(cleaned, pick.odds_taken, pick.strip_odds);
   cleaned = stripEmbeddedLine(cleaned, pick.line ?? null);
   const tokens: string[] = [];
   if (cleaned) tokens.push(cleaned);
