@@ -11,7 +11,7 @@ import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, re
 import type { TofBoardRow, TofCard, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
-import { TofPrizeDetails, TofPrizeStickerRow, TofPrizeStickers } from "@/components/tof/TofPrizeCallouts";
+import { TofPrizeDetails, TofPrizeHintRow, TofPrizeStickers } from "@/components/tof/TofPrizeCallouts";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
 import { logGuestSwipe, markGuestConverted } from "@/lib/tof/guest-log";
@@ -635,10 +635,12 @@ function TofTitle({ open, onToggle, prize }: { open: boolean; onToggle: () => vo
       className="group mx-auto flex cursor-pointer select-none flex-col items-center bg-transparent p-0 focus-visible:outline-none"
     >
       {open && (
-        <span className="pp-rise mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
-          Tap to close
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6.5 5 3.5 8 6.5" /></svg>
-        </span>
+        <TofPrizeHintRow active={prize} className="mb-2">
+          <span className="pp-rise flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
+            Tap to close
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6.5 5 3.5 8 6.5" /></svg>
+          </span>
+        </TofPrizeHintRow>
       )}
       <h2 className={`relative flex items-baseline justify-center gap-3 font-[family-name:var(--font-display)] leading-none text-[var(--color-text)] transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-[0.98] ${open ? "" : "tof-bob"}`} style={{ textShadow: "0 3px 0 #0a0a0c, 0 10px 24px rgba(0,0,0,0.55)" }}>
         <span className="text-[46px] tracking-[0.01em] text-[var(--color-pos)] sm:text-[60px]">TAIL</span>
@@ -646,12 +648,13 @@ function TofTitle({ open, onToggle, prize }: { open: boolean; onToggle: () => vo
         <span className="text-[46px] tracking-[0.01em] text-[var(--color-neg)] sm:text-[60px]">FADE</span>
         {prize && <TofPrizeStickers active={prize} />}
       </h2>
-      {prize && <TofPrizeStickerRow active={prize} />}
       {!open && (
-        <span className="tof-hint mt-1 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
-          Tap to play
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
-        </span>
+        <TofPrizeHintRow active={prize} className="mt-1">
+          <span className="tof-hint flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-muted)]" aria-hidden="true">
+            Tap to play
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
+          </span>
+        </TofPrizeHintRow>
       )}
     </button>
   );

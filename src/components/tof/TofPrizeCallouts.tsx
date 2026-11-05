@@ -1,3 +1,4 @@
+import type React from "react";
 import { sponsorDisplay, WEEK_MIN_PLAYS, type TofPrize } from "@/lib/tof/prize";
 
 type Active = { prize: TofPrize; live: boolean };
@@ -10,46 +11,51 @@ function SponsorLogo({ src, size }: { src: string | null; size: number }) {
   return <img src={src} alt="" width={size} height={size} className="shrink-0 rounded-[5px]" style={{ width: size, height: size }} />;
 }
 
-const AMOUNT_TAG = "tof-prize-glow pointer-events-none inline-block rotate-[-10deg] rounded-md border-[1.5px] border-[rgba(245,197,74,0.85)] bg-[#0b0d0c] px-1.5 pb-0.5 pt-1 font-[family-name:var(--font-display)] text-[18px] leading-none tracking-[0.02em] text-[var(--color-gold)] xl:text-[22px]";
-const SPONSOR_TAG = "tof-prize-glow pointer-events-none flex rotate-[6deg] items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-0.5 pl-0.5 pr-2 font-[family-name:var(--font-sans)] text-[10px] font-bold leading-none tracking-normal text-[var(--color-text-soft)] xl:text-[11px]";
+const AMOUNT_TAG = "tof-prize-glow pointer-events-none inline-block rounded-md border-[1.5px] border-[rgba(245,197,74,0.85)] bg-[#0b0d0c] px-1.5 pb-0.5 pt-1 font-[family-name:var(--font-display)] text-[22px] leading-none tracking-[0.02em] text-[var(--color-gold)]";
+const SPONSOR_TAG = "tof-prize-glow pointer-events-none flex items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-0.5 pl-0.5 pr-2 font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal normal-case text-[var(--color-text-soft)]";
+/* Compact versions for the hint line: no taller than the hint itself. */
+const AMOUNT_CHIP = "tof-prize-glow pointer-events-none inline-block rounded border border-[rgba(245,197,74,0.85)] bg-[#0b0d0c] px-1 pb-px pt-0.5 font-[family-name:var(--font-display)] text-[12px] leading-none tracking-[0.02em] text-[var(--color-gold)]";
+const SPONSOR_CHIP = "tof-prize-glow pointer-events-none flex items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(245,197,74,0.7)] bg-[#0b0d0c] py-px pl-px pr-1.5 font-[family-name:var(--font-sans)] text-[9.5px] font-bold leading-none tracking-normal normal-case text-[var(--color-text-soft)]";
 
-function Tags({ active }: { active: Active }) {
-  const s = sponsorDisplay(active.prize);
-  return {
-    amount: <span className={AMOUNT_TAG} style={{ textShadow: "0 2px 0 #6b4e10" }}>{active.prize.amount}</span>,
-    sponsor: (
-      <span className={SPONSOR_TAG} style={{ textShadow: "none" }}>
-        <SponsorLogo src={s.logo} size={16} />
-        <span className="py-1">Sponsored by <span className="font-extrabold text-[var(--color-text)]">{s.name}</span></span>
-      </span>
-    ),
-    label: `${active.prize.amount} weekly prize, sponsored by ${s.name}`,
-  };
-}
-
-/** Prize tags beside the Tail or Fade title on wide screens: the amount left
-    of TAIL, the sponsor right of FADE, clear of the lettering. Decoration
-    inside the title button (the whole title still toggles the table); the
-    panel's contest box carries the sponsor link. Render inside the
-    relatively positioned title row. */
-export function TofPrizeStickers({ active }: { active: Active }) {
-  const t = Tags({ active });
+function SponsorBody({ prize, logo }: { prize: TofPrize; logo: number }) {
+  const s = sponsorDisplay(prize);
   return (
     <>
-      <span aria-hidden="true" className="absolute right-full top-1/2 mr-4 hidden -translate-y-1/2 xl:block">{t.amount}</span>
-      <span aria-hidden="true" className="absolute left-full top-1/2 ml-4 hidden -translate-y-1/2 xl:block">{t.sponsor}</span>
-      <span className="sr-only">{t.label}</span>
+      <SponsorLogo src={s.logo} size={logo} />
+      <span>Sponsored by <span className="font-extrabold text-[var(--color-text)]">{s.name}</span></span>
     </>
   );
 }
 
-/** The same tags as a small row under the title where there is no room beside it. */
-export function TofPrizeStickerRow({ active }: { active: Active }) {
-  const t = Tags({ active });
+/** Prize tags beside the Tail or Fade title on wide screens: the amount left
+    of TAIL, the sponsor right of FADE, clear of the lettering and adding no
+    height. Decoration inside the title button (the whole title still toggles
+    the table); the panel's contest box carries the sponsor link. Render
+    inside the relatively positioned title row. */
+export function TofPrizeStickers({ active }: { active: Active }) {
+  const s = sponsorDisplay(active.prize);
   return (
-    <span aria-hidden="true" className="mt-2.5 flex items-center justify-center gap-3 xl:hidden">
-      {t.amount}
-      {t.sponsor}
+    <>
+      <span aria-hidden="true" className="absolute right-full top-1/2 mr-4 hidden -translate-y-1/2 xl:block">
+        <span className={AMOUNT_TAG} style={{ textShadow: "0 2px 0 #6b4e10" }}>{active.prize.amount}</span>
+      </span>
+      <span aria-hidden="true" className="absolute left-full top-1/2 ml-4 hidden -translate-y-1/2 xl:block">
+        <span className={SPONSOR_TAG} style={{ textShadow: "none" }}><SponsorBody prize={active.prize} logo={18} /></span>
+      </span>
+      <span className="sr-only">{`${active.prize.amount} weekly prize, sponsored by ${s.name}`}</span>
+    </>
+  );
+}
+
+/** Below xl there is no room beside the title, so compact tags flank the
+    existing "Tap to play / Tap to close" hint instead of adding a row. */
+export function TofPrizeHintRow({ active, className = "", children }: { active: Active | null; className?: string; children: React.ReactNode }) {
+  if (!active) return <span className={`flex justify-center ${className}`}>{children}</span>;
+  return (
+    <span className={`flex items-center justify-center gap-2.5 ${className}`}>
+      <span aria-hidden="true" className={`${AMOUNT_CHIP} -my-0.5 xl:hidden`}>{active.prize.amount}</span>
+      {children}
+      <span aria-hidden="true" className={`${SPONSOR_CHIP} -my-0.5 xl:hidden`}><SponsorBody prize={active.prize} logo={13} /></span>
     </span>
   );
 }
