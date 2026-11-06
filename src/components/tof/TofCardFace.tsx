@@ -5,6 +5,12 @@ import { TeamLogo } from "@/components/slate/TeamLogo";
 import { teamColor } from "@/lib/teams";
 import type { Sport } from "@/lib/types";
 import { avatarSrc } from "@/lib/avatarSrc";
+import { liveLabel } from "@/lib/live-label";
+// Loads the NCAAB team map (logos by ESPN id, school colors) so college cards resolve like the pro sports.
+import "@/lib/ncaab-teams-register";
+
+/** The NCAAB burgundy, shared with the page tint (SportTint). */
+const NCAAB_BURGUNDY = "#962048";
 
 export const CATEGORY: Record<string, { label: string; color: string }> = {
   contested: { label: "CONTESTED", color: "#f5c54a" },
@@ -56,6 +62,12 @@ function badgeText(label: string): string {
   return first.slice(0, 3);
 }
 
+/** In-game status for the live chip: "2H 4:12", "HALF", "OT" for college, plain LIVE when the feed has no detail. */
+function liveStatus(card: { period?: number | null; clock?: string | null; status_name?: string | null }, sport: Sport): string {
+  if (sport !== "NCAAB" && sport !== "NBA" && sport !== "NFL") return "LIVE";
+  return liveLabel({ sport, period: card.period, clock: card.clock, status_name: card.status_name });
+}
+
 export function TofCardFace({
   card, stampTail = 0, stampFade = 0, stampPass = 0, locked = false,
 }: {
@@ -77,6 +89,7 @@ export function TofCardFace({
   const tailColor = tailTeam ? teamColor(tailTeam, sport) : "#19f57c";
   // The card carries the capper's team as a deep wash at the top, so a stack reads as different cards.
   const wash = deepTone(tailColor);
+  const isNcaab = sport === "NCAAB";
   const live = shared && shared.game_state !== "scheduled" && shared.home_score != null && shared.away_score != null;
   const final = shared?.game_state === "final";
 
@@ -85,21 +98,21 @@ export function TofCardFace({
       className="relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.10)] p-4 select-none"
       // The gradient must not tile into the border strip (a repeat there shows the wash color
       // as a 1px line along the bottom edge), so it is clipped to the padding box and not repeated.
-      style={{ backgroundImage: `linear-gradient(180deg, ${wash} 0%, #121217 46%, #0b0b0e 100%)`, backgroundClip: "padding-box", backgroundOrigin: "border-box", backgroundRepeat: "no-repeat" }}
+      style={{ borderTopColor: isNcaab ? NCAAB_BURGUNDY : undefined, backgroundImage: `linear-gradient(180deg, ${wash} 0%, #121217 46%, #0b0b0e 100%)`, backgroundClip: "padding-box", backgroundOrigin: "border-box", backgroundRepeat: "no-repeat" }}
     >
       <div className="pointer-events-none absolute left-5 top-8 z-20 rotate-[-14deg] rounded-lg border-[3px] border-[var(--color-pos)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[family-name:var(--font-display)] text-[30px] tracking-[0.1em] text-[var(--color-pos)]" style={{ opacity: stampTail }}>TAIL</div>
       <div className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 rotate-[-6deg] rounded-lg border-[3px] border-[#a1a1aa] bg-[rgba(10,10,12,0.75)] px-4 py-1 font-[family-name:var(--font-display)] text-[30px] tracking-[0.1em] text-[#d4d4d8]" style={{ opacity: stampPass }}>PASS</div>
       <div className="pointer-events-none absolute right-5 top-8 z-20 rotate-[14deg] rounded-lg border-[3px] border-[var(--color-neg)] bg-[rgba(10,10,12,0.7)] px-3 py-1 font-[family-name:var(--font-display)] text-[30px] tracking-[0.1em] text-[var(--color-neg)]" style={{ opacity: stampFade }}>FADE</div>
 
       <div className="relative flex items-center justify-between text-[10px] font-extrabold tracking-[0.16em]">
-        <span style={{ color: tag.color }}>{tag.label}{locked && live ? <span className="ml-2 text-[var(--color-text-muted)]">LOCKED</span> : null}</span>
+        <span style={{ color: tag.color }}>{tag.label}{isNcaab ? <span data-testid="sport-chip" className="ml-2 rounded px-1.5 py-[1px] text-[9px] tracking-[0.14em] text-[#f3c6d4]" style={{ background: "rgba(150,32,72,0.45)" }}>NCAAB</span> : null}{locked && live ? <span className="ml-2 text-[var(--color-text-muted)]">LOCKED</span> : null}</span>
         {live ? (
           <span className="flex items-center gap-1.5 tabular-nums text-[var(--color-text-soft)]">
             {!final && <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-pos)]" />}
             <span>{away} {shared!.away_score}</span>
             <span className="text-[var(--color-text-muted)]">·</span>
             <span>{shared!.home_score} {home}</span>
-            <span className="ml-1 text-[var(--color-text-muted)]">{final ? "FINAL" : "LIVE"}</span>
+            <span data-testid="live-label" className="ml-1 text-[var(--color-text-muted)]">{final ? "FINAL" : liveStatus(shared!, sport)}</span>
           </span>
         ) : (
           <span className="text-[var(--color-text-muted)]">{locked ? "LOCKED" : startLabel(card.game_start_at)}</span>
