@@ -98,7 +98,9 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
     onNext: () => move(1),
     onPrev: () => move(-1),
     onEnter: () => {
-      if (!stray && primary.enabled) void terminal.regrade();
+      if (stray || !primary.enabled) return false;
+      void terminal.regrade();
+      return true;
     },
     onGrade: (o) => {
       if (!stray) void terminal.grade(o);

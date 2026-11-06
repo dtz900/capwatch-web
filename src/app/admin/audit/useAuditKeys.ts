@@ -20,7 +20,7 @@ interface KeyLike {
   ctrlKey?: boolean;
   metaKey?: boolean;
   altKey?: boolean;
-  target?: { tagName?: string; isContentEditable?: boolean } | null;
+  target?: { tagName?: string; isContentEditable?: boolean; closest?: (sel: string) => unknown } | null;
 }
 
 const MAP: Record<string, AuditKeyAction> = {
@@ -42,14 +42,21 @@ export function keyToAction(e: KeyLike): AuditKeyAction | null {
   if (e.ctrlKey || e.metaKey || e.altKey) return null;
   const t = e.target;
   if (t && (TYPING.has((t.tagName ?? "").toUpperCase()) || t.isContentEditable)) return null;
-  return MAP[e.key.toLowerCase()] ?? null;
+  const action = MAP[e.key.toLowerCase()] ?? null;
+  // Enter on a link or button belongs to that control.
+  if (action === "enter" && t) {
+    const tag = (t.tagName ?? "").toUpperCase();
+    if (tag === "A" || tag === "BUTTON" || t.closest?.("a,button")) return null;
+  }
+  return action;
 }
 
 interface Handlers {
   enabled: boolean;
   onNext: () => void;
   onPrev: () => void;
-  onEnter: () => void;
+  /** Returns true when it acted; only then is the browser default suppressed. */
+  onEnter: () => boolean;
   onGrade: (outcome: GradeOutcome) => void;
   onSkip: () => void;
   onEscape: () => void;
@@ -63,7 +70,7 @@ export function useAuditKeys(h: Handlers) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const cur = ref.current;
-      if (!cur.enabled) return;
+      if (!cur.enabled || e.repeat) return;
       const action = keyToAction({
         key: e.key,
         ctrlKey: e.ctrlKey,
@@ -73,9 +80,7 @@ export function useAuditKeys(h: Handlers) {
       });
       if (!action) return;
       if (action === "enter") {
-        // A focused button would also click on Enter; the flow key wins.
-        e.preventDefault();
-        cur.onEnter();
+        if (cur.onEnter()) e.preventDefault();
       } else if (action === "next") cur.onNext();
       else if (action === "prev") cur.onPrev();
       else if (action === "skip") cur.onSkip();

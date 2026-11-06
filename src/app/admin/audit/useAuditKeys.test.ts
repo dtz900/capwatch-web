@@ -28,4 +28,10 @@ describe("keyToAction", () => {
     expect(keyToAction({ key: "j", metaKey: true } as never)).toBeNull();
     expect(keyToAction({ key: "j", altKey: true } as never)).toBeNull();
   });
+  it("leaves Enter to focused buttons and links", () => {
+    expect(keyToAction({ key: "Enter", target: { tagName: "BUTTON" } })).toBeNull();
+    expect(keyToAction({ key: "Enter", target: { tagName: "A" } })).toBeNull();
+    expect(keyToAction({ key: "Enter", target: { tagName: "SPAN", closest: () => ({}) } })).toBeNull();
+    expect(keyToAction({ key: "Enter", target: { tagName: "BODY", closest: () => null } })).toBe("enter");
+  });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ackAuditAction,
   deletePickAction,
@@ -17,6 +17,11 @@ import type { QueueRow } from "./labels";
 import { nextSelection } from "./selection";
 import { siblingIdsFor } from "./siblings";
 import type { GradeOutcome } from "./useAuditKeys";
+
+/** The API reports a failed call as "<status>: <body>". */
+const MANUAL_GRADE_ERROR = /^409:|manual grade/i;
+
+const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 export const MANUAL_GRADE_COPY = "This pick has a manual grade. Use Win / Loss / Push / Void to change it.";
 
@@ -45,6 +50,8 @@ interface Args {
  * selection on and refresh the server data in the background. */
 export function useTerminalActions(a: Args) {
   const router = useRouter();
+  // Set synchronously so two fast presses cannot both fire before `pending` re-renders.
+  const inFlight = useRef(false);
   const [msg, setMsg] = useState<{ id: number; text: string } | null>(null);
   // An error belongs to the pick it happened on and disappears when another is selected.
   const message = msg && msg.id === a.selectedId ? msg.text : null;
@@ -60,6 +67,8 @@ export function useTerminalActions(a: Args) {
   };
 
   const run = async (id: number, call: () => Promise<ActionResult | AckResult>, toast: string) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     a.setPending(true);
     setMsg(null);
     try {
@@ -69,7 +78,10 @@ export function useTerminalActions(a: Args) {
         return;
       }
       settle([id], toast);
+    } catch (err) {
+      setMsg({ id, text: errText(err) });
     } finally {
+      inFlight.current = false;
       a.setPending(false);
     }
   };
@@ -82,13 +94,14 @@ export function useTerminalActions(a: Args) {
   const regrade = async () => {
     const id = a.selectedId;
     const row = a.rows.find((r) => r.pick_id === id);
-    if (id == null || !row) return;
+    if (id == null || !row || inFlight.current) return;
+    inFlight.current = true;
     a.setPending(true);
     setMsg(null);
     try {
       const res = await regradeAction(id);
       if (!res.ok) {
-        setMsg({ id, text: /409|manual/i.test(res.error) ? MANUAL_GRADE_COPY : res.error });
+        setMsg({ id, text: MANUAL_GRADE_ERROR.test(res.error) ? MANUAL_GRADE_COPY : res.error });
         return;
       }
       const done = [id];
@@ -104,7 +117,10 @@ export function useTerminalActions(a: Args) {
       }
       const saved = `Saved, regrading: ${done.map((d) => `#${d}`).join(" and ")}`;
       settle(done, failed.length ? `${saved}. Regrade failed on ${failed.join("; ")}` : saved);
+    } catch (err) {
+      setMsg({ id, text: errText(err) });
     } finally {
+      inFlight.current = false;
       a.setPending(false);
     }
   };
@@ -121,13 +137,14 @@ export function useTerminalActions(a: Args) {
     return run(
       id,
       () => (a.showAcked ? unackAuditAction([id]) : ackAuditAction({ pickIds: [id] })),
-      `Triaged: #${id}`,
+      a.showAcked ? `Unskipped: #${id}` : `Triaged: #${id}`,
     );
   };
 
   const remove = () => {
     const id = a.selectedId;
     if (id == null) return Promise.resolve();
+    if (inFlight.current) return Promise.resolve();
     if (!window.confirm(`Delete pick #${id}? This is for parser garbage that was never a real bet.`)) {
       return Promise.resolve();
     }
