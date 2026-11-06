@@ -51,6 +51,9 @@ export function AddBetPanel() {
   const [gameTargetIdx, setGameTargetIdx] = useState(0);
   const [playerQuery, setPlayerQuery] = useState("");
   const [players, setPlayers] = useState<PlayerSearchResult[]>([]);
+  const [playerError, setPlayerError] = useState<string | null>(null);
+  const [gameError, setGameError] = useState<string | null>(null);
+  const [missingTeams, setMissingTeams] = useState<string[]>([]);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -62,7 +65,10 @@ export function AddBetPanel() {
     startTransition(async () => {
       const requested = sport;
       const r = await searchGamesAction(gameDate, undefined, requested);
-      if (sportRef.current === requested) setGames(r.ok ? r.results : []);
+      if (sportRef.current !== requested) return;
+      setGames(r.ok ? r.results : []);
+      setGameError(r.ok ? null : r.error);
+      setMissingTeams(r.ok ? r.missingTeams : []);
     });
 
   // Search the roster of the sport toggle; without it every NFL name
@@ -72,7 +78,10 @@ export function AddBetPanel() {
     startTransition(async () => {
       const requested = sport;
       const r = await searchPlayersAction(playerQuery, requested);
-      if (sportRef.current === requested) setPlayers(r.ok ? r.results : []);
+      if (sportRef.current !== requested) return;
+      setPlayers(r.ok ? r.results : []);
+      setPlayerError(r.ok ? null : r.error);
+      setMissingTeams(r.ok ? r.missingTeams : []);
     });
 
   const isParlay = legs.length > 1;
@@ -167,6 +176,9 @@ export function AddBetPanel() {
               setSport(sp);
               sportRef.current = sp;
               setGames([]);
+              setGameError(null);
+              setPlayerError(null);
+              setMissingTeams([]);
               // A bound game from the other sport would submit an MLB
               // game_id under sport NFL (Codex P1, PR #110); unbind all.
               setLegs((ls) => ls.map((l) => ({ ...l, game: null })));
@@ -195,6 +207,9 @@ export function AddBetPanel() {
           </span>
         )}
       </div>
+      {gameError && (
+        <p className="text-[11px] text-[var(--color-neg)]">Game search failed: {gameError}</p>
+      )}
       {games.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {games.map((g) => (
@@ -313,6 +328,16 @@ export function AddBetPanel() {
                 </>
               )}
             </div>
+          )}
+          {leg.type === "player" && playerError && (
+            <p className="text-[11px] text-[var(--color-neg)]">
+              Player search failed: {playerError}
+            </p>
+          )}
+          {leg.type === "player" && missingTeams.length > 0 && (
+            <p className="text-[11px] text-[var(--color-text-muted)]">
+              Rosters for {missingTeams.join(", ")} did not load
+            </p>
           )}
           {leg.type === "player" && players.length > 0 && (
             <div className="flex flex-wrap gap-2">
