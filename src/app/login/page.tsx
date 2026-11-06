@@ -4,7 +4,7 @@ import { notFound, useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { vipEnabled } from "@/lib/flags";
 import { signInReturnPath } from "@/app/auth/callback/redirects";
-import { signInErrorMessage } from "@/lib/password-auth";
+import { SELLER_NO_PASSWORD, signInErrorMessage } from "@/lib/password-auth";
 
 /**
  * Sign-in: magic link + emailed code, same email.
@@ -89,9 +89,25 @@ function LoginInner() {
     if (!supabase || signingIn) return;
     setSigningIn(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) {
         setError(signInErrorMessage(error));
+        return;
+      }
+      // An account that owns a capper profile sells picks, so a password is
+      // never enough for it: end the session and send them to the emailed
+      // link. The platform refuses seller actions from a password session
+      // anyway; this just keeps a seller from landing in one. A failed
+      // lookup ends the session too rather than guessing.
+      const userId = data.user?.id;
+      const owned = userId
+        ? await supabase.from("cappers").select("id").eq("claimed_by_user_id", userId).limit(1)
+        : { data: null, error: new Error("no user on the session") };
+      if (owned.error || (owned.data && owned.data.length > 0)) {
+        if (owned.error) console.error("seller check after password sign-in failed:", owned.error);
+        await supabase.auth.signOut();
+        setPassword("");
+        setError(owned.error ? "Could not finish signing in. Use the email sign-in." : SELLER_NO_PASSWORD);
         return;
       }
     } catch (err) {

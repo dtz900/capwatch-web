@@ -1,12 +1,26 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { createBrowserSupabase } from "@/lib/supabase/client";
-import { MAX_PASSWORD_LENGTH, setPasswordErrorMessage, validateNewPassword } from "@/lib/password-auth";
+import {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  SELLER_NO_PASSWORD,
+  breachCount,
+  setPasswordErrorMessage,
+  validateNewPassword,
+} from "@/lib/password-auth";
 
 /* Set or change the account password. Optional: the emailed link keeps
  * working. Being signed in already proves the mailbox, so no current
- * password is asked for (most accounts never had one). */
+ * password is asked for (most accounts never had one).
+ *
+ * A password is checked against known breaches before it is saved, and an
+ * account that owns a capper profile cannot set one at all: sellers stay on
+ * the emailed link, and the platform refuses seller actions from a password
+ * session regardless (api/user_auth.py get_seller_user_id). */
 export function PasswordCard() {
+  const { capper } = useAuth();
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -32,6 +46,18 @@ export function PasswordCard() {
     setError(null);
     setSaving(true);
     try {
+      let breaches: number;
+      try {
+        breaches = await breachCount(password);
+      } catch (err) {
+        console.error("password breach lookup failed:", err);
+        setError("Could not check that password right now. Try again in a minute.");
+        return;
+      }
+      if (breaches > 0) {
+        setError("That password has appeared in a data breach, so it is easy to guess. Pick a different one.");
+        return;
+      }
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) {
         console.error("password update failed:", err);
@@ -51,11 +77,15 @@ export function PasswordCard() {
 
   if (!supabase) return null;
 
+  if (capper) {
+    return <p className="mt-3 text-xs text-[var(--color-text-muted)]">{SELLER_NO_PASSWORD}</p>;
+  }
+
   return (
     <form onSubmit={save} className="mt-3">
       <p className="text-xs text-[var(--color-text-muted)]">
         Optional. Set one to sign in without waiting on an email. The emailed link keeps working
-        either way.
+        either way. At least {MIN_PASSWORD_LENGTH} characters.
       </p>
       <div className="mt-3 flex gap-2">
         <div className="relative min-w-0 flex-1">

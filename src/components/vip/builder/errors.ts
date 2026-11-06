@@ -25,7 +25,18 @@ const TEXT: Record<string, string> = {
   "404:pick_not_found": "That pick is no longer posted.",
 };
 
+/* The platform refuses seller actions from a session opened with a password
+   (api/user_auth.py get_seller_user_id). It sends its own copy with the code. */
+const EMAIL_SIGNIN =
+  "For your protection, selling tools only work after you sign in with the emailed link or code. Sign out, then sign back in by email.";
+const emailSigninCopy = (err: unknown): string | null =>
+  err instanceof VipApiError && err.status === 403 && err.detail === "email_signin_required"
+    ? (err.message_text ?? EMAIL_SIGNIN)
+    : null;
+
 export function builderError(err: unknown): string {
+  const signin = emailSigninCopy(err);
+  if (signin) return signin;
   if (err instanceof VipApiError) {
     const known = TEXT[`${err.status}:${err.detail}`];
     if (known) return known;
@@ -51,6 +62,8 @@ export const isGameStarted = (err: unknown) =>
 
 /** Copy for the NCAAB on-demand search and board reads. */
 export function boardLoadError(err: unknown): string {
+  const signin = emailSigninCopy(err);
+  if (signin) return signin;
   if (err instanceof VipApiError) {
     if (err.status === 429) {
       return err.message_text ?? "You have opened a lot of college games this hour. Try again in a few minutes.";
