@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ADMIN_SPORTS } from "@/lib/admin-sports";
 import type { MarketDef, PickPatchInput } from "./actions";
-import { FieldRow } from "./FieldRow";
+import { FieldRow, LABEL_CLASS, ROW_CLASS } from "./FieldRow";
 import { fieldStates, isStrayNcaabProp, type FieldKey } from "./fieldState";
 import { REASON_LABEL, formatOdds, type QueueRow } from "./labels";
 import { TweetBlock } from "./TweetBlock";
@@ -23,8 +23,6 @@ export interface PickDetailProps {
 }
 
 const KBD = "border border-[var(--color-border)] rounded px-[5px] text-[10px] font-bold text-[var(--color-text-soft)]";
-const LBL = "text-[10.5px] font-extrabold tracking-[0.14em] uppercase text-[var(--color-text-muted)]";
-const ROW = "grid grid-cols-[96px_1fr_auto] gap-3.5 items-center py-[11px] border-b border-[var(--color-border)]";
 
 function siblingCopy(ids: number[], rows: QueueRow[]): string {
   const first = rows[0];
@@ -102,8 +100,8 @@ export function PickDetail({
         </div>
       ) : (
         <div className="mt-5 border-t border-[var(--color-border)]">
-          <div className={ROW}>
-            <div className={LBL}>Sport</div>
+          <div className={ROW_CLASS}>
+            <div className={LABEL_CLASS}>Sport</div>
             <div className="inline-flex justify-self-start border border-[var(--color-border)] rounded-lg overflow-hidden">
               {ADMIN_SPORTS.map((s) => (
                 <button
