@@ -241,11 +241,16 @@ export const NFL_DEFAULT_MIN_PICKS = 1;
 // floor; "all" (MLB + NFL + NBA) keeps the MLB floor.
 export const NBA_WINDOW_MIN_PICKS: Partial<Record<Window, number>> = {};
 export const NBA_DEFAULT_MIN_PICKS = 1;
+// College plays dozens of games a night and cappers post at volume, so the
+// floor is 5 graded picks rather than the MLB 10. Mirrors the platform's NCAAB
+// floor; "all" keeps the MLB floor.
+export const NCAAB_WINDOW_MIN_PICKS: Partial<Record<Window, number>> = {};
+export const NCAAB_DEFAULT_MIN_PICKS = 5;
 export function minPicksForWindow(window: Window, sport?: SportFilter): number {
   if (sport === "nfl") return NFL_WINDOW_MIN_PICKS[window] ?? NFL_DEFAULT_MIN_PICKS;
   if (sport === "nba") return NBA_WINDOW_MIN_PICKS[window] ?? NBA_DEFAULT_MIN_PICKS;
-  // NCAAB has no floor of its own yet (open question in the C4 inventory):
-  // it takes the MLB default, as the platform does until a branch is added.
+  // NCAAB ranks at 5 graded picks in every window (David, 2026-11-05).
+  if (sport === "ncaab") return NCAAB_WINDOW_MIN_PICKS[window] ?? NCAAB_DEFAULT_MIN_PICKS;
   return WINDOW_MIN_PICKS[window] ?? DEFAULT_MIN_PICKS;
 }
 

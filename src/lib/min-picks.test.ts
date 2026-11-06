@@ -24,3 +24,12 @@ describe("NBA ranking floor", () => {
     expect(minPicksForWindow("all_time", "nba")).toBe(1);
   });
 });
+
+describe("NCAAB ranking floor", () => {
+  it("ranks at 5 graded picks in every window", () => {
+    expect(minPicksForWindow("last_7", "ncaab")).toBe(5);
+    expect(minPicksForWindow("last_30", "ncaab")).toBe(5);
+    expect(minPicksForWindow("season", "ncaab")).toBe(5);
+    expect(minPicksForWindow("all_time", "ncaab")).toBe(5);
+  });
+});

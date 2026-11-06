@@ -57,7 +57,7 @@ describe("sides and sharps", () => {
 
   it("formats the spread at the market line, pickem and no line", () => {
     expect(buildCard(game([], { market: { spread_home: 0, total: null, source: null } })).spread.left.text).toBe("MCN PK");
-    expect(buildCard(game([], { market: null })).spread.right.text).toBe("UNT");
+    expect(buildCard(game([], { market: null })).spread.right).toMatchObject({ text: "UNT", note: "no line" });
     expect(fmtLine(-3.5)).toBe("-3.5");
   });
 });
@@ -102,5 +102,47 @@ describe("biggest bet, chips and ordering", () => {
     expect(quiet.length).toBe(5);
     expect(withPicks.length + quiet.length).toBe(NCAAB_FIXTURE_GAMES.length);
     expect(withPicks[0].game_id).toBe(401925031);
+  });
+});
+
+describe("line fallback when the market is missing", () => {
+  const noMarket = { market: null };
+  it("uses the most common line the sharps took on that side", () => {
+    const c = buildCard(game([
+      base({ capper_id: 1, selection: "MCN", line: -4 }),
+      base({ capper_id: 2, selection: "MCN", line: -4 }),
+      base({ capper_id: 3, selection: "MCN", line: -3.5 }),
+      base({ capper_id: 4, selection: "UNT", line: 4 }),
+      base({ capper_id: 5, market: "total", selection: "Over 140.5", line: null }),
+      base({ capper_id: 6, market: "total", selection: "Over 140.5", line: null }),
+      base({ capper_id: 7, market: "total", selection: "Under 141", line: 141 }),
+    ], noMarket));
+    expect(c.spread.left.text).toBe("MCN -4");
+    expect(c.spread.right.text).toBe("UNT +4");
+    expect(c.total.left.text).toBe("Over 140.5");
+    expect(c.total.right.text).toBe("Under 141");
+    expect(c.spread.left.note).toBeUndefined();
+  });
+
+  it("falls back per field: a missing total keeps the spread market line", () => {
+    const c = buildCard(game([base({ capper_id: 1, market: "total", selection: "Over 139", line: 139 })], { market: { spread_home: 2, total: null, source: null } }));
+    expect(c.spread.left.text).toBe("MCN -2");
+    expect(c.total.left.text).toBe("Over 139");
+  });
+
+  it("shows the side with a muted no-line note, never bare", () => {
+    const c = buildCard(game([base({ capper_id: 1, selection: "MCN", line: -4 })], noMarket));
+    expect(c.spread.left.text).toBe("MCN -4");
+    expect(c.spread.right).toMatchObject({ text: "UNT", note: "no line" });
+    expect(c.total.left).toMatchObject({ text: "Over", note: "no line" });
+    expect(c.total.right).toMatchObject({ text: "Under", note: "no line" });
+  });
+
+  it("fixture PUR @ ILL labels both sides from the picks", () => {
+    const pur = NCAAB_FIXTURE_GAMES.find((g) => g.away_team === "PUR")!;
+    const c = buildCard(pur);
+    expect(c.spread.left.text).toBe("PUR -4");
+    expect(c.spread.right.text).toBe("ILL +4");
+    expect(c.total.left).toMatchObject({ text: "Over", note: "no line" });
   });
 });

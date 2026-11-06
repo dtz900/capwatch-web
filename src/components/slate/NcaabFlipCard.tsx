@@ -20,6 +20,7 @@ function MarketLine({ row, awayColor, homeColor }: { row: MarketRow; awayColor: 
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-baseline gap-2.5 text-[14px] font-extrabold">
         <span className="truncate" style={{ color: left.lead ? leftColor : "var(--color-text-muted)" }}>
           {left.text}
+          {left.note && <span className="ml-1 text-[10px] font-semibold text-[var(--color-text-muted)]">{left.note}</span>}
         </span>
         <span className="whitespace-nowrap tabular-nums" aria-label={`${left.n} to ${right.n}`}>
           <span className={left.lead ? "text-[var(--color-text)]" : "text-[#52525b]"}>{left.n}</span>
@@ -28,6 +29,7 @@ function MarketLine({ row, awayColor, homeColor }: { row: MarketRow; awayColor: 
         </span>
         <span className="truncate text-right" style={{ color: right.lead ? rightColor : "var(--color-text-muted)" }}>
           {right.text}
+          {right.note && <span className="ml-1 text-[10px] font-semibold text-[var(--color-text-muted)]">{right.note}</span>}
         </span>
       </div>
     </div>

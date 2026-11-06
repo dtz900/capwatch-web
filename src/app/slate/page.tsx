@@ -397,7 +397,7 @@ async function SlateBoard({ p }: { p: SlateParams }) {
     : sport === "nba"
       ? "Sharps are ranked by their NBA season straight-pick performance (units profit, min 10 graded picks)."
       : sport === "ncaab"
-        ? "Sharps are ranked by their NCAAB season straight-pick performance (units profit, min 10 graded picks)."
+        ? "Sharps are ranked by their NCAAB season straight-pick performance (units profit, min 5 graded picks)."
       : "Sharps are ranked by their season straight-pick performance (units profit, min 10 graded picks).";
   const dayCaption = dateParam === "today" ? "Tonight" : "Tomorrow";
   const nflCaption = isNfl ? weekLabel(data, p.week) : "Weekly board";

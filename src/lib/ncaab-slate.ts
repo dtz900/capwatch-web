@@ -85,10 +85,37 @@ export interface SideCount {
   lead: boolean;
 }
 
+export type SideLabel = SideCount & {
+  text: string;
+  /** "no line" when neither the market nor the sharps on this side give a line. */
+  note?: string;
+};
+
 export interface MarketRow {
   label: "SPREAD" | "TOTAL";
-  left: SideCount & { text: string };
-  right: SideCount & { text: string };
+  left: SideLabel;
+  right: SideLabel;
+}
+
+/** Most common value; the first one seen wins a tie. Null when empty. */
+export function modeOf(values: ReadonlyArray<number>): number | null {
+  const counts = new Map<number, number>();
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  let best: number | null = null;
+  let bestN = 0;
+  for (const [v, n] of counts) {
+    if (n > bestN) {
+      best = v;
+      bestN = n;
+    }
+  }
+  return best;
+}
+
+function pickLine(p: SlatePick): number | null {
+  if (p.line != null) return p.line;
+  const m = (p.selection ?? "").match(/(?:over|under|\b[ou])\s*(\d+(?:\.\d+)?)/i);
+  return m ? parseFloat(m[1]) : null;
 }
 
 export function tallySides(counts: { left: number; right: number }): { left: SideCount; right: SideCount } {
@@ -173,15 +200,30 @@ export function buildCard(game: SlateGame): NcaabCard {
   const spreadTally = tallySides({ left: sideCappers("SPREAD", "away"), right: sideCappers("SPREAD", "home") });
   const totalTally = tallySides({ left: sideCappers("TOTAL", "over"), right: sideCappers("TOTAL", "under") });
 
+  // Label a side at the market line; with no market line, at the most common
+  // line the sharps on that side took; with neither, the bare side plus a muted
+  // "no line" note. Never a bare team or a bare Over.
+  const sideLabel = (tally: SideCount, name: string, marketLine: number | null, side: PickSide, group: NcaabGroup, signed: boolean): SideLabel => {
+    const line =
+      marketLine ??
+      modeOf(
+        classified
+          .filter((c) => c.group === group && c.side === side)
+          .map((c) => pickLine(c.pick))
+          .filter((v): v is number => v != null),
+      );
+    if (line == null) return { ...tally, text: name, note: "no line" };
+    return { ...tally, text: `${name} ${signed ? fmtLine(line) : line}` };
+  };
   const spread: MarketRow = {
     label: "SPREAD",
-    left: { ...spreadTally.left, text: line == null ? away : `${away} ${fmtLine(line === 0 ? 0 : -line)}` },
-    right: { ...spreadTally.right, text: line == null ? home : `${home} ${fmtLine(line)}` },
+    left: sideLabel(spreadTally.left, away, line == null ? null : -line, "away", "SPREAD", true),
+    right: sideLabel(spreadTally.right, home, line, "home", "SPREAD", true),
   };
   const totalRow: MarketRow = {
     label: "TOTAL",
-    left: { ...totalTally.left, text: total == null ? "Over" : `Over ${total}` },
-    right: { ...totalTally.right, text: total == null ? "Under" : `Under ${total}` },
+    left: sideLabel(totalTally.left, "Over", total, "over", "TOTAL", false),
+    right: sideLabel(totalTally.right, "Under", total, "under", "TOTAL", false),
   };
 
   const textCtx = { awayTeam: game.away_team, homeTeam: game.home_team, sport: "NCAAB" as const, awayName: game.away_name, homeName: game.home_name };
