@@ -1,5 +1,6 @@
 import "./ncaab-teams-register";
 import { describe, expect, it } from "vitest";
+import { formatPickText } from "./bet-format";
 import { buildCard, classifyPick, orderGames } from "./ncaab-slate";
 import type { SlateGame, SlatePick } from "./types";
 
@@ -149,5 +150,32 @@ describe("line mirroring, tiebreaks and order", () => {
     const live = game([base({ capper_id: 1 })], { game_id: 2, game_state: "in_progress" });
     const soon = game([base({ capper_id: 1 }), base({ capper_id: 2 })], { game_id: 3 });
     expect(orderGames([fin, live, soon]).map((g) => g.game_id)).toEqual([3, 2, 1]);
+  });
+});
+
+describe("team totals keep their team", () => {
+  it("prefixes the resolved team on the back row and the biggest-bet line", () => {
+    const c = buildCard(game([
+      base({ market: "team_total", stat_name: "team_points", selection: "UNT Over 70.5", direction: "over", line: 70.5, stake_units: 3 }),
+      base({ capper_id: 2, market: "team_total", selection: "McNeese Under 68", line: 68 }),
+    ]));
+    const tt = c.rows.filter((r) => r.group === "TEAM TOTAL").map((r) => r.bet);
+    expect(tt).toEqual(["UNT Over 70.5 -110", "MCN Under 68 -110"]);
+    expect(c.biggest?.bet).toBe("UNT Over 70.5 -110");
+  });
+
+  it("falls back to the selection school name when no team resolves", () => {
+    const c = buildCard(game([base({ market: "team_total", selection: "Xyzzy State Over 70.5", line: 70.5 })]));
+    expect(c.rows[0].bet).toBe("Xyzzy State Over 70.5 -110");
+  });
+
+  it("leaves full-game totals and other sports untouched", () => {
+    const c = buildCard(game([base({ market: "total", selection: "Over 139.5", line: 139.5 })]));
+    expect(c.rows[0].bet).toBe("Over 139.5 -110");
+    for (const sport of ["NBA", "NFL", "MLB"] as const) {
+      expect(
+        formatPickText({ pick: { market: "team_total", selection: "BOS Over 110.5", line: 110.5, odds_taken: -110 }, awayTeam: "BOS", homeTeam: "NYK", sport }),
+      ).toBe("Over 110.5 -110");
+    }
   });
 });

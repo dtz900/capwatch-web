@@ -271,8 +271,18 @@ export function buildCard(game: SlateGame): NcaabCard {
   };
 
   const textCtx = { awayTeam: game.away_team, homeTeam: game.home_team, sport: "NCAAB" as const, awayName: game.away_name, homeName: game.home_name };
-  const betText = (p: SlatePick) =>
+  const baseText = (p: SlatePick) =>
     formatPickText({ pick: { ...p, kind: p.kind === "parlay_leg" ? "parlay_leg" : "straight" }, ...textCtx });
+  // formatPickText renders a team total as a plain total ("Over 70.5 -110") and
+  // drops the team, so a TEAM TOTAL pick gets its team put back in front.
+  const betText = (p: SlatePick) => {
+    const text = baseText(p);
+    if (classifyPick(p, game).group !== "TEAM TOTAL") return text;
+    const side = pickTeamSide(p.selection, game.away_team, game.home_team, "NCAAB", { away: game.away_name, home: game.home_name });
+    const team =
+      side === "away" ? away : side === "home" ? home : (p.selection ?? "").replace(/\s*\b(over|under|o|u)\s?\d.*$/i, "").trim();
+    return team ? `${team} ${text}` : text;
+  };
 
   // Largest straight; ties go to the earliest post, then list order.
   const postedMs = (p: SlatePick) => (p.posted_at ? Date.parse(p.posted_at) || Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER);
