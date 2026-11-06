@@ -1,24 +1,13 @@
-import crypto from "crypto";
 import Link from "next/link";
-import { createServiceSupabase } from "@/lib/supabase/service";
 
-import { unsubKind, unsubPayload } from "./kinds";
+import { applyUnsub } from "./apply";
+import { unsubKind } from "./kinds";
 
 export const dynamic = "force-dynamic";
 
-/* Signed one-click unsubscribe (tail alerts, k=tof, k=vip). Token scheme must
- * stay in sync with the backend's core/email_unsub.py: hex
- * HMAC-SHA256(EMAIL_UNSUB_SECRET, user_id). The service client bypasses
- * RLS, so a verified token is the only thing authorizing the write. */
-function validToken(userId: string, token: string, k: string | undefined): boolean {
-  const secret = process.env.EMAIL_UNSUB_SECRET;
-  if (!secret || !userId || !token) return false;
-  const expected = crypto.createHmac("sha256", secret).update(unsubPayload(userId, k)).digest("hex");
-  const a = Buffer.from(expected, "utf8");
-  const b = Buffer.from(token, "utf8");
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
+/* Signed unsubscribe link from an email footer. Verification and the write
+ * live in ./apply, shared with the one-click POST route that mailbox
+ * providers call (src/app/api/email/unsubscribe/route.ts). */
 export default async function UnsubscribePage({
   searchParams,
 }: {
@@ -26,17 +15,7 @@ export default async function UnsubscribePage({
 }) {
   const { u = "", t = "", k } = await searchParams;
   const kind = unsubKind(k);
-  let ok = false;
-  if (validToken(u, t, k)) {
-    const supabase = createServiceSupabase();
-    if (supabase) {
-      const { error } = await supabase
-        .from("ts_profiles")
-        .update({ [kind.column]: false })
-        .eq("user_id", u);
-      ok = !error;
-    }
-  }
+  const ok = (await applyUnsub(u, t, k)) === "ok";
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-6 text-center">
