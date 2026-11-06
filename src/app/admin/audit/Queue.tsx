@@ -42,7 +42,8 @@ export function Queue({
     ["Pick-shaped rejects", footer.pickShaped],
   ];
   return (
-    <div className="border-r border-[var(--color-border)] overflow-y-auto flex flex-col min-h-0">
+    <div className="border-r border-[var(--color-border)] flex flex-col min-h-0 h-full">
+      <div className="flex-1 min-h-0 overflow-y-auto">
       {rows.length === 0 ? (
         <div className="px-[22px] py-[60px] text-center text-[var(--color-text-muted)]">
           Nothing needs you in {sportLabel}.
@@ -61,7 +62,7 @@ export function Queue({
             >
               {on && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--color-text)]" />}
               <span className="bg-[var(--color-text)] text-[#0a0a0c] text-[10px] font-extrabold tracking-[0.06em] rounded-[5px] text-center py-[5px] w-[50px]">
-                {r.sport ?? "MLB"}
+                {r.sport ?? "?"}
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-[14px] leading-[19px] font-extrabold">
@@ -87,10 +88,10 @@ export function Queue({
         })
       )}
 
-      {rows.length > 0 && (
+      {(rows.length > 0 || newerHref || olderHref) && (
         <div className="flex items-center justify-between px-[22px] py-3 text-[11px] font-semibold text-[var(--color-text-muted)]">
           <span>
-            Showing {from}-{to} of {paging.total}
+            {rows.length > 0 ? `Showing ${from}-${to} of ${paging.total}` : `Nothing at this offset (${paging.total} total)`}
           </span>
           <span className="flex gap-3 font-bold text-[var(--color-text-soft)]">
             {newerHref && <Link href={newerHref}>Newer</Link>}
@@ -98,8 +99,9 @@ export function Queue({
           </span>
         </div>
       )}
+      </div>
 
-      <div className="mt-auto border-t border-[var(--color-border)]">
+      <div className="flex-none border-t border-[var(--color-border)]">
         {buckets.map(([label, n]) => (
           <button
             key={label}

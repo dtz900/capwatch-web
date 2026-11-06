@@ -48,7 +48,7 @@ function DetailPlaceholder({ row }: { row: QueueRow }) {
     <div className="max-w-[900px] w-full px-8 pt-[22px]">
       <div className="flex items-center gap-[14px]">
         <span className="bg-[var(--color-text)] text-[#0a0a0c] text-[10px] font-extrabold tracking-[0.06em] rounded-[5px] text-center py-[5px] w-[50px]">
-          {row.sport ?? "MLB"}
+          {row.sport ?? "?"}
         </span>
         <div className="min-w-0">
           <div className="text-[26px] font-extrabold tracking-[-0.02em] leading-[1.1]">
