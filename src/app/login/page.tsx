@@ -4,6 +4,7 @@ import { notFound, useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { vipEnabled } from "@/lib/flags";
 import { signInReturnPath } from "@/app/auth/callback/redirects";
+import { signInErrorMessage } from "@/lib/password-auth";
 
 /**
  * Sign-in: magic link + emailed code, same email.
@@ -16,6 +17,10 @@ import { signInReturnPath } from "@/app/auth/callback/redirects";
  * the email OTP verifier path, which has no browser affinity. Errors from
  * /auth/callback arrive on ?error= and render here instead of a silent
  * bounce to the homepage.
+ *
+ * Password sign-in sits behind a text link as the fallback for mailboxes
+ * that hold or junk the email (Comcast, 2026-11-06). It needs no email at
+ * all; a password is set on the account page after one email sign-in.
  */
 function LoginInner() {
   const enabled =
@@ -30,6 +35,9 @@ function LoginInner() {
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [usePassword, setUsePassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = useMemo(() => (enabled ? createBrowserSupabase() : null), [enabled]);
 
@@ -73,6 +81,35 @@ function LoginInner() {
     const dest = signInReturnPath(document.cookie);
     document.cookie = "ts_return_to=; path=/; max-age=0";
     window.location.href = dest;
+  }
+
+  async function signInWithPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!supabase || signingIn) return;
+    setSigningIn(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) {
+        setError(signInErrorMessage(error));
+        return;
+      }
+    } catch (err) {
+      console.error("password sign-in failed:", err);
+      setError(signInErrorMessage({}));
+      return;
+    } finally {
+      setSigningIn(false);
+    }
+    const dest = signInReturnPath(document.cookie);
+    document.cookie = "ts_return_to=; path=/; max-age=0";
+    window.location.href = dest;
+  }
+
+  function switchMode(next: boolean) {
+    setUsePassword(next);
+    setPassword("");
+    setError(null);
   }
 
   async function google() {
@@ -135,6 +172,46 @@ function LoginInner() {
               Use a different email
             </button>
           </form>
+        ) : usePassword ? (
+          <form onSubmit={signInWithPassword} className="mt-6 space-y-3">
+            <input
+              type="email"
+              required
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full rounded-lg bg-black/40 border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)]"
+            />
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              aria-label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full rounded-lg bg-black/40 border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)]"
+            />
+            <button
+              type="submit"
+              disabled={signingIn}
+              className="w-full rounded-lg bg-[var(--color-text)] text-black font-semibold py-2 text-sm disabled:opacity-60"
+            >
+              {signingIn ? "Signing in…" : "Sign in"}
+            </button>
+            {error && <p className="text-sm text-[var(--color-neg)]">{error}</p>}
+            <p className="text-xs text-[var(--color-text-muted)]">
+              No password yet? Sign in by email once, then set one on your account page.
+            </p>
+            <button
+              type="button"
+              onClick={() => switchMode(false)}
+              className="w-full text-xs text-[var(--color-text-muted)] underline"
+            >
+              Email me a sign-in link instead
+            </button>
+          </form>
         ) : (
           <form onSubmit={sendLink} className="mt-6 space-y-3">
             <input
@@ -152,6 +229,13 @@ function LoginInner() {
               Email me a sign-in link
             </button>
             {error && <p className="text-sm text-[var(--color-neg)]">{error}</p>}
+            <button
+              type="button"
+              onClick={() => switchMode(true)}
+              className="w-full text-xs text-[var(--color-text-muted)] underline"
+            >
+              Use a password instead
+            </button>
           </form>
         )}
         {googleEnabled && (
