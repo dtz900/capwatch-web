@@ -9,6 +9,7 @@ import { EmailAlertsToggle } from "@/components/account/EmailAlertsToggle";
 import { EmailPrefToggle } from "@/components/account/EmailPrefToggle";
 import { VipEmailToggle } from "@/components/account/VipEmailToggle";
 import { AvatarUpload } from "@/components/account/AvatarUpload";
+import { PasswordCard } from "@/components/account/PasswordCard";
 import { XVerificationCard } from "@/components/account/XVerificationCard";
 import { BoardAvatar } from "@/components/tof/BoardAvatar";
 import { displayAvatar } from "@/lib/x-claim";
@@ -306,6 +307,14 @@ export default function AccountPage() {
           />
         )}
         <VipEmailToggle />
+      </div>
+
+      {/* Password (optional; the emailed link stays the default sign-in) */}
+      <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
+        <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+          Password
+        </h2>
+        <PasswordCard />
       </div>
 
       {/* Bet slip record */}
