@@ -1,6 +1,6 @@
 /**
  * A faint league wash behind the whole page: blue when MLB is selected, red
- * for NFL, yellow for NBA (orange read as the NFL red on opening night,
+ * for NFL, yellow for NBA, burgundy for NCAAB (orange read as the NFL red on opening night,
  * David 2026-10-20), nothing on the combined view. The Tail or Fade bar sits
  * over the first ~300px, so the wash reaches well below it (David 2026-10-20:
  * "extend it down further for all screens"). Fixed and non-interactive, painted
@@ -18,8 +18,8 @@ const WASH: Record<"mlb" | "nfl" | "nba" | "ncaab", string> = {
     "radial-gradient(1600px 1150px at 50% 0%, rgba(234, 179, 8, 0.22), rgba(234, 179, 8, 0) 70%)," +
     " linear-gradient(180deg, rgba(161, 98, 7, 0.10) 0%, rgba(161, 98, 7, 0) 75%)",
   ncaab:
-    "radial-gradient(1600px 1150px at 50% 0%, rgba(59, 111, 214, 0.20), rgba(59, 111, 214, 0) 70%)," +
-    " linear-gradient(180deg, rgba(37, 80, 170, 0.09) 0%, rgba(37, 80, 170, 0) 75%)",
+    "radial-gradient(1600px 1150px at 50% 0%, rgba(150, 32, 72, 0.26), rgba(150, 32, 72, 0) 70%)," +
+    " linear-gradient(180deg, rgba(122, 31, 61, 0.12) 0%, rgba(122, 31, 61, 0) 75%)",
 };
 
 export function SportTint({ sport }: { sport: string | null | undefined }) {

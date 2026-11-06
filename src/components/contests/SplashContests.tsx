@@ -30,6 +30,7 @@ const LEAGUE_LOGO: Record<string, string> = {
   mlb: "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png",
   nfl: "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png",
   nba: "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
+  ncaab: "https://a.espncdn.com/redesign/assets/img/icons/NCAASports_MensBasketball.png",
 };
 
 export function SplashContests({ placement, className = "" }: Props) {
