@@ -7,7 +7,7 @@
  * between the page background and the content (negative z-index against
  * the root canvas), so nothing else on the page has to know about it.
  */
-const WASH: Record<"mlb" | "nfl" | "nba", string> = {
+const WASH: Record<"mlb" | "nfl" | "nba" | "ncaab", string> = {
   mlb:
     "radial-gradient(1600px 1150px at 50% 0%, rgba(37, 99, 235, 0.26), rgba(37, 99, 235, 0) 70%)," +
     " linear-gradient(180deg, rgba(30, 64, 175, 0.10) 0%, rgba(30, 64, 175, 0) 75%)",
@@ -17,10 +17,13 @@ const WASH: Record<"mlb" | "nfl" | "nba", string> = {
   nba:
     "radial-gradient(1600px 1150px at 50% 0%, rgba(234, 179, 8, 0.22), rgba(234, 179, 8, 0) 70%)," +
     " linear-gradient(180deg, rgba(161, 98, 7, 0.10) 0%, rgba(161, 98, 7, 0) 75%)",
+  ncaab:
+    "radial-gradient(1600px 1150px at 50% 0%, rgba(59, 111, 214, 0.20), rgba(59, 111, 214, 0) 70%)," +
+    " linear-gradient(180deg, rgba(37, 80, 170, 0.09) 0%, rgba(37, 80, 170, 0) 75%)",
 };
 
 export function SportTint({ sport }: { sport: string | null | undefined }) {
-  const key = sport === "mlb" || sport === "nfl" || sport === "nba" ? sport : null;
+  const key = sport === "mlb" || sport === "nfl" || sport === "nba" || sport === "ncaab" ? sport : null;
   if (!key) return null;
   return (
     <div

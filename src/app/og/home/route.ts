@@ -1,3 +1,4 @@
+import { publicSportFilters } from "@/lib/public-leagues";
 import { DEFAULT_ROOT_OG_FILTERS, renderRootOg } from "../../_root-og";
 import type { BetTypeFilter, Sort, Window } from "@/lib/types";
 
@@ -30,6 +31,6 @@ export async function GET(request: Request): Promise<Response> {
       ? (bt as BetTypeFilter)
       : DEFAULT_ROOT_OG_FILTERS.bet_type,
     active_only: url.searchParams.get("ao") !== "false",
-    sport: (["all", "mlb", "nfl", "nba"] as const).find((s) => s === url.searchParams.get("sp")),
+    sport: publicSportFilters().find((s) => s === url.searchParams.get("sp")),
   });
 }

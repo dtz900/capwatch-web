@@ -1,5 +1,6 @@
 import { NFL_TEAM_NAMES } from "@/lib/nfl-teams";
 import { NBA_TEAM_NAMES, NBA_EXTRA_ALIASES } from "@/lib/nba-teams";
+import { NCAAB_ALIASES, ncaabTeam } from "@/lib/ncaab-teams";
 import type { Sport } from "@/lib/types";
 import { removeOddsToken } from "@/lib/live-market";
 
@@ -25,10 +26,17 @@ interface PickInput {
   leg_count?: number | null;
 }
 
+type TeamNames = { away?: string | null; home?: string | null };
+
 interface FormatContext {
   pick: PickInput;
   awayTeam?: string | null;
   homeTeam?: string | null;
+  /** League of the game; only NCAAB changes how team text resolves. */
+  sport?: Sport;
+  /** School short names from the slate payload (NCAAB), tried beside the static map. */
+  awayName?: string | null;
+  homeName?: string | null;
 }
 
 export type MarketBucket =
@@ -136,6 +144,13 @@ function shortPlayerName(text: string): string {
   return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
 }
 
+/** First-half bet (college basketball): market "1h_*" / "h1_*" or "1H" in the text. */
+export function isFirstHalf(pick: Pick<PickInput, "market" | "selection">): boolean {
+  const market = (pick.market ?? "").toLowerCase();
+  if (/^(first_half|1h|h1)_/.test(market)) return true;
+  return /\b(1h|1st\s+half|first\s+half)\b/i.test(pick.selection ?? "");
+}
+
 function isF5(pick: PickInput): boolean {
   const market = (pick.market ?? "").toLowerCase();
   if (market.startsWith("f5_") || market === "first_5") return true;
@@ -152,10 +167,12 @@ export function inferMarketBucket(
 ): MarketBucket | null {
   // 1. Trust the parser's market field if it's set.
   if (rawMarket) {
-    const m = rawMarket.trim().toLowerCase();
-    if (m === "ml" || m === "f5_ml") return "Moneyline";
+    // First-half markets ("1h_spread") bucket like their full-game twins.
+    const m = rawMarket.trim().toLowerCase().replace(/^(first_half|1h|h1)_/, "");
+    // NCAAB platform stat names: win (moneyline), team_points (team total).
+    if (m === "ml" || m === "win" || m === "f5_ml") return "Moneyline";
     if (m === "spread" || m === "f5_spread" || m === "run_line" || m === "runline") return "Spread";
-    if (m === "total" || m === "f5_total" || m === "team_total") return "Total";
+    if (m === "total" || m === "f5_total" || m === "team_total" || m === "team_points") return "Total";
     if (m.startsWith("prop_pitcher") || m.startsWith("prop_batter") || m === "player_prop" || m === "prop") return "Player prop";
     if (m === "nrfi" || m === "yrfi" || m === "game_prop") return "Game prop";
     if (m === "parlay") return "Parlay";
@@ -209,9 +226,10 @@ export function pickMlSide(
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
   sport: Sport = "MLB",
+  names?: TeamNames,
 ): "away" | "home" | null {
   if (inferMarketBucket(pick.market, pick.selection) !== "Moneyline") return null;
-  const team = resolveTeam(pick.selection ?? "", awayTeam, homeTeam, sport);
+  const team = resolveTeam(pick.selection ?? "", awayTeam, homeTeam, sport, names);
   if (team && awayTeam && team === awayTeam) return "away";
   if (team && homeTeam && team === homeTeam) return "home";
   return null;
@@ -226,8 +244,9 @@ export function pickTeamSide(
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
   sport: Sport = "MLB",
+  names?: TeamNames,
 ): "away" | "home" | null {
-  const team = resolveTeam(selection ?? "", awayTeam, homeTeam, sport);
+  const team = resolveTeam(selection ?? "", awayTeam, homeTeam, sport, names);
   if (team && awayTeam && team === awayTeam) return "away";
   if (team && homeTeam && team === homeTeam) return "home";
   return null;
@@ -269,12 +288,65 @@ function resolveMascotInGame(
   return null;
 }
 
+function normalizeSchoolText(s: string): string {
+  // Apostrophes and periods vanish ("St. John's" -> "st johns"); "saint" and
+  // "mount" fold to their abbreviations so "Saint Marys" meets "St Marys".
+  const flat = s
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/['’.]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\bsaint\b/g, "st")
+    .replace(/\bmount\b/g, "mt");
+  return ` ${flat} `;
+}
+
+/**
+ * NCAAB: the school a selection names, out of the two in the game. One pass
+ * scores every abbreviation hit (case-sensitive whole word), school name and
+ * nickname alias, and the longest match wins, so "Iowa State -3" in IOWA @ ISU
+ * is ISU even though "Iowa" is also a name and "IOWA" an abbreviation.
+ */
+function resolveNcaabTeam(
+  selection: string,
+  awayTeam: string | null | undefined,
+  homeTeam: string | null | undefined,
+  names?: TeamNames,
+): string | null {
+  const text = normalizeSchoolText(selection);
+  let best: { abbr: string; len: number } | null = null;
+  const consider = (abbr: string, len: number) => {
+    if (!best || len > best.len) best = { abbr, len };
+  };
+  const sides: Array<[string | null | undefined, string | null | undefined]> = [
+    [awayTeam, names?.away],
+    [homeTeam, names?.home],
+  ];
+  for (const [abbr, payloadName] of sides) {
+    if (!abbr) continue;
+    const abbrRe = new RegExp(`(?<![A-Za-z0-9])${abbr.replace(/[^A-Za-z0-9]/g, "\\$&")}(?![A-Za-z0-9])`);
+    if (abbrRe.test(selection)) consider(abbr, abbr.length);
+    const candidates = [payloadName, ncaabTeam(abbr)?.name, ...(NCAAB_ALIASES[abbr.toUpperCase()] ?? [])];
+    for (const c of candidates) {
+      if (!c) continue;
+      const n = normalizeSchoolText(c);
+      if (n.trim().length >= 3 && text.includes(n)) consider(abbr, n.trim().length);
+    }
+  }
+  return (best as { abbr: string } | null)?.abbr ?? null;
+}
+
 function resolveTeam(
   selection: string,
   awayTeam: string | null | undefined,
   homeTeam: string | null | undefined,
   sport: Sport = "MLB",
+  names?: TeamNames,
 ): string | null {
+  // College abbreviations collide with school names ("Iowa State" holds
+  // "Iowa"), so NCAAB scores abbreviations and names together.
+  if (sport === "NCAAB") return resolveNcaabTeam(selection, awayTeam, homeTeam, names);
   // Match the game's known abbrs first.
   for (const abbr of [awayTeam, homeTeam]) {
     if (!abbr) continue;
@@ -400,6 +472,8 @@ function stripEmbeddedOdds(
 
 export function formatPickText(ctx: FormatContext): string {
   const { pick, awayTeam, homeTeam } = ctx;
+  const sport: Sport = ctx.sport ?? "MLB";
+  const names: TeamNames = { away: ctx.awayName, home: ctx.homeName };
 
   if (pick.kind === "parlay" || (pick.market ?? "").toLowerCase() === "parlay") {
     return pick.leg_count ? `${pick.leg_count}-leg parlay` : "Parlay";
@@ -414,10 +488,10 @@ export function formatPickText(ctx: FormatContext): string {
 
   const odds = fmtOdds(pick.odds_taken);
   const bucket = inferMarketBucket(pick.market, selection);
-  const prefix = isF5(pick) ? "F5 " : "";
+  const prefix = isF5(pick) ? "F5 " : sport === "NCAAB" && isFirstHalf(pick) ? "1H " : "";
 
   if (bucket === "Moneyline") {
-    const team = resolveTeam(selection, awayTeam, homeTeam);
+    const team = resolveTeam(selection, awayTeam, homeTeam, sport, names);
     const label = team ?? selection.replace(/\b(ml|moneyline)\b/gi, "").trim();
     return [`${prefix}${label}`.trim(), "ML", odds].filter(Boolean).join(" ");
   }
@@ -428,7 +502,7 @@ export function formatPickText(ctx: FormatContext): string {
   }
 
   if (bucket === "Spread") {
-    const team = resolveTeam(selection, awayTeam, homeTeam);
+    const team = resolveTeam(selection, awayTeam, homeTeam, sport, names);
     if (team && pick.line != null) {
       const lineStr = pick.line > 0 ? `+${pick.line}` : `${pick.line}`;
       return [`${prefix}${team}`, lineStr, odds].filter(Boolean).join(" ");

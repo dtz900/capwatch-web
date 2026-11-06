@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import type { SlateSport } from "@/lib/api";
 import { tonightCaption, type TonightCounts } from "@/lib/slate-tonight";
 import { slateSportParam } from "@/lib/slate-sport";
+import { leagueName, publicOnly, SLATE_CHIP_ORDER } from "@/lib/public-leagues";
 import { LeagueChips, type LeagueChip } from "@/components/ui/LeagueChips";
 
 /**
@@ -21,12 +22,14 @@ export function SportToggle({
   mlbCaption,
   nflCaption,
   nbaCaption,
+  ncaabCaption = "Daily board",
   tonight,
 }: {
   current: SlateSport;
   mlbCaption: string;
   nflCaption: string;
   nbaCaption: string;
+  ncaabCaption?: string;
   tonight?: TonightCounts;
 }) {
   const router = useRouter();
@@ -39,11 +42,14 @@ export function SportToggle({
     return { value, label, league: value, caption: signal ? tonightCaption(n) : caption, signal };
   };
 
-  const chips: LeagueChip[] = [
-    chip("nfl", "NFL", nflCaption),
-    chip("nba", "NBA", nbaCaption),
-    chip("mlb", "MLB", mlbCaption),
-  ];
+  const captions: Record<SlateSport, string> = {
+    nfl: nflCaption,
+    nba: nbaCaption,
+    ncaab: ncaabCaption,
+    mlb: mlbCaption,
+  };
+  // Only public leagues get a chip; the order lives in public-leagues.ts.
+  const chips: LeagueChip[] = publicOnly(SLATE_CHIP_ORDER).map((l) => chip(l, leagueName(l), captions[l]));
 
   const onSelect = (value: string) => {
     if (value === current) return;

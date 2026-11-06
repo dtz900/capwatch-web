@@ -11,16 +11,20 @@ interface Props {
   className?: string;
   /** Disables the team-color drop-shadow halo. Default: enabled. */
   flat?: boolean;
+  /** Explicit logo URL (NCAAB payload ids) that wins over the abbreviation lookup. */
+  logoUrl?: string | null;
+  /** Explicit halo/fallback color that wins over the abbreviation lookup. */
+  color?: string | null;
 }
 
 /**
  * MLB team logo with a transparent background and a soft team-color halo.
  * Falls back to a colored text mark when the image can't load.
  */
-export function TeamLogo({ abbr, sport = "MLB", size = 28, className, flat = false }: Props) {
+export function TeamLogo({ abbr, sport = "MLB", size = 28, className, flat = false, logoUrl, color: colorOverride }: Props) {
   const [failed, setFailed] = useState(false);
-  const url = teamLogoUrl(abbr, sport);
-  const color = teamColor(abbr, sport);
+  const url = logoUrl ?? teamLogoUrl(abbr, sport);
+  const color = colorOverride ?? teamColor(abbr, sport);
 
   const haloRadius = Math.max(2, Math.round(size * 0.11));
   const halo = flat

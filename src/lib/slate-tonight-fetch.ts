@@ -1,9 +1,10 @@
+import { publicOnly, SLATE_CHIP_ORDER } from "./public-leagues";
 import { fetchSlate, withDeadline, type SlateSport } from "./api";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import { currentSlateDay } from "./week-standings";
 import { tonightGameCount, type TonightCounts } from "./slate-tonight";
 
-const SPORTS: readonly SlateSport[] = ["nfl", "nba", "mlb"];
+const SPORTS: readonly SlateSport[] = publicOnly(SLATE_CHIP_ORDER);
 
 // Counts change slowly (a game finishing, a postponement), so they get their
 // own KV entry well above the 15s slate TTL: a cold read fans out three slate

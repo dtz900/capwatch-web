@@ -1,3 +1,4 @@
+import { publicSportFilters } from "@/lib/public-leagues";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -59,7 +60,7 @@ interface PageProps {
   }>;
 }
 
-const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl", "nba"];
+const VALID_SPORTS: ReadonlyArray<SportFilter> = publicSportFilters();
 function parseSport(raw: string | undefined): SportFilter {
   return VALID_SPORTS.includes(raw as SportFilter) ? (raw as SportFilter) : "all";
 }

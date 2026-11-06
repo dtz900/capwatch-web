@@ -7,15 +7,18 @@ import type { Sport } from "./types";
 import { teamLogoUrl as mlbTeamLogoUrl, teamColor as mlbTeamColor } from "./mlb-teams";
 import { nflTeamLogoUrl, nflTeamColor } from "./nfl-teams";
 import { nbaTeamLogoUrl, nbaTeamColor } from "./nba-teams";
+import { ncaabTeamLogoUrl, ncaabTeamColor } from "./ncaab-teams";
 
 export function teamLogoUrl(abbr: string | null, sport: Sport = "MLB"): string | null {
   if (sport === "NFL") return nflTeamLogoUrl(abbr);
   if (sport === "NBA") return nbaTeamLogoUrl(abbr);
+  if (sport === "NCAAB") return ncaabTeamLogoUrl(abbr);
   return mlbTeamLogoUrl(abbr);
 }
 
 export function teamColor(abbr: string | null, sport: Sport = "MLB", fallback = "#3b3b3b"): string {
   if (sport === "NFL") return nflTeamColor(abbr, fallback);
   if (sport === "NBA") return nbaTeamColor(abbr, fallback);
+  if (sport === "NCAAB") return ncaabTeamColor(abbr, fallback);
   return mlbTeamColor(abbr, fallback);
 }

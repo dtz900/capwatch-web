@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { SlateSkeleton } from "@/components/slate/SlateSkeleton";
@@ -23,6 +24,9 @@ import { SplashContests } from "@/components/contests/SplashContests";
 import type { SlateGame, SlateResponse } from "@/lib/types";
 import { pinnedNflWeek, slateGameShareLink, type SlateShareView } from "@/lib/slate-share";
 import { buildSlateOgFingerprint, resolveRequestedGame, slateBetCount } from "./_slate-og-renderer";
+
+// Code-split: the NCAAB view and its 360-team map load only for an NCAAB board.
+const NcaabSlateView = dynamic(() => import("@/components/slate/NcaabSlateView").then((m) => m.NcaabSlateView));
 
 interface PageProps {
   searchParams: Promise<{
@@ -73,9 +77,9 @@ function weekLabel(data: SlateResponse | null, fallbackWeek: number | undefined)
   return `Week ${n}`;
 }
 
-/** Day boards (MLB, NBA) read "Tonight's MLB slate"; this is the league word. */
+/** Day boards (MLB, NBA, NCAAB) read "Tonight's MLB slate"; this is the league word. */
 function dayLeague(sport: SlateSport): string {
-  return sport === "nba" ? "NBA" : "MLB";
+  return sport === "nba" ? "NBA" : sport === "ncaab" ? "NCAAB" : "MLB";
 }
 
 function fmtDay(iso: string | null | undefined, opts: Intl.DateTimeFormatOptions): string | null {
@@ -288,6 +292,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
             mlbCaption={sport === "mlb" ? dayCaption : "Daily board"}
             nflCaption={isNfl ? weekLabel(null, p.week) : "Weekly board"}
             nbaCaption={sport === "nba" ? dayCaption : "Daily board"}
+            ncaabCaption={sport === "ncaab" ? dayCaption : "Daily board"}
             dateParam={isNfl ? null : dateParam}
           />
         }
@@ -302,6 +307,7 @@ export default async function SlatePage({ searchParams }: PageProps) {
 async function SlateBoard({ p }: { p: SlateParams }) {
   const { sport, dateParam } = p;
   const isNfl = sport === "nfl";
+  const isNcaab = sport === "ncaab";
   const timer = renderTimer();
 
   // The picker's "N tonight" signal for the other leagues rides along with
@@ -358,13 +364,18 @@ async function SlateBoard({ p }: { p: SlateParams }) {
   const totalPicks = allPicks.length;
   const gamesWithPicks = data.games.filter((g) => g.picks.length > 0);
   const gamesWithoutPicks = data.games.filter((g) => g.picks.length === 0);
-  const railGames = buildRailGames(gamesWithPicks, gamesWithoutPicks);
+  // The NCAAB board is a 4-across card grid, so it drops the matchup rail (a
+  // 60-game rail adds nothing) and uses the full page width.
+  const railGames = isNcaab ? [] : buildRailGames(gamesWithPicks, gamesWithoutPicks);
   const uniqueSharps = new Set(allPicks.map((pk) => pk.capper_id)).size;
   const totalGames = data.games.length;
   const ds = data.day_summary;
   const totalUnits = ds.graded_count + ds.pending_count;
 
   const summaryLine = (() => {
+    if (isNcaab && totalPicks > 0) {
+      return `${gamesWithPicks.length} of ${totalGames} games have picks · ${totalPicks} picks on the board`;
+    }
     if (totalPicks === 0) {
       return `${totalGames} games on the board, no picks tweeted yet`;
     }
@@ -388,11 +399,14 @@ async function SlateBoard({ p }: { p: SlateParams }) {
     ? "Sharps are ranked by their NFL season straight-pick performance (units profit, min 10 graded picks)."
     : sport === "nba"
       ? "Sharps are ranked by their NBA season straight-pick performance (units profit, min 10 graded picks)."
+      : sport === "ncaab"
+        ? "Sharps are ranked by their NCAAB season straight-pick performance (units profit, min 5 graded picks)."
       : "Sharps are ranked by their season straight-pick performance (units profit, min 10 graded picks).";
   const dayCaption = dateParam === "today" ? "Tonight" : "Tomorrow";
   const nflCaption = isNfl ? weekLabel(data, p.week) : "Weekly board";
   const mlbCaption = sport === "mlb" ? dayCaption : "Daily board";
   const nbaCaption = sport === "nba" ? dayCaption : "Daily board";
+  const ncaabCaption = sport === "ncaab" ? dayCaption : "Daily board";
 
   // NFL links pin the regular-season week the API actually served, so a card
   // shared from the current-week board still opens that week after it rolls.
@@ -414,13 +428,13 @@ async function SlateBoard({ p }: { p: SlateParams }) {
     <>
       {/* Mobile strip is a full-width sibling of <main> so it spans the
           viewport and stays aligned with the board. It self-hides at xl. */}
-      <SlateRailStrip games={railGames} />
+      {!isNcaab && <SlateRailStrip games={railGames} />}
       <main className="max-w-[1400px] mx-auto px-4 sm:px-7 pb-24">
         {/* Two-column: a sticky matchup rail plus the board filling the rest.
             The flex wrapper must NOT get overflow or transform: it would break
             the nav sticky (top-0) and the GameBlock sticky strips (top-16). */}
         <div className="flex flex-col xl:flex-row xl:items-start gap-4 xl:gap-8">
-          <SlateRailColumn games={railGames} />
+          {!isNcaab && <SlateRailColumn games={railGames} />}
           <div className="min-w-0 flex-1">
             <div className="pt-8 sm:pt-10 max-w-[520px]">
               <SportToggle
@@ -428,6 +442,7 @@ async function SlateBoard({ p }: { p: SlateParams }) {
                 mlbCaption={mlbCaption}
                 nflCaption={nflCaption}
                 nbaCaption={nbaCaption}
+                ncaabCaption={ncaabCaption}
                 tonight={tonight}
               />
             </div>
@@ -445,8 +460,9 @@ async function SlateBoard({ p }: { p: SlateParams }) {
                   {summaryLine}
                 </p>
                 <p className="text-[12px] text-[var(--color-text-muted)] font-medium mt-2 max-w-[640px]">
-                  {rankCopy}{" "}
-                  Parlay legs route to the team they back but do not count toward the season rank.
+                  {isNcaab
+                    ? "Games are ranked by how many sharps are on them. Lines are Pinnacle's main line; the numbers are sharps on each side. Tap a game to see every pick."
+                    : `${rankCopy} Parlay legs route to the team they back but do not count toward the season rank.`}
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -487,7 +503,11 @@ async function SlateBoard({ p }: { p: SlateParams }) {
                     />
                   </div>
                 )}
-                {pickedByDay ? (
+                {isNcaab ? (
+                  <div className="mt-2">
+                    <NcaabSlateView games={data.games} />
+                  </div>
+                ) : pickedByDay ? (
                   <div className="flex flex-col gap-8 mt-2">
                     {pickedByDay.map((bucket) => (
                       <section key={bucket.day} className="flex flex-col gap-5">
@@ -505,7 +525,7 @@ async function SlateBoard({ p }: { p: SlateParams }) {
                     ))}
                   </div>
                 )}
-                {gamesWithoutPicks.length > 0 && (
+                {!isNcaab && gamesWithoutPicks.length > 0 && (
                   <div className="mt-10 pt-6 border-t border-[rgba(255,255,255,0.06)]">
                     <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-2">
                       Quiet · {gamesWithoutPicks.length} {gamesWithoutPicks.length === 1 ? "game" : "games"} with no picks tweeted

@@ -1,6 +1,7 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
 import { warnFailed, warnIfSlow } from "./upstream-log";
 import type { SportFilter } from "./types";
+import type { League } from "./public-leagues";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
   activeRound,
@@ -240,9 +241,16 @@ export const NFL_DEFAULT_MIN_PICKS = 1;
 // floor; "all" (MLB + NFL + NBA) keeps the MLB floor.
 export const NBA_WINDOW_MIN_PICKS: Partial<Record<Window, number>> = {};
 export const NBA_DEFAULT_MIN_PICKS = 1;
+// College plays dozens of games a night and cappers post at volume, so the
+// floor is 5 graded picks rather than the MLB 10. Mirrors the platform's NCAAB
+// floor; "all" keeps the MLB floor.
+export const NCAAB_WINDOW_MIN_PICKS: Partial<Record<Window, number>> = {};
+export const NCAAB_DEFAULT_MIN_PICKS = 5;
 export function minPicksForWindow(window: Window, sport?: SportFilter): number {
   if (sport === "nfl") return NFL_WINDOW_MIN_PICKS[window] ?? NFL_DEFAULT_MIN_PICKS;
   if (sport === "nba") return NBA_WINDOW_MIN_PICKS[window] ?? NBA_DEFAULT_MIN_PICKS;
+  // NCAAB ranks at 5 graded picks in every window (David, 2026-11-05).
+  if (sport === "ncaab") return NCAAB_WINDOW_MIN_PICKS[window] ?? NCAAB_DEFAULT_MIN_PICKS;
   return WINDOW_MIN_PICKS[window] ?? DEFAULT_MIN_PICKS;
 }
 
@@ -297,7 +305,7 @@ export async function fetchLivePicksCounts(sport: SportFilter = "mlb"): Promise<
   return res.json() as Promise<LivePicksCountsResponse>;
 }
 
-export type SlateSport = "mlb" | "nfl" | "nba";
+export type SlateSport = League;
 
 /**
  * MLB and NBA: a day ("today" | "tomorrow" | YYYY-MM-DD). NFL: the current
@@ -341,8 +349,8 @@ export async function fetchSlate(
   const cacheKey =
     sport === "nfl"
       ? `slate:v1:nfl:${week ?? "current"}`
-      : sport === "nba"
-        ? `slate:v1:nba:${date}`
+      : sport === "nba" || sport === "ncaab"
+        ? `slate:v1:${sport}:${date}`
         : `slate:v1:${date}`;
   const lkgKey = resolveSlateLkgKey(cacheKey, date, sport, week);
   const qs = new URLSearchParams({ date });

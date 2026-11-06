@@ -1,3 +1,4 @@
+import { publicLeagueList, publicSportFilters } from "@/lib/public-leagues";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { unstable_noStore as noStore } from "next/cache";
@@ -29,7 +30,7 @@ interface PageProps {
 }
 
 const VALID_WINDOWS: Window[] = ["all_time", "season", "last_30", "last_7"];
-const VALID_SPORTS: SportFilter[] = ["all", "mlb", "nfl", "nba"];
+const VALID_SPORTS: ReadonlyArray<SportFilter> = publicSportFilters();
 // The board defaults to the combined record; MLB / NFL / NBA are one click away.
 const DEFAULT_SPORT: SportFilter = "all";
 function parseSport(raw: string | undefined): SportFilter {
@@ -108,7 +109,8 @@ function sportTitle(s: SportFilter | undefined): string {
   if (s === "nfl") return "NFL";
   if (s === "mlb") return "MLB";
   if (s === "nba") return "NBA";
-  return "MLB, NFL and NBA";
+  if (s === "ncaab") return "NCAAB";
+  return publicLeagueList();
 }
 
 function windowTitle(w: Window): string {

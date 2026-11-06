@@ -1,3 +1,4 @@
+import { PUBLIC_LEAGUES } from "./public-leagues";
 import type { BetTypeFilter, CapperAggregate, MarketSlice, SportFilter, Window } from "./types";
 
 /** Query params for a shared profile link, mirroring the provider's syncUrl so
@@ -35,7 +36,8 @@ export function capperRecordPill(sport: SportFilter): string {
   if (sport === "nfl") return "NFL CAPPER RECORD";
   if (sport === "mlb") return "MLB CAPPER RECORD";
   if (sport === "nba") return "NBA CAPPER RECORD";
-  return "MLB + NFL + NBA CAPPER RECORD";
+  if (sport === "ncaab") return "NCAAB CAPPER RECORD";
+  return `${PUBLIC_LEAGUES.map((l) => l.toUpperCase()).join(" + ")} CAPPER RECORD`;
 }
 
 /** Scope label led by the league when one is selected, e.g. "NFL · Season".

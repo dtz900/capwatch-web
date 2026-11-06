@@ -3,13 +3,12 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import type { SportFilter } from "@/lib/types";
+import { publicOnly, TAB_ORDER, leagueName } from "@/lib/public-leagues";
 import { LeagueChips, type LeagueChip } from "@/components/ui/LeagueChips";
 
 const CHIPS: LeagueChip[] = [
   { value: "all", label: "All", league: "all" },
-  { value: "mlb", label: "MLB", league: "mlb" },
-  { value: "nfl", label: "NFL", league: "nfl" },
-  { value: "nba", label: "NBA", league: "nba" },
+  ...publicOnly(TAB_ORDER).map((l) => ({ value: l, label: leagueName(l), league: l }) as LeagueChip),
 ];
 
 /**

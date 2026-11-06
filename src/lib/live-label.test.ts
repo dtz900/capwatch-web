@@ -47,3 +47,25 @@ describe("liveLabel (NBA)", () => {
     expect(nba(0, null, null)).toBe("LIVE");
   });
 });
+
+describe("liveLabel (NCAAB halves)", () => {
+  const c = (period: number | null, clock: string | null, status_name: string | null) =>
+    liveLabel({ sport: "NCAAB", period, clock, status_name, inning: null, inning_half: null });
+
+  it("reads half and clock", () => {
+    expect(c(1, "12:34", "STATUS_IN_PROGRESS")).toBe("1H 12:34");
+    expect(c(2, "3:05", "STATUS_IN_PROGRESS")).toBe("2H 3:05");
+  });
+  it("reads halftime and bare halves", () => {
+    expect(c(1, "0.0", "STATUS_HALFTIME")).toBe("HALF");
+    expect(c(2, null, "STATUS_IN_PROGRESS")).toBe("2H");
+  });
+  it("reads overtime from period 3", () => {
+    expect(c(3, null, "STATUS_IN_PROGRESS")).toBe("OT");
+    expect(c(4, null, "STATUS_IN_PROGRESS")).toBe("2OT");
+    expect(c(3, "2:10", "STATUS_IN_PROGRESS")).toBe("OT 2:10");
+  });
+  it("falls back to LIVE with no period", () => {
+    expect(c(null, null, "STATUS_IN_PROGRESS")).toBe("LIVE");
+  });
+});
