@@ -1,21 +1,22 @@
 import { useState } from "react";
 import type { PickPatchInput } from "../actions";
 import type { QueueRow } from "../labels";
+import type { PickHint } from "../usePatchFlow";
 
 export interface EditorProps {
   p: QueueRow;
   disabled: boolean;
   /** Rejects with the failure message when the patch did not land. */
-  onPatch: (patch: PickPatchInput, okMessage: string, propagate?: boolean) => Promise<void>;
+  onPatch: (patch: PickPatchInput, okMessage: string, propagate?: boolean, hint?: PickHint) => Promise<void>;
 }
 
 /** Wraps onPatch with an editor-local error line shown under the editor. */
 export function useEditorError(onPatch: EditorProps["onPatch"]) {
   const [error, setError] = useState<string | null>(null);
-  const run: EditorProps["onPatch"] = async (patch, okMessage, propagate) => {
+  const run: EditorProps["onPatch"] = async (patch, okMessage, propagate, hint) => {
     setError(null);
     try {
-      await onPatch(patch, okMessage, propagate);
+      await onPatch(patch, okMessage, propagate, hint);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }

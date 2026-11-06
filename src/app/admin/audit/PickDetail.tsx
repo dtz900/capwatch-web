@@ -30,7 +30,6 @@ export interface PickDetailProps {
   /** Set to the new sport after a sport change until a market is picked. */
   marketRecheck: string | null;
   hint: PickHint | undefined;
-  onHint: (hint: PickHint) => void;
   pending: boolean;
   onPatch: (patch: PickPatchInput, okMessage: string, propagate?: boolean) => Promise<void>;
 }
@@ -58,12 +57,11 @@ export function PickDetail({
   fixedKeys,
   marketRecheck,
   hint,
-  onHint,
   pending,
   onPatch,
 }: PickDetailProps) {
   const [open, setOpen] = useState<Partial<Record<FieldKey, boolean>>>({});
-  const boundGame = useBoundGame(p);
+  const { game: boundGame, error: sideError } = useBoundGame(p);
   const states = fieldStates(p, Array.isArray(markets) ? markets : null).map((s): FieldState => {
     if (s.key === "market" && marketRecheck) {
       return { ...s, red: true, fixed: false, note: `Check for ${marketRecheck}` };
@@ -74,9 +72,9 @@ export function PickDetail({
   const editorFor = (k: FieldKey) => {
     switch (k) {
       case "player":
-        return <PlayerEditor {...ed} onPicked={onHint} />;
+        return <PlayerEditor {...ed} />;
       case "game":
-        return <GameEditor {...ed} pickedTeam={hint?.team ?? null} onPickedDate={(gameDate) => onHint({ gameDate })} />;
+        return <GameEditor {...ed} pickedTeam={hint?.team ?? null} />;
       case "market":
         return <MarketEditor {...ed} markets={markets} />;
       case "line":
@@ -158,11 +156,17 @@ export function PickDetail({
                 <FieldRow state={s} open={!!open[s.key]} onToggle={() => toggle(s.key)}>
                   {editorFor(s.key)}
                 </FieldRow>
-                {s.key === "game" && needsSide(p.selection, boundGame) && (
+                {s.key === "game" && (sideError || needsSide(p.selection, boundGame)) && (
                   <div className={ROW_CLASS}>
                     <div className={LABEL_CLASS}>Side</div>
                     <div className="min-w-0 col-span-2">
-                      <SideEditor {...ed} game={boundGame} />
+                      {sideError ? (
+                        <div className="text-[12px] font-semibold text-[var(--color-neg)] opacity-80">
+                          Side check failed: {sideError}
+                        </div>
+                      ) : (
+                        needsSide(p.selection, boundGame) && <SideEditor {...ed} game={boundGame} />
+                      )}
                     </div>
                   </div>
                 )}

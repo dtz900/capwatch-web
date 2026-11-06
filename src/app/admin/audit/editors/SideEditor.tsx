@@ -6,31 +6,41 @@ import { searchGamesAction, type GameSearchResult } from "../actions";
 import { postedYmd } from "./dates";
 import { ErrorLine, useEditorError, type EditorProps } from "./types";
 
-/** Finds the bound game, trying the game date then the posted date. */
-export function useBoundGame(p: EditorProps["p"]): GameSearchResult | null {
-  const [game, setGame] = useState<GameSearchResult | null>(null);
+/** Finds the bound game, trying the game date then the posted date. A failed
+ * lookup is returned as `error`; a game that is simply absent is neither. */
+export function useBoundGame(p: EditorProps["p"]): { game: GameSearchResult | null; error: string | null } {
+  const key = `${p.game_id}|${p.game_date}|${p.posted_at}|${p.sport}`;
+  const [loaded, setLoaded] = useState<{ key: string; game: GameSearchResult | null; error: string | null } | null>(
+    null,
+  );
+  const state = loaded && loaded.key === key ? loaded : { game: null, error: null };
   useEffect(() => {
-    setGame(null);
     if (!p.game_id) return;
     let live = true;
     const dates = [p.game_date, postedYmd(p.posted_at)].filter(
       (d, i, a): d is string => !!d && a.indexOf(d) === i,
     );
     (async () => {
+      let lastError: string | null = null;
       for (const d of dates) {
         const r = await searchGamesAction(d, undefined, p.sport);
-        const hit = r.ok ? r.results.find((g) => String(g.game_pk) === p.game_id) : undefined;
+        if (!r.ok) {
+          lastError = r.error;
+          continue;
+        }
+        const hit = r.results.find((g) => String(g.game_pk) === p.game_id);
         if (hit) {
-          if (live) setGame(hit);
+          if (live) setLoaded({ key, game: hit, error: null });
           return;
         }
       }
+      if (live) setLoaded({ key, game: null, error: lastError });
     })();
     return () => {
       live = false;
     };
-  }, [p.game_id, p.game_date, p.posted_at, p.sport]);
-  return game;
+  }, [key, p.game_id, p.game_date, p.posted_at, p.sport]);
+  return { game: state.game, error: state.error };
 }
 
 /** True when the selection reads differently for the two sides of the game. */

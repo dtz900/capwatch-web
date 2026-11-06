@@ -6,7 +6,8 @@ import { searchGamesAction, type GameSearchResult } from "../actions";
 import { dateLabel, postedYmd, shiftYmd } from "./dates";
 import { ErrorLine, HINT_CLASS, OPTS_CLASS, OPT_CLASS, useEditorError, type EditorProps } from "./types";
 
-type Status = { kind: "loading" } | { kind: "ok"; results: GameSearchResult[] } | { kind: "error"; error: string };
+type Outcome = { kind: "ok"; results: GameSearchResult[] } | { kind: "error"; error: string };
+type Status = { kind: "loading" } | Outcome;
 
 export function defaultGameDate(p: EditorProps["p"]): string {
   const posted = postedYmd(p.posted_at);
@@ -29,24 +30,24 @@ export function GameEditor({
   disabled,
   onPatch,
   pickedTeam,
-  onPickedDate,
-}: EditorProps & { pickedTeam: string | null; onPickedDate: (date: string) => void }) {
+}: EditorProps & { pickedTeam: string | null }) {
   const sport = p.sport ?? "MLB";
   const [date, setDate] = useState(defaultGameDate(p));
-  const [status, setStatus] = useState<Status>({ kind: "loading" });
+  const [loaded, setLoaded] = useState<{ key: string; outcome: Outcome } | null>(null);
+  const key = `${sport}|${date}`;
+  const status: Status = loaded && loaded.key === key ? loaded.outcome : { kind: "loading" };
   const { error, run } = useEditorError(onPatch);
 
   useEffect(() => {
     if (!date) return;
     let live = true;
-    setStatus({ kind: "loading" });
     searchGamesAction(date, undefined, sport).then((r) => {
-      if (live) setStatus(r.ok ? { kind: "ok", results: r.results } : { kind: "error", error: r.error });
+      if (live) setLoaded({ key, outcome: r.ok ? { kind: "ok", results: r.results } : { kind: "error", error: r.error } });
     });
     return () => {
       live = false;
     };
-  }, [date, sport]);
+  }, [date, sport, key]);
 
   const isHis = (g: GameSearchResult) =>
     pickedTeam != null && (g.away_team === pickedTeam || g.home_team === pickedTeam);
@@ -54,8 +55,7 @@ export function GameEditor({
 
   const bind = (g: GameSearchResult) => {
     const name = `${teamDisplayName(g.away_team, sport)} @ ${teamDisplayName(g.home_team, sport)}`;
-    onPickedDate(g.game_date ?? date);
-    return run({ game_id: String(g.game_pk) }, `Set game ${name}`, true);
+    return run({ game_id: String(g.game_pk) }, `Set game ${name}`, true, { gameDate: g.game_date ?? date });
   };
 
   return (

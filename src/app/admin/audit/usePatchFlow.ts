@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { patchPickAction, type PickPatchInput } from "./actions";
+import { useEffect, useRef, useState } from "react";
+import { patchPickFieldAction, type PickPatchInput } from "./actions";
 import type { FieldKey } from "./fieldState";
 import type { QueueRow } from "./labels";
+import { siblingIdsFor } from "./siblings";
 
 /** What an editor learned from a pick: used for the local row copy and the game sort. */
 export interface PickHint {
@@ -49,11 +50,7 @@ function applyLocal(row: QueueRow, patch: PickPatchInput, hint: PickHint | undef
   return next;
 }
 
-export function usePatchFlow(
-  problems: QueueRow[],
-  siblingIdsOf: (pickId: number) => number[],
-  applyToSiblings: boolean,
-) {
+export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean) {
   const [rows, setRows] = useState(problems);
   const [fixed, setFixed] = useState<Record<number, FieldKey[]>>({});
   const [marketRecheck, setMarketRecheck] = useState<Record<number, string>>({});
@@ -62,21 +59,32 @@ export function usePatchFlow(
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => setRows(problems), [problems]);
+  // Resync only when the set of picks changes; rows already held keep their local commits.
+  const [seen, setSeen] = useState(problems);
+  if (seen !== problems) {
+    setSeen(problems);
+    const idKey = (rs: QueueRow[]) => rs.map((r) => r.pick_id).sort((x, y) => x - y).join(",");
+    if (idKey(problems) !== idKey(rows)) {
+      const local = new Map(rows.map((r) => [r.pick_id, r]));
+      setRows(problems.map((r) => local.get(r.pick_id) ?? r));
+    }
+  }
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
+
+  const siblingIdsOfPick = (id: number): number[] => {
+    const row = rowsRef.current.find((r) => r.pick_id === id);
+    return row ? siblingIdsFor(rowsRef.current, row) : [];
+  };
 
   const show = (msg: string) => {
     setToast(msg);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setToast(null), 1800);
   };
-
-  const hintsRef = useRef<Record<number, PickHint>>({});
-  const setHint = useCallback((pickId: number, hint: PickHint) => {
-    // The ref is read synchronously by the patch that follows this call.
-    hintsRef.current = { ...hintsRef.current, [pickId]: { ...hintsRef.current[pickId], ...hint } };
-    setHints((h) => ({ ...h, [pickId]: { ...h[pickId], ...hint } }));
-  }, []);
 
   /** Records a landed patch in the local copy. */
   const commit = (pickId: number, patch: PickPatchInput, hint: PickHint | undefined) => {
@@ -93,42 +101,49 @@ export function usePatchFlow(
       }
       return { ...f, [pickId]: [...keys] };
     });
-    setMarketRecheck((m) => {
-      const { [pickId]: _drop, ...rest } = m;
-      return patch.sport !== undefined ? { ...rest, [pickId]: patch.sport } : rest;
-    });
+    if (hint) setHints((h) => ({ ...h, [pickId]: { ...h[pickId], ...hint } }));
+    if (patch.sport !== undefined) setMarketRecheck((m) => ({ ...m, [pickId]: patch.sport as string }));
+    else if (patch.stat_name !== undefined) {
+      setMarketRecheck((m) => Object.fromEntries(Object.entries(m).filter(([id]) => Number(id) !== pickId)));
+    }
   };
 
+  /** Rejects when the primary patch fails (row untouched) and when a sibling
+   * fails (primary stays committed; the message names both). */
   const handlePatch = async (
     pickId: number,
     patch: PickPatchInput,
     okMessage: string,
     propagate = false,
+    hint?: PickHint,
   ): Promise<void> => {
     setPending(true);
     try {
-      const hint = hintsRef.current[pickId];
-      const res = await patchPickAction(pickId, patch);
+      const res = await patchPickFieldAction(pickId, patch);
       if (!res.ok) throw new Error(res.error);
       commit(pickId, patch, hint);
 
       const failed: string[] = [];
       const done: number[] = [];
       if (propagate && applyToSiblings) {
-        for (const id of siblingIdsOf(pickId)) {
-          const r = await patchPickAction(id, patch);
+        for (const id of siblingIdsOfPick(pickId)) {
+          const r = await patchPickFieldAction(id, patch);
           if (r.ok) {
             commit(id, patch, hint);
             done.push(id);
           } else failed.push(`#${id}: ${r.error}`);
         }
       }
-      const also = done.length ? ` on #${pickId}, ${done.map((i) => `#${i}`).join(", ")}` : "";
-      show(failed.length ? `${okMessage} on #${pickId}; failed on ${failed.join("; ")}` : `${okMessage}${also}`);
+      if (failed.length) {
+        const msg = `Applied to #${[pickId, ...done].join(", #")}; failed on ${failed.join("; ")}`;
+        show(msg);
+        throw new Error(msg);
+      }
+      show(done.length ? `${okMessage} on #${[pickId, ...done].join(", #")}` : okMessage);
     } finally {
       setPending(false);
     }
   };
 
-  return { rows, fixed, marketRecheck, hints, setHint, pending, toast, handlePatch };
+  return { rows, fixed, marketRecheck, hints, pending, toast, handlePatch };
 }

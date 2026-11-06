@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { parseAdminSport } from "@/lib/admin-sports";
 import { fetchMarketsAction, type MarketDef } from "./actions";
 import { PickDetail } from "./PickDetail";
@@ -21,28 +21,17 @@ interface Props {
 
 export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging, newerHref, olderHref }: Props) {
   const [selectedId, setSelectedId] = useState<number | null>(problems[0]?.pick_id ?? null);
-  const [applyToSiblings, setApplyToSiblings] = useState(true);
-  const flow = usePatchFlow(
-    problems,
-    (id) => {
-      const row = flowRowsRef.current.find((r) => r.pick_id === id);
-      return row ? siblingIdsFor(flowRowsRef.current, row) : [];
-    },
-    applyToSiblings,
-  );
+  // The checkbox resets to checked whenever another pick is selected.
+  const [applyOverride, setApplyOverride] = useState<{ id: number | null; value: boolean }>({ id: null, value: true });
+  const applyToSiblings = applyOverride.id === selectedId ? applyOverride.value : true;
+  const setApplyToSiblings = (value: boolean) => setApplyOverride({ id: selectedId, value });
+  const flow = usePatchFlow(problems, applyToSiblings);
   const rows = flow.rows;
-  const flowRowsRef = useRef(rows);
-  flowRowsRef.current = rows;
   const selected = rows.find((p) => p.pick_id === selectedId) ?? rows[0] ?? null;
   const [marketsBySport, setMarketsBySport] = useState<Record<string, MarketDef[] | "error">>({});
   const [marketsError, setMarketsError] = useState<Record<string, string>>({});
 
-  const selectedPickId = selected?.pick_id ?? null;
   const sport = parseAdminSport(selected?.sport ?? "MLB");
-
-  useEffect(() => {
-    setApplyToSiblings(true);
-  }, [selectedPickId]);
 
   useEffect(() => {
     if (!sport || marketsBySport[sport] !== undefined) return;
@@ -93,7 +82,6 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
             fixedKeys={flow.fixed[selected.pick_id] ?? []}
             marketRecheck={flow.marketRecheck[selected.pick_id] ?? null}
             hint={flow.hints[selected.pick_id]}
-            onHint={(h) => flow.setHint(selected.pick_id, h)}
             pending={flow.pending}
             onPatch={(patch, msg, propagate) => flow.handlePatch(selected.pick_id, patch, msg, propagate)}
           />

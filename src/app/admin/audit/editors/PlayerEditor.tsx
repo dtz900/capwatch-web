@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { PickHint } from "../usePatchFlow";
 import { searchPlayersAction, type PlayerSearchResult } from "../actions";
 import { ErrorLine, HINT_CLASS, INPUT_CLASS, OPTS_CLASS, OPT_CLASS, useEditorError, type EditorProps } from "./types";
 
@@ -14,8 +13,7 @@ export function PlayerEditor({
   p,
   disabled,
   onPatch,
-  onPicked,
-}: EditorProps & { onPicked: (hint: PickHint) => void }) {
+}: EditorProps) {
   const sport = p.sport ?? "MLB";
   const [q, setQ] = useState(p.player_name ?? p.selection ?? "");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -38,8 +36,10 @@ export function PlayerEditor({
   }, [q, sport]);
 
   const attach = async (r: PlayerSearchResult) => {
-    onPicked({ team: r.team_abbreviation, name: r.full_name });
-    await run({ player_id: r.player_id }, `Set player ${r.full_name}`, true);
+    await run({ player_id: r.player_id }, `Set player ${r.full_name}`, true, {
+      team: r.team_abbreviation,
+      name: r.full_name,
+    });
   };
 
   return (

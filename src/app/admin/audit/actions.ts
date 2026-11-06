@@ -29,7 +29,11 @@ export type ActionResult =
   | { ok: true; capper_handle?: string | null }
   | { ok: false; error: string };
 
-async function call(path: string, init: RequestInit): Promise<ActionResult> {
+async function call(
+  path: string,
+  init: RequestInit,
+  opts: { revalidateAudit?: boolean } = {},
+): Promise<ActionResult> {
   try {
     const res = await fetch(`${API_BASE}${path}`, init);
     if (!res.ok) {
@@ -43,7 +47,7 @@ async function call(path: string, init: RequestInit): Promise<ActionResult> {
     } catch {
       // Some endpoints may return non-JSON or empty bodies; not an error.
     }
-    revalidatePath("/admin/audit");
+    if (opts.revalidateAudit !== false) revalidatePath("/admin/audit");
     revalidatePath("/");
     revalidatePath("/cappers");
     if (capperHandle) {
@@ -94,19 +98,30 @@ export async function resolvePickShapedFlagAction(
   });
 }
 
-export async function patchPickAction(pickId: number, patch: PickPatchInput): Promise<ActionResult> {
+function patchRequest(pickId: number, patch: PickPatchInput): { path: string; init: RequestInit } | string {
   const cleaned: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(patch)) {
     if (v !== null && v !== undefined && v !== "") cleaned[k] = v;
   }
-  if (Object.keys(cleaned).length === 0) {
-    return { ok: false, error: "No fields to update" };
-  }
-  return call(`/api/admin/picks/${pickId}`, {
-    method: "PATCH",
-    headers: adminHeaders(),
-    body: JSON.stringify(cleaned),
-  });
+  if (Object.keys(cleaned).length === 0) return "No fields to update";
+  return {
+    path: `/api/admin/picks/${pickId}`,
+    init: { method: "PATCH", headers: adminHeaders(), body: JSON.stringify(cleaned) },
+  };
+}
+
+export async function patchPickAction(pickId: number, patch: PickPatchInput): Promise<ActionResult> {
+  const req = patchRequest(pickId, patch);
+  if (typeof req === "string") return { ok: false, error: req };
+  return call(req.path, req.init);
+}
+
+/** Same PATCH for the audit editors, but leaves /admin/audit alone so the
+ * pick being edited stays in the queue. Terminal actions revalidate it. */
+export async function patchPickFieldAction(pickId: number, patch: PickPatchInput): Promise<ActionResult> {
+  const req = patchRequest(pickId, patch);
+  if (typeof req === "string") return { ok: false, error: req };
+  return call(req.path, req.init, { revalidateAudit: false });
 }
 
 export async function manualGradeAction(
