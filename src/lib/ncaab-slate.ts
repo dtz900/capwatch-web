@@ -46,29 +46,64 @@ function overUnder(selection: string | null | undefined): "over" | "under" | nul
   return m[1].toLowerCase().startsWith("o") ? "over" : "under";
 }
 
-/** Group and side for one pick of one game. */
+/**
+ * Group for a platform key: a stat name (win, first_half_spread, team_points)
+ * or a display market (ML, 1h_spread, team_total). Null when the key says
+ * nothing; OTHER for game props and second-half bets, which must never feed
+ * the full-game counts.
+ */
+function groupFromKey(raw: string | null | undefined): NcaabGroup | null {
+  const k = (raw ?? "").trim().toLowerCase();
+  if (!k) return null;
+  if (k === "game_prop" || /^(second_half|2h|h2)_/.test(k)) return "OTHER";
+  const firstHalf = /^(first_half|1h|h1)_/.test(k);
+  const base = k.replace(/^(first_half|1h|h1)_/, "");
+  if (base === "team_points" || base === "team_total") return "TEAM TOTAL";
+  if (base === "win" || base === "ml") return firstHalf ? "1H ML" : "ML";
+  if (base === "spread") return firstHalf ? "1H SPREAD" : "SPREAD";
+  if (base === "total") return firstHalf ? "1H TOTAL" : "TOTAL";
+  return null;
+}
+
+function directionOf(pick: SlatePick): "over" | "under" | null {
+  const d = (pick.direction ?? "").trim().toLowerCase();
+  if (d === "over" || d === "under") return d;
+  return overUnder(pick.selection);
+}
+
+/**
+ * Group and side for one pick of one game. Order: stat_name, then market, then
+ * raw first_half_* (both handled by groupFromKey), then the selection text.
+ */
 export function classifyPick(pick: SlatePick, game: SlateGame): ClassifiedPick {
   const names = { away: game.away_name, home: game.home_name };
-  const market = (pick.market ?? "").trim().toLowerCase();
-  const firstHalf = isFirstHalf(pick);
-
-  if (market === "team_total" || /^(1h_|h1_)?team_total$/.test(market)) {
-    return { pick, group: "TEAM TOTAL", side: overUnder(pick.selection) };
-  }
-
-  // A "1H" tag in the text would hide the market from the text heuristics.
-  const bareSelection = (pick.selection ?? "").replace(/\b(1h|1st\s+half|first\s+half)\b/gi, " ").replace(/\s+/g, " ").trim();
-  const bucket = inferMarketBucket(pick.market, bareSelection);
   const teamSide = () => pickTeamSide(pick.selection, game.away_team, game.home_team, "NCAAB", names);
 
-  if (bucket === "Spread") {
-    return { pick, group: firstHalf ? "1H SPREAD" : "SPREAD", side: teamSide() };
+  let group: NcaabGroup | null = null;
+  if ((pick.stat_name ?? "").trim()) group = groupFromKey(pick.stat_name) ?? "OTHER";
+  if (group == null) group = groupFromKey(pick.market);
+
+  if (group == null) {
+    const text = pick.selection ?? "";
+    if (/\b(2h|2nd\s+half|second\s+half)\b/i.test(text)) {
+      group = "OTHER";
+    } else {
+      // A "1H" tag in the text would hide the market from the text heuristics.
+      const bare = text.replace(/\b(1h|1st\s+half|first\s+half)\b/gi, " ").replace(/\s+/g, " ").trim();
+      const bucket = inferMarketBucket(null, bare);
+      const firstHalf = isFirstHalf(pick);
+      if (bucket === "Spread") group = firstHalf ? "1H SPREAD" : "SPREAD";
+      else if (bucket === "Total") group = firstHalf ? "1H TOTAL" : "TOTAL";
+      else if (bucket === "Moneyline") group = firstHalf ? "1H ML" : "ML";
+      else group = "OTHER";
+    }
   }
-  if (bucket === "Total") {
-    return { pick, group: firstHalf ? "1H TOTAL" : "TOTAL", side: overUnder(pick.selection) };
+
+  if (group === "SPREAD" || group === "1H SPREAD" || group === "ML" || group === "1H ML") {
+    return { pick, group, side: teamSide() };
   }
-  if (bucket === "Moneyline") {
-    return { pick, group: firstHalf ? "1H ML" : "ML", side: teamSide() };
+  if (group === "TOTAL" || group === "1H TOTAL" || group === "TEAM TOTAL") {
+    return { pick, group, side: directionOf(pick) };
   }
   return { pick, group: "OTHER", side: null };
 }
@@ -200,45 +235,55 @@ export function buildCard(game: SlateGame): NcaabCard {
   const spreadTally = tallySides({ left: sideCappers("SPREAD", "away"), right: sideCappers("SPREAD", "home") });
   const totalTally = tallySides({ left: sideCappers("TOTAL", "over"), right: sideCappers("TOTAL", "under") });
 
-  // Label a side at the market line; with no market line, at the most common
-  // line the sharps on that side took; with neither, the bare side plus a muted
-  // "no line" note. Never a bare team or a bare Over.
-  const sideLabel = (tally: SideCount, name: string, marketLine: number | null, side: PickSide, group: NcaabGroup, signed: boolean): SideLabel => {
-    const line =
-      marketLine ??
-      modeOf(
-        classified
-          .filter((c) => c.group === group && c.side === side)
-          .map((c) => pickLine(c.pick))
-          .filter((v): v is number => v != null),
-      );
-    if (line == null) return { ...tally, text: name, note: "no line" };
-    return { ...tally, text: `${name} ${signed ? fmtLine(line) : line}` };
+  // Label a side at the market line. With no market line, use the most common
+  // line among the sharps on the side with more takers, mirrored onto the other
+  // side (spread flips sign, a total repeats), so both sides read one line.
+  // With no line anywhere: the bare side plus a muted "no line" note.
+  const takers = (group: NcaabGroup, side: PickSide) => {
+    const lines = classified
+      .filter((c) => c.group === group && c.side === side)
+      .map((c) => pickLine(c.pick))
+      .filter((v): v is number => v != null);
+    return { line: modeOf(lines), n: lines.length };
   };
+  const fallbackLine = (group: NcaabGroup, left: PickSide, right: PickSide, flip: boolean): number | null => {
+    const l = takers(group, left);
+    const r = takers(group, right);
+    if (l.line == null && r.line == null) return null;
+    if (r.line == null || (l.line != null && l.n >= r.n)) return l.line; // line as the left side wears it
+    return flip ? -(r.line as number) : (r.line as number);
+  };
+  const spreadLeft = line == null ? fallbackLine("SPREAD", "away", "home", true) : -line;
+  const totalLine = total ?? fallbackLine("TOTAL", "over", "under", false);
+  const label = (tally: SideCount, name: string, value: number | null, signed: boolean): SideLabel =>
+    value == null
+      ? { ...tally, text: name, note: "no line" }
+      : { ...tally, text: `${name} ${signed ? fmtLine(value) : value}` };
   const spread: MarketRow = {
     label: "SPREAD",
-    left: sideLabel(spreadTally.left, away, line == null ? null : -line, "away", "SPREAD", true),
-    right: sideLabel(spreadTally.right, home, line, "home", "SPREAD", true),
+    left: label(spreadTally.left, away, spreadLeft, true),
+    right: label(spreadTally.right, home, spreadLeft == null ? null : -spreadLeft, true),
   };
   const totalRow: MarketRow = {
     label: "TOTAL",
-    left: sideLabel(totalTally.left, "Over", total, "over", "TOTAL", false),
-    right: sideLabel(totalTally.right, "Under", total, "under", "TOTAL", false),
+    left: label(totalTally.left, "Over", totalLine, false),
+    right: label(totalTally.right, "Under", totalLine, false),
   };
 
   const textCtx = { awayTeam: game.away_team, homeTeam: game.home_team, sport: "NCAAB" as const, awayName: game.away_name, homeName: game.home_name };
   const betText = (p: SlatePick) =>
     formatPickText({ pick: { ...p, kind: p.kind === "parlay_leg" ? "parlay_leg" : "straight" }, ...textCtx });
 
-  let biggest: BiggestBet | null = null;
-  let top = 0;
+  // Largest straight; ties go to the earliest post, then list order.
+  const postedMs = (p: SlatePick) => (p.posted_at ? Date.parse(p.posted_at) || Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER);
+  let top: SlatePick | null = null;
   for (const p of game.picks) {
-    if (p.kind !== "straight") continue;
-    if (p.stake_units > top) {
-      top = p.stake_units;
-      biggest = { units: fmtUnits(p.stake_units), bet: betText(p), who: handleOf(p) };
+    if (p.kind !== "straight" || !(p.stake_units > 0)) continue;
+    if (!top || p.stake_units > top.stake_units || (p.stake_units === top.stake_units && postedMs(p) < postedMs(top))) {
+      top = p;
     }
   }
+  const biggest: BiggestBet | null = top ? { units: fmtUnits(top.stake_units), bet: betText(top), who: handleOf(top) } : null;
 
   const count = (pred: (c: ClassifiedPick) => boolean) => classified.filter(pred).length;
   const chips: string[] = [];
@@ -304,8 +349,9 @@ function tipMs(game: SlateGame): number {
 
 /** Most sharps first, then earliest tip, then game id for a stable order. */
 export function orderGames(games: readonly SlateGame[]): SlateGame[] {
+  const done = (g: SlateGame) => (g.game_state === "final" ? 1 : 0);
   return [...games].sort(
-    (a, b) => gameCappers(b) - gameCappers(a) || tipMs(a) - tipMs(b) || a.game_id - b.game_id,
+    (a, b) => done(a) - done(b) || gameCappers(b) - gameCappers(a) || tipMs(a) - tipMs(b) || a.game_id - b.game_id,
   );
 }
 

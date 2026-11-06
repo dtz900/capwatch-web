@@ -159,10 +159,12 @@ html, body {
 
 /* NCAAB slate flip cards. Front and back are stacked faces of one rotating
    inner; reduced motion keeps the swap but drops the spin. */
-.ncaab-flip { perspective: 1400px; height: 300px; }
-.ncaab-flip-inner { position: relative; width: 100%; height: 100%; transition: transform .5s cubic-bezier(.2,.7,.2,1); transform-style: preserve-3d; }
+.ncaab-flip { perspective: 1400px; display: flex; }
+.ncaab-flip-inner { position: relative; flex: 1; min-width: 0; min-height: 300px; transition: transform .5s cubic-bezier(.2,.7,.2,1); transform-style: preserve-3d; }
 .ncaab-flip[data-open="true"] .ncaab-flip-inner { transform: rotateY(180deg); }
-.ncaab-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 14px; overflow: hidden; box-sizing: border-box; background: #111114; border: 1px solid var(--color-border); }
+.ncaab-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 14px; overflow: hidden; box-sizing: border-box; background: #111114; border: 1px solid var(--color-border); transition: border-color .15s; }
+/* The front sizes the card (it grows at large text sizes); the back is pinned to that size and scrolls. */
+.ncaab-face-front { position: relative; inset: auto; min-height: 300px; height: 100%; }
 .ncaab-face-back { transform: rotateY(180deg); }
 .ncaab-rows { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.10) transparent; }
 @media (prefers-reduced-motion: reduce) {

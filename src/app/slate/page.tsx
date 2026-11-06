@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { SlateSkeleton } from "@/components/slate/SlateSkeleton";
@@ -7,7 +8,6 @@ import { GameBlock } from "@/components/slate/GameBlock";
 import { QuietGameStrip } from "@/components/slate/QuietGameStrip";
 import { DateToggle } from "@/components/slate/DateToggle";
 import { SportToggle } from "@/components/slate/SportToggle";
-import { NcaabSlateView } from "@/components/slate/NcaabSlateView";
 import { SportTint } from "@/components/ui/SportTint";
 import { StandingsSection } from "@/components/slate/StandingsSection";
 import { SlateRailStrip, SlateRailColumn } from "@/components/slate/SlateRail";
@@ -24,6 +24,9 @@ import { SplashContests } from "@/components/contests/SplashContests";
 import type { SlateGame, SlateResponse } from "@/lib/types";
 import { pinnedNflWeek, slateGameShareLink, type SlateShareView } from "@/lib/slate-share";
 import { buildSlateOgFingerprint, resolveRequestedGame, slateBetCount } from "./_slate-og-renderer";
+
+// Code-split: the NCAAB view and its 360-team map load only for an NCAAB board.
+const NcaabSlateView = dynamic(() => import("@/components/slate/NcaabSlateView").then((m) => m.NcaabSlateView));
 
 interface PageProps {
   searchParams: Promise<{

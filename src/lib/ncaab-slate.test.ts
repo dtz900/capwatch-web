@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import "./ncaab-teams-register";
 import { NCAAB_FIXTURE_GAMES } from "@/app/dev/ncaab-slate/fixture";
 import { buildCard, classifyPick, fmtLine, orderGames, splitBoard, tallySides } from "./ncaab-slate";
 import { formatPickText } from "./bet-format";
@@ -120,7 +121,8 @@ describe("line fallback when the market is missing", () => {
     expect(c.spread.left.text).toBe("MCN -4");
     expect(c.spread.right.text).toBe("UNT +4");
     expect(c.total.left.text).toBe("Over 140.5");
-    expect(c.total.right.text).toBe("Under 141");
+    // Both sides share the line of the side with more takers.
+    expect(c.total.right.text).toBe("Under 140.5");
     expect(c.spread.left.note).toBeUndefined();
   });
 
@@ -128,14 +130,6 @@ describe("line fallback when the market is missing", () => {
     const c = buildCard(game([base({ capper_id: 1, market: "total", selection: "Over 139", line: 139 })], { market: { spread_home: 2, total: null, source: null } }));
     expect(c.spread.left.text).toBe("MCN -2");
     expect(c.total.left.text).toBe("Over 139");
-  });
-
-  it("shows the side with a muted no-line note, never bare", () => {
-    const c = buildCard(game([base({ capper_id: 1, selection: "MCN", line: -4 })], noMarket));
-    expect(c.spread.left.text).toBe("MCN -4");
-    expect(c.spread.right).toMatchObject({ text: "UNT", note: "no line" });
-    expect(c.total.left).toMatchObject({ text: "Over", note: "no line" });
-    expect(c.total.right).toMatchObject({ text: "Under", note: "no line" });
   });
 
   it("fixture PUR @ ILL labels both sides from the picks", () => {

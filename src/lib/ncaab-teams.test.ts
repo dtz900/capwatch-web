@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { NCAAB_TEAMS, legibleTeamColor, ncaabLogoUrlForId, ncaabTeam, ncaabTeamLogoUrl, ncaabTeamName } from "./ncaab-teams";
+import "./ncaab-teams-register";
+import { NCAAB_TEAMS } from "./ncaab-teams.generated";
+import { legibleTeamColor, ncaabLogoUrlForId, ncaabTeam, ncaabTeamLogoUrl, ncaabTeamName } from "./ncaab-teams";
 import { teamLogoUrl } from "./teams";
 
 describe("ncaab team map", () => {
   it("covers the D1 field with unique ids", () => {
-    const rows = Object.values(NCAAB_TEAMS);
+    const rows = Object.values(NCAAB_TEAMS) as Array<{ id: string }>;
     expect(rows.length).toBeGreaterThan(340);
     expect(new Set(rows.map((r) => r.id)).size).toBe(rows.length);
   });

@@ -136,6 +136,13 @@ export interface SlatePick {
    * null for team and game bets. Optional: payloads before 2026-09-19 omit it. */
   player_id?: number | null;
   player_name?: string | null;
+  /** NCAAB rows: the platform stat name (win, spread, total, first_half_win,
+   * first_half_spread, first_half_total, team_points); classified before `market`. */
+  stat_name?: string | null;
+  /** NCAAB rows: the platform bet kind (game, team, ...). */
+  bet_kind?: string | null;
+  /** NCAAB rows: "over" / "under" on totals and team totals. */
+  direction?: string | null;
   odds_taken: number | null;
   grading_odds?: number | null;
   grading_odds_source?: GradingOddsSource | null;

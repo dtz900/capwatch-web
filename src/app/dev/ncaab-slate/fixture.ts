@@ -10,6 +10,17 @@ const capperId = (h: string) => {
   return cappers.get(h) as number;
 };
 
+// Platform stat name for each display market string (contract "Market vocabulary").
+const STAT_FOR_MARKET: Record<string, string> = {
+  ml: "win",
+  spread: "spread",
+  total: "total",
+  "1h_ml": "first_half_win",
+  "1h_spread": "first_half_spread",
+  "1h_total": "first_half_total",
+  team_total: "team_points",
+};
+
 function pick(
   handle: string,
   market: string | null,
@@ -27,6 +38,9 @@ function pick(
     kind: "straight",
     leg_count: null,
     market,
+    stat_name: market ? (STAT_FOR_MARKET[market.toLowerCase()] ?? null) : null,
+    bet_kind: market?.toLowerCase() === "team_total" ? "team" : "game",
+    direction: /\bover\b/i.test(selection) ? "over" : /\bunder\b/i.test(selection) ? "under" : null,
     selection,
     line: null,
     odds_taken: -110,
@@ -92,8 +106,8 @@ export const NCAAB_FIXTURE_GAMES: SlateGame[] = [
     pick("net_cutter", "spread", "UNT", { line: 2 }),
     pick("under_dog", "total", "Under 139.5"),
     pick("fade_fred", "total", "Under 140", { stake_units: 1.5 }),
-    pick("dai_bets", "ml", "North Texas", { odds_taken: 105 }),
-    pick("sharp_sam", "ml", "McNeese", { odds_taken: -125 }),
+    pick("dai_bets", "ML", "North Texas", { odds_taken: 105 }),
+    pick("sharp_sam", "ML", "McNeese", { odds_taken: -125 }),
     pick("hoops_hawk", "1h_spread", "McNeese", { line: -1 }),
     pick("net_cutter", "team_total", "UNT Over 70.5"),
     leg("dbunk_picks", "spread", "McNeese", -1.5),
@@ -108,7 +122,7 @@ export const NCAAB_FIXTURE_GAMES: SlateGame[] = [
     pick("late_lou", "1h_total", "1H Over 74.5"),
   ]),
   game(401909501, "KU", "UNC", "Kansas", "North Carolina", "2026-11-06T01:00:00Z", pin(1.5, 148), [
-    pick("dai_bets", "ml", "Kansas ML", { odds_taken: -120, stake_units: 5 }),
+    pick("dai_bets", "ML", "Kansas ML", { odds_taken: -120, stake_units: 5 }),
     pick("fade_fred", "spread", "UNC", { line: 1.5 }),
     pick("sharp_sam", "total", "Under 148"),
   ]),
@@ -125,7 +139,7 @@ export const NCAAB_FIXTURE_GAMES: SlateGame[] = [
     pick("fade_fred", "total", "Over 161", { outcome: "L", profit_units: -1 }),
   ], { game_state: "final", period: 2, clock: "0.0", status_name: "STATUS_FINAL", away_score: 84, home_score: 77 }),
   game(401909563, "TENN", "ALA", "Tennessee", "Alabama", "2026-11-06T02:30:00Z", pin(-5, 150.5), [
-    pick("dai_bets", "ml", "Tennessee ML", { odds_taken: 180 }),
+    pick("dai_bets", "ML", "Tennessee ML", { odds_taken: 180 }),
   ]),
   game(401921698, "BAY", "ISU", "Baylor", "Iowa State", "2026-11-06T01:30:00Z", pin(-2, 142), [
     pick("hoops_hawk", "team_total", "Baylor Under 70.5"),

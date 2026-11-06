@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import "@/lib/ncaab-teams-register";
 import { buildCard, splitBoard } from "@/lib/ncaab-slate";
 import { ncaabLogoUrlForId } from "@/lib/ncaab-teams";
 import type { SlateGame } from "@/lib/types";

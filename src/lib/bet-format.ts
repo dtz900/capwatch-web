@@ -1,6 +1,6 @@
 import { NFL_TEAM_NAMES } from "@/lib/nfl-teams";
 import { NBA_TEAM_NAMES, NBA_EXTRA_ALIASES } from "@/lib/nba-teams";
-import { ncaabTeam } from "@/lib/ncaab-teams";
+import { NCAAB_ALIASES, ncaabTeam } from "@/lib/ncaab-teams";
 import type { Sport } from "@/lib/types";
 import { removeOddsToken } from "@/lib/live-market";
 
@@ -147,7 +147,7 @@ function shortPlayerName(text: string): string {
 /** First-half bet (college basketball): market "1h_*" / "h1_*" or "1H" in the text. */
 export function isFirstHalf(pick: Pick<PickInput, "market" | "selection">): boolean {
   const market = (pick.market ?? "").toLowerCase();
-  if (/^(1h|h1)_/.test(market)) return true;
+  if (/^(first_half|1h|h1)_/.test(market)) return true;
   return /\b(1h|1st\s+half|first\s+half)\b/i.test(pick.selection ?? "");
 }
 
@@ -168,10 +168,11 @@ export function inferMarketBucket(
   // 1. Trust the parser's market field if it's set.
   if (rawMarket) {
     // First-half markets ("1h_spread") bucket like their full-game twins.
-    const m = rawMarket.trim().toLowerCase().replace(/^(1h|h1)_/, "");
-    if (m === "ml" || m === "f5_ml") return "Moneyline";
+    const m = rawMarket.trim().toLowerCase().replace(/^(first_half|1h|h1)_/, "");
+    // NCAAB platform stat names: win (moneyline), team_points (team total).
+    if (m === "ml" || m === "win" || m === "f5_ml") return "Moneyline";
     if (m === "spread" || m === "f5_spread" || m === "run_line" || m === "runline") return "Spread";
-    if (m === "total" || m === "f5_total" || m === "team_total") return "Total";
+    if (m === "total" || m === "f5_total" || m === "team_total" || m === "team_points") return "Total";
     if (m.startsWith("prop_pitcher") || m.startsWith("prop_batter") || m === "player_prop" || m === "prop") return "Player prop";
     if (m === "nrfi" || m === "yrfi" || m === "game_prop") return "Game prop";
     if (m === "parlay") return "Parlay";
@@ -288,13 +289,24 @@ function resolveMascotInGame(
 }
 
 function normalizeSchoolText(s: string): string {
-  return ` ${s.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim()} `;
+  // Apostrophes and periods vanish ("St. John's" -> "st johns"); "saint" and
+  // "mount" fold to their abbreviations so "Saint Marys" meets "St Marys".
+  const flat = s
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/['’.]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\bsaint\b/g, "st")
+    .replace(/\bmount\b/g, "mt");
+  return ` ${flat} `;
 }
 
 /**
- * NCAAB: the school a selection names, out of the two in the game. Schools are
- * matched by short name ("North Texas") from the payload and the static map;
- * the longest matching name wins so "North Texas" is never read as "Texas".
+ * NCAAB: the school a selection names, out of the two in the game. One pass
+ * scores every abbreviation hit (case-sensitive whole word), school name and
+ * nickname alias, and the longest match wins, so "Iowa State -3" in IOWA @ ISU
+ * is ISU even though "Iowa" is also a name and "IOWA" an abbreviation.
  */
 function resolveNcaabTeam(
   selection: string,
@@ -304,21 +316,25 @@ function resolveNcaabTeam(
 ): string | null {
   const text = normalizeSchoolText(selection);
   let best: { abbr: string; len: number } | null = null;
-  const sides: Array<[string | null | undefined, Array<string | null | undefined>]> = [
-    [awayTeam, [names?.away, ncaabTeam(awayTeam)?.name]],
-    [homeTeam, [names?.home, ncaabTeam(homeTeam)?.name]],
+  const consider = (abbr: string, len: number) => {
+    if (!best || len > best.len) best = { abbr, len };
+  };
+  const sides: Array<[string | null | undefined, string | null | undefined]> = [
+    [awayTeam, names?.away],
+    [homeTeam, names?.home],
   ];
-  for (const [abbr, candidates] of sides) {
+  for (const [abbr, payloadName] of sides) {
     if (!abbr) continue;
+    const abbrRe = new RegExp(`(?<![A-Za-z0-9])${abbr.replace(/[^A-Za-z0-9]/g, "\\$&")}(?![A-Za-z0-9])`);
+    if (abbrRe.test(selection)) consider(abbr, abbr.length);
+    const candidates = [payloadName, ncaabTeam(abbr)?.name, ...(NCAAB_ALIASES[abbr.toUpperCase()] ?? [])];
     for (const c of candidates) {
       if (!c) continue;
       const n = normalizeSchoolText(c);
-      if (n.trim().length >= 3 && text.includes(n) && (!best || n.length > best.len)) {
-        best = { abbr, len: n.length };
-      }
+      if (n.trim().length >= 3 && text.includes(n)) consider(abbr, n.trim().length);
     }
   }
-  return best?.abbr ?? null;
+  return (best as { abbr: string } | null)?.abbr ?? null;
 }
 
 function resolveTeam(
@@ -328,13 +344,15 @@ function resolveTeam(
   sport: Sport = "MLB",
   names?: TeamNames,
 ): string | null {
+  // College abbreviations collide with school names ("Iowa State" holds
+  // "Iowa"), so NCAAB scores abbreviations and names together.
+  if (sport === "NCAAB") return resolveNcaabTeam(selection, awayTeam, homeTeam, names);
   // Match the game's known abbrs first.
   for (const abbr of [awayTeam, homeTeam]) {
     if (!abbr) continue;
-    const re = new RegExp(`\\b${abbr.replace(/[^A-Za-z0-9]/g, "\\$&")}\\b`, "i");
+    const re = new RegExp(`\\b${abbr}\\b`, "i");
     if (re.test(selection)) return abbr;
   }
-  if (sport === "NCAAB") return resolveNcaabTeam(selection, awayTeam, homeTeam, names);
 
   // NFL: mascots and nicknames of the two teams in this game ("Chiefs ML",
   // "Giants moneyline"). The MLB alias table below would send Giants to SF

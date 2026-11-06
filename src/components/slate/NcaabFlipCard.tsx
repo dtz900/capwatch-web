@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { avatarSrc } from "@/lib/avatarSrc";
 import type { BackRow, MarketRow, NcaabCard } from "@/lib/ncaab-slate";
 import { StatusChip, deriveLifecycle } from "./StatusChip";
@@ -22,7 +22,7 @@ function MarketLine({ row, awayColor, homeColor }: { row: MarketRow; awayColor: 
           {left.text}
           {left.note && <span className="ml-1 text-[10px] font-semibold text-[var(--color-text-muted)]">{left.note}</span>}
         </span>
-        <span className="whitespace-nowrap tabular-nums" aria-label={`${left.n} to ${right.n}`}>
+        <span className="whitespace-nowrap tabular-nums" role="group" aria-label={`${left.n} to ${right.n}`}>
           <span className={left.lead ? "text-[var(--color-text)]" : "text-[#52525b]"}>{left.n}</span>
           <span className="mx-[5px] text-[#3f3f46]">·</span>
           <span className={right.lead ? "text-[var(--color-text)]" : "text-[#52525b]"}>{right.n}</span>
@@ -71,22 +71,50 @@ function PickRow({ r }: { r: BackRow }) {
 
 export function NcaabFlipCard({ card, initialOpen = false }: { card: NcaabCard; initialOpen?: boolean }) {
   const [open, setOpen] = useState(initialOpen);
+  const frontRef = useRef<HTMLButtonElement>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
+  const toggled = useRef(false);
+  // Flipping inerts the face that had focus, so hand focus to the visible
+  // face's button: Back when opening, the flip button when closing.
+  useEffect(() => {
+    if (!toggled.current) return;
+    (open ? backRef.current : frontRef.current)?.focus();
+  }, [open]);
+  const flip = (next: boolean) => {
+    toggled.current = true;
+    setOpen(next);
+  };
   const g = card.game;
   const sharps = `${card.cappers} ${card.cappers === 1 ? "SHARP" : "SHARPS"}`;
-  const label = `${card.away} at ${card.home}, ${sharps.toLowerCase()}, ${card.pickCount} ${card.pickCount === 1 ? "pick" : "picks"}. Show all picks`;
+  const label = `Show all ${card.pickCount} ${card.pickCount === 1 ? "pick" : "picks"} on ${card.away} at ${card.home}`;
 
   return (
-    <div className="ncaab-flip" data-open={open} data-ncaab-game={g.game_id} id={`game-${g.game_id}`}>
+    <div
+      className="ncaab-flip"
+      data-open={open}
+      data-ncaab-game={g.game_id}
+      id={`game-${g.game_id}`}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) {
+          e.stopPropagation();
+          flip(false);
+        }
+      }}
+    >
       <div className="ncaab-flip-inner">
-        <button
-          type="button"
-          className="ncaab-face m-0 p-0 w-full text-left cursor-pointer font-[inherit] text-[var(--color-text)] hover:border-[var(--color-border-h)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text)]"
-          onClick={() => setOpen(true)}
-          aria-label={label}
-          aria-expanded={open}
-          inert={open}
-        >
-          <div className="h-full box-border flex flex-col">
+        <div className="ncaab-face ncaab-face-front text-left text-[var(--color-text)] hover:border-[var(--color-border-h)]" inert={open}>
+          {/* The summary below is plain, readable content. This button sits behind
+              it and takes the click; its label is short because the text is
+              already there to read. */}
+          <button
+            ref={frontRef}
+            type="button"
+            className="absolute inset-0 w-full h-full m-0 p-0 border-0 bg-transparent cursor-pointer rounded-[14px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text)]"
+            onClick={() => flip(true)}
+            aria-label={label}
+            aria-expanded={open}
+          />
+          <div className="relative pointer-events-none min-h-[298px] box-border flex flex-col">
             <div className="px-3 pt-3 flex justify-between items-center">
               <StatusChip lifecycle={deriveLifecycle(g)} game={g} gameTime={g.game_time} />
               <span className={`${CHIP} px-[9px] py-1 text-[10px] font-extrabold tracking-[0.16em] whitespace-nowrap`}>
@@ -147,7 +175,7 @@ export function NcaabFlipCard({ card, initialOpen = false }: { card: NcaabCard; 
               </span>
             </div>
           </div>
-        </button>
+        </div>
 
         <div className="ncaab-face ncaab-face-back flex flex-col" inert={!open} aria-hidden={!open}>
           <div className="flex items-center justify-between gap-2 py-2 pr-2 pl-3">
@@ -159,8 +187,9 @@ export function NcaabFlipCard({ card, initialOpen = false }: { card: NcaabCard; 
               <TeamLogo abbr={card.home} sport="NCAAB" logoUrl={card.homeLogo} color={card.homeColor} size={20} flat />
             </div>
             <button
+              ref={backRef}
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => flip(false)}
               aria-label="Back to summary"
               className="w-11 h-8 rounded-[7px] border-0 bg-[rgba(255,255,255,0.04)] ring-1 ring-inset ring-[rgba(255,255,255,0.08)] text-[var(--color-text-soft)] cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text)]"
             >
@@ -173,7 +202,7 @@ export function NcaabFlipCard({ card, initialOpen = false }: { card: NcaabCard; 
             <div className="flex-1" style={{ background: card.awayColor }} />
             <div className="flex-1" style={{ background: card.homeColor }} />
           </div>
-          <div className="ncaab-rows flex-1 overflow-y-auto px-3 pt-0.5 pb-2.5" tabIndex={open ? 0 : -1} aria-label="All picks on this game">
+          <div className="ncaab-rows flex-1 overflow-y-auto px-3 pt-0.5 pb-2.5" role="region" tabIndex={open ? 0 : -1} aria-label="All picks on this game">
             {card.rows.map((r) => (
               <PickRow key={r.key} r={r} />
             ))}

@@ -13,12 +13,13 @@ import { NCAAB_FIXTURE_GAMES } from "./fixture";
    chip row is drawn from ALL_LEAGUES here only so the NCAAB state can be seen
    while NCAAB is absent from PUBLIC_LEAGUES. */
 export const metadata: Metadata = {
-  title: "NCAAB slate fixture | TailSlips",
+  title: "TailSlips",
   robots: { index: false, follow: false },
 };
 
 export default function NcaabSlateFixturePage() {
-  if (process.env.NEXT_PUBLIC_NCAAB_FIXTURES !== "true") notFound();
+  // Never in production, even if the flag leaks into a prod env.
+  if (process.env.NEXT_PUBLIC_NCAAB_FIXTURES !== "true" || process.env.VERCEL_ENV === "production") notFound();
   const games = NCAAB_FIXTURE_GAMES;
   const withPicks = games.filter((g) => g.picks.length > 0);
   const picks = games.reduce((n, g) => n + g.picks.length, 0);

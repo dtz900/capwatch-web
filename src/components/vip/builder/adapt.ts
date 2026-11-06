@@ -1,6 +1,7 @@
 /* Board API payloads -> the shapes the approved builder UI renders. */
 import { NBA_EXTRA_ALIASES, NBA_TEAM_NAMES } from "@/lib/nba-teams";
 import { NFL_TEAM_NAMES } from "@/lib/nfl-teams";
+import "@/lib/ncaab-teams-register";
 import { ncaabTeamName } from "@/lib/ncaab-teams";
 import type {
   BoardGame,

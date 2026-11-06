@@ -3,14 +3,53 @@
  * slate rows; ESPN logos are keyed by numeric team id, not abbreviation, so
  * the generated map (scripts/build-ncaab-teams.mjs) turns one into the other.
  * When a payload carries `away_team_id` / `home_team_id` those win.
+ *
+ * The 360-row map is NOT imported here: it is registered by
+ * ncaab-teams-register.ts, which only the NCAAB view and the VIP builder
+ * load, so the data stays out of the shared bundles while NCAAB is dark.
+ * Lookups before registration return null.
  */
-import { NCAAB_TEAMS, type NcaabTeamRow } from "./ncaab-teams.generated";
 
-export { NCAAB_TEAMS };
+export interface NcaabTeamRow {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+let TEAMS: Record<string, NcaabTeamRow> = {};
+
+export function registerNcaabTeams(map: Record<string, NcaabTeamRow>): void {
+  TEAMS = map;
+}
+
+/** Nicknames cappers type that the school name does not contain. */
+export const NCAAB_ALIASES: Record<string, string[]> = {
+  CONN: ["uconn", "connecticut", "huskies"],
+  GONZ: ["zags", "zag", "bulldogs"],
+  VILL: ["nova"],
+  MISS: ["ole miss", "mississippi"],
+  PITT: ["pitt", "panthers"],
+  UNC: ["tar heels", "unc"],
+  UCF: ["ucf", "central florida"],
+  PENN: ["penn", "upenn"],
+  UK: ["big blue"],
+  KU: ["jayhawks"],
+  DUKE: ["blue devils"],
+  MICH: ["wolverines"],
+  ILL: ["illini"],
+  PUR: ["boilermakers", "boilers"],
+  ISU: ["cyclones"],
+  TTU: ["red raiders"],
+  SJU: ["red storm"],
+  MARQ: ["golden eagles"],
+  CREI: ["bluejays"],
+  UNT: ["mean green"],
+  MCN: ["cowboys"],
+};
 
 export function ncaabTeam(abbr: string | null | undefined): NcaabTeamRow | null {
   if (!abbr) return null;
-  return NCAAB_TEAMS[abbr.trim().toUpperCase()] ?? null;
+  return TEAMS[abbr.trim().toUpperCase()] ?? null;
 }
 
 export function ncaabLogoUrlForId(id: string | number | null | undefined): string | null {
