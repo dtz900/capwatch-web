@@ -18,6 +18,8 @@ interface Props {
   sportLabel: string;
   footer: FooterCounts;
   recapDiffLabel: string;
+  /** Find-by-id mode: only that pick is listed and paging is hidden. */
+  pickId?: number;
   paging: { offset: number; pageSize: number; total: number };
   newerHref: string | null;
   olderHref: string | null;
@@ -35,6 +37,7 @@ export function Queue({
   footer,
   recapDiffLabel,
   paging,
+  pickId,
   newerHref,
   olderHref,
   bucket,
@@ -53,6 +56,16 @@ export function Queue({
   return (
     <div className="border-r border-[var(--color-border)] flex flex-col min-h-0 h-full">
       <div className="flex-1 min-h-0 overflow-y-auto">
+      {!bucket && pickId !== undefined && (
+        <div className="flex items-center justify-between px-[22px] py-[10px] border-b border-[var(--color-border)] text-[12px] font-semibold text-[var(--color-text-muted)]">
+          <span>
+            {rows.length > 0 ? `Showing pick #${pickId} only` : `No pick #${pickId} found`}
+          </span>
+          <Link href="/admin/audit" className="font-bold text-[var(--color-text-soft)] hover:text-[var(--color-text)]">
+            Clear
+          </Link>
+        </div>
+      )}
       {bucket ? (
         bucket
       ) : rows.length === 0 ? (
@@ -103,7 +116,7 @@ export function Queue({
         })
       )}
 
-      {!bucket && (rows.length > 0 || newerHref || olderHref) && (
+      {!bucket && pickId === undefined && (rows.length > 0 || newerHref || olderHref) && (
         <div className="flex items-center justify-between px-[22px] py-3 text-[11px] font-semibold text-[var(--color-text-muted)]">
           <span>
             {rows.length > 0 ? `Showing ${from}-${to} of ${paging.total}` : `Nothing at this offset (${paging.total} total)`}

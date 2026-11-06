@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { parseAdminSport } from "@/lib/admin-sports";
 import { fetchMarketsAction, type MarketDef } from "./actions";
 import { PickDetail } from "./PickDetail";
@@ -11,6 +11,8 @@ import { effectiveStates, isStrayNcaabProp, primaryLabel } from "./fieldState";
 import { useAuditKeys } from "./useAuditKeys";
 import { useTerminalActions } from "./useTerminalActions";
 import { siblingIdsFor } from "./siblings";
+import { AddBetDrawer } from "./AddBetDrawer";
+import { ADD_BET_EVENT } from "./AddBetButton";
 import { Queue, type FooterCounts } from "./Queue";
 import { emptyQueueCopy, type QueueRow } from "./labels";
 
@@ -23,9 +25,10 @@ interface Props {
   newerHref: string | null;
   olderHref: string | null;
   buckets: BucketData;
+  pickIdValue?: number;
 }
 
-export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging, newerHref, olderHref, buckets }: Props) {
+export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging, newerHref, olderHref, buckets, pickIdValue }: Props) {
   const [selectedId, setSelectedId] = useState<number | null>(problems[0]?.pick_id ?? null);
   // The checkbox resets to checked whenever another pick is selected.
   const [applyOverride, setApplyOverride] = useState<{ id: number | null; value: boolean }>({ id: null, value: true });
@@ -40,6 +43,14 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
   const [view, setView] = useState<"queue" | BucketKind>("queue");
   // Escape remounts the detail so every editor (and its search box) closes.
   const [editorsEpoch, setEditorsEpoch] = useState(0);
+
+  const [addBetOpen, setAddBetOpen] = useState(false);
+  const closeAddBet = useCallback(() => setAddBetOpen(false), []);
+  useEffect(() => {
+    const open = () => setAddBetOpen(true);
+    window.addEventListener(ADD_BET_EVENT, open);
+    return () => window.removeEventListener(ADD_BET_EVENT, open);
+  }, []);
 
   const sport = parseAdminSport(selected?.sport ?? "MLB");
 
@@ -94,7 +105,7 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
     setSelectedId(rows[Math.max(0, Math.min(rows.length - 1, i + delta))].pick_id);
   };
   useAuditKeys({
-    enabled: !!selected && !flow.pending,
+    enabled: !!selected && !flow.pending && !addBetOpen,
     onNext: () => move(1),
     onPrev: () => move(-1),
     onEnter: () => {
@@ -119,6 +130,7 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
         footer={footer}
         recapDiffLabel={recapDiffLabel}
         paging={paging}
+        pickId={pickIdValue}
         newerHref={newerHref}
         olderHref={olderHref}
         bucket={view === "queue" ? null : <BucketList kind={view} data={buckets} onBack={() => setView("queue")} />}
@@ -160,6 +172,7 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
           />
         )}
       </div>
+      {addBetOpen && <AddBetDrawer onClose={closeAddBet} />}
       {flow.toast && (
         <div
           role="status"

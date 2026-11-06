@@ -35,6 +35,9 @@ const MAP: Record<string, AuditKeyAction> = {
   escape: "escape",
 };
 
+/** Actions that keep firing while the key is held. */
+export const REPEATABLE: ReadonlySet<AuditKeyAction> = new Set(["next", "prev"]);
+
 const TYPING = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 
 /** Pure mapping so the key table is testable without a DOM. */
@@ -70,7 +73,7 @@ export function useAuditKeys(h: Handlers) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const cur = ref.current;
-      if (!cur.enabled || e.repeat) return;
+      if (!cur.enabled) return;
       const action = keyToAction({
         key: e.key,
         ctrlKey: e.ctrlKey,
@@ -79,6 +82,8 @@ export function useAuditKeys(h: Handlers) {
         target: e.target as HTMLElement | null,
       });
       if (!action) return;
+      // Held J/K scrolls the queue; every other action fires once per press.
+      if (e.repeat && !REPEATABLE.has(action)) return;
       if (action === "enter") {
         if (cur.onEnter()) e.preventDefault();
       } else if (action === "next") cur.onNext();

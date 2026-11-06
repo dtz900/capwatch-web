@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { teamDisplayName } from "@/lib/team-names";
 import { searchGamesAction, type GameSearchResult } from "../actions";
+import { teamQueryFromSelection } from "./teamQuery";
 import { dateLabel, postedYmd, shiftYmd } from "./dates";
 import { ErrorLine, HINT_CLASS, OPTS_CLASS, OPT_CLASS, useEditorError, type EditorProps } from "./types";
 
@@ -34,20 +35,26 @@ export function GameEditor({
   const sport = p.sport ?? "MLB";
   const [date, setDate] = useState(defaultGameDate(p));
   const [loaded, setLoaded] = useState<{ key: string; outcome: Outcome } | null>(null);
-  const key = `${sport}|${date}`;
+  const [teamInput, setTeamInput] = useState(teamQueryFromSelection(p.selection, sport));
+  const [team, setTeam] = useState(teamInput.trim());
+  useEffect(() => {
+    const t = setTimeout(() => setTeam(teamInput.trim()), 250);
+    return () => clearTimeout(t);
+  }, [teamInput]);
+  const key = `${sport}|${date}|${team}`;
   const status: Status = loaded && loaded.key === key ? loaded.outcome : { kind: "loading" };
   const { error, run } = useEditorError(onPatch);
 
   useEffect(() => {
     if (!date) return;
     let live = true;
-    searchGamesAction(date, undefined, sport).then((r) => {
+    searchGamesAction(date, team || undefined, sport).then((r) => {
       if (live) setLoaded({ key, outcome: r.ok ? { kind: "ok", results: r.results } : { kind: "error", error: r.error } });
     });
     return () => {
       live = false;
     };
-  }, [date, sport, key]);
+  }, [date, sport, team, key]);
 
   const isHis = (g: GameSearchResult) =>
     pickedTeam != null && (g.away_team === pickedTeam || g.home_team === pickedTeam);
@@ -61,7 +68,14 @@ export function GameEditor({
   return (
     <div>
       {date ? (
-        <div className="inline-flex items-center gap-2.5 font-extrabold text-[13px]">
+        <div className="flex items-center gap-3 font-extrabold text-[13px]">
+          <input
+            value={teamInput}
+            onChange={(e) => setTeamInput(e.target.value)}
+            placeholder="Team"
+            aria-label="Filter games by team"
+            className="w-[160px] rounded-lg border border-[rgba(255,255,255,0.13)] bg-transparent px-[11px] py-[6px] text-[12px] font-bold text-[var(--color-text)] outline-none focus:border-[var(--color-text-soft)]"
+          />
           <button type="button" aria-label="Previous day" onClick={() => setDate(shiftYmd(date, -1))} className={STEP_BTN}>
             ‹
           </button>
@@ -77,7 +91,11 @@ export function GameEditor({
         <div className="mt-2 text-[12px] font-semibold text-[var(--color-neg)]">Game search failed: {status.error}</div>
       )}
       {date && status.kind === "ok" && rows.length === 0 && (
-        <div className={`${HINT_CLASS} mt-2`}>No {sport} games on this date.</div>
+        <div className={`${HINT_CLASS} mt-2`}>
+          {team
+            ? `No ${sport} games match "${team}" on this date. Clear the team box to see all games.`
+            : `No ${sport} games on this date.`}
+        </div>
       )}
       {rows.length > 0 && (
         <div className={OPTS_CLASS}>

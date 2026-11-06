@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keyToAction } from "./useAuditKeys";
+import { REPEATABLE, keyToAction } from "./useAuditKeys";
 
 describe("keyToAction", () => {
   it("maps the flow keys", () => {
@@ -34,5 +34,12 @@ describe("keyToAction", () => {
     expect(keyToAction({ key: "Enter", target: { tagName: "SPAN", closest: () => ({}) } })).toBeNull();
     expect(keyToAction({ key: "Enter", target: { tagName: "BODY", closest: () => null } })).toBe("enter");
     expect(keyToAction({ key: "Enter", target: { tagName: "BODY" } })).toBe("enter");
+  });
+  it("allows key repeat only for queue navigation", () => {
+    expect(REPEATABLE.has(keyToAction({ key: "j" })!)).toBe(true);
+    expect(REPEATABLE.has(keyToAction({ key: "k" })!)).toBe(true);
+    for (const key of ["Enter", "w", "l", "p", "v", "a", "Escape"]) {
+      expect(REPEATABLE.has(keyToAction({ key })!)).toBe(false);
+    }
   });
 });

@@ -1,3 +1,5 @@
+import { AddBetButton } from "./AddBetButton";
+
 interface Props {
   needsYou: number;
   settled: number;
@@ -42,13 +44,7 @@ export function HeaderStrip({ needsYou, settled, pending, graded, pickIdValue }:
             className="w-[150px] rounded-lg border border-[rgba(255,255,255,0.13)] bg-transparent px-[11px] py-[7px] text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-text-soft)] tabular-nums"
           />
         </form>
-        {/* Inert until the add-bet drawer lands (Task 14). */}
-        <button
-          type="button"
-          className="rounded-lg border border-[rgba(255,255,255,0.13)] px-[13px] py-[7px] text-[12px] font-extrabold hover:border-[var(--color-text-soft)]"
-        >
-          + Add bet
-        </button>
+        <AddBetButton />
       </div>
     </div>
   );

@@ -34,8 +34,9 @@ const labelCls =
 // 2026-09-08). Same fix the audit panel's MarketSelect uses.
 const optionCls = "bg-[#0e0e12] text-[var(--color-text)]";
 
-export function AddBetPanel() {
-  const [open, setOpen] = useState(false);
+/** `embedded`: rendered inside the add-bet drawer, which supplies the chrome, so start open with no card or Close row. */
+export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
+  const [open, setOpen] = useState(embedded);
   const [capper, setCapper] = useState("");
   const [tweetUrl, setTweetUrl] = useState("");
   const [units, setUnits] = useState("1");
@@ -133,12 +134,20 @@ export function AddBetPanel() {
   }
 
   return (
-    <section className="mb-6 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.02)] p-5 flex flex-col gap-4">
+    <section
+      className={
+        embedded
+          ? "flex flex-col gap-4"
+          : "mb-6 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.02)] p-5 flex flex-col gap-4"
+      }
+    >
       <div className="flex items-center justify-between">
         <div className={labelCls}>Add bet manually · lands admin-locked, graded next tick</div>
-        <button type="button" onClick={() => setOpen(false)} className={btnCls}>
-          Close
-        </button>
+        {!embedded && (
+          <button type="button" onClick={() => setOpen(false)} className={btnCls}>
+            Close
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">

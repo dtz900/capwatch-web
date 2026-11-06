@@ -203,6 +203,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             ungradedFinal: data.ungraded_final?.total ?? 0,
           },
         }}
+        pickIdValue={pickIdLookup}
         recapDiffLabel={recapDiffLabel}
         sportLabel={sport ?? "any sport"}
         paging={{ offset, pageSize: PAGE_SIZE, total: data.total_problems }}
