@@ -17,6 +17,18 @@ function row(over: Partial<VipEligibility>): VipEligibility {
 }
 
 describe("EligibilityBadges", () => {
+  it("locked NCAAB: coming soon copy, greyed mark, no units", () => {
+    render(
+      <EligibilityBadges
+        eligibility={[row({ sport: "NCAAB", eligible: false, units: 19, n_picks: 71, reason: "sport_locked" })]}
+      />,
+    );
+    screen.getByLabelText("NCAAB VIP coming soon");
+    expect(screen.getAllByText("NCAAB VIP coming soon").length).toBeGreaterThan(0);
+    expect(screen.queryByText("71 picks")).toBeNull();
+    expect(screen.queryByText("+19.0u")).toBeNull();
+  });
+
   it("eligible stat: exact sentence as aria-label, off-white units, picks count", () => {
     render(<EligibilityBadges eligibility={[row({})]} />);
     expect(

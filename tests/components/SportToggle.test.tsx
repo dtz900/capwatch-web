@@ -9,12 +9,13 @@ vi.mock("next/navigation", () => ({
 import { SportToggle } from "@/components/slate/SportToggle";
 
 describe("SportToggle", () => {
-  it("orders the leagues NFL, NBA, MLB left to right", () => {
+  it("orders the leagues NFL, NBA, NCAAB, MLB left to right", () => {
     render(<SportToggle current="mlb" mlbCaption="Tonight" nflCaption="Weekly board" nbaCaption="Daily board" />);
     const labels = screen.getAllByRole("radio").map((b) => b.textContent?.replace(/\s+/g, " ").trim());
     expect(labels[0]).toMatch(/^NFL/);
     expect(labels[1]).toMatch(/^NBA/);
-    expect(labels[2]).toMatch(/^MLB/);
+    expect(labels[2]).toMatch(/^NCAAB/);
+    expect(labels[3]).toMatch(/^MLB/);
   });
 
   it("flags the other leagues that have games tonight", () => {

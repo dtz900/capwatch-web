@@ -5,6 +5,7 @@ import { useState } from "react";
 import { TeamLogo } from "@/components/slate/TeamLogo";
 import { LeagueMark } from "@/components/vip/EligibilityBadges";
 import { CHIP_MUTED, EYEBROW } from "@/components/vip/styles";
+import { VIP_LOCKED_SPORTS, vipLockedCopy } from "@/lib/vip/locked";
 import type { BoardSport } from "@/lib/vip/types";
 import { PERIODS, teamName, teamTerms, type BuilderGame, type Period } from "./adapt";
 import { GameLines } from "./GameLines";
@@ -163,6 +164,17 @@ function SportLogos({
           </button>
         );
       })}
+      {VIP_LOCKED_SPORTS.map((sp) => (
+        <div
+          key={sp}
+          data-testid={`vip-locked-${sp}`}
+          aria-disabled="true"
+          className="flex items-center gap-2.5 h-12 px-3 rounded-xl border border-dashed border-[rgba(255,255,255,0.08)]"
+        >
+          <LeagueMark sport={sp} eligible={false} className="h-[26px]" />
+          <span className="text-[11px] font-bold text-[var(--color-text-muted)]">{vipLockedCopy(sp)}</span>
+        </div>
+      ))}
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { bookCount, type Period } from "./adapt";
 import { Board } from "./Board";
 import { BOOKS, OTHER_BOOK, defaultBook } from "./books";
 import { batchError, builderError, isFixClosed, isGameStarted } from "./errors";
+import { isVipLockedSport } from "@/lib/vip/locked";
 import { ManualEntry } from "./ManualEntry";
 import { OffBoardEntry } from "./OffBoardEntry";
 import { fmtPrice, type Fmt } from "./odds";
@@ -82,7 +83,8 @@ export function PickBuilder({
   preferredBook?: string | null;
   onPosted?: () => void;
 }) {
-  const sports = eligibleSports.map((s) => s.toUpperCase() as VipSport);
+  // Locked sports (NCAAB VIP) are never postable, whatever the platform says.
+  const sports = eligibleSports.filter((s) => !isVipLockedSport(s)).map((s) => s.toUpperCase() as VipSport);
   const boardSports = BOARD_SPORTS.filter((s) => sports.includes(s));
   const boards = useBoards(boardSports, token);
   const [sport, setSport] = useState<BoardSport | null>(boardSports[0] ?? null);

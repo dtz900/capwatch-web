@@ -2,6 +2,7 @@
 
 import { Tooltip } from "@/components/common/Tooltip";
 import type { VipEligibility } from "@/lib/vip/types";
+import { isVipLockedRow, vipLockedCopy } from "@/lib/vip/locked";
 import { closedCopy, eligibleCopy, focalUnits } from "./format";
 
 export const ELIGIBILITY_TOOLTIP =
@@ -48,7 +49,8 @@ export function LeagueMark({
  *  off-white, the rest muted; nothing is red or green here. The spec's
  *  sentence lives on as the group's aria-label. */
 export function EligibilityStat({ row, tile = false }: { row: VipEligibility; tile?: boolean }) {
-  const label = row.eligible ? eligibleCopy(row) : closedCopy(row);
+  const locked = isVipLockedRow(row);
+  const label = row.eligible && !locked ? eligibleCopy(row) : closedCopy(row);
   const tone = row.eligible
     ? "text-[var(--color-text)]"
     : "text-[var(--color-text-muted)]";
@@ -69,14 +71,22 @@ export function EligibilityStat({ row, tile = false }: { row: VipEligibility; ti
         eligible={row.eligible}
         className={tile ? "h-[30px] sm:h-[44px]" : undefined}
       />
-      <span
-        className={`${tile ? "text-[18px]" : "text-[24px]"} sm:text-[26px] leading-none font-extrabold tabular-nums tracking-[-0.02em] ${tone}`}
-      >
-        {focalUnits(row.units)}
-      </span>
-      <span className="text-[11px] text-[var(--color-text-muted)] tabular-nums">
-        {row.n_picks ?? 0} picks
-      </span>
+      {locked ? (
+        <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-[var(--color-text-muted)] text-center">
+          {vipLockedCopy(row.sport)}
+        </span>
+      ) : (
+        <>
+          <span
+            className={`${tile ? "text-[18px]" : "text-[24px]"} sm:text-[26px] leading-none font-extrabold tabular-nums tracking-[-0.02em] ${tone}`}
+          >
+            {focalUnits(row.units)}
+          </span>
+          <span className="text-[11px] text-[var(--color-text-muted)] tabular-nums">
+            {row.n_picks ?? 0} picks
+          </span>
+        </>
+      )}
       {row.eligible && row.in_season === false && (
         <span className="text-[10px] uppercase tracking-[0.12em] font-bold text-[var(--color-text-muted)]">
           off-season

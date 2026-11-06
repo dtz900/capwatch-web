@@ -14,32 +14,33 @@ import { parseSlateSport } from "./slate-sport";
 import { capperRecordPill } from "./capperFilters";
 import { leagueLabel } from "./seo";
 
-describe("PUBLIC_LEAGUES (NCAAB stays dark)", () => {
-  it("knows NCAAB but does not publish it", () => {
+describe("PUBLIC_LEAGUES (NCAAB is public)", () => {
+  it("publishes NCAAB", () => {
     expect(ALL_LEAGUES).toContain("ncaab");
-    expect(PUBLIC_LEAGUES).not.toContain("ncaab");
-    expect(isPublicLeague("ncaab")).toBe(false);
+    expect(PUBLIC_LEAGUES).toContain("ncaab");
+    expect(isPublicLeague("ncaab")).toBe(true);
     expect(isPublicLeague("nba")).toBe(true);
   });
 
-  it("every chip and tab order drops NCAAB", () => {
-    expect(publicOnly(SLATE_CHIP_ORDER)).toEqual(["nfl", "nba", "mlb"]);
-    expect(publicOnly(TAB_ORDER)).toEqual(["mlb", "nfl", "nba"]);
-    expect(publicSportFilters()).toEqual(["all", "mlb", "nfl", "nba"]);
+  it("every chip and tab order includes NCAAB", () => {
+    expect(publicOnly(SLATE_CHIP_ORDER)).toEqual(["nfl", "nba", "ncaab", "mlb"]);
+    expect(publicOnly(TAB_ORDER)).toEqual(["mlb", "nfl", "nba", "ncaab"]);
+    expect(publicSportFilters()).toEqual(["all", "mlb", "nfl", "nba", "ncaab"]);
   });
 
-  it("?sport=ncaab falls back to the default slate league", () => {
-    expect(parseSlateSport("ncaab")).toBe("nba");
+  it("?sport=ncaab opens the NCAAB slate", () => {
+    expect(parseSlateSport("ncaab")).toBe("ncaab");
   });
 
-  it("public copy never names NCAAB", () => {
-    expect(publicLeagueList()).toBe("MLB, NFL and NBA");
-    expect(capperRecordPill("all")).toBe("MLB + NFL + NBA CAPPER RECORD");
-    expect(leagueLabel("all")).toBe("MLB, NFL and NBA");
+  it("public copy names NCAAB", () => {
+    expect(publicLeagueList()).toBe("MLB, NFL, NBA and NCAAB");
+    expect(capperRecordPill("all")).toBe("MLB + NFL + NBA + NCAAB CAPPER RECORD");
+    expect(leagueLabel("all")).toBe("MLB, NFL, NBA and NCAAB");
   });
 
-  it("the sitemap source has no NCAAB entry", () => {
+  it("the sitemap source does not hardcode a league list", () => {
     const src = readFileSync("src/app/sitemap.ts", "utf8");
     expect(src.toLowerCase()).not.toContain("ncaab");
+    expect(src.toLowerCase()).not.toContain("?sport=");
   });
 });

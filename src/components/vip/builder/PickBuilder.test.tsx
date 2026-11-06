@@ -552,4 +552,20 @@ describe("PickBuilder straights mode", () => {
     await tapPrice(/^O 220\.5/);
     expect(screen.getByText("SAME GAME PARLAY · 2")).toBeInTheDocument();
   });
+
+  it("shows NCAAB as locked and never selectable, even if the platform lists it as postable", async () => {
+    renderBuilder(["NBA", "NCAAB"]);
+    await tapPrice(/^\+1\.5/);
+    const locked = screen.getByTestId("vip-locked-NCAAB");
+    expect(locked).toHaveTextContent("NCAAB VIP coming soon");
+    expect(locked.tagName).not.toBe("BUTTON");
+    expect(screen.queryByRole("button", { name: /NCAAB/ })).toBeNull();
+    expect(client.getVipBoardSlate).not.toHaveBeenCalledWith("NCAAB", expect.anything());
+  });
+
+  it("explains a 403 sport_locked from the platform", async () => {
+    client.postVipPick.mockRejectedValue(new client.VipApiError(403, "sport_locked"));
+    await postSpread();
+    expect(await screen.findByText("NCAAB VIP is coming soon.")).toBeInTheDocument();
+  });
 });
