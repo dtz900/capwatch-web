@@ -70,7 +70,7 @@ export function LeagueChips({
       role="radiogroup"
       aria-label={ariaLabel}
       aria-busy={busy}
-      className={`${many && lg ? "grid grid-cols-4 items-stretch" : "flex items-stretch"} ${lg ? (many ? "gap-1 sm:gap-3" : "gap-2 sm:gap-3") : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
+      className={`${many && lg ? "grid grid-cols-4 sm:flex items-stretch" : "flex items-stretch"} ${lg ? (many ? "gap-1 sm:gap-3" : "gap-2 sm:gap-3") : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
     >
       {chips.map((c) => {
         const active = c.value === value;
@@ -82,7 +82,7 @@ export function LeagueChips({
             aria-checked={active}
             onClick={() => onChange(c.value)}
             className={`group flex flex-col items-center justify-center rounded-lg select-none
-                        ${lg ? `${many ? "px-0.5 min-w-0" : "px-2 min-w-[96px]"} sm:px-5 py-3 ${many ? "sm:min-w-0" : "sm:min-w-[140px]"}` : "px-3.5 py-2"}
+                        ${lg ? `${many ? "px-0.5 min-w-0" : "px-2 min-w-[96px]"} sm:px-5 py-3 sm:min-w-[140px]` : "px-3.5 py-2"}
                         transition-colors duration-150 ${
               active
                 ? "bg-[#f7f3e9] text-black shadow-[0_6px_18px_-8px_rgba(247,243,233,0.55)]"
