@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { REASON_LABEL, formatOdds, type QueueRow } from "./labels";
+import type { ReactNode } from "react";
+import type { BucketKind } from "./BucketList";
+import { REASON_LABEL, emptyQueueCopy, formatOdds, type QueueRow } from "./labels";
 
 export interface FooterCounts {
   settled: number;
@@ -19,6 +21,10 @@ interface Props {
   paging: { offset: number; pageSize: number; total: number };
   newerHref: string | null;
   olderHref: string | null;
+  /** When set, replaces the row list (a footer bucket is open). */
+  bucket: ReactNode | null;
+  activeBucket: BucketKind | null;
+  onOpenBucket: (kind: BucketKind) => void;
 }
 
 export function Queue({
@@ -31,22 +37,27 @@ export function Queue({
   paging,
   newerHref,
   olderHref,
+  bucket,
+  activeBucket,
+  onOpenBucket,
 }: Props) {
   const from = paging.offset + 1;
   const to = Math.min(paging.offset + rows.length, paging.total);
-  const buckets: Array<[string, number]> = [
-    ["Settled, no action needed", footer.settled],
-    ["Pending, will grade themselves", footer.pending],
-    ["Triaged, hidden", footer.triaged],
-    ["Ungraded on a final game", footer.ungradedFinal],
-    ["Pick-shaped rejects", footer.pickShaped],
+  const buckets: Array<[BucketKind, string, number]> = [
+    ["settled", "Settled, no action needed", footer.settled],
+    ["pending", "Pending, will grade themselves", footer.pending],
+    ["triaged", "Triaged, hidden", footer.triaged],
+    ["ungraded_final", "Ungraded on a final game", footer.ungradedFinal],
+    ["pick_shaped", "Pick-shaped rejects", footer.pickShaped],
   ];
   return (
     <div className="border-r border-[var(--color-border)] flex flex-col min-h-0 h-full">
       <div className="flex-1 min-h-0 overflow-y-auto">
-      {rows.length === 0 ? (
+      {bucket ? (
+        bucket
+      ) : rows.length === 0 ? (
         <div className="px-[22px] py-[60px] text-center text-[var(--color-text-muted)]">
-          Nothing needs you in {sportLabel}.
+          {emptyQueueCopy(sportLabel)}
         </div>
       ) : (
         rows.map((r) => {
@@ -56,6 +67,7 @@ export function Queue({
               key={r.pick_id}
               type="button"
               onClick={() => onSelect(r.pick_id)}
+              aria-current={on ? "true" : undefined}
               className={`relative w-full grid grid-cols-[50px_1fr_auto] gap-3 items-center pl-[22px] pr-[18px] py-3 border-b border-[var(--color-border)] text-left hover:bg-[rgba(255,255,255,0.02)] ${
                 on ? "bg-[rgba(247,243,233,0.055)]" : ""
               }`}
@@ -88,7 +100,7 @@ export function Queue({
         })
       )}
 
-      {(rows.length > 0 || newerHref || olderHref) && (
+      {!bucket && (rows.length > 0 || newerHref || olderHref) && (
         <div className="flex items-center justify-between px-[22px] py-3 text-[11px] font-semibold text-[var(--color-text-muted)]">
           <span>
             {rows.length > 0 ? `Showing ${from}-${to} of ${paging.total}` : `Nothing at this offset (${paging.total} total)`}
@@ -102,11 +114,15 @@ export function Queue({
       </div>
 
       <div className="flex-none border-t border-[var(--color-border)]">
-        {buckets.map(([label, n]) => (
+        {buckets.map(([kind, label, n]) => (
           <button
-            key={label}
+            key={kind}
             type="button"
-            className="flex w-full justify-between px-[22px] py-[11px] text-[12px] font-bold text-[var(--color-text-muted)] border-b border-[var(--color-border)] hover:text-[var(--color-text-soft)]"
+            aria-pressed={activeBucket === kind}
+            onClick={() => onOpenBucket(kind)}
+            className={`flex w-full justify-between px-[22px] py-[11px] text-[12px] font-bold border-b border-[var(--color-border)] hover:text-[var(--color-text-soft)] ${
+              activeBucket === kind ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
+            }`}
           >
             <span>{label}</span>
             <b className="font-bold text-[var(--color-text-soft)] tabular-nums">{n.toLocaleString("en-US")} ›</b>

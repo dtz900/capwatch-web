@@ -4,7 +4,8 @@ import { fetchPickShapedFlags } from "./actions";
 import { HeaderStrip } from "./HeaderStrip";
 import { SportTabs } from "./SportTabs";
 import { Workbench } from "./Workbench";
-import type { QueueRow } from "./labels";
+import type { BucketRow, QueueRow, UngradedFinalView } from "./labels";
+import { REASON_LABEL } from "./labels";
 
 interface PageProps {
   searchParams: Promise<{
@@ -134,6 +135,24 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
       : null,
   }));
 
+  const toBucketRow = (p: (typeof data.problems)[number]): BucketRow => ({
+    pick_id: p.pick_id,
+    date: p.posted_at ? fmtDay(p.posted_at) : null,
+    capper: p.capper_display_name ?? p.capper_handle ?? "Unknown",
+    selection: p.selection ?? p.market ?? "Untitled pick",
+    reason: REASON_LABEL[p.reason] ?? p.reason,
+  });
+  const ungradedFinalViews: UngradedFinalView[] = (data.ungraded_final?.rows ?? []).map((r) => ({
+    pick_id: r.pick_id,
+    capper_handle: r.capper_handle,
+    selection: r.selection,
+    stat_name: r.stat_name,
+    sport: r.sport,
+    game_id: r.game_id,
+    finalSince: formatAgo(r.final_at),
+    reason: r.reason,
+  }));
+
   const hasNewer = offset > 0;
   const hasOlder = offset + data.problems.length < data.total_problems;
 
@@ -169,6 +188,20 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
           triaged: data.summary.acked ?? 0,
           ungradedFinal: data.ungraded_final?.total ?? 0,
           pickShaped: pickShapedFlags.length,
+        }}
+        buckets={{
+          settled: (data.settled ?? []).map(toBucketRow),
+          pending: (data.pending ?? []).map(toBucketRow),
+          ungradedFinal: ungradedFinalViews,
+          flags: pickShapedFlags,
+          capper: capper ?? null,
+          showAcked,
+          triagedHref: buildHref({ show_acked: "true" }),
+          counts: {
+            settled: data.settled_total ?? 0,
+            pending: data.pending_total ?? 0,
+            ungradedFinal: data.ungraded_final?.total ?? 0,
+          },
         }}
         recapDiffLabel={recapDiffLabel}
         sportLabel={sport ?? "any sport"}

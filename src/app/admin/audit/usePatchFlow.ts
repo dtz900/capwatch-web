@@ -145,5 +145,8 @@ export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean) {
     }
   };
 
-  return { rows, fixed, marketRecheck, hints, pending, toast, handlePatch };
+  /** Drops rows after a terminal action landed (regrade, grade, skip, delete). */
+  const removeRows = (ids: number[]) => setRows((rs) => rs.filter((r) => !ids.includes(r.pick_id)));
+
+  return { rows, fixed, marketRecheck, hints, pending, setPending, toast, show, removeRows, handlePatch };
 }

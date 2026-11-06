@@ -116,3 +116,19 @@ export function primaryLabel(
   const remaining = states.filter((s) => s.red && !s.fixed).length;
   return { label: dirty ? "Save and regrade" : "Regrade", enabled: remaining === 0, remaining };
 }
+
+/** Field states as the detail pane shows them: session fixes applied and a
+ * changed sport forcing a market recheck. The action strip reads the same list. */
+export function effectiveStates(
+  p: AuditProblem,
+  markets: MarketDef[] | null,
+  fixedKeys: FieldKey[],
+  marketRecheck: string | null,
+): FieldState[] {
+  return fieldStates(p, markets).map((s): FieldState => {
+    if (s.key === "market" && marketRecheck) {
+      return { ...s, red: true, fixed: false, note: `Check for ${marketRecheck}` };
+    }
+    return fixedKeys.includes(s.key) ? { ...s, red: false, fixed: true } : s;
+  });
+}

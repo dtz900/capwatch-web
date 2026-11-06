@@ -10,7 +10,7 @@ import { SportEditor } from "./editors/SportEditor";
 import { TextEditor } from "./editors/TextEditor";
 import type { PickHint } from "./usePatchFlow";
 import { FieldRow, LABEL_CLASS, ROW_CLASS } from "./FieldRow";
-import { fieldStates, isStrayNcaabProp, type FieldKey, type FieldState } from "./fieldState";
+import { effectiveStates, isStrayNcaabProp, type FieldKey } from "./fieldState";
 import { REASON_LABEL, formatOdds, type QueueRow } from "./labels";
 import { TweetBlock } from "./TweetBlock";
 
@@ -62,12 +62,7 @@ export function PickDetail({
 }: PickDetailProps) {
   const [open, setOpen] = useState<Partial<Record<FieldKey, boolean>>>({});
   const { game: boundGame, error: sideError } = useBoundGame(p);
-  const states = fieldStates(p, Array.isArray(markets) ? markets : null).map((s): FieldState => {
-    if (s.key === "market" && marketRecheck) {
-      return { ...s, red: true, fixed: false, note: `Check for ${marketRecheck}` };
-    }
-    return fixedKeys.includes(s.key) ? { ...s, red: false, fixed: true } : s;
-  });
+  const states = effectiveStates(p, Array.isArray(markets) ? markets : null, fixedKeys, marketRecheck);
   const ed = { p, disabled: pending, onPatch };
   const editorFor = (k: FieldKey) => {
     switch (k) {
