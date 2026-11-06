@@ -42,6 +42,13 @@ describe("TofBoard avatars", () => {
     expect(screen.queryByText(/Sponsored by/)).toBeNull();
   });
 
+  it("lists players short of the minimum with how far they have to go", () => {
+    render(<TofBoard rows={[row({ username: "newbie", plays: 4 }), row({ rank: 2, username: "grinder", plays: 12 })]} me={null} minPlays={10} />);
+    expect(screen.getByText("4/10")).toBeInTheDocument();
+    expect(screen.queryByText("12/10")).toBeNull();
+    expect(screen.getByText("10 plays to qualify")).toBeInTheDocument();
+  });
+
   it("shows the pinned me row with its avatar", () => {
     render(<TofBoard rows={[]} me={{ username: "TailSlips", stats, avatar_url: "https://pbs/ts.jpg", capper_handle: null }} minPlays={10} />);
     expect(screen.getByRole("img", { name: "TailSlips" })).toHaveAttribute("src", "https://pbs/ts.jpg");

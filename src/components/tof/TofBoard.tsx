@@ -36,6 +36,15 @@ function PrizeBanner({ prize, live, minPlays }: { prize: TofPrize; live: boolean
   );
 }
 
+/** "4/10": a listed player still short of the plays needed to qualify. */
+function PlaysToGo({ plays, minPlays }: { plays: number; minPlays: number }) {
+  return (
+    <span title={`${minPlays - plays} more graded plays to qualify`} className="shrink-0 rounded border border-[rgba(255,255,255,0.12)] px-1 text-[9.5px] font-bold tabular-nums text-[var(--color-text-muted)]">
+      {plays}/{minPlays}
+    </span>
+  );
+}
+
 export function TofBoard({ rows, me, minPlays, period = "month", prize = null }: {
   rows: TofBoardRow[];
   me: TofBoardMe | null;
@@ -49,10 +58,10 @@ export function TofBoard({ rows, me, minPlays, period = "month", prize = null }:
       {prize && <PrizeBanner prize={prize.prize} live={prize.live} minPlays={prize.live ? minPlays : WEEK_MIN_PLAYS} />}
       <div className="flex items-baseline justify-between">
         <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Tailers · this {period}</div>
-        <div className="text-[10px] font-bold text-[#52525b]">min {minPlays} plays</div>
+        <div className="text-[10px] font-bold text-[#52525b]">{minPlays} plays to qualify</div>
       </div>
       {rows.length === 0 ? (
-        <div className="mt-3 text-[12px] text-[var(--color-text-muted)]">Nobody has {minPlays} graded plays yet. Be first.</div>
+        <div className="mt-3 text-[12px] text-[var(--color-text-muted)]">Nobody has a graded play yet. Be first.</div>
       ) : (
         <div className="mt-2 flex flex-col">
           {rows.map((r, i) => (
@@ -64,6 +73,7 @@ export function TofBoard({ rows, me, minPlays, period = "month", prize = null }:
               ) : (
                 <span className="min-w-0 flex-grow truncate font-bold">{r.username}</span>
               )}
+              {r.plays < minPlays && <PlaysToGo plays={r.plays} minPlays={minPlays} />}
               <StreakBadge streak={r.day_streak} size="xs" />
               <span className="text-[var(--color-text-soft)] tabular-nums">{r.wins}-{r.losses}</span>
               <span className={`w-16 text-right font-extrabold tabular-nums ${r.units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}>{unitsLabel(r.units)}</span>
@@ -76,6 +86,7 @@ export function TofBoard({ rows, me, minPlays, period = "month", prize = null }:
           <span className="w-5 font-extrabold text-[var(--color-text-muted)]">you</span>
           <BoardAvatar url={me.avatar_url} name={me.username} />
           <span className="min-w-0 flex-grow truncate font-extrabold">{me.username}</span>
+          {me.stats.plays < minPlays && <PlaysToGo plays={me.stats.plays} minPlays={minPlays} />}
           <StreakBadge streak={me.stats.day_streak} size="xs" />
           <span className="text-[var(--color-text-soft)] tabular-nums">{me.stats.wins}-{me.stats.losses}</span>
           <span className={`w-16 text-right font-extrabold tabular-nums ${me.stats.units >= 0 ? "text-[var(--color-pos)]" : "text-[var(--color-neg)]"}`}>{unitsLabel(me.stats.units)}</span>
