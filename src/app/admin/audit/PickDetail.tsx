@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ADMIN_SPORTS } from "@/lib/admin-sports";
 import type { MarketDef, PickPatchInput } from "./actions";
+import { GameEditor } from "./editors/GameEditor";
+import { MarketEditor } from "./editors/MarketEditor";
+import { PlayerEditor } from "./editors/PlayerEditor";
+import { needsSide, SideEditor, useBoundGame } from "./editors/SideEditor";
+import { SportEditor } from "./editors/SportEditor";
+import { TextEditor } from "./editors/TextEditor";
+import type { PickHint } from "./usePatchFlow";
 import { FieldRow, LABEL_CLASS, ROW_CLASS } from "./FieldRow";
-import { fieldStates, isStrayNcaabProp, type FieldKey } from "./fieldState";
+import { fieldStates, isStrayNcaabProp, type FieldKey, type FieldState } from "./fieldState";
 import { REASON_LABEL, formatOdds, type QueueRow } from "./labels";
 import { TweetBlock } from "./TweetBlock";
 
@@ -19,7 +25,14 @@ export interface PickDetailProps {
   siblingRows: QueueRow[];
   applyToSiblings: boolean;
   setApplyToSiblings: (v: boolean) => void;
-  onPatched: (pickId: number, patch: PickPatchInput) => void;
+  /** Fields fixed this session (shown as Fixed, no longer red). */
+  fixedKeys: FieldKey[];
+  /** Set to the new sport after a sport change until a market is picked. */
+  marketRecheck: string | null;
+  hint: PickHint | undefined;
+  onHint: (hint: PickHint) => void;
+  pending: boolean;
+  onPatch: (patch: PickPatchInput, okMessage: string, propagate?: boolean) => Promise<void>;
 }
 
 const KBD = "border border-[var(--color-border)] rounded px-[5px] text-[10px] font-bold text-[var(--color-text-soft)]";
@@ -42,10 +55,38 @@ export function PickDetail({
   siblingRows,
   applyToSiblings,
   setApplyToSiblings,
+  fixedKeys,
+  marketRecheck,
+  hint,
+  onHint,
+  pending,
+  onPatch,
 }: PickDetailProps) {
   const [open, setOpen] = useState<Partial<Record<FieldKey, boolean>>>({});
-  const marketsError = typeof markets === "string" ? markets : null;
-  const states = fieldStates(p, Array.isArray(markets) ? markets : null);
+  const boundGame = useBoundGame(p);
+  const states = fieldStates(p, Array.isArray(markets) ? markets : null).map((s): FieldState => {
+    if (s.key === "market" && marketRecheck) {
+      return { ...s, red: true, fixed: false, note: `Check for ${marketRecheck}` };
+    }
+    return fixedKeys.includes(s.key) ? { ...s, red: false, fixed: true } : s;
+  });
+  const ed = { p, disabled: pending, onPatch };
+  const editorFor = (k: FieldKey) => {
+    switch (k) {
+      case "player":
+        return <PlayerEditor {...ed} onPicked={onHint} />;
+      case "game":
+        return <GameEditor {...ed} pickedTeam={hint?.team ?? null} onPickedDate={(gameDate) => onHint({ gameDate })} />;
+      case "market":
+        return <MarketEditor {...ed} markets={markets} />;
+      case "line":
+        return <TextEditor {...ed} field="line" />;
+      case "odds":
+        return <TextEditor {...ed} field="odds_taken" />;
+      case "stake":
+        return <TextEditor {...ed} field="units" />;
+    }
+  };
   const toggle = (k: FieldKey) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
   return (
@@ -102,21 +143,7 @@ export function PickDetail({
         <div className="mt-5 border-t border-[var(--color-border)]">
           <div className={ROW_CLASS}>
             <div className={LABEL_CLASS}>Sport</div>
-            <div className="inline-flex justify-self-start border border-[var(--color-border)] rounded-lg overflow-hidden">
-              {ADMIN_SPORTS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={`px-[13px] py-1.5 text-[12px] font-extrabold ${
-                    s === (p.sport ?? "MLB")
-                      ? "bg-[var(--color-text)] text-[#0a0a0c]"
-                      : "text-[var(--color-text-muted)]"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            <SportEditor {...ed} />
             <span className="text-[11.5px] font-semibold text-[var(--color-text-muted)]">
               Rosters, games and markets follow this
             </span>
@@ -129,11 +156,14 @@ export function PickDetail({
             states.map((s) => (
               <div key={s.key}>
                 <FieldRow state={s} open={!!open[s.key]} onToggle={() => toggle(s.key)}>
-                  <div className="text-[11.5px] text-[var(--color-text-muted)]">Editor coming next</div>
+                  {editorFor(s.key)}
                 </FieldRow>
-                {s.key === "market" && marketsError && (
-                  <div className="py-2 pl-[110px] text-[12px] font-semibold text-[var(--color-text-muted)]">
-                    Markets failed to load: {marketsError}
+                {s.key === "game" && needsSide(p.selection, boundGame) && (
+                  <div className={ROW_CLASS}>
+                    <div className={LABEL_CLASS}>Side</div>
+                    <div className="min-w-0 col-span-2">
+                      <SideEditor {...ed} game={boundGame} />
+                    </div>
                   </div>
                 )}
               </div>
