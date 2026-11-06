@@ -6,6 +6,7 @@
 // with ticket odds + units on leg 0. Everything lands admin_locked.
 
 import { useRef, useState, useTransition } from "react";
+import { ADMIN_SPORTS, type AdminSport } from "@/lib/admin-sports";
 import {
   addManualBetAction,
   searchGamesAction,
@@ -42,7 +43,7 @@ export function AddBetPanel() {
   const [isLive, setIsLive] = useState(false);
   const [legs, setLegs] = useState<LegDraft[]>([{ ...EMPTY_LEG }]);
   const [gameDate, setGameDate] = useState(todayEt());
-  const [sport, setSport] = useState<"MLB" | "NFL" | "NBA">("MLB");
+  const [sport, setSport] = useState<AdminSport>("MLB");
   // Guards the in-flight game search against a sport toggle racing it
   // (Codex P2, PR #110): a lookup resolves only if its sport still matches.
   const sportRef = useRef(sport);
@@ -60,8 +61,8 @@ export function AddBetPanel() {
   const loadGames = () =>
     startTransition(async () => {
       const requested = sport;
-      const results = await searchGamesAction(gameDate, undefined, requested);
-      if (sportRef.current === requested) setGames(results);
+      const r = await searchGamesAction(gameDate, undefined, requested);
+      if (sportRef.current === requested) setGames(r.ok ? r.results : []);
     });
 
   // Search the roster of the sport toggle; without it every NFL name
@@ -70,8 +71,8 @@ export function AddBetPanel() {
   const loadPlayers = () =>
     startTransition(async () => {
       const requested = sport;
-      const results = await searchPlayersAction(playerQuery, requested);
-      if (sportRef.current === requested) setPlayers(results);
+      const r = await searchPlayersAction(playerQuery, requested);
+      if (sportRef.current === requested) setPlayers(r.ok ? r.results : []);
     });
 
   const isParlay = legs.length > 1;
@@ -158,7 +159,7 @@ export function AddBetPanel() {
 
       <div className="flex flex-wrap gap-2 items-center border-t border-[rgba(255,255,255,0.06)] pt-3">
         <span className={labelCls}>Games</span>
-        {(["MLB", "NFL", "NBA"] as const).map((sp) => (
+        {ADMIN_SPORTS.map((sp) => (
           <button
             key={sp}
             type="button"

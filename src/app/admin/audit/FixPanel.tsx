@@ -134,7 +134,8 @@ export function FixPanel(props: Props) {
       (d): d is string => !!d,
     );
     for (const d of dates) {
-      const games = await searchGamesAction(d, undefined, props.sport ?? undefined);
+      const r = await searchGamesAction(d, undefined, props.sport ?? undefined);
+      const games = r.ok ? r.results : [];
       const hit = games.find((g) => String(g.game_pk) === props.gameId);
       if (hit) {
         setMatchup(hit);
@@ -493,7 +494,7 @@ function PlayerFinder({
     if (!query.trim()) return;
     startTransition(async () => {
       const r = await searchPlayersAction(query, sport);
-      setResults(r);
+      setResults(r.ok ? r.results : []);
       setSearched(true);
     });
   };
@@ -592,7 +593,7 @@ function GameFinder({
     if (overrideDate) setDate(overrideDate);
     startTransition(async () => {
       const r = await searchGamesAction(ymd, undefined, sport);
-      setResults(r);
+      setResults(r.ok ? r.results : []);
     });
   };
 

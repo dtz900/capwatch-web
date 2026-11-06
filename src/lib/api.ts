@@ -1,6 +1,7 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
 import { warnFailed, warnIfSlow } from "./upstream-log";
 import type { SportFilter } from "./types";
+import type { AdminSport } from "./admin-sports";
 import type { League } from "./public-leagues";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
@@ -490,7 +491,7 @@ export interface AuditFilters {
   /** "sport" groups the queue MLB-first, newest within each block. */
   sort?: "oldest" | "newest" | "sport";
   /** Filter the whole queue (actionable + pending + settled) to one sport. */
-  sport?: "MLB" | "NFL" | "NBA";
+  sport?: AdminSport;
   show_acked?: boolean;
   limit?: number;
   offset?: number;
@@ -499,7 +500,7 @@ export interface AuditFilters {
 export interface AuditProblem {
   pick_id: number;
   capper_id: number;
-  /** "MLB" | "NFL" | "NBA" (server defaults missing values to MLB). */
+  /** "MLB" | "NFL" | "NBA" | "NCAAB" (server defaults missing values to MLB). */
   sport?: string;
   capper_handle: string | null;
   capper_display_name: string | null;
@@ -529,6 +530,10 @@ export interface AuditProblem {
   /** Book-rules-correct void (player didn't play / data gap). No fix
    * needed; its own glance-only bucket, cleared via ack. */
   settled?: boolean;
+  bet_kind?: string | null;
+  stat_name?: string | null;
+  player_name?: string | null;
+  media_urls?: string[] | null;
 }
 
 /** Outcome of the nightly recap-diff job, or null when it has never run. */

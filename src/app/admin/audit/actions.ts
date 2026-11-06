@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { API_BASE } from "@/lib/config";
+import type { AdminSport } from "@/lib/admin-sports";
 
 function adminHeaders(): HeadersInit {
   const secret = process.env.CRON_SECRET;
@@ -20,6 +21,8 @@ export interface PickPatchInput {
   units?: number | null;
   player_id?: number | null;
   game_id?: string | null;
+  sport?: string;
+  stat_name?: string;
 }
 
 export type ActionResult =
@@ -309,9 +312,32 @@ export interface PlayerSearchResult {
   position?: string | null;
 }
 
-/** sport=NFL searches nfl_rosters (ESPN athlete ids); anything else, mlb_players. */
-export async function searchPlayersAction(q: string, sport?: string): Promise<PlayerSearchResult[]> {
-  if (!q.trim()) return [];
+export type SearchOutcome<T> =
+  | { ok: true; results: T[]; missingTeams: string[] }
+  | { ok: false; error: string };
+
+/** The API `detail` when present, else `HTTP <status>`. */
+async function errorFromResponse(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+    if (typeof body.detail === "string" && body.detail) return body.detail;
+  } catch {
+    // body was not JSON; fall through to the status code
+  }
+  return `HTTP ${res.status}`;
+}
+
+function errorFromThrown(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/** sport=NFL searches nfl_rosters (ESPN athlete ids); anything else, mlb_players.
+ * Errors are returned, never swallowed into an empty list. */
+export async function searchPlayersAction(
+  q: string,
+  sport?: string,
+): Promise<SearchOutcome<PlayerSearchResult>> {
+  if (!q.trim()) return { ok: true, results: [], missingTeams: [] };
   try {
     const params = new URLSearchParams({ q: q.trim() });
     if (sport) params.set("sport", sport);
@@ -319,11 +345,14 @@ export async function searchPlayersAction(q: string, sport?: string): Promise<Pl
       `${API_BASE}/api/admin/players/search?${params.toString()}`,
       { headers: adminHeaders(), cache: "no-store" },
     );
-    if (!res.ok) return [];
-    const body = (await res.json()) as { results: PlayerSearchResult[] };
-    return body.results ?? [];
-  } catch {
-    return [];
+    if (!res.ok) return { ok: false, error: await errorFromResponse(res) };
+    const body = (await res.json()) as {
+      results?: PlayerSearchResult[];
+      missing_teams?: string[];
+    };
+    return { ok: true, results: body.results ?? [], missingTeams: body.missing_teams ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: errorFromThrown(err) };
   }
 }
 
@@ -343,7 +372,7 @@ export async function searchGamesAction(
   date: string,
   team?: string,
   sport?: string,
-): Promise<GameSearchResult[]> {
+): Promise<SearchOutcome<GameSearchResult>> {
   try {
     const params = new URLSearchParams({ date });
     if (team) params.set("team", team);
@@ -352,10 +381,37 @@ export async function searchGamesAction(
       headers: adminHeaders(),
       cache: "no-store",
     });
-    if (!res.ok) return [];
-    const body = (await res.json()) as { results: GameSearchResult[] };
-    return body.results ?? [];
-  } catch {
-    return [];
+    if (!res.ok) return { ok: false, error: await errorFromResponse(res) };
+    const body = (await res.json()) as {
+      results?: GameSearchResult[];
+      missing_teams?: string[];
+    };
+    return { ok: true, results: body.results ?? [], missingTeams: body.missing_teams ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: errorFromThrown(err) };
+  }
+}
+
+export interface MarketDef {
+  stat_name: string;
+  role_required: string;
+  aliases: string[];
+  default_line: number | null;
+  takes_line: boolean;
+}
+
+export async function fetchMarketsAction(
+  sport: AdminSport,
+): Promise<{ ok: true; results: MarketDef[] } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/admin/markets?${new URLSearchParams({ sport })}`,
+      { headers: adminHeaders(), cache: "no-store" },
+    );
+    if (!res.ok) return { ok: false, error: await errorFromResponse(res) };
+    const body = (await res.json()) as { results?: MarketDef[] };
+    return { ok: true, results: body.results ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: errorFromThrown(err) };
   }
 }

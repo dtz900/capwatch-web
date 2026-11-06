@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fetchAudit } from "@/lib/api";
+import { ADMIN_SPORTS, parseAdminSport } from "@/lib/admin-sports";
 import { AddBetPanel } from "./AddBetPanel";
 import { PickShapedQueue } from "./PickShapedQueue";
 import { fetchPickShapedFlags } from "./actions";
@@ -14,7 +15,7 @@ interface PageProps {
     pick_id?: string;
     offset?: string;
     sort?: "oldest" | "newest" | "sport";
-    sport?: "MLB" | "NFL" | "NBA";
+    sport?: string;
     show_acked?: string;
   }>;
 }
@@ -89,7 +90,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   // set, so the freshest un-triaged problems are what matter.
   const sort: "oldest" | "newest" | "sport" =
     sp.sort === "oldest" || sp.sort === "sport" ? sp.sort : "newest";
-  const sport = sp.sport === "MLB" || sp.sport === "NFL" || sp.sport === "NBA" ? sp.sport : undefined;
+  const sport = parseAdminSport(sp.sport);
   const showAcked = sp.show_acked === "true";
 
   const pickShapedFlags = await fetchPickShapedFlags();
@@ -283,7 +284,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
             <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
               Sport
             </span>
-            {(["", "MLB", "NFL", "NBA"] as const).map((s) => {
+            {(["", ...ADMIN_SPORTS] as const).map((s) => {
               const n = s ? (data.by_sport?.[s] ?? 0) : null;
               return (
                 <Link
