@@ -3,6 +3,7 @@ import type { DeckCard } from "@/components/tof/TofDeck";
 import { StreakBadge } from "@/components/leaderboard/StreakBadge";
 import { TeamLogo } from "@/components/slate/TeamLogo";
 import { teamColor } from "@/lib/teams";
+import { pickTeamSide } from "@/lib/bet-format";
 import type { Sport } from "@/lib/types";
 import { avatarSrc } from "@/lib/avatarSrc";
 import { liveLabel } from "@/lib/live-label";
@@ -82,7 +83,11 @@ export function TofCardFace({
   const shared = card.kind === "shared" ? card : null;
   const sport = (card.sport ?? "MLB") as Sport;
   const { away, home } = splitMatchup(card.matchup);
-  const tailTeam = sideTeam(card.tail_label, [away, home]);
+  // Dealt cards label the side by abbreviation ("TEX ML"). A stable card
+  // carries the capper's own words ("Arkansas State +25.5"), so it falls
+  // back to resolving the name against the two teams of its game.
+  const namedSide = card.kind === "stable" ? pickTeamSide(card.tail_label, away, home, sport) : null;
+  const tailTeam = sideTeam(card.tail_label, [away, home]) ?? (namedSide === "away" ? away : namedSide === "home" ? home : null);
   const fadeLabel = shared?.fade_label ?? null;
   const unpriced = shared?.fade_odds_source === "no_close_available";
   const fadeOdds = shared ? shared.fade_odds_at_deal : null;

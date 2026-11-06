@@ -46,7 +46,8 @@ function stableFromPick(p: TodayPickEntry, now: Date, played = false): StableDec
     profile_image_url: p.profile_image_url, matchup: p.matchup, game_start_at: p.commence_time ?? "",
     market_group: group, tail_label: p.selection ?? p.market ?? "", tail_odds: odds,
     note: "From your stable.", capper_streak: 0,
-    capper_record: null, sport: "MLB",
+    // The feed sends the league since 2026-11-06; an older payload reads MLB.
+    capper_record: null, sport: p.sport ?? "MLB",
   };
   if (!played && p.commence_time && isLocked(card, now)) return null;
   return card;
