@@ -26,6 +26,8 @@ import {
   type NbaHero,
   type PhotoMode,
 } from "./_nba-hero";
+import { buildNcaabJsx } from "./_ncaab-og-card";
+import { buildNcaabVolume, smallLogoUrl } from "@/lib/ncaab-og-volume";
 
 // Rendered at 1x (1200x630). This is the config X's crawler scrapes reliably;
 // a 2x canvas made the cold render heavier (Twitterbot timed out and cached a
@@ -424,7 +426,9 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
         : "This week's NFL slate."
       : sportParam === "nba"
         ? "Tonight's NBA slate."
-        : "Tonight's MLB slate.";
+        : sportParam === "ncaab"
+          ? "Tonight's NCAAB slate."
+          : "Tonight's MLB slate.";
   const scale = opts.scale === 2 ? 2 : 1;
   const [slateResult, logoDataUri] = await Promise.allSettled([
     fetchSlate(dateParam, sportParam, sportParam === "nfl" ? opts.week : undefined),
@@ -435,6 +439,18 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
   const logo = logoDataUri.status === "fulfilled" ? logoDataUri.value : null;
 
   const games = slate?.games ?? [];
+  // NCAAB runs 50 to 150 games a night: the card is the volume of the night,
+  // not one featured matchup, so it skips the marquee pipeline entirely.
+  if (sportParam === "ncaab") {
+    return renderNcaabCard({
+      games,
+      logo,
+      slateOk: slateResult.status === "fulfilled",
+      dateLabel: dateParam === "tomorrow" ? "Tomorrow" : "Tonight",
+      scale,
+      fallbackHeading,
+    });
+  }
   const allPicks = games.flatMap((g) => g.picks);
   const sharpsPosted = new Set(allPicks.map((p) => p.capper_id)).size;
   const betsTotal = slateBetCount(allPicks);
@@ -522,6 +538,59 @@ export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Respons
       return new Response(TRANSPARENT_PNG, {
         headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE },
       });
+    }
+  }
+}
+
+const NCAAB_LEAGUE_LOGO =
+  "https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/NCAASports_MensBasketball.png&w=128&h=128";
+
+async function renderNcaabCard(args: {
+  games: SlateGame[];
+  logo: string | null;
+  slateOk: boolean;
+  dateLabel: string;
+  scale: number;
+  fallbackHeading: string;
+}): Promise<Response> {
+  const volume = buildNcaabVolume(args.games);
+  const [leagueLogo, logoPairs, fonts] = await Promise.all([
+    fetchRemoteImageAsDataUri(NCAAB_LEAGUE_LOGO),
+    Promise.all(
+      volume.top.map(async (g) => {
+        const [away, home] = await Promise.all([
+          fetchRemoteImageAsDataUri(smallLogoUrl(g.awayLogo)),
+          fetchRemoteImageAsDataUri(smallLogoUrl(g.homeLogo)),
+        ]);
+        return [g.id, { away, home }] as const;
+      }),
+    ),
+    loadCardFonts(),
+  ]);
+  const logos = new Map(logoPairs);
+  // Slate API down, or a team logo that failed to download, takes the short
+  // cache so the card heals on the next request instead of pinning the miss.
+  const degraded = !args.slateOk || logoPairs.some(([, l]) => l.away == null || l.home == null);
+  const cacheControl = degraded ? FALLBACK_CACHE : PRIMARY_CACHE;
+  const node = buildNcaabJsx({ wordmark: args.logo, leagueLogo, dateLabel: args.dateLabel, volume, logos });
+  try {
+    const buf =
+      args.scale === 2
+        ? await renderScaledPng(node, fonts, args.scale)
+        : await new ImageResponse(node, { ...size, fonts }).arrayBuffer();
+    return new Response(buf, { headers: { "content-type": "image/png", "cache-control": cacheControl } });
+  } catch (err) {
+    console.error("[slate-og-renderer] NCAAB render failed", err);
+    try {
+      const fallback = buildFallbackJsx(args.logo, args.fallbackHeading);
+      const buf =
+        args.scale === 2
+          ? await renderScaledPng(fallback, fonts, args.scale)
+          : await new ImageResponse(fallback, { ...size, fonts }).arrayBuffer();
+      return new Response(buf, { headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE } });
+    } catch (err2) {
+      console.error("[slate-og-renderer] NCAAB fallback render failed", err2);
+      return new Response(TRANSPARENT_PNG, { headers: { "content-type": "image/png", "cache-control": FALLBACK_CACHE } });
     }
   }
 }
