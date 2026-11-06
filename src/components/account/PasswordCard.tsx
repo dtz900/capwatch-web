@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import {
@@ -7,6 +7,7 @@ import {
   MIN_PASSWORD_LENGTH,
   SELLER_NO_PASSWORD,
   breachCount,
+  ownsCapper,
   setPasswordErrorMessage,
   validateNewPassword,
 } from "@/lib/password-auth";
@@ -20,7 +21,12 @@ import {
  * the emailed link, and the platform refuses seller actions from a password
  * session regardless (api/user_auth.py get_seller_user_id). */
 export function PasswordCard() {
-  const { capper } = useAuth();
+  const { session } = useAuth();
+  const userId = session?.user?.id ?? null;
+  // null until the ownership lookup answers; the form stays hidden meanwhile
+  // and if the lookup fails, so a seller never sees it by accident.
+  const [seller, setSeller] = useState<{ userId: string; owns: boolean } | null>(null);
+  const [lookupFailed, setLookupFailed] = useState(false);
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -75,9 +81,33 @@ export function PasswordCard() {
     }
   }
 
+  useEffect(() => {
+    if (!supabase || !userId) return;
+    let cancelled = false;
+    ownsCapper(supabase, userId)
+      .then((owns) => {
+        if (!cancelled) setSeller({ userId, owns });
+      })
+      .catch((err) => {
+        console.error("capper ownership lookup failed:", err);
+        if (!cancelled) setLookupFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, userId]);
+
   if (!supabase) return null;
 
-  if (capper) {
+  const resolved = seller && seller.userId === userId ? seller : null;
+  if (!resolved) {
+    return lookupFailed ? (
+      <p className="mt-3 text-xs text-[var(--color-text-muted)]">
+        Could not load password settings. Refresh the page to try again.
+      </p>
+    ) : null;
+  }
+  if (resolved.owns) {
     return <p className="mt-3 text-xs text-[var(--color-text-muted)]">{SELLER_NO_PASSWORD}</p>;
   }
 

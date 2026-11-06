@@ -4,7 +4,7 @@ import { notFound, useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { vipEnabled } from "@/lib/flags";
 import { signInReturnPath } from "@/app/auth/callback/redirects";
-import { SELLER_NO_PASSWORD, signInErrorMessage } from "@/lib/password-auth";
+import { SELLER_NO_PASSWORD, ownsCapper, signInErrorMessage } from "@/lib/password-auth";
 
 /**
  * Sign-in: magic link + emailed code, same email.
@@ -99,15 +99,21 @@ function LoginInner() {
       // link. The platform refuses seller actions from a password session
       // anyway; this just keeps a seller from landing in one. A failed
       // lookup ends the session too rather than guessing.
-      const userId = data.user?.id;
-      const owned = userId
-        ? await supabase.from("cappers").select("id").eq("claimed_by_user_id", userId).limit(1)
-        : { data: null, error: new Error("no user on the session") };
-      if (owned.error || (owned.data && owned.data.length > 0)) {
-        if (owned.error) console.error("seller check after password sign-in failed:", owned.error);
-        await supabase.auth.signOut();
+      let blocked: string | null = null;
+      try {
+        const userId = data.user?.id;
+        if (!userId) throw new Error("no user on the session");
+        if (await ownsCapper(supabase, userId)) blocked = SELLER_NO_PASSWORD;
+      } catch (err) {
+        console.error("seller check after password sign-in failed:", err);
+        blocked = "Could not finish signing in. Use the email sign-in.";
+      }
+      if (blocked) {
+        // This device only: the default scope is global and would end the
+        // seller's emailed-link sessions on their other devices too.
+        await supabase.auth.signOut({ scope: "local" });
         setPassword("");
-        setError(owned.error ? "Could not finish signing in. Use the email sign-in." : SELLER_NO_PASSWORD);
+        setError(blocked);
         return;
       }
     } catch (err) {

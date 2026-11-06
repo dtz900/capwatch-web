@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { breachCount, setPasswordErrorMessage, signInErrorMessage, validateNewPassword } from "./password-auth";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { breachCount, ownsCapper, setPasswordErrorMessage, signInErrorMessage, validateNewPassword } from "./password-auth";
 
 describe("validateNewPassword", () => {
   it("rejects short passwords and accepts 12 or more characters", () => {
@@ -63,5 +64,30 @@ describe("breachCount", () => {
   it("throws when the lookup fails, so an unchecked password is never saved", async () => {
     const down = vi.fn(async () => new Response("", { status: 503 }));
     await expect(breachCount("password", down as unknown as typeof fetch)).rejects.toThrow(/503/);
+  });
+});
+
+describe("ownsCapper", () => {
+  const client = (result: { data: unknown[] | null; error: unknown }, seen: string[] = []) =>
+    ({
+      from: () => ({
+        select: () => ({
+          eq: (column: string, value: string) => {
+            seen.push(`${column}=${value}`);
+            return { limit: async () => result };
+          },
+        }),
+      }),
+    }) as unknown as SupabaseClient;
+
+  it("goes by cappers.claimed_by_user_id for this user", async () => {
+    const seen: string[] = [];
+    expect(await ownsCapper(client({ data: [{ id: 7 }], error: null }, seen), "u1")).toBe(true);
+    expect(seen).toEqual(["claimed_by_user_id=u1"]);
+    expect(await ownsCapper(client({ data: [], error: null }), "u1")).toBe(false);
+  });
+
+  it("throws on a failed lookup instead of answering not a seller", async () => {
+    await expect(ownsCapper(client({ data: null, error: { message: "boom" } }), "u1")).rejects.toThrow();
   });
 });

@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 /* Password sign-in is the fallback for mailboxes that hold or junk the
  * sign-in email (Comcast sat on one for minutes, 2026-11-06). The emailed
  * link and code stay the default; a password only removes the wait.
@@ -27,6 +29,17 @@ export function validateNewPassword(password: string): string | null {
     return `Keep it under ${MAX_PASSWORD_LENGTH} characters.`;
   }
   return null;
+}
+
+/** True when this account owns a capper profile, by the same column the
+ *  platform's seller routes check (cappers.claimed_by_user_id). Not the X
+ *  verification on the auth context: an owner linked without it is still a
+ *  seller. Throws when the lookup fails; callers treat that as "do not let a
+ *  password through", never as "not a seller". */
+export async function ownsCapper(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await supabase.from("cappers").select("id").eq("claimed_by_user_id", userId).limit(1);
+  if (error) throw error instanceof Error ? error : new Error("capper ownership lookup failed");
+  return (data?.length ?? 0) > 0;
 }
 
 export const SELLER_NO_PASSWORD =
