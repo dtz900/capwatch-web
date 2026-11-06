@@ -7,6 +7,7 @@ import type { VipCapperStatus, VipEligibility, VipMe } from "@/lib/vip/types";
 import { SellerSetupCard } from "./SellerSetupCard";
 import { PromotePanel } from "./PromotePanel";
 import { SellerStrip } from "./SellerStrip";
+import { lockedSportsFrom } from "@/lib/vip/locked";
 import { PickBuilder } from "./builder/PickBuilder";
 import { EYEBROW, VIP_PRIMARY_BTN } from "./styles";
 
@@ -93,7 +94,7 @@ export function OwnerPanel({
 
 /** The builder under the dashboard; the band's Post a VIP pick opens it, so the
  *  capper's own profile reads like everyone else's on a normal visit. */
-function Builder({ me, token, onPosted, onClose }: { me: VipMe; token: string; onPosted: () => void; onClose: () => void }) {
+function Builder({ me, token, onPosted, onClose, locked }: { me: VipMe; token: string; onPosted: () => void; onClose: () => void; locked: string[] }) {
   return (
     <>
       <button
@@ -107,6 +108,7 @@ function Builder({ me, token, onPosted, onClose }: { me: VipMe; token: string; o
         token={token}
         eligibleSports={me.can_post_sports}
         preferredBook={me.seller?.preferred_book}
+        lockedSports={locked}
         onPosted={onPosted}
       />
     </>
@@ -181,7 +183,7 @@ export function OwnerPanelView({
       {building && canPost && token && (
         // scroll-mt clears the sticky site header.
         <div ref={builderRef} className="scroll-mt-20">
-          <Builder me={me} token={token} onPosted={onPosted} onClose={() => setBuilding(false)} />
+          <Builder me={me} token={token} onPosted={onPosted} onClose={() => setBuilding(false)} locked={lockedSportsFrom(eligibility)} />
         </div>
       )}
     </div>

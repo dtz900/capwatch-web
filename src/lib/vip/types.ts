@@ -174,6 +174,10 @@ export interface VipGameResult {
   game_date: string;
   commence_time: string;
   game_number?: number;
+  /** NCAAB: the school names beside ESPN's abbreviations, so two games with
+   *  the same abbreviation read apart. */
+  away_name?: string;
+  home_name?: string;
 }
 
 export interface ManualLegInput {
@@ -218,6 +222,9 @@ export interface VipPickResult {
   reveal_at: string;
   fix_deadline?: string;
   clamped?: VipClamp[];
+  /** Indexes of legs saved for review because the price could not be checked
+   *  against a board (NCAAB). Absent or empty when every leg was verified. */
+  unchecked?: number[];
 }
 
 /** POST /api/vip/picks/batch: one result per ticket, in request order. */
@@ -291,6 +298,14 @@ export interface BoardGame extends BoardSlateGame {
   thin: boolean;
   periods: Partial<Record<BoardPeriodKey, BoardPeriod>>;
   props: BoardProp[];
+  /** NCAAB on-demand boards only. */
+  home_id?: string;
+  away_id?: string;
+  books?: string[];
+  /** The Odds API had no prices for this game yet. */
+  no_lines?: boolean;
+  neutral_site?: boolean;
+  fetched_at?: string | null;
 }
 
 /* Error detail strings the platform returns in the `detail` field. */

@@ -3,6 +3,7 @@ import { VipApiError } from "@/lib/vip/client";
 
 const TEXT: Record<string, string> = {
   "403:sport_locked": "NCAAB VIP is coming soon.",
+  "403:sport_not_eligible": "You are not eligible to post in this sport right now.",
   "409:game_started": "This game has started.",
   "409:game_start_unknown": "We could not find a start time for that game. Pick it from the list.",
   "409:duplicate_pick": "You already posted this pick a few minutes ago.",
@@ -47,3 +48,22 @@ export const isFixClosed = (err: unknown) =>
 
 export const isGameStarted = (err: unknown) =>
   err instanceof VipApiError && err.status === 409 && err.detail === "game_started";
+
+/** Copy for the NCAAB on-demand search and board reads. */
+export function boardLoadError(err: unknown): string {
+  if (err instanceof VipApiError) {
+    if (err.status === 429) {
+      return err.message_text ?? "You have opened a lot of college games this hour. Try again in a few minutes.";
+    }
+    if (err.status === 502) return "Lines for this game are not available right now. Try again in a minute.";
+    if (err.status === 404) return "We could not find that game.";
+    if (err.status === 403 && err.detail === "sport_locked") return "NCAAB VIP is coming soon.";
+    if (err.status === 403) return "You are not eligible to post in this sport right now.";
+  }
+  return "Could not load the game. Try again.";
+}
+
+export function searchLoadError(err: unknown): string {
+  if (err instanceof VipApiError && err.status === 403) return boardLoadError(err);
+  return "Could not search games. Try again.";
+}

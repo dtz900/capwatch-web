@@ -553,14 +553,21 @@ describe("PickBuilder straights mode", () => {
     expect(screen.getByText("SAME GAME PARLAY · 2")).toBeInTheDocument();
   });
 
-  it("shows NCAAB as locked and never selectable, even if the platform lists it as postable", async () => {
-    renderBuilder(["NBA", "NCAAB"]);
+  it("shows NCAAB as locked while the platform reports sport_locked, never selectable", async () => {
+    render(<PickBuilder token="tok" eligibleSports={["NBA", "NCAAB"]} lockedSports={["NCAAB"]} preferredBook="fanduel" />);
     await tapPrice(/^\+1\.5/);
     const locked = screen.getByTestId("vip-locked-NCAAB");
     expect(locked).toHaveTextContent("NCAAB VIP coming soon");
     expect(locked.tagName).not.toBe("BUTTON");
-    expect(screen.queryByRole("button", { name: /NCAAB/ })).toBeNull();
+    expect(screen.queryByLabelText("Game date")).toBeNull();
     expect(client.getVipBoardSlate).not.toHaveBeenCalledWith("NCAAB", expect.anything());
+  });
+
+  it("drops the coming soon tile once nothing is reported locked", async () => {
+    render(<PickBuilder token="tok" eligibleSports={["NBA", "NCAAB"]} lockedSports={[]} preferredBook="fanduel" />);
+    await tapPrice(/^\+1\.5/);
+    expect(screen.queryByTestId("vip-locked-NCAAB")).toBeNull();
+    expect(screen.getByLabelText("Game date")).toBeInTheDocument();
   });
 
   it("explains a 403 sport_locked from the platform", async () => {
@@ -569,3 +576,78 @@ describe("PickBuilder straights mode", () => {
     expect(await screen.findByText("NCAAB VIP is coming soon.")).toBeInTheDocument();
   });
 });
+
+describe("PickBuilder NCAAB", () => {
+  const NC_SIDE_A = side("n1:sp:a", "Auburn -3.5", "-3.5", -110, { fanduel: -110 },
+    { sport: "NCAAB", game_id: "n1", selection: "Auburn", line: -3.5 });
+  const NC_SIDE_H = side("n1:sp:h", "Miami (OH) +3.5", "+3.5", -110, { fanduel: -110 },
+    { sport: "NCAAB", game_id: "n1", selection: "Miami (OH)", line: 3.5 });
+  const NC_BOARD: BoardGame = {
+    sport: "NCAAB", game_id: "n1", away: "Miami (OH)", home: "Auburn", commence_time: START, started: false,
+    thin: false, home_id: "2", away_id: "193", books: ["fanduel"], no_lines: false, neutral_site: false,
+    periods: { Game: { spread: [NC_SIDE_H, NC_SIDE_A], total: null, ml: null, alt_spreads: [], alt_totals: [], team_totals: [] } },
+    props: [],
+  };
+  const RESULT = {
+    game_pk: "n1", away_team: "M-OH", home_team: "AUB", away_name: "Miami (OH)", home_name: "Auburn",
+    game_date: "2026-11-06", commence_time: START,
+  };
+
+  beforeEach(() => {
+    client.getVipBoardSlate.mockResolvedValue({ games: [] });
+    client.searchVipGames.mockResolvedValue({ results: [RESULT], truncated: true });
+    client.getVipBoardGame.mockResolvedValue(NC_BOARD);
+  });
+
+  const renderNc = () => render(<PickBuilder token="tok" eligibleSports={["NCAAB"]} lockedSports={[]} preferredBook="fanduel" />);
+
+  async function openGame() {
+    renderNc();
+    fireEvent.click(await screen.findByRole("button", { name: "Find games" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Miami \(OH\) at Auburn/ }));
+  }
+
+  it("lists both school names and says when results were cut off", async () => {
+    renderNc();
+    fireEvent.click(await screen.findByRole("button", { name: "Find games" }));
+    expect(await screen.findByText("Miami (OH) at Auburn")).toBeInTheDocument();
+    expect(screen.getByText(/Type a school to narrow/)).toBeInTheDocument();
+    expect(client.searchVipGames).toHaveBeenCalledWith(expect.any(String), "", "NCAAB", "tok");
+  });
+
+  it("opens the board for the chosen game", async () => {
+    await openGame();
+    expect(client.getVipBoardGame).toHaveBeenCalledWith("NCAAB", "n1", "tok");
+    expect(await screen.findByRole("button", { name: /^-3\.5/ })).toBeInTheDocument();
+  });
+
+  it("says no lines are posted yet", async () => {
+    client.getVipBoardGame.mockResolvedValue({ ...NC_BOARD, no_lines: true, periods: {} });
+    await openGame();
+    expect(await screen.findByText(/No lines posted yet/)).toBeInTheDocument();
+  });
+
+  it("explains a rate limit with the platform message", async () => {
+    client.getVipBoardGame.mockRejectedValue(new client.VipApiError(429, "board_rate_limited"));
+    await openGame();
+    expect(await screen.findByText(/opened a lot of college games/)).toBeInTheDocument();
+  });
+
+  it("explains an unavailable board", async () => {
+    client.getVipBoardGame.mockRejectedValue(new client.VipApiError(502, "board_unavailable"));
+    await openGame();
+    expect(await screen.findByText(/not available right now/)).toBeInTheDocument();
+  });
+
+  it("tells the seller a leg was saved for review", async () => {
+    client.postVipPick.mockResolvedValue({
+      ok: true, created_pick_ids: [9], parlay_id: null, ticket_id: 9, reveal_at: START, unchecked: [0],
+    });
+    await openGame();
+    fireEvent.click(await screen.findByRole("button", { name: /^-3\.5/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Review pick" }));
+    fireEvent.click(screen.getByRole("button", { name: "Post to subscribers" }));
+    expect(await screen.findByText("We could not verify this price; it will be reviewed.")).toBeInTheDocument();
+  });
+});
+

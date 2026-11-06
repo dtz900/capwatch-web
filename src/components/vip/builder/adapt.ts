@@ -56,6 +56,12 @@ export interface BuilderGame {
   periods: Partial<Record<Period, Lines>>;
   props: PropMarket[];
   slate: BoardSlateGame;
+  /** NCAAB on-demand board: the book feed had no prices for this game yet. */
+  noLines?: boolean;
+  neutralSite?: boolean;
+  /** NCAAB: ESPN ids of the two schools, to label either side exactly. */
+  awayId?: string;
+  homeId?: string;
 }
 
 export function teamName(sport: VipSport, abbr: string): string {
@@ -172,7 +178,10 @@ export function fromBoard(b: BoardGame, now: Date): BuilderGame {
   for (const [key, p] of Object.entries(b.periods) as Array<[Period, BoardPeriod | undefined]>) {
     if (p) periods[key] = lines(p, b.away, b.home);
   }
-  return { ...base, thin: b.thin, started: b.started, loaded: true, periods, props: b.props.map(prop) };
+  return {
+    ...base, thin: b.thin, started: b.started, loaded: true, periods, props: b.props.map(prop),
+    noLines: b.no_lines === true, neutralSite: b.neutral_site === true, awayId: b.away_id, homeId: b.home_id,
+  };
 }
 
 /** Distinct books quoting anything on the given boards. */
