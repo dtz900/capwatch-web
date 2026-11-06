@@ -33,5 +33,6 @@ describe("keyToAction", () => {
     expect(keyToAction({ key: "Enter", target: { tagName: "A" } })).toBeNull();
     expect(keyToAction({ key: "Enter", target: { tagName: "SPAN", closest: () => ({}) } })).toBeNull();
     expect(keyToAction({ key: "Enter", target: { tagName: "BODY", closest: () => null } })).toBe("enter");
+    expect(keyToAction({ key: "Enter", target: { tagName: "BODY" } })).toBe("enter");
   });
 });

@@ -106,7 +106,10 @@ export function BucketList({ kind, data, onBack }: Props) {
     <div>
       <button
         type="button"
-        onClick={onBack}
+        onClick={(e) => {
+          e.currentTarget.blur();
+          onBack();
+        }}
         className="w-full text-left px-[22px] py-[11px] border-b border-[var(--color-border)] text-[12px] font-bold text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
       >
         ‹ Back to queue

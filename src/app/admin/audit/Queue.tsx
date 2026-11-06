@@ -66,7 +66,10 @@ export function Queue({
             <button
               key={r.pick_id}
               type="button"
-              onClick={() => onSelect(r.pick_id)}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                onSelect(r.pick_id);
+              }}
               aria-current={on ? "true" : undefined}
               className={`relative w-full grid grid-cols-[50px_1fr_auto] gap-3 items-center pl-[22px] pr-[18px] py-3 border-b border-[var(--color-border)] text-left hover:bg-[rgba(255,255,255,0.02)] ${
                 on ? "bg-[rgba(247,243,233,0.055)]" : ""
@@ -119,7 +122,10 @@ export function Queue({
             key={kind}
             type="button"
             aria-pressed={activeBucket === kind}
-            onClick={() => onOpenBucket(kind)}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              onOpenBucket(kind);
+            }}
             className={`flex w-full justify-between px-[22px] py-[11px] text-[12px] font-bold border-b border-[var(--color-border)] hover:text-[var(--color-text-soft)] ${
               activeBucket === kind ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
             }`}
