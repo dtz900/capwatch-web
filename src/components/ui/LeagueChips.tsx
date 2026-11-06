@@ -81,7 +81,7 @@ export function LeagueChips({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(c.value)}
-            className={`group flex flex-col items-center justify-center rounded-lg select-none
+            className={`group flex flex-col items-center justify-center rounded-lg select-none sm:shrink-0 whitespace-nowrap
                         ${lg ? `${many ? "px-0.5 min-w-0" : "px-2 min-w-[96px]"} sm:px-5 py-3 sm:min-w-[140px]` : "px-3.5 py-2"}
                         transition-colors duration-150 ${
               active
