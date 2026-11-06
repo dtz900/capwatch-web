@@ -9,11 +9,11 @@ import { VipCrown } from "@/components/vip/VipCrown";
 import { ERROR_TEXT, EYEBROW, VIP_PRIMARY_BTN, VIP_WORDMARK } from "@/components/vip/styles";
 import { fixVipPick, postVipPick, postVipPicks, pullVipPick } from "@/lib/vip/client";
 import type { BoardSide, BoardSport, VipClamp, VipSport } from "@/lib/vip/types";
-import { bookCount, type Period } from "./adapt";
+import { bookCount, type BuilderGame, type Period } from "./adapt";
 import { Board } from "./Board";
 import { BOOKS, OTHER_BOOK, defaultBook } from "./books";
 import { batchError, builderError, isFixClosed, isGameStarted } from "./errors";
-import { isVipLockedSport } from "@/lib/vip/locked";
+import { NcaabPicker } from "./NcaabPicker";
 import { ManualEntry } from "./ManualEntry";
 import { OffBoardEntry } from "./OffBoardEntry";
 import { fmtPrice, type Fmt } from "./odds";
@@ -77,17 +77,26 @@ export function PickBuilder({
   eligibleSports,
   preferredBook,
   onPosted,
+  lockedSports = [],
 }: {
   token: string;
   eligibleSports: string[];
+  /** Sports the platform reports as locked (coming soon), from eligibility. */
+  lockedSports?: string[];
   preferredBook?: string | null;
   onPosted?: () => void;
 }) {
-  // Locked sports (NCAAB VIP) are never postable, whatever the platform says.
-  const sports = eligibleSports.filter((s) => !isVipLockedSport(s)).map((s) => s.toUpperCase() as VipSport);
+  // A sport the platform reports as locked is never postable, even if listed.
+  const sports = eligibleSports
+    .map((s) => s.toUpperCase())
+    .filter((s) => !lockedSports.map((l) => l.toUpperCase()).includes(s)) as VipSport[];
+  const hasNcaab = sports.includes("NCAAB");
+  const manualSports = sports.filter((s) => s !== "NCAAB");
   const boardSports = BOARD_SPORTS.filter((s) => sports.includes(s));
   const boards = useBoards(boardSports, token);
   const [sport, setSport] = useState<BoardSport | null>(boardSports[0] ?? null);
+  // NCAAB has no slate: games the seller opened by search, with their boards.
+  const [ncaabGames, setNcaabGames] = useState<BuilderGame[]>([]);
   const [fmt, setFmt] = useState<Fmt>("american");
   const [book, setBook] = useState(() => defaultBook(preferredBook));
   // A main book saved in the stats card while the builder is open takes
@@ -134,7 +143,7 @@ export function PickBuilder({
     if (dayIds) prioritize(dayIds.split(","));
   }, [dayIds, prioritize]);
 
-  const allGames = useMemo(() => Object.values(boards.games).flat(), [boards.games]);
+  const allGames = useMemo(() => [...Object.values(boards.games).flat(), ...ncaabGames], [boards.games, ncaabGames]);
   const selected = new Set(legs.map((l) => l.side.key));
   // Straights only with 2+ legs, and never while fixing: a fix is one ticket.
   const straights = mode === "straights" && legs.length >= 2 && !fixing;
@@ -251,6 +260,7 @@ export function PickBuilder({
             pulled: false,
             fixDeadline: r.fix_deadline ? Date.parse(r.fix_deadline) : fallback,
             clamped,
+            unchecked: r.unchecked ?? [],
           };
         }),
       );
@@ -289,6 +299,7 @@ export function PickBuilder({
         pulled: false,
         fixDeadline: fixing && posted ? posted.fixDeadline : deadline,
         clamped: res.clamped ?? [],
+        unchecked: res.unchecked ?? [],
       };
       if (fixIdx !== null) {
         // One straight of a batch was fixed: it replaces its row, and the
@@ -458,6 +469,18 @@ export function PickBuilder({
                       legCount={(s) => legs.filter((l) => l.game.sport === s).length}
                       books={bookCount(allGames)}
                       status={boards.status[sport] ?? "loading"}
+                      locked={lockedSports}
+                    />
+                  )}
+                  {hasNcaab && (
+                    <NcaabPicker
+                      token={token}
+                      games={ncaabGames}
+                      onOpen={(g) => setNcaabGames((all) => [...all.filter((x) => x.id !== g.id), g])}
+                      selected={selected}
+                      onTap={tap}
+                      period={period}
+                      onPeriod={setPeriod}
                     />
                   )}
                   {sport ? (
@@ -473,7 +496,12 @@ export function PickBuilder({
                     </>
                   ) : (
                     // No board (MLB-only seller): the structured editor is the builder.
-                    <ManualEntry sports={sports} token={token} onAdd={addLegs} startOpen />
+                    <>
+                      {manualSports.length > 0 && <ManualEntry sports={manualSports} token={token} onAdd={addLegs} startOpen />}
+                      {ncaabGames.length > 0 && (
+                        <OffBoardEntry games={ncaabGames.filter((g) => !g.started).sort((a, b) => a.startMs - b.startMs)} onAdd={addLegs} />
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="contents lg:flex lg:flex-col lg:gap-4 lg:sticky lg:top-[136px] lg:max-h-[calc(100vh-152px)] lg:overflow-y-auto">

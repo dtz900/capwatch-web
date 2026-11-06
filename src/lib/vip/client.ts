@@ -19,25 +19,34 @@ import type { VipReceipt } from "./promote";
 export class VipApiError extends Error {
   readonly status: number;
   readonly detail: string;
+  /** Platform-written copy when `detail` came as {code, message}. */
+  readonly message_text?: string;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, messageText?: string) {
     super(`vip_${status}`);
     this.name = "VipApiError";
     this.status = status;
     this.detail = detail;
+    this.message_text = messageText;
   }
 }
 
 type VipInit = RequestInit & { token?: string | null };
 
-async function readDetail(res: Response): Promise<string> {
+/** The platform answers `detail` as a string code, or (rate limits) as an
+ *  object {code, message}. Either way the error carries the code. */
+async function readError(res: Response): Promise<VipApiError> {
   try {
     const body = await res.json();
-    if (body && typeof body.detail === "string") return body.detail;
+    const d = body?.detail;
+    if (typeof d === "string") return new VipApiError(res.status, d);
+    if (d && typeof d === "object" && typeof d.code === "string") {
+      return new VipApiError(res.status, d.code, typeof d.message === "string" ? d.message : undefined);
+    }
   } catch {
     // body was not JSON; fall through to the status text
   }
-  return res.statusText;
+  return new VipApiError(res.status, res.statusText);
 }
 
 /* Browser-side call to the platform with the user's Supabase access token. */
@@ -51,7 +60,7 @@ export async function vipFetch<T>(path: string, init: VipInit = {}): Promise<T> 
     headers,
     cache: "no-store",
   });
-  if (!res.ok) throw new VipApiError(res.status, await readDetail(res));
+  if (!res.ok) throw await readError(res);
   return (await res.json()) as T;
 }
 
@@ -125,7 +134,7 @@ export function searchVipGames(
   token: string | null,
 ) {
   const qs = new URLSearchParams({ date, team, sport });
-  return vipFetch<{ results: VipGameResult[] }>(`/api/vip/games/search?${qs}`, { token });
+  return vipFetch<{ results: VipGameResult[]; truncated?: boolean }>(`/api/vip/games/search?${qs}`, { token });
 }
 
 export function postVipPick(body: VipPickBody, token: string | null) {
@@ -154,7 +163,7 @@ export function getVipBoardSlate(sport: BoardSport, token: string | null) {
   return vipFetch<{ games: BoardSlateGame[] }>(`/api/vip/board/slate?${qs}`, { token });
 }
 
-export function getVipBoardGame(sport: BoardSport, gameId: string, token: string | null) {
+export function getVipBoardGame(sport: BoardSport | "NCAAB", gameId: string, token: string | null) {
   return vipFetch<BoardGame>(
     `/api/vip/board/${encodeURIComponent(sport)}/${encodeURIComponent(gameId)}`,
     { token },
@@ -180,7 +189,7 @@ export async function pullVipPick(ticketId: number, token: string | null): Promi
     cache: "no-store",
   });
   if (res.ok || res.status === 404) return;
-  throw new VipApiError(res.status, await readDetail(res));
+  throw await readError(res);
 }
 
 export function startVipCheckout(capperId: number | string, termsVersion: string, token: string | null) {

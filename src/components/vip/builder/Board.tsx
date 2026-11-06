@@ -5,7 +5,7 @@ import { useState } from "react";
 import { TeamLogo } from "@/components/slate/TeamLogo";
 import { LeagueMark } from "@/components/vip/EligibilityBadges";
 import { CHIP_MUTED, EYEBROW } from "@/components/vip/styles";
-import { VIP_LOCKED_SPORTS, vipLockedCopy } from "@/lib/vip/locked";
+import { vipLockedCopy } from "@/lib/vip/locked";
 import type { BoardSport } from "@/lib/vip/types";
 import { PERIODS, teamName, teamTerms, type BuilderGame, type Period } from "./adapt";
 import { GameLines } from "./GameLines";
@@ -40,7 +40,7 @@ function Matchup({ g }: { g: BuilderGame }) {
   );
 }
 
-function GameRow({
+export function GameRow({
   g,
   selected,
   onTap,
@@ -116,7 +116,10 @@ function SportLogos({
   sport,
   onSport,
   legCount,
+  locked,
 }: {
+  /** Sports the platform reports as locked (coming soon). */
+  locked: string[];
   sports: BoardSport[];
   eligible: BoardSport[];
   sport: BoardSport;
@@ -164,7 +167,7 @@ function SportLogos({
           </button>
         );
       })}
-      {VIP_LOCKED_SPORTS.map((sp) => (
+      {locked.map((sp) => (
         <div
           key={sp}
           data-testid={`vip-locked-${sp}`}
@@ -196,7 +199,9 @@ export function Board({
   legCount,
   books,
   status,
+  locked = [],
 }: {
+  locked?: string[];
   /** Every board sport, eligible or not. */
   sports: BoardSport[];
   eligible: BoardSport[];
@@ -231,7 +236,7 @@ export function Board({
   return (
     <>
       <div className="flex flex-col gap-3">
-        <SportLogos sports={sports} eligible={eligible} sport={sport} onSport={onSport} legCount={legCount} />
+        <SportLogos sports={sports} eligible={eligible} sport={sport} onSport={onSport} legCount={legCount} locked={locked} />
         <div className="flex items-center gap-3 flex-wrap">
           {query.trim() === "" && days.length > 0 && (
             <Segmented<string>

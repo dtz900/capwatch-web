@@ -27,7 +27,11 @@ export interface Posted extends Ticket {
    *  a fix keeps it, so fixing never extends the window. */
   fixDeadline: number;
   clamped: VipClamp[];
+  /** Leg indexes saved for review because their price could not be checked. */
+  unchecked?: number[];
 }
+
+export const UNCHECKED_NOTE = "We could not verify this price; it will be reviewed.";
 
 const clampNote = (c: VipClamp | undefined, fmt: Fmt) =>
   c ? `Better than every book we track. Your record counts it at ${fmtPrice(c.recorded, fmt)}.` : null;
@@ -37,17 +41,21 @@ export function TicketView({
   fmt,
   struck = false,
   clamped = [],
+  unchecked = [],
 }: {
   ticket: Ticket;
   fmt: Fmt;
   struck?: boolean;
   clamped?: VipClamp[];
+  unchecked?: number[];
 }) {
   const { legs, units, combined, book } = ticket;
   const parlay = legs.length > 1;
   const toWin = combined !== null ? Number(units) * (toDecimal(combined) - 1) : null;
   // A straight's clamp has no leg index; on a parlay that means the ticket.
   const legClamp = (i: number) => clamped.find((c) => (parlay ? c.leg_index === i : c.leg_index === null));
+  // A straight is one leg whatever index the platform flagged.
+  const legUnchecked = (i: number) => unchecked.length > 0 && (!parlay || unchecked.includes(i));
   const ticketClamp = parlay ? clamped.find((c) => c.leg_index === null) : undefined;
   return (
     <div className={`flex flex-col ${struck ? "opacity-50" : ""}`}>
@@ -75,6 +83,9 @@ export function TicketView({
               })()}
             </span>
           </div>
+          {legUnchecked(i) && (
+            <span role="status" className="pl-12 text-[11px] text-[rgba(247,243,233,0.7)]">{UNCHECKED_NOTE}</span>
+          )}
           {clampNote(legClamp(i), fmt) && (
             <span className="pl-12 text-[11px] text-[rgba(247,243,233,0.7)]">{clampNote(legClamp(i), fmt)}</span>
           )}
@@ -216,7 +227,7 @@ export function PostedView({
           <VipCrown className="w-4 h-4" />
           <span className={VIP_WORDMARK}>{posted.pulled ? "PULLED" : posted.original ? "FIXED" : "LIVE FOR SUBSCRIBERS"}</span>
         </div>
-        <TicketView ticket={posted} fmt={fmt} struck={posted.pulled} clamped={posted.clamped} />
+        <TicketView ticket={posted} fmt={fmt} struck={posted.pulled} clamped={posted.clamped} unchecked={posted.unchecked} />
         {posted.original && (
           <div className="mt-3 rounded-lg bg-[rgba(0,0,0,0.25)] px-3 py-2 text-[12px] text-[rgba(247,243,233,0.55)]">
             Original: <span className="line-through">{summary(posted.original, fmt)}</span>
@@ -290,7 +301,7 @@ function BatchRow({
           <VipCrown className="w-4 h-4" />
           <span className={VIP_WORDMARK}>{posted.pulled ? "PULLED" : posted.original ? "FIXED" : "LIVE FOR SUBSCRIBERS"}</span>
         </div>
-        <TicketView ticket={posted} fmt={fmt} struck={posted.pulled} clamped={posted.clamped} />
+        <TicketView ticket={posted} fmt={fmt} struck={posted.pulled} clamped={posted.clamped} unchecked={posted.unchecked} />
         {posted.original && (
           <div className="mt-3 rounded-lg bg-[rgba(0,0,0,0.25)] px-3 py-2 text-[12px] text-[rgba(247,243,233,0.55)]">
             Original: <span className="line-through">{summary(posted.original, fmt)}</span>

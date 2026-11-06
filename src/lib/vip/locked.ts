@@ -1,18 +1,20 @@
 /**
  * VIP sports that are public on the site but not yet open for selling.
- * Mirrors the platform's VIP_LOCKED_SPORTS: the platform writes these as
- * ineligible with reason `sport_locked` and answers every post with a 403
- * `sport_locked`. The web never offers them in the builder.
+ * The platform decides: it writes a locked sport's eligibility row with
+ * reason `sport_locked` and answers every post with a 403 `sport_locked`.
+ * Nothing is hard-coded here, so the "coming soon" UI disappears on its own
+ * the moment the platform stops reporting the reason.
  */
-export const VIP_LOCKED_SPORTS = ["NCAAB"] as const;
+type SportRow = { sport: unknown; reason?: string | null };
 
-export function isVipLockedSport(sport: unknown): boolean {
-  return typeof sport === "string" && (VIP_LOCKED_SPORTS as readonly string[]).includes(sport.toUpperCase());
+/** A VIP eligibility row is locked when the platform says so. */
+export function isVipLockedRow(row: SportRow): boolean {
+  return row.reason === "sport_locked";
 }
 
-/** A VIP eligibility row is locked by sport or by the platform's reason. */
-export function isVipLockedRow(row: { sport: unknown; reason?: string | null }): boolean {
-  return row.reason === "sport_locked" || isVipLockedSport(row.sport);
+/** Upper-case sports the platform currently reports as locked. */
+export function lockedSportsFrom(rows: SportRow[] | null | undefined): string[] {
+  return [...new Set((rows ?? []).filter(isVipLockedRow).map((r) => String(r.sport).toUpperCase()))];
 }
 
 export function vipLockedCopy(sport: unknown): string {
