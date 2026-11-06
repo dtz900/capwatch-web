@@ -1,4 +1,5 @@
 import type { SlateSport } from "./api";
+import { isPublicLeague } from "./public-leagues";
 
 // Pure helpers only: SportToggle is a client component and imports this file.
 
@@ -11,7 +12,7 @@ export const DEFAULT_SLATE_SPORT: SlateSport = "nba";
 
 /** `?sport=` as the URL carries it; anything unrecognised is the default league. */
 export function parseSlateSport(raw: unknown): SlateSport {
-  return raw === "nfl" || raw === "nba" || raw === "mlb" ? raw : DEFAULT_SLATE_SPORT;
+  return isPublicLeague(raw) ? raw : DEFAULT_SLATE_SPORT;
 }
 
 /** The `?sport=` value a /slate link needs for this league: none for the default. */

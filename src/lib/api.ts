@@ -1,6 +1,7 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
 import { warnFailed, warnIfSlow } from "./upstream-log";
 import type { SportFilter } from "./types";
+import type { League } from "./public-leagues";
 import { withKvCache, readLastKnownGood } from "./kv-cache";
 import {
   activeRound,
@@ -243,6 +244,8 @@ export const NBA_DEFAULT_MIN_PICKS = 1;
 export function minPicksForWindow(window: Window, sport?: SportFilter): number {
   if (sport === "nfl") return NFL_WINDOW_MIN_PICKS[window] ?? NFL_DEFAULT_MIN_PICKS;
   if (sport === "nba") return NBA_WINDOW_MIN_PICKS[window] ?? NBA_DEFAULT_MIN_PICKS;
+  // NCAAB has no floor of its own yet (open question in the C4 inventory):
+  // it takes the MLB default, as the platform does until a branch is added.
   return WINDOW_MIN_PICKS[window] ?? DEFAULT_MIN_PICKS;
 }
 
@@ -297,7 +300,7 @@ export async function fetchLivePicksCounts(sport: SportFilter = "mlb"): Promise<
   return res.json() as Promise<LivePicksCountsResponse>;
 }
 
-export type SlateSport = "mlb" | "nfl" | "nba";
+export type SlateSport = League;
 
 /**
  * MLB and NBA: a day ("today" | "tomorrow" | YYYY-MM-DD). NFL: the current
@@ -341,8 +344,8 @@ export async function fetchSlate(
   const cacheKey =
     sport === "nfl"
       ? `slate:v1:nfl:${week ?? "current"}`
-      : sport === "nba"
-        ? `slate:v1:nba:${date}`
+      : sport === "nba" || sport === "ncaab"
+        ? `slate:v1:${sport}:${date}`
         : `slate:v1:${date}`;
   const lkgKey = resolveSlateLkgKey(cacheKey, date, sport, week);
   const qs = new URLSearchParams({ date });

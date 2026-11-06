@@ -17,7 +17,7 @@ const WINDOW_LABEL: Record<Window, string> = {
  * minimum. Say which, instead of rendering a blank page.
  */
 export function EmptyBoard({ sport, window }: { sport: SportFilter; window: Window }) {
-  const league = sport === "nfl" ? "NFL" : sport === "nba" ? "NBA" : null;
+  const league = sport === "nfl" ? "NFL" : sport === "nba" ? "NBA" : sport === "ncaab" ? "NCAAB" : null;
   return (
     <section
       data-testid="empty-board"

@@ -1,0 +1,282 @@
+/**
+ * Pure model for the NCAAB slate view. The API returns every D1 game with its
+ * raw picks and the Pinnacle full-game line (platform contract
+ * ncaab-c4-slate-contract); sides, sharps, the biggest bet and the order are
+ * computed here so the view stays a thin render.
+ */
+import { formatPickText, inferMarketBucket, isFirstHalf, pickTeamSide } from "./bet-format";
+import { ncaabLogoUrlForId, ncaabTeam, ncaabTeamLogoUrl, legibleTeamColor } from "./ncaab-teams";
+import type { SlateGame, SlatePick } from "./types";
+
+export type NcaabGroup =
+  | "SPREAD"
+  | "TOTAL"
+  | "ML"
+  | "1H SPREAD"
+  | "1H TOTAL"
+  | "1H ML"
+  | "TEAM TOTAL"
+  | "OTHER";
+
+/** Back-of-card section order. */
+export const GROUP_ORDER: readonly NcaabGroup[] = [
+  "SPREAD",
+  "TOTAL",
+  "ML",
+  "1H SPREAD",
+  "1H TOTAL",
+  "1H ML",
+  "TEAM TOTAL",
+  "OTHER",
+];
+
+export type PickSide = "away" | "home" | "over" | "under";
+
+export interface ClassifiedPick {
+  pick: SlatePick;
+  group: NcaabGroup;
+  /** Which side of the market the pick backs, or null when it cannot be told. */
+  side: PickSide | null;
+}
+
+function overUnder(selection: string | null | undefined): "over" | "under" | null {
+  const sel = selection ?? "";
+  const m = sel.match(/\b(over|under)\b/i) ?? sel.match(/\b([oOuU])\s?\d/);
+  if (!m) return null;
+  return m[1].toLowerCase().startsWith("o") ? "over" : "under";
+}
+
+/** Group and side for one pick of one game. */
+export function classifyPick(pick: SlatePick, game: SlateGame): ClassifiedPick {
+  const names = { away: game.away_name, home: game.home_name };
+  const market = (pick.market ?? "").trim().toLowerCase();
+  const firstHalf = isFirstHalf(pick);
+
+  if (market === "team_total" || /^(1h_|h1_)?team_total$/.test(market)) {
+    return { pick, group: "TEAM TOTAL", side: overUnder(pick.selection) };
+  }
+
+  // A "1H" tag in the text would hide the market from the text heuristics.
+  const bareSelection = (pick.selection ?? "").replace(/\b(1h|1st\s+half|first\s+half)\b/gi, " ").replace(/\s+/g, " ").trim();
+  const bucket = inferMarketBucket(pick.market, bareSelection);
+  const teamSide = () => pickTeamSide(pick.selection, game.away_team, game.home_team, "NCAAB", names);
+
+  if (bucket === "Spread") {
+    return { pick, group: firstHalf ? "1H SPREAD" : "SPREAD", side: teamSide() };
+  }
+  if (bucket === "Total") {
+    return { pick, group: firstHalf ? "1H TOTAL" : "TOTAL", side: overUnder(pick.selection) };
+  }
+  if (bucket === "Moneyline") {
+    return { pick, group: firstHalf ? "1H ML" : "ML", side: teamSide() };
+  }
+  return { pick, group: "OTHER", side: null };
+}
+
+function distinctCappers(picks: ReadonlyArray<{ pick: SlatePick }>): number {
+  return new Set(picks.map((c) => c.pick.capper_id)).size;
+}
+
+/** Sharps on each side of one market row. Parlay legs and straights both count. */
+export interface SideCount {
+  /** Distinct cappers on this side. */
+  n: number;
+  /** Bright on the card: the side has sharps and at least as many as the other. */
+  lead: boolean;
+}
+
+export interface MarketRow {
+  label: "SPREAD" | "TOTAL";
+  left: SideCount & { text: string };
+  right: SideCount & { text: string };
+}
+
+export function tallySides(counts: { left: number; right: number }): { left: SideCount; right: SideCount } {
+  return {
+    left: { n: counts.left, lead: counts.left > 0 && counts.left >= counts.right },
+    right: { n: counts.right, lead: counts.right > 0 && counts.right >= counts.left },
+  };
+}
+
+/** "PK", "+2", "-2.5". */
+export function fmtLine(x: number): string {
+  if (x === 0) return "PK";
+  return x > 0 ? `+${x}` : String(x);
+}
+
+function fmtUnits(u: number): string {
+  return `${Number.isInteger(u) ? u : Number(u.toFixed(2))}u`;
+}
+
+export function fmtPrice(odds: number | null | undefined): string {
+  if (odds == null) return "NO PRICE";
+  return odds > 0 ? `+${odds}` : String(odds);
+}
+
+export interface BackRow {
+  key: string;
+  group: NcaabGroup;
+  /** True on the first row of each group (renders the section heading). */
+  head: boolean;
+  handle: string;
+  avatar: string | null;
+  bet: string;
+  /** "-110 · 1u", "NO PRICE", or "PARLAY". */
+  price: string;
+  parlay: boolean;
+}
+
+export interface BiggestBet {
+  units: string;
+  bet: string;
+  who: string;
+}
+
+export interface NcaabCard {
+  game: SlateGame;
+  id: number;
+  away: string;
+  home: string;
+  awayName: string;
+  homeName: string;
+  awayLogo: string | null;
+  homeLogo: string | null;
+  awayColor: string;
+  homeColor: string;
+  /** Distinct cappers with any pick on the game. */
+  cappers: number;
+  /** Pick rows on the card back. */
+  pickCount: number;
+  spread: MarketRow;
+  total: MarketRow;
+  biggest: BiggestBet | null;
+  /** Count chips: pick rows in ML, any 1H market, and TEAM TOTAL. */
+  chips: string[];
+  rows: BackRow[];
+}
+
+function handleOf(p: SlatePick): string {
+  const h = (p.handle ?? "").replace(/^@/, "");
+  return h ? `@${h}` : `Capper ${p.capper_id}`;
+}
+
+export function buildCard(game: SlateGame): NcaabCard {
+  const away = game.away_team ?? "AWAY";
+  const home = game.home_team ?? "HOME";
+  const classified = game.picks.map((p) => classifyPick(p, game));
+
+  const sideCappers = (group: NcaabGroup, side: PickSide): number =>
+    distinctCappers(classified.filter((c) => c.group === group && c.side === side));
+
+  const line = game.market?.spread_home ?? null;
+  const total = game.market?.total ?? null;
+  const spreadTally = tallySides({ left: sideCappers("SPREAD", "away"), right: sideCappers("SPREAD", "home") });
+  const totalTally = tallySides({ left: sideCappers("TOTAL", "over"), right: sideCappers("TOTAL", "under") });
+
+  const spread: MarketRow = {
+    label: "SPREAD",
+    left: { ...spreadTally.left, text: line == null ? away : `${away} ${fmtLine(line === 0 ? 0 : -line)}` },
+    right: { ...spreadTally.right, text: line == null ? home : `${home} ${fmtLine(line)}` },
+  };
+  const totalRow: MarketRow = {
+    label: "TOTAL",
+    left: { ...totalTally.left, text: total == null ? "Over" : `Over ${total}` },
+    right: { ...totalTally.right, text: total == null ? "Under" : `Under ${total}` },
+  };
+
+  const textCtx = { awayTeam: game.away_team, homeTeam: game.home_team, sport: "NCAAB" as const, awayName: game.away_name, homeName: game.home_name };
+  const betText = (p: SlatePick) =>
+    formatPickText({ pick: { ...p, kind: p.kind === "parlay_leg" ? "parlay_leg" : "straight" }, ...textCtx });
+
+  let biggest: BiggestBet | null = null;
+  let top = 0;
+  for (const p of game.picks) {
+    if (p.kind !== "straight") continue;
+    if (p.stake_units > top) {
+      top = p.stake_units;
+      biggest = { units: fmtUnits(p.stake_units), bet: betText(p), who: handleOf(p) };
+    }
+  }
+
+  const count = (pred: (c: ClassifiedPick) => boolean) => classified.filter(pred).length;
+  const chips: string[] = [];
+  const ml = count((c) => c.group === "ML");
+  const h1 = count((c) => c.group === "1H SPREAD" || c.group === "1H TOTAL" || c.group === "1H ML");
+  const tt = count((c) => c.group === "TEAM TOTAL");
+  if (ml > 0) chips.push(`${ml} ML`);
+  if (h1 > 0) chips.push(`${h1} 1H`);
+  if (tt > 0) chips.push(`${tt} TT`);
+
+  const rows: BackRow[] = [];
+  for (const group of GROUP_ORDER) {
+    const inGroup = classified.filter((c) => c.group === group);
+    inGroup.forEach((c, i) => {
+      const parlay = c.pick.kind === "parlay_leg";
+      const units = c.pick.stake_units > 0 ? ` · ${fmtUnits(c.pick.stake_units)}` : "";
+      rows.push({
+        key: `${group}-${i}-${c.pick.capper_id}-${c.pick.parlay_id ?? ""}-${c.pick.selection ?? ""}`,
+        group,
+        head: i === 0,
+        handle: handleOf(c.pick),
+        avatar: c.pick.profile_image_url,
+        bet: betText(c.pick),
+        price: parlay ? "PARLAY" : `${fmtPrice(c.pick.odds_taken)}${units}`,
+        parlay,
+      });
+    });
+  }
+
+  const awayRow = ncaabTeam(away);
+  const homeRow = ncaabTeam(home);
+  return {
+    game,
+    id: game.game_id,
+    away,
+    home,
+    awayName: game.away_name ?? awayRow?.name ?? away,
+    homeName: game.home_name ?? homeRow?.name ?? home,
+    // The payload's team id wins; the generated map covers payloads without one.
+    awayLogo: ncaabLogoUrlForId(game.away_team_id) ?? ncaabTeamLogoUrl(away),
+    homeLogo: ncaabLogoUrlForId(game.home_team_id) ?? ncaabTeamLogoUrl(home),
+    awayColor: legibleTeamColor(game.away_color ?? awayRow?.color),
+    homeColor: legibleTeamColor(game.home_color ?? homeRow?.color),
+    cappers: new Set(game.picks.map((p) => p.capper_id)).size,
+    pickCount: game.picks.length,
+    spread,
+    total: totalRow,
+    biggest,
+    chips,
+    rows,
+  };
+}
+
+/** Distinct cappers on a game. */
+export function gameCappers(game: SlateGame): number {
+  return new Set(game.picks.map((p) => p.capper_id)).size;
+}
+
+function tipMs(game: SlateGame): number {
+  const t = game.game_time ? Date.parse(game.game_time) : NaN;
+  return Number.isFinite(t) ? t : Number.MAX_SAFE_INTEGER;
+}
+
+/** Most sharps first, then earliest tip, then game id for a stable order. */
+export function orderGames(games: readonly SlateGame[]): SlateGame[] {
+  return [...games].sort(
+    (a, b) => gameCappers(b) - gameCappers(a) || tipMs(a) - tipMs(b) || a.game_id - b.game_id,
+  );
+}
+
+export interface NcaabBoard {
+  withPicks: SlateGame[];
+  /** Zero-pick games, earliest tip first, collapsed behind one row. */
+  quiet: SlateGame[];
+}
+
+export function splitBoard(games: readonly SlateGame[]): NcaabBoard {
+  const ordered = orderGames(games);
+  return {
+    withPicks: ordered.filter((g) => g.picks.length > 0),
+    quiet: ordered.filter((g) => g.picks.length === 0),
+  };
+}

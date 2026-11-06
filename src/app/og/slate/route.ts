@@ -1,3 +1,4 @@
+import { isPublicLeague } from "@/lib/public-leagues";
 import { renderSlateOg } from "../../slate/_slate-og-renderer";
 
 // Explicit Route Handler for the slate OG image. The slate page's
@@ -33,7 +34,7 @@ export async function GET(request: Request): Promise<Response> {
   // RenderSlateOpts.scale in _slate-og-renderer.tsx.
   const scale = url.searchParams.get("scale") === "2" ? 2 : (1 as const);
   const rawSport = url.searchParams.get("sport");
-  const sport = rawSport === "nfl" || rawSport === "nba" ? rawSport : "mlb";
+  const sport = isPublicLeague(rawSport) ? rawSport : "mlb";
   const rawWeek = Number(url.searchParams.get("week"));
   const week = sport === "nfl" && Number.isInteger(rawWeek) && rawWeek >= 1 && rawWeek <= 22 ? rawWeek : undefined;
   // photos=headshot swaps the NFL player tiles from editorial action photos

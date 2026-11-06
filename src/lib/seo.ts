@@ -1,4 +1,5 @@
 import type { CapperProfile, SportFilter, Window } from "./types";
+import { publicLeagueList } from "./public-leagues";
 
 export const SITE_URL = "https://tailslips.com";
 export const SITE_NAME = "TailSlips";
@@ -51,7 +52,8 @@ export function formatWinRateForTitle(rate: number): string {
 export function leagueLabel(sport?: SportFilter | null): string {
   if (sport === "nfl") return "NFL";
   if (sport === "nba") return "NBA";
-  if (sport === "all") return "MLB, NFL and NBA";
+  if (sport === "ncaab") return "NCAAB";
+  if (sport === "all") return publicLeagueList();
   return "MLB";
 }
 

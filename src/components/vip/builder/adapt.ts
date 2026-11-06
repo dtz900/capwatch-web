@@ -1,6 +1,7 @@
 /* Board API payloads -> the shapes the approved builder UI renders. */
 import { NBA_EXTRA_ALIASES, NBA_TEAM_NAMES } from "@/lib/nba-teams";
 import { NFL_TEAM_NAMES } from "@/lib/nfl-teams";
+import { ncaabTeamName } from "@/lib/ncaab-teams";
 import type {
   BoardGame,
   BoardPeriod,
@@ -57,6 +58,8 @@ export interface BuilderGame {
 }
 
 export function teamName(sport: VipSport, abbr: string): string {
+  // College abbreviations are ESPN's (MCN, UNT); the static map holds the school name.
+  if (sport === "NCAAB") return ncaabTeamName(abbr) ?? abbr;
   return (sport === "NFL" ? NFL_TEAM_NAMES : NBA_TEAM_NAMES)[abbr] ?? abbr;
 }
 

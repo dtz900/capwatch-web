@@ -1,3 +1,4 @@
+import { publicSportFilters } from "@/lib/public-leagues";
 import { NextResponse } from "next/server";
 import { fetchCapperProfile } from "@/lib/api";
 import type { BetTypeFilter, SportFilter, Window } from "@/lib/types";
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const VALID_WINDOWS = new Set<Window>(["last_7", "last_30", "season", "all_time"]);
 const VALID_BET_TYPES = new Set<BetTypeFilter>(["all", "straights", "parlays"]);
-const VALID_SPORTS = new Set<SportFilter>(["all", "mlb", "nfl", "nba"]);
+const VALID_SPORTS = new Set<SportFilter>(publicSportFilters());
 
 export async function GET(
   request: Request,

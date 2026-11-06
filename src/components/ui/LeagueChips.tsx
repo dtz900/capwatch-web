@@ -16,19 +16,22 @@ export type LeagueChip = {
   signal?: boolean;
 };
 
-type League = "mlb" | "nfl" | "nba";
+type League = "mlb" | "nfl" | "nba" | "ncaab";
 
-const MARK: Record<League, string> = {
+// NCAAB has no official ESPN league mark, so its chip is text only.
+const MARK: Partial<Record<League, string>> = {
   mlb: "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png",
   nfl: "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png",
   nba: "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
 };
 
 function Mark({ league, h, sizeClass, muted }: { league: League; h: number; sizeClass: string; muted: boolean }) {
+  const src = MARK[league];
+  if (!src) return null;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={MARK[league]}
+      src={src}
       alt=""
       aria-hidden
       height={h}
@@ -56,6 +59,8 @@ export function LeagueChips({
   busy?: boolean;
 }) {
   const lg = size === "lg";
+  // Four large chips (NCAAB public) need tighter phone widths to fit a 375px screen.
+  const many = chips.length > 3;
   const markH = lg ? 32 : 24;
   // Three large chips have to fit a 375px phone inside the 16px gutters, so
   // the lg size steps down below sm and returns to the full treatment above.
@@ -65,7 +70,7 @@ export function LeagueChips({
       role="radiogroup"
       aria-label={ariaLabel}
       aria-busy={busy}
-      className={`flex items-stretch ${lg ? "gap-2 sm:gap-3" : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
+      className={`flex items-stretch ${lg ? (many ? "gap-1 sm:gap-3" : "gap-2 sm:gap-3") : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
     >
       {chips.map((c) => {
         const active = c.value === value;
@@ -77,7 +82,7 @@ export function LeagueChips({
             aria-checked={active}
             onClick={() => onChange(c.value)}
             className={`group flex flex-col items-center justify-center rounded-lg select-none
-                        ${lg ? "px-2 sm:px-5 py-3 min-w-[96px] sm:min-w-[140px]" : "px-3.5 py-2"}
+                        ${lg ? `${many ? "px-1 min-w-[78px]" : "px-2 min-w-[96px]"} sm:px-5 py-3 sm:min-w-[140px]` : "px-3.5 py-2"}
                         transition-colors duration-150 ${
               active
                 ? "bg-[#f7f3e9] text-black shadow-[0_6px_18px_-8px_rgba(247,243,233,0.55)]"

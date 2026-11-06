@@ -1,3 +1,4 @@
+import { isPublicLeague } from "@/lib/public-leagues";
 import { fetchSlate, fetchWeekStandings } from "@/lib/api";
 import type { SlateCapperSummary } from "@/lib/types";
 import { capperVipEnabled } from "@/lib/flags";
@@ -26,7 +27,7 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || "today";
   const rawSport = url.searchParams.get("sport");
-  const sport = rawSport === "nfl" || rawSport === "nba" ? rawSport : "mlb";
+  const sport = isPublicLeague(rawSport) ? rawSport : "mlb";
   // MLB: `week=1` is a flag for the Mon-Sun rollup around `date`.
   // NFL: `week=N` is the league week number; the API serves the whole week
   // as one slate, so no per-day summing is needed.

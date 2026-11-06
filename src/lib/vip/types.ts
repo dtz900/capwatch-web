@@ -1,4 +1,4 @@
-export type VipSport = "MLB" | "NFL" | "NBA";
+export type VipSport = "MLB" | "NFL" | "NBA" | "NCAAB";
 
 export type VipSellerStatus = "onboarding" | "active" | "restricted" | "stopped" | "disabled";
 

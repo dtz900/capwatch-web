@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { LiveBadge } from "./LiveBadge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { SportFilter } from "@/lib/types";
+import { PUBLIC_LEAGUES, publicLeagueList } from "@/lib/public-leagues";
 
 interface HeroStatsValue {
   totalPicks: number;
@@ -17,9 +18,9 @@ interface HeroProps {
 
 const COPY: Record<SportFilter, { kicker: string; title: string; lead: string }> = {
   all: {
-    kicker: "MLB + NFL + NBA · 2026",
+    kicker: `${PUBLIC_LEAGUES.map((l) => l.toUpperCase()).join(" + ")} · 2026`,
     title: "Capper Rankings",
-    lead: "Every public MLB, NFL and NBA pick from a tracked X account, graded against the final outcome.",
+    lead: `Every public ${publicLeagueList()} pick from a tracked X account, graded against the final outcome.`,
   },
   mlb: {
     kicker: "MLB · 2026 Season",
@@ -35,6 +36,11 @@ const COPY: Record<SportFilter, { kicker: string; title: string; lead: string }>
     kicker: "NBA · 2026-27 Season",
     title: "NBA Capper Rankings",
     lead: "Every public NBA pick from a tracked X account, graded against the final outcome.",
+  },
+  ncaab: {
+    kicker: "NCAAB · 2026-27 Season",
+    title: "NCAAB Capper Rankings",
+    lead: "Every public NCAAB pick from a tracked X account, graded against the final outcome.",
   },
 };
 

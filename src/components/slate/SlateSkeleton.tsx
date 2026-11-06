@@ -13,6 +13,7 @@ interface Props {
   mlbCaption: string;
   nflCaption: string;
   nbaCaption: string;
+  ncaabCaption?: string;
   /** Day boards (MLB, NBA) show the today/tomorrow toggle; the NFL week board passes null. */
   dateParam: "today" | "tomorrow" | null;
 }
@@ -22,7 +23,7 @@ interface Props {
  * column, league chips, heading, game cards) so the shell paints at once and
  * the real board lands in place without a layout jump.
  */
-export function SlateSkeleton({ sport, heading, mlbCaption, nflCaption, nbaCaption, dateParam }: Props) {
+export function SlateSkeleton({ sport, heading, mlbCaption, nflCaption, nbaCaption, ncaabCaption, dateParam }: Props) {
   return (
     <div role="status" aria-label="Loading slate">
       <div className="xl:hidden sticky top-16 z-20 h-[46px] bg-[#0a0a0c] border-b border-[rgba(255,255,255,0.06)]">
@@ -49,7 +50,7 @@ export function SlateSkeleton({ sport, heading, mlbCaption, nflCaption, nbaCapti
           </div>
           <div className="min-w-0 flex-1">
             <div className="pt-8 sm:pt-10 max-w-[520px]">
-              <SportToggle current={sport} mlbCaption={mlbCaption} nflCaption={nflCaption} nbaCaption={nbaCaption} />
+              <SportToggle current={sport} mlbCaption={mlbCaption} nflCaption={nflCaption} nbaCaption={nbaCaption} ncaabCaption={ncaabCaption} />
             </div>
             <header className="pt-8 pb-3 flex items-end justify-between gap-4 flex-wrap">
               <div>

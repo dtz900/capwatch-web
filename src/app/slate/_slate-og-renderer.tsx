@@ -1,3 +1,4 @@
+import { isPublicLeague } from "@/lib/public-leagues";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ReactNode } from "react";
@@ -412,7 +413,7 @@ const NBA_HERO_BUDGET_MS = 3500;
 export async function renderSlateOg(opts: RenderSlateOpts = {}): Promise<Response> {
   const t0 = Date.now();
   const dateParam = opts.dateParam === "tomorrow" ? "tomorrow" : "today";
-  const sportParam: SlateSport = opts.sport === "nfl" || opts.sport === "nba" ? opts.sport : "mlb";
+  const sportParam: SlateSport = isPublicLeague(opts.sport) ? opts.sport : "mlb";
   // NBA is a day board like MLB; its featured game gets the photo stage
   // (action still or headshot plus the info panel), falling back to the
   // moneyline Scoreboard when the photo chain comes back empty.

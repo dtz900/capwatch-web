@@ -1,3 +1,5 @@
+import type { League } from "./public-leagues";
+
 export type ActivityStatus = "active" | "quiet" | "dormant" | "dark";
 export type FormOutcome = "W" | "L" | "P";
 export type Window = "all_time" | "season" | "last_30" | "last_7";
@@ -162,9 +164,10 @@ export type GameState = "scheduled" | "in_progress" | "final";
 export type InningHalf = "top" | "bot" | "mid" | "end";
 
 /** League code as stored on picks / games. */
-export type Sport = "MLB" | "NFL" | "NBA";
-/** Leaderboard + profile selector; "all" is the combined record (MLB + NFL + NBA). */
-export type SportFilter = "all" | "mlb" | "nfl" | "nba";
+export type Sport = "MLB" | "NFL" | "NBA" | "NCAAB";
+/** Leaderboard + profile selector; "all" is the combined record of the public leagues.
+ * NCAAB is typed here but only reachable once it joins PUBLIC_LEAGUES. */
+export type SportFilter = "all" | League;
 
 /** The NFL slate is a week, not a day; the API describes which one. */
 export interface NflWeekMeta {
@@ -174,6 +177,16 @@ export interface NflWeekMeta {
   /** First and last ET kickoff dates of the week (YYYY-MM-DD). */
   start: string | null;
   end: string | null;
+}
+
+/**
+ * Pinnacle full-game main line for a game (NCAAB slate rows). `spread_home` is
+ * the home team's spread (home -2 is -2, home +2 is +2); null when no line.
+ */
+export interface SlateMarket {
+  spread_home: number | null;
+  total: number | null;
+  source: "pinnacle_close" | "pinnacle_latest" | null;
 }
 
 export interface SlateGame {
@@ -198,6 +211,16 @@ export interface SlateGame {
   period?: number | null;
   clock?: string | null;
   status_name?: string | null;
+
+  /** NCAAB rows only (platform contract ncaab-c4-slate-contract): ESPN team ids
+   * for logos, short school names, team hex colors and the full-game line. */
+  away_team_id?: string | null;
+  home_team_id?: string | null;
+  away_name?: string | null;
+  home_name?: string | null;
+  away_color?: string | null;
+  home_color?: string | null;
+  market?: SlateMarket | null;
 
   picks: SlatePick[];
 }
