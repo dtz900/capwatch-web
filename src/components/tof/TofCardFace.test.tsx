@@ -72,3 +72,29 @@ describe("TofCardFace NCAAB", () => {
   });
 });
 
+
+describe("TofCardFace stable card", () => {
+  const stable = (over: Partial<DeckCard>): DeckCard =>
+    ({
+      kind: "stable", id: -9, pick_id: 9, handle: "dai_bets", display_name: null, profile_image_url: null,
+      matchup: "ARST @ ALA", game_start_at: "2026-11-07T00:30:00Z", market_group: "Spread",
+      tail_label: "Arkansas State +25.5", tail_odds: -110, note: "From your stable.", capper_streak: 0,
+      capper_record: null, sport: "NCAAB", ...over,
+    }) as DeckCard;
+
+  it("resolves a school name to its team logo and wears the NCAAB chip", () => {
+    render(<TofCardFace card={stable({})} />);
+    expect(screen.getByTestId("logo")).toHaveTextContent("ARST");
+    expect(screen.getByTestId("sport-chip")).toHaveTextContent("NCAAB");
+  });
+
+  it("resolves an NBA mascot against the game's two teams", () => {
+    render(<TofCardFace card={stable({ sport: "NBA", matchup: "WSH @ CLE", tail_label: "Wizards +10" })} />);
+    expect(screen.getByTestId("logo")).toHaveTextContent("WSH");
+  });
+
+  it("keeps the O / U badge on a total", () => {
+    render(<TofCardFace card={stable({ market_group: "Game Total", tail_label: "Over 150.5" })} />);
+    expect(screen.getByTestId("pick-badge")).toHaveTextContent(/^O$/);
+  });
+});

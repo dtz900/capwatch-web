@@ -524,6 +524,8 @@ export interface TodayPickEntry {
   display_name: string | null;
   profile_image_url: string | null;
   kind: "straight" | "parlay";
+  /** League of a straight pick. Optional: payloads before 2026-11-06 omit it. */
+  sport?: Sport | null;
   matchup: string | null;
   market: string | null;
   market_group: string | null;
