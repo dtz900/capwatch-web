@@ -2,6 +2,7 @@
 import { VipApiError } from "@/lib/vip/client";
 
 const TEXT: Record<string, string> = {
+  "403:sport_locked": "NCAAB VIP is coming soon.",
   "409:game_started": "This game has started.",
   "409:game_start_unknown": "We could not find a start time for that game. Pick it from the list.",
   "409:duplicate_pick": "You already posted this pick a few minutes ago.",

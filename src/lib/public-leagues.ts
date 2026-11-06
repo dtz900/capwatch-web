@@ -13,8 +13,8 @@
 export const ALL_LEAGUES = ["mlb", "nfl", "nba", "ncaab"] as const;
 export type League = (typeof ALL_LEAGUES)[number];
 
-/** THE flip. Add "ncaab" here when the platform's PUBLIC_SPORTS adds NCAAB. */
-export const PUBLIC_LEAGUES = ["mlb", "nfl", "nba"] as const satisfies readonly League[];
+/** THE flip. Mirrors the platform's PUBLIC_SPORTS. */
+export const PUBLIC_LEAGUES = ["mlb", "nfl", "nba", "ncaab"] as const satisfies readonly League[];
 export type PublicLeague = (typeof PUBLIC_LEAGUES)[number];
 
 export function isPublicLeague(raw: unknown): raw is PublicLeague {

@@ -300,6 +300,7 @@ export const VIP_ERRORS = {
     "seller_denylisted",
     "seller_inactive",
     "sport_not_eligible",
+    "sport_locked",
     "capper_hidden",
   ],
   400: [

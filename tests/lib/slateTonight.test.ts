@@ -96,8 +96,8 @@ describe("fetchTonightCounts", () => {
       return slate([game({ game_state: "final" })]);
     });
     const counts = await fetchTonightCounts();
-    expect(counts).toEqual({ nfl: 1, nba: 2, mlb: 0 });
-    expect(vi.mocked(fetchSlate).mock.calls.map((c) => c[1]).sort()).toEqual(["mlb", "nba", "nfl"]);
+    expect(counts).toEqual({ nfl: 1, nba: 2, ncaab: 0, mlb: 0 });
+    expect(vi.mocked(fetchSlate).mock.calls.map((c) => c[1]).sort()).toEqual(["mlb", "nba", "ncaab", "nfl"]);
     expect(vi.mocked(fetchSlate).mock.calls.every((c) => c[0] === "today")).toBe(true);
   });
 
@@ -107,7 +107,7 @@ describe("fetchTonightCounts", () => {
       return slate([game({})]);
     });
     const counts = await fetchTonightCounts();
-    expect(counts).toEqual({ nfl: 1, mlb: 1 });
+    expect(counts).toEqual({ nfl: 1, ncaab: 1, mlb: 1 });
   });
 
   it("serves the day's last-known-good counts when the live read misses the deadline", async () => {

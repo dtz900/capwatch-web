@@ -57,7 +57,7 @@ describe("capperRecordPill", () => {
     expect(capperRecordPill("nba")).toBe("NBA CAPPER RECORD");
   });
   it("never labels the all-league record as MLB only", () => {
-    expect(capperRecordPill("all")).toBe("MLB + NFL + NBA CAPPER RECORD");
+    expect(capperRecordPill("all")).toBe("MLB + NFL + NBA + NCAAB CAPPER RECORD");
   });
 });
 

@@ -1,4 +1,5 @@
 import { formatUnits } from "@/lib/formatters";
+import { isVipLockedRow, vipLockedCopy } from "@/lib/vip/locked";
 import type { VipCapperStatus, VipEligibility } from "@/lib/vip/types";
 
 /** Signed, one decimal, with the unit suffix: 12.34 -> "+12.3u". */
@@ -21,6 +22,7 @@ export function withSeason(s: VipCapperStatus): VipEligibility[] {
 }
 
 export function closedCopy(e: VipEligibility): string {
+  if (isVipLockedRow(e)) return vipLockedCopy(e.sport);
   return `Not currently selling: ${signedUnits(e.units)} ${e.sport}, last 30 days`;
 }
 
