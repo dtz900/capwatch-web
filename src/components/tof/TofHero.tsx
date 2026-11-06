@@ -89,6 +89,7 @@ const NO_HAND_COPY: Record<string, string> = {
   "no games today": "No games today.",
   "no games after the drop": "Only early games today, so nothing to deal.",
   "fewer than 3 cards": "Not enough picks for a hand today.",
+  "fewer than 4 cards": "Not enough picks for a hand today.",
 };
 
 export function TofHero({ initial }: { initial: TofHandResponse | null }) {

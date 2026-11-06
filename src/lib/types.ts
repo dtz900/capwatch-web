@@ -583,6 +583,10 @@ export interface TofCard {
   game_state: "scheduled" | "in_progress" | "final";
   home_score: number | null;
   away_score: number | null;
+  /** Live clock detail (NCAAB: period is the half, 3+ = OT). Null for sports the feed does not detail. */
+  period?: number | null;
+  clock?: string | null;
+  status_name?: string | null;
   market_group: "ML" | "Spread" | "Game Total";
   tail_label: string;
   tail_odds: number;

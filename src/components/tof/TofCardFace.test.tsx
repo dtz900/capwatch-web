@@ -36,3 +36,39 @@ describe("TofCardFace matchup", () => {
     expect(screen.getByTestId("pick-matchup")).toHaveTextContent("AZ @ COL");
   });
 });
+
+describe("TofCardFace NCAAB", () => {
+  const ncaab = (over: Partial<DeckCard> = {}) => card({
+    sport: "NCAAB", matchup: "UNC @ DUKE", market_group: "Spread", tail_label: "DUKE -4.5", fade_label: "UNC +4.5",
+    ...over,
+  });
+
+  it("shows the burgundy NCAAB chip and the school logo for the picked team", () => {
+    render(<TofCardFace card={ncaab()} />);
+    expect(screen.getByTestId("sport-chip")).toHaveTextContent("NCAAB");
+    expect(screen.getByTestId("logo")).toHaveTextContent("DUKE");
+  });
+
+  it("has no NCAAB chip on a pro card", () => {
+    render(<TofCardFace card={card({})} />);
+    expect(screen.queryByTestId("sport-chip")).toBeNull();
+  });
+
+  it("labels a live college game by half and clock, and OT", () => {
+    const live = { game_state: "in_progress" as const, home_score: 61, away_score: 58 };
+    const { rerender } = render(<TofCardFace card={ncaab({ ...live, period: 2, clock: "4:12" })} />);
+    expect(screen.getByTestId("live-label")).toHaveTextContent("2H 4:12");
+    rerender(<TofCardFace card={ncaab({ ...live, period: 2, status_name: "STATUS_HALFTIME" })} />);
+    expect(screen.getByTestId("live-label")).toHaveTextContent("HALF");
+    rerender(<TofCardFace card={ncaab({ ...live, period: 3, clock: "1:05" })} />);
+    expect(screen.getByTestId("live-label")).toHaveTextContent("OT 1:05");
+    rerender(<TofCardFace card={ncaab({ ...live, game_state: "final" })} />);
+    expect(screen.getByTestId("live-label")).toHaveTextContent("FINAL");
+  });
+
+  it("keeps plain LIVE for a baseball card", () => {
+    render(<TofCardFace card={card({ game_state: "in_progress", home_score: 2, away_score: 1, period: 7 })} />);
+    expect(screen.getByTestId("live-label")).toHaveTextContent("LIVE");
+  });
+});
+
