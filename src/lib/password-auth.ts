@@ -28,7 +28,8 @@ export function validateNewPassword(password: string): string | null {
 
 export function signInErrorMessage(error: AuthErrorLike): string {
   if (error.code === "invalid_credentials" || /invalid login credentials/i.test(error.message ?? "")) {
-    return "That email and password do not match. If you have not set a password yet, use the email sign-in, then set one on your account page.";
+    // The form's own hint under the error covers "no password yet".
+    return "That email and password do not match.";
   }
   if (error.code === "email_not_confirmed") {
     return "This email has not been confirmed yet. Use the email sign-in to confirm it.";

@@ -15,8 +15,8 @@ describe("validateNewPassword", () => {
 });
 
 describe("signInErrorMessage", () => {
-  it("points a wrong or missing password at the email sign-in", () => {
-    expect(signInErrorMessage({ code: "invalid_credentials" })).toMatch(/email sign-in/);
+  it("says a wrong or missing password plainly", () => {
+    expect(signInErrorMessage({ code: "invalid_credentials" })).toMatch(/do not match/);
     expect(signInErrorMessage({ message: "Invalid login credentials" })).toMatch(/do not match/);
   });
 
