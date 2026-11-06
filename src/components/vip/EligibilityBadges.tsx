@@ -12,6 +12,7 @@ const LEAGUE_MARK: Record<string, string> = {
   MLB: "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png",
   NFL: "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png",
   NBA: "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
+  NCAAB: "https://a.espncdn.com/redesign/assets/img/icons/NCAASports_MensBasketball.png",
 };
 
 /** League mark: full color when eligible, greyscale and dim when not

@@ -9,7 +9,7 @@
 export type LeagueChip = {
   value: string;
   label: string;
-  /** "mlb" | "nfl" | "nba" draw that league's mark; "all" is text only. */
+  /** "mlb" | "nfl" | "nba" | "ncaab" draw that league's mark; "all" is text only. */
   league: League | "all";
   caption?: string;
   /** Pulse a dot by the caption: this board has something to look at right now. */
@@ -18,11 +18,11 @@ export type LeagueChip = {
 
 type League = "mlb" | "nfl" | "nba" | "ncaab";
 
-// NCAAB has no official ESPN league mark, so its chip is text only.
-const MARK: Partial<Record<League, string>> = {
+const MARK: Record<League, string> = {
   mlb: "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png",
   nfl: "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png",
   nba: "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
+  ncaab: "https://a.espncdn.com/redesign/assets/img/icons/NCAASports_MensBasketball.png",
 };
 
 function Mark({ league, h, sizeClass, muted }: { league: League; h: number; sizeClass: string; muted: boolean }) {
@@ -70,7 +70,7 @@ export function LeagueChips({
       role="radiogroup"
       aria-label={ariaLabel}
       aria-busy={busy}
-      className={`flex items-stretch ${lg ? (many ? "gap-1 sm:gap-3" : "gap-2 sm:gap-3") : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
+      className={`${many && lg ? "grid grid-cols-4 items-stretch" : "flex items-stretch"} ${lg ? (many ? "gap-1 sm:gap-3" : "gap-2 sm:gap-3") : "gap-1.5"} transition-opacity duration-150 ${busy ? "opacity-70" : "opacity-100"}`}
     >
       {chips.map((c) => {
         const active = c.value === value;
@@ -82,14 +82,14 @@ export function LeagueChips({
             aria-checked={active}
             onClick={() => onChange(c.value)}
             className={`group flex flex-col items-center justify-center rounded-lg select-none
-                        ${lg ? `${many ? "px-1 min-w-[78px]" : "px-2 min-w-[96px]"} sm:px-5 py-3 sm:min-w-[140px]` : "px-3.5 py-2"}
+                        ${lg ? `${many ? "px-0.5 min-w-0" : "px-2 min-w-[96px]"} sm:px-5 py-3 ${many ? "sm:min-w-0" : "sm:min-w-[140px]"}` : "px-3.5 py-2"}
                         transition-colors duration-150 ${
               active
                 ? "bg-[#f7f3e9] text-black shadow-[0_6px_18px_-8px_rgba(247,243,233,0.55)]"
                 : "bg-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
-            <span className={`flex items-center ${lg ? "gap-2 sm:gap-3" : "gap-2"}`}>
+            <span className={`flex items-center ${lg ? `${many ? "flex-col gap-1.5 sm:flex-row" : ""} sm:gap-3 ${many ? "" : "gap-2"}` : "gap-2"}`}>
               {c.league !== "all" && <Mark league={c.league} h={markH} sizeClass={markClass} muted={!active} />}
               <span
                 className={`font-extrabold tracking-[-0.01em] leading-none ${
