@@ -21,7 +21,14 @@ const OK = `${BTN} border-[var(--color-border)] text-[var(--color-text-soft)] ho
 const NO = `${BTN} text-[var(--color-neg)] border-[rgba(239,68,68,0.45)]`;
 const ROW = "grid grid-cols-[1fr_auto_auto] gap-3 items-center py-2 border-b border-[var(--color-border)]";
 
-const trackedLabel = (s: string) => (s === "auto_approved" ? "Tracked" : s === "rejected" ? "Rejected" : s);
+const trackedLabel = (s: string) =>
+  s === "auto_approved"
+    ? "Tracked"
+    : s === "rejected"
+      ? "Rejected"
+      : s === "needs_review"
+        ? "Held (not in this view)"
+        : s;
 
 function Pick({ selection, odds }: { selection: string | null; odds: number | null }) {
   return (

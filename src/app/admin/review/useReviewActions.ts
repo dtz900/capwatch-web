@@ -34,7 +34,10 @@ export const canApprove = (row: ReviewRow) => row.game_id != null || row.parlay_
 export function useReviewActions(a: Args) {
   // Set synchronously so two fast presses cannot both fire before `pending` re-renders.
   const inFlight = useRef(false);
-  const [message, setMessage] = useState<string | null>(null);
+  // A message belongs to the pick that was selected when it was set, so it clears on navigation.
+  const [note, setNote] = useState<{ text: string; forId: number | null } | null>(null);
+  const message = note && note.forId === a.selectedId ? note.text : null;
+  const setMessage = (text: string | null) => setNote(text == null ? null : { text, forId: a.selectedId });
 
   const settle = (ids: number[], toast: string) => {
     const gone = new Set(ids);
@@ -51,18 +54,18 @@ export function useReviewActions(a: Args) {
     a.refresh();
   };
 
-  const run = async (call: () => Promise<Outcome>) => {
+  const run = async (call: () => Promise<Outcome>, prefix = "") => {
     if (inFlight.current) return;
     inFlight.current = true;
     a.setPending(true);
     setMessage(null);
     try {
       const res = await call();
-      if (!res.ok) setMessage(res.error);
+      if (!res.ok) setMessage(prefix + res.error);
       else if (res.removed.length > 0) settle(res.removed, res.toast);
       else a.show(res.toast);
     } catch (err) {
-      setMessage(errText(err));
+      setMessage(prefix + errText(err));
     } finally {
       inFlight.current = false;
       a.setPending(false);
@@ -79,14 +82,14 @@ export function useReviewActions(a: Args) {
     return run(async () => {
       const res = await approvePickAction(id);
       return res.ok ? { ok: true, removed: [id], toast: `Approved #${id}` } : res;
-    });
+    }, `#${id}: `);
   };
 
   const reject = (id: number) =>
     run(async () => {
       const res = await rejectPickAction(id);
       return res.ok ? { ok: true, removed: [id], toast: `Rejected #${id}` } : res;
-    });
+    }, `#${id}: `);
 
   const approveMany = (ids: number[], label?: string) =>
     ids.length === 0

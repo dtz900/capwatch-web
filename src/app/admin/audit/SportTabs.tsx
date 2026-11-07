@@ -31,11 +31,13 @@ interface Props {
   buildHref: BuildHref;
   reasonLabel: Record<string, string>;
   reasonTitle: string;
+  /** Label of the clear-the-reason chip. */
+  anyLabel?: string;
 }
 
 const chipBase = "rounded-full border px-[11px] py-1 text-[11.5px] font-bold whitespace-nowrap";
 
-export function SportTabs({ sport, by_sport, by_reason, total, reason, sort, hiddenReasons, buildHref, reasonLabel, reasonTitle }: Props) {
+export function SportTabs({ sport, by_sport, by_reason, total, reason, sort, hiddenReasons, buildHref, reasonLabel, reasonTitle, anyLabel = "Any" }: Props) {
   const tabs = orderSportTabs(by_sport);
   const reasons = Object.entries(by_reason)
     .filter(([r]) => !hiddenReasons.has(r))
@@ -74,7 +76,7 @@ export function SportTabs({ sport, by_sport, by_reason, total, reason, sort, hid
               : "border-[var(--color-border)] text-[var(--color-text-soft)]"
           }`}
         >
-          Any
+          {anyLabel}
         </Link>
         {reasons.map(([r, n]) => (
           <Link

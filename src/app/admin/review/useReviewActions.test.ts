@@ -69,7 +69,33 @@ describe("useReviewActions", () => {
     });
     expect(a.removeRows).not.toHaveBeenCalled();
     expect(a.setSelectedId).not.toHaveBeenCalled();
-    expect(hook.result.current.message).toContain("no game");
+    expect(hook.result.current.message).toBe("#1: 400: no game");
+  });
+
+  it("clears the message when the selection moves", async () => {
+    const rows = [row(1, { game_id: null }), row(2)];
+    let selectedId = 1;
+    const a = {
+      rows,
+      get selectedId() {
+        return selectedId;
+      },
+      setSelectedId: vi.fn(),
+      selection: new Set<number>(),
+      setSelection: vi.fn(),
+      setPending: vi.fn(),
+      show: vi.fn(),
+      removeRows: vi.fn(),
+      refresh: vi.fn(),
+    };
+    const hook = renderHook(() => useReviewActions(a));
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    expect(hook.result.current.message).toBe("Set the game first, or reject.");
+    selectedId = 2;
+    hook.rerender();
+    expect(hook.result.current.message).toBeNull();
   });
 
   it("approveMany reports skipped", async () => {

@@ -114,7 +114,7 @@ export function ReviewWorkbench({ rows: initial, counts, paging, newerHref, olde
     onNext: () => move(1),
     onPrev: () => move(-1),
     onApprove: () => {
-      if (!current || !actions.canApprove(current)) return false;
+      if (!current) return false;
       void actions.approve(current.pick_id);
       return true;
     },
@@ -162,28 +162,26 @@ export function ReviewWorkbench({ rows: initial, counts, paging, newerHref, olde
         <div className="min-h-0 overflow-y-auto min-w-0 flex flex-col">
           {current && (
             <>
-              <div className="p-6">
-                <ReviewDetail
-                  key={`${current.pick_id}:${editorsEpoch}`}
-                  p={current}
-                  index={rows.findIndex((r) => r.pick_id === current.pick_id)}
-                  total={rows.length}
-                  markets={markets}
-                  hint={flow.hints[current.pick_id]}
-                  pending={busy}
-                  fixedKeys={flow.fixed[current.pick_id] ?? []}
-                  onPatch={(patch, msg, propagate, hint) => flow.handlePatch(current.pick_id, patch, msg, propagate, hint)}
-                  onRetryMarkets={retryMarkets}
-                  heldSiblings={heldSiblings}
-                  tracked={tracked}
-                  groupSelected={groupSelected}
-                  onApprove={(id) => void actions.approve(id)}
-                  onReject={(id) => void actions.reject(id)}
-                  onApproveAll={() => void actions.approveMany(heldIdList, "from one tweet")}
-                  onRejectAll={() => void actions.rejectMany(heldIdList, "from one tweet")}
-                  onSelectGroup={(on) => current.raw_id != null && selectGroup(current.raw_id, on)}
-                />
-              </div>
+              <ReviewDetail
+                key={`${current.pick_id}:${editorsEpoch}`}
+                p={current}
+                index={rows.findIndex((r) => r.pick_id === current.pick_id)}
+                total={rows.length}
+                markets={markets}
+                hint={flow.hints[current.pick_id]}
+                pending={busy}
+                fixedKeys={flow.fixed[current.pick_id] ?? []}
+                onPatch={(patch, msg, propagate, hint) => flow.handlePatch(current.pick_id, patch, msg, propagate, hint)}
+                onRetryMarkets={retryMarkets}
+                heldSiblings={heldSiblings}
+                tracked={tracked}
+                groupSelected={groupSelected}
+                onApprove={(id) => void actions.approve(id)}
+                onReject={(id) => void actions.reject(id)}
+                onApproveAll={() => void actions.approveMany(heldIdList, "from one tweet")}
+                onRejectAll={() => void actions.rejectMany(heldIdList, "from one tweet")}
+                onSelectGroup={(on) => current.raw_id != null && selectGroup(current.raw_id, on)}
+              />
               <ReviewActionStrip
                 canApprove={actions.canApprove(current)}
                 started={current.started_minutes != null}

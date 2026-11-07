@@ -79,6 +79,32 @@ describe("ReviewDetail", () => {
     render(<ReviewDetail {...props(row({ started_minutes: 42, game_label: "NE @ BUF", tip_label: "10:00 AM" }))} />);
     expect(screen.getByText("Started 42 min before the tweet")).toBeInTheDocument();
   });
+  it("reads No game bound for an unbound parlay leg", () => {
+    render(<ReviewDetail {...props(row({ game_id: null, parlay_id: 5 }))} />);
+    expect(screen.getByText("No game bound")).toBeInTheDocument();
+    expect(screen.queryByText("Pregame")).toBeNull();
+  });
+  it("does not claim Pregame for a bound game without a start time", () => {
+    render(<ReviewDetail {...props(row({ game_id: "1", tip_label: null }))} />);
+    expect(screen.queryByText("Pregame")).toBeNull();
+    expect(screen.getByText("Start time not loaded")).toBeInTheDocument();
+  });
+  it("reads Pregame for a bound game with a start time", () => {
+    render(<ReviewDetail {...props(row({ game_id: "1", tip_label: "10:00 AM", game_label: "NE @ BUF" }))} />);
+    expect(screen.getByText("Pregame")).toBeInTheDocument();
+  });
+  it("shows the label derived from the hint after a bind, not the raw id", () => {
+    render(
+      <ReviewDetail
+        {...props(row({ game_id: "77123", game_label: null }), {
+          hint: { game: { away_team: "Boston Celtics", home_team: "Miami Heat" } },
+          markets: [],
+        })}
+      />,
+    );
+    expect(screen.queryByText("77123")).toBeNull();
+    expect(screen.getAllByText(/Celtics|BOS|Boston/i).length).toBeGreaterThan(0);
+  });
   it("lists held siblings with their own buttons and the tracked ones greyed", () => {
     const cur = row({ pick_id: 1, raw_id: 9 });
     const sib = row({ pick_id: 2, raw_id: 9, selection: "Moussa Diabate 6+ rebounds" });
@@ -92,6 +118,17 @@ describe("ReviewDetail", () => {
     );
     expect(screen.getByRole("button", { name: /approve all 2 held/i })).toBeInTheDocument();
     expect(screen.getByText("Tracked")).toBeInTheDocument();
+  });
+  it("labels a needs_review sibling outside this view", () => {
+    const cur = row({ pick_id: 1, raw_id: 9 });
+    render(
+      <ReviewDetail
+        {...props(cur, {
+          tracked: [{ id: 3, selection: "Evan Mobley 7+ rebounds", review_status: "needs_review", odds_taken: null, parlay_id: null }],
+        })}
+      />,
+    );
+    expect(screen.getByText("Held (not in this view)")).toBeInTheDocument();
   });
   it("marks the tweet line", () => {
     render(<ReviewDetail {...props(row({ selection: "Anthony Davis 8+ rebounds", tweet_text: "x\nAnthony Davis 8+ rebounds\ny" }))} />);

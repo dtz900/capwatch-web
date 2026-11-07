@@ -11,6 +11,7 @@ import { TextEditor } from "../audit/editors/TextEditor";
 import { FieldRow, LABEL_CLASS, ROW_CLASS } from "../audit/FieldRow";
 import { effectiveStates, type FieldKey } from "../audit/fieldState";
 import type { PickHint } from "../audit/usePatchFlow";
+import { gameLabelFor } from "../audit/teamMatch";
 import { TweetBlock } from "../audit/TweetBlock";
 import { FromThisTweet } from "./FromThisTweet";
 import { formatOdds, markTweetLine } from "./reviewLabels";
@@ -39,12 +40,15 @@ export interface ReviewDetailProps {
 const KBD = "border border-[var(--color-border)] rounded px-[5px] text-[10px] font-bold text-[var(--color-text-soft)]";
 const START_VERB: Record<string, string> = { NBA: "tips", NCAAB: "tips", NFL: "kicks", MLB: "first pitch" };
 
-function TimingLine({ p }: { p: ReviewRow }) {
+function TimingLine({ p, gameLabel }: { p: ReviewRow; gameLabel: string | null }) {
+  // Green "Pregame" needs evidence: a bound game and a loaded start time.
   const verdict =
     p.started_minutes != null ? (
       <span className="font-extrabold text-[var(--color-neg)]">{`Started ${p.started_minutes} min before the tweet`}</span>
-    ) : p.game_id == null && p.parlay_id == null ? (
+    ) : p.game_id == null ? (
       <span className="font-extrabold text-[var(--color-neg)]">No game bound</span>
+    ) : p.tip_label == null ? (
+      <span className="font-extrabold text-[var(--color-text-muted)]">Start time not loaded</span>
     ) : (
       <span className="font-extrabold text-[var(--color-pos)]">Pregame</span>
     );
@@ -52,7 +56,7 @@ function TimingLine({ p }: { p: ReviewRow }) {
   return (
     <div className="mt-3 text-[12.5px] font-semibold text-[var(--color-text-muted)]">
       {verdict}
-      {p.game_label && ` · ${p.game_label}${p.tip_label ? ` ${verb} ${p.tip_label} PT` : ""}`}
+      {gameLabel && ` · ${gameLabel}${p.tip_label ? ` ${verb} ${p.tip_label} PT` : ""}`}
       {p.posted_label && ` · tweeted ${p.posted_label} PT`}
     </div>
   );
@@ -77,10 +81,12 @@ export function ReviewDetail(props: ReviewDetailProps) {
   const { p, index, total, markets, hint, pending, fixedKeys, onPatch, onRetryMarkets } = props;
   const [open, setOpen] = useState<Partial<Record<FieldKey, boolean>>>({});
   const marketsError = typeof markets === "string";
+  const known = p.game_id == null ? null : hint?.game;
+  const gameLabel = known ? gameLabelFor(known, p.sport, hint?.gameDate ?? null) : p.game_label;
   const states = effectiveStates(p, Array.isArray(markets) ? markets : null, fixedKeys, null, {
     mode: "review",
     playerMismatch: p.player_mismatch,
-    gameLabel: p.game_label,
+    gameLabel,
     marketsError,
   });
   const ed = { p, disabled: pending, onPatch };
@@ -89,7 +95,7 @@ export function ReviewDetail(props: ReviewDetailProps) {
       case "player":
         return <PlayerEditor {...ed} />;
       case "game":
-        return <GameEditor {...ed} pickedTeam={hint?.team ?? null} />;
+        return <GameEditor {...ed} pickedTeam={hint?.team ?? p.player_team ?? null} />;
       case "market":
         return <MarketEditor {...ed} markets={markets} />;
       case "line":
@@ -118,6 +124,9 @@ export function ReviewDetail(props: ReviewDetailProps) {
                 {formatOdds(p.odds_taken)}
               </span>
             )}
+            {p.units != null && (
+              <span className="ml-2 text-[20px] font-bold text-[var(--color-text-soft)] tabular-nums">{`${p.units}u`}</span>
+            )}
           </div>
           <div className="mt-[5px] text-[12.5px] font-semibold text-[var(--color-text-muted)]">
             {p.reason_label && <span className="font-extrabold text-[var(--color-text-soft)]">{p.reason_label}</span>}
@@ -135,7 +144,7 @@ export function ReviewDetail(props: ReviewDetailProps) {
         </div>
       </div>
 
-      <TimingLine p={p} />
+      <TimingLine p={p} gameLabel={gameLabel} />
       <TweetBlock p={p} renderText={markedTweet(p.selection)} />
       <FromThisTweet
         current={p}

@@ -91,6 +91,7 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
             buildHref={buildHref}
             reasonLabel={REVIEW_REASON_LABEL}
             reasonTitle="Held because"
+            anyLabel="Any reason"
           />
         }
         paging={{ offset, pageSize: PAGE_SIZE, total: data.total }}
