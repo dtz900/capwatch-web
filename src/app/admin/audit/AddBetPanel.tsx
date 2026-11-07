@@ -141,14 +141,14 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
           : "mb-6 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.02)] p-5 flex flex-col gap-4"
       }
     >
-      <div className="flex items-center justify-between">
-        <div className={labelCls}>Add bet manually · lands admin-locked, graded next tick</div>
-        {!embedded && (
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <div className={labelCls}>Add bet manually · lands admin-locked, graded next tick</div>
           <button type="button" onClick={() => setOpen(false)} className={btnCls}>
             Close
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 items-center">
         <input
@@ -190,7 +190,9 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
               setMissingTeams([]);
               // A bound game from the other sport would submit an MLB
               // game_id under sport NFL (Codex P1, PR #110); unbind all.
-              setLegs((ls) => ls.map((l) => ({ ...l, game: null })));
+              setLegs((ls) =>
+                ls.map((l) => ({ ...l, game: null, ...(sp === "NCAAB" && l.type === "player" ? { type: "custom" as const, player: null } : {}) })),
+              );
             }}
             className={`px-2.5 py-1.5 rounded text-[10px] font-bold ${
               sport === sp
@@ -252,7 +254,9 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
               value={leg.type}
               onChange={(e) => setLeg(idx, { type: e.target.value as LegType })}
             >
-              {Object.entries(LEG_TYPE_LABEL).map(([v, label]) => (
+              {Object.entries(LEG_TYPE_LABEL)
+                .filter(([v]) => !(sport === "NCAAB" && v === "player"))
+                .map(([v, label]) => (
                 <option key={v} value={v} className={optionCls}>
                   {label}
                 </option>

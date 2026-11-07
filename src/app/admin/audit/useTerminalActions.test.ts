@@ -51,12 +51,13 @@ function row(id: number, over: Partial<QueueRow> = {}): QueueRow {
   } as QueueRow;
 }
 
-function setup(rows: QueueRow[], selectedId: number, over: { showAcked?: boolean } = {}) {
+function setup(rows: QueueRow[], selectedId: number, over: { showAcked?: boolean; patched?: number[] } = {}) {
   const a = {
     rows,
     selectedId,
     setSelectedId: vi.fn(),
     applyToSiblings: true,
+    patchedSiblings: new Set(over.patched ?? rows.map((r) => r.pick_id)),
     showAcked: over.showAcked ?? false,
     markets: null,
     fixed: {},
@@ -85,8 +86,16 @@ describe("useTerminalActions", () => {
     await act(() => hook.result.current.regrade());
     expect(m.regrade.mock.calls.map((c) => c[0])).toEqual([1, 2]);
     expect(a.removeRows).toHaveBeenCalledWith([1, 2]);
-    expect(a.show).toHaveBeenCalledWith("Saved, regrading: #1 and #2");
+    expect(a.show).toHaveBeenCalledWith("Saved, regrading: #1 and #2; #3 still needs fixing");
     expect(m.refresh).toHaveBeenCalled();
+  });
+
+  it("regrades only siblings that received a patch this session", async () => {
+    const rows = [row(1), row(2), row(3)];
+    const { a, hook } = setup(rows, 1, { patched: [3] });
+    await act(() => hook.result.current.regrade());
+    expect(m.regrade.mock.calls.map((c) => c[0])).toEqual([1, 3]);
+    expect(a.show).toHaveBeenCalledWith("Saved, regrading: #1 and #3");
   });
 
   it("maps a 409 to the manual-grade copy and keeps the selection", async () => {

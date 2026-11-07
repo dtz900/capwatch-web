@@ -40,7 +40,18 @@ function takesLine(p: AuditProblem, markets: MarketDef[] | null): boolean {
   return hit ? hit.takes_line : true;
 }
 
-export function fieldStates(p: AuditProblem, markets: MarketDef[] | null): FieldState[] {
+export interface StateOpts {
+  /** Readable label for the bound game (teams and date). */
+  gameLabel?: string | null;
+  /** Markets failed to load: whether the pick takes a line is unknown, so it cannot be red. */
+  marketsError?: boolean;
+}
+
+export function fieldStates(
+  p: AuditProblem & { game_label?: string | null },
+  markets: MarketDef[] | null,
+  opts: StateOpts = {},
+): FieldState[] {
   const gameRed =
     p.reason === "missing_game_id" || p.reason === "player_did_not_play" || p.game_id == null;
   const gameNote = p.reason === "player_did_not_play" ? NEXT_DAY : NOT_BOUND;
@@ -48,7 +59,8 @@ export function fieldStates(p: AuditProblem, markets: MarketDef[] | null): Field
   const playerRed =
     p.reason === "missing_player_id" || (p.bet_kind === "player" && p.player_id == null);
   const marketRed = p.reason === "market_unhandled";
-  const lineRed = p.reason === "missing_line" || (p.line == null && takesLine(p, markets));
+  const lineUnknown = !!opts.marketsError && p.line == null;
+  const lineRed = p.reason === "missing_line" || (p.line == null && !opts.marketsError && takesLine(p, markets));
 
   const states: FieldState[] = [];
 
@@ -66,7 +78,7 @@ export function fieldStates(p: AuditProblem, markets: MarketDef[] | null): Field
     {
       key: "game",
       label: "Game",
-      value: p.game_id,
+      value: p.game_id == null ? null : (opts.gameLabel ?? p.game_label ?? p.game_id),
       red: gameRed,
       note: gameRed ? gameNote : null,
     },
@@ -84,7 +96,7 @@ export function fieldStates(p: AuditProblem, markets: MarketDef[] | null): Field
       label: "Line",
       value: p.line == null ? null : String(p.line),
       red: lineRed,
-      note: lineRed ? NO_NUMBER : null,
+      note: lineRed ? NO_NUMBER : lineUnknown ? "Markets unavailable" : null,
     },
   );
 
@@ -120,12 +132,13 @@ export function primaryLabel(
 /** Field states as the detail pane shows them: session fixes applied and a
  * changed sport forcing a market recheck. The action strip reads the same list. */
 export function effectiveStates(
-  p: AuditProblem,
+  p: AuditProblem & { game_label?: string | null },
   markets: MarketDef[] | null,
   fixedKeys: FieldKey[],
   marketRecheck: string | null,
+  opts: StateOpts = {},
 ): FieldState[] {
-  return fieldStates(p, markets).map((s): FieldState => {
+  return fieldStates(p, markets, opts).map((s): FieldState => {
     if (s.key === "market" && marketRecheck) {
       return { ...s, red: true, fixed: false, note: `Check for ${marketRecheck}` };
     }

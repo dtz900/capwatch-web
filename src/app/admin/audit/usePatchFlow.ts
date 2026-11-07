@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { patchPickFieldAction, type PickPatchInput } from "./actions";
 import type { FieldKey } from "./fieldState";
 import type { QueueRow } from "./labels";
-import { siblingIdsFor } from "./siblings";
+import { gameSiblings, playerSiblings } from "./siblings";
+import type { GameTeams } from "./teamMatch";
 
 /** What an editor learned from a pick: used for the local row copy and the game sort. */
 export interface PickHint {
   team?: string | null;
   name?: string;
   gameDate?: string | null;
+  /** The teams of a chosen game, so a game patch only reaches the siblings on it. */
+  game?: GameTeams;
 }
 
 const PATCH_FIELD: Partial<Record<keyof PickPatchInput, FieldKey>> = {
@@ -50,10 +53,11 @@ function applyLocal(row: QueueRow, patch: PickPatchInput, hint: PickHint | undef
   return next;
 }
 
-export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean) {
+export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean, selectedId: number | null = null) {
   const [rows, setRows] = useState(problems);
   const [fixed, setFixed] = useState<Record<number, FieldKey[]>>({});
   const [marketRecheck, setMarketRecheck] = useState<Record<number, string>>({});
+  const [patchedSiblings, setPatchedSiblings] = useState<ReadonlySet<number>>(new Set());
   const [hints, setHints] = useState<Record<number, PickHint>>({});
   const [pending, setPending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -66,7 +70,15 @@ export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean) {
     const idKey = (rs: QueueRow[]) => rs.map((r) => r.pick_id).sort((x, y) => x - y).join(",");
     if (idKey(problems) !== idKey(rows)) {
       const local = new Map(rows.map((r) => [r.pick_id, r]));
-      setRows(problems.map((r) => local.get(r.pick_id) ?? r));
+      const next = problems.map((r) => local.get(r.pick_id) ?? r);
+      // The pick being worked on stays until a terminal action removes it, even
+      // if the server now files it elsewhere (a bind can reclassify it).
+      const held = selectedId == null ? undefined : local.get(selectedId);
+      if (held && !next.some((r) => r.pick_id === held.pick_id)) {
+        const at = rows.findIndex((r) => r.pick_id === held.pick_id);
+        next.splice(Math.min(Math.max(at, 0), next.length), 0, held);
+      }
+      setRows(next);
     }
   }
   const rowsRef = useRef(rows);
@@ -75,9 +87,15 @@ export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean) {
   }, [rows]);
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
 
-  const siblingIdsOfPick = (id: number): number[] => {
+  /** Only a player patch and a game patch propagate, each to the siblings it fits. */
+  const siblingsToPatch = (id: number, patch: PickPatchInput, hint: PickHint | undefined): number[] => {
     const row = rowsRef.current.find((r) => r.pick_id === id);
-    return row ? siblingIdsFor(rowsRef.current, row) : [];
+    if (!row) return [];
+    if (patch.player_id !== undefined) return playerSiblings(rowsRef.current, row).map((r) => r.pick_id);
+    if (patch.game_id !== undefined && hint?.game) {
+      return gameSiblings(rowsRef.current, row, hint.game).map((r) => r.pick_id);
+    }
+    return [];
   };
 
   const show = (msg: string) => {
@@ -102,8 +120,10 @@ export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean) {
       return { ...f, [pickId]: [...keys] };
     });
     if (hint) setHints((h) => ({ ...h, [pickId]: { ...h[pickId], ...hint } }));
-    if (patch.sport !== undefined) setMarketRecheck((m) => ({ ...m, [pickId]: patch.sport as string }));
-    else if (patch.stat_name !== undefined) {
+    if (patch.sport !== undefined) {
+      setHints((h) => ({ ...h, [pickId]: { ...h[pickId], game: undefined } }));
+      setMarketRecheck((m) => ({ ...m, [pickId]: patch.sport as string }));
+    } else if (patch.stat_name !== undefined) {
       setMarketRecheck((m) => Object.fromEntries(Object.entries(m).filter(([id]) => Number(id) !== pickId)));
     }
   };
@@ -119,20 +139,20 @@ export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean) {
   ): Promise<void> => {
     setPending(true);
     try {
+      const sibs = propagate && applyToSiblings ? siblingsToPatch(pickId, patch, hint) : [];
       const res = await patchPickFieldAction(pickId, patch);
       if (!res.ok) throw new Error(res.error);
       commit(pickId, patch, hint);
 
       const failed: string[] = [];
       const done: number[] = [];
-      if (propagate && applyToSiblings) {
-        for (const id of siblingIdsOfPick(pickId)) {
-          const r = await patchPickFieldAction(id, patch);
-          if (r.ok) {
-            commit(id, patch, hint);
-            done.push(id);
-          } else failed.push(`#${id}: ${r.error}`);
-        }
+      for (const id of sibs) {
+        const r = await patchPickFieldAction(id, patch);
+        if (r.ok) {
+          commit(id, patch, hint);
+          done.push(id);
+          setPatchedSiblings((s) => new Set(s).add(id));
+        } else failed.push(`#${id}: ${r.error}`);
       }
       if (failed.length) {
         const msg = `Applied to #${[pickId, ...done].join(", #")}; failed on ${failed.join("; ")}`;
@@ -148,5 +168,5 @@ export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean) {
   /** Drops rows after a terminal action landed (regrade, grade, skip, delete). */
   const removeRows = (ids: number[]) => setRows((rs) => rs.filter((r) => !ids.includes(r.pick_id)));
 
-  return { rows, fixed, marketRecheck, hints, pending, setPending, toast, show, removeRows, handlePatch };
+  return { rows, patchedSiblings, fixed, marketRecheck, hints, pending, setPending, toast, show, removeRows, handlePatch };
 }

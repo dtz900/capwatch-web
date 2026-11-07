@@ -40,10 +40,10 @@ function row(id: number, over: Partial<QueueRow> = {}): QueueRow {
   };
 }
 
-function setup(rows: QueueRow[], apply = true) {
+function setup(rows: QueueRow[], apply = true, selected: number | null = null) {
   return renderHook(
     ({ problems }) =>
-      usePatchFlow(problems, apply),
+      usePatchFlow(problems, apply, selected),
     { initialProps: { problems: rows } },
   );
 }
@@ -115,5 +115,57 @@ describe("usePatchFlow", () => {
     rerender({ problems: [row(1), row(3)] });
     expect(result.current.rows.map((r) => r.pick_id)).toEqual([1, 3]);
     expect(result.current.rows[0].line).toBe(4.5);
+  });
+
+  it("a game patch only reaches siblings on that game and records them", async () => {
+    patchMock.mockResolvedValue({ ok: true });
+    const a = row(1, { selection: "Lakers ML", player_name: null, sport: "NBA" });
+    const b = row(2, { selection: "Celtics ML", player_name: null, sport: "NBA" });
+    const c = row(3, { selection: "Knicks o220.5", player_name: null, sport: "NBA" });
+    const { result } = setup([a, b, c]);
+    await act(async () => {
+      await result.current.handlePatch(1, { game_id: "5" }, "Set game", true, {
+        game: { away_team: "LAL", home_team: "BOS" },
+      });
+    });
+    expect(patchMock.mock.calls.map((c2) => c2[0])).toEqual([1, 2]);
+    expect([...result.current.patchedSiblings]).toEqual([2]);
+  });
+
+  it("a game patch without game teams never propagates", async () => {
+    patchMock.mockResolvedValue({ ok: true });
+    const { result } = setup([row(1), row(2)]);
+    await act(async () => {
+      await result.current.handlePatch(1, { game_id: "5" }, "Set game", true, { gameDate: "2026-11-06" });
+    });
+    expect(patchMock.mock.calls.map((c) => c[0])).toEqual([1]);
+  });
+
+  it("a player patch goes to the same player only", async () => {
+    patchMock.mockResolvedValue({ ok: true });
+    const a = row(1, { selection: "Sabonis o10.5 Reb", player_name: "Sabonis" });
+    const b = row(2, { selection: "Murray o20.5 Pts", player_name: "Murray" });
+    const { result } = setup([a, b]);
+    await act(async () => {
+      await result.current.handlePatch(1, { player_id: 9 }, "Set player", true, { name: "Domantas Sabonis" });
+    });
+    expect(patchMock.mock.calls.map((c) => c[0])).toEqual([1]);
+  });
+
+  it("keeps the selected pick when the new problems no longer contain it", async () => {
+    patchMock.mockResolvedValue({ ok: true });
+    const { result, rerender } = setup([row(1), row(2)], true, 1);
+    await act(async () => {
+      await result.current.handlePatch(1, { line: 4.5 }, "Line set");
+    });
+    rerender({ problems: [row(2), row(3)] });
+    expect(result.current.rows.map((r) => r.pick_id)).toEqual([1, 2, 3]);
+    expect(result.current.rows[0].line).toBe(4.5);
+  });
+
+  it("drops a vanished pick that is not selected", () => {
+    const { result, rerender } = setup([row(1), row(2)], true, 2);
+    rerender({ problems: [row(2)] });
+    expect(result.current.rows.map((r) => r.pick_id)).toEqual([2]);
   });
 });

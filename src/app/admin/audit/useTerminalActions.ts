@@ -37,8 +37,11 @@ interface Args {
   selectedId: number | null;
   setSelectedId: (id: number | null) => void;
   applyToSiblings: boolean;
+  /** Siblings that received a field patch this session; only these are regraded with the primary. */
+  patchedSiblings: ReadonlySet<number>;
   showAcked: boolean;
   markets: MarketDef[] | null;
+  marketsError?: boolean;
   fixed: Record<number, FieldKey[]>;
   marketRecheck: Record<number, string>;
   setPending: (v: boolean) => void;
@@ -87,7 +90,9 @@ export function useTerminalActions(a: Args) {
   };
 
   const hasRed = (r: QueueRow) =>
-    effectiveStates(r, a.markets, a.fixed[r.pick_id] ?? [], a.marketRecheck[r.pick_id] ?? null).some(
+    effectiveStates(r, a.markets, a.fixed[r.pick_id] ?? [], a.marketRecheck[r.pick_id] ?? null, {
+      marketsError: a.marketsError,
+    }).some(
       (s) => s.red && !s.fixed,
     );
 
@@ -106,16 +111,22 @@ export function useTerminalActions(a: Args) {
       }
       const done = [id];
       const failed: string[] = [];
+      const skipped: number[] = [];
       if (a.applyToSiblings) {
         for (const sib of siblingIdsFor(a.rows, row)) {
           const sibRow = a.rows.find((r) => r.pick_id === sib);
-          if (!sibRow || hasRed(sibRow)) continue;
+          if (!sibRow || !a.patchedSiblings.has(sib)) continue;
+          if (hasRed(sibRow)) {
+            skipped.push(sib);
+            continue;
+          }
           const r = await regradeAction(sib);
           if (r.ok) done.push(sib);
           else failed.push(`#${sib}: ${r.error}`);
         }
       }
-      const saved = `Saved, regrading: ${done.map((d) => `#${d}`).join(" and ")}`;
+      let saved = `Saved, regrading: ${done.map((d) => `#${d}`).join(" and ")}`;
+      if (skipped.length) saved += `; ${skipped.map((d) => `#${d}`).join(", ")} still needs fixing`;
       settle(done, failed.length ? `${saved}. Regrade failed on ${failed.join("; ")}` : saved);
     } catch (err) {
       setMsg({ id, text: errText(err) });

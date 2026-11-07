@@ -70,7 +70,7 @@ export function Queue({
         bucket
       ) : rows.length === 0 ? (
         <div className="px-[22px] py-[60px] text-center text-[var(--color-text-muted)]">
-          {emptyQueueCopy(sportLabel)}
+          {pickId !== undefined ? `No pick #${pickId} found.` : emptyQueueCopy(sportLabel)}
         </div>
       ) : (
         rows.map((r) => {

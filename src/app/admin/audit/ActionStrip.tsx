@@ -57,7 +57,10 @@ export function ActionStrip({
         <button
           type="button"
           disabled={!primaryOn}
-          onClick={onRegrade}
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onRegrade();
+          }}
           className={`rounded-lg px-[13px] py-[7px] text-[12px] font-extrabold border ${
             primaryOn
               ? "bg-[var(--color-text)] text-[#0a0a0c] border-[var(--color-text)]"
@@ -84,7 +87,10 @@ export function ActionStrip({
                 key={g.outcome}
                 type="button"
                 disabled={pending}
-                onClick={() => onGrade(g.outcome)}
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  onGrade(g.outcome);
+                }}
                 className={`${BTN} ${g.hover}`}
               >
                 {g.label}
@@ -94,14 +100,20 @@ export function ActionStrip({
             <span className="w-px h-[22px] bg-[rgba(255,255,255,0.13)] mx-1" />
           </>
         )}
-        <button type="button" disabled={pending} onClick={onSkip} className={`${BTN} hover:text-[var(--color-text)]`}>
+        <button type="button" disabled={pending} onClick={(e) => {
+            e.currentTarget.blur();
+            onSkip();
+          }} className={`${BTN} hover:text-[var(--color-text)]`}>
           {skipLabel}
           <kbd className={KBD}>A</kbd>
         </button>
         <button
           type="button"
           disabled={pending}
-          onClick={onDelete}
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onDelete();
+          }}
           className={`${BTN} text-[var(--color-neg)] hover:border-[var(--color-neg)]`}
         >
           Delete

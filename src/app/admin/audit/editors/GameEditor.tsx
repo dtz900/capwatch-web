@@ -62,7 +62,10 @@ export function GameEditor({
 
   const bind = (g: GameSearchResult) => {
     const name = `${teamDisplayName(g.away_team, sport)} @ ${teamDisplayName(g.home_team, sport)}`;
-    return run({ game_id: String(g.game_pk) }, `Set game ${name}`, true, { gameDate: g.game_date ?? date });
+    return run({ game_id: String(g.game_pk) }, `Set game ${name}`, true, {
+      gameDate: g.game_date ?? date,
+      game: { away_team: g.away_team, home_team: g.home_team, away_team_id: g.away_team_id, home_team_id: g.home_team_id },
+    });
   };
 
   return (

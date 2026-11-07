@@ -32,7 +32,7 @@ export type ActionResult =
 async function call(
   path: string,
   init: RequestInit,
-  opts: { revalidateAudit?: boolean } = {},
+  opts: { revalidate?: boolean } = {},
 ): Promise<ActionResult> {
   try {
     const res = await fetch(`${API_BASE}${path}`, init);
@@ -47,11 +47,11 @@ async function call(
     } catch {
       // Some endpoints may return non-JSON or empty bodies; not an error.
     }
-    if (opts.revalidateAudit !== false) revalidatePath("/admin/audit");
-    revalidatePath("/");
-    revalidatePath("/cappers");
-    if (capperHandle) {
-      revalidatePath(`/cappers/${capperHandle}`);
+    if (opts.revalidate !== false) {
+      revalidatePath("/admin/audit");
+      revalidatePath("/");
+      revalidatePath("/cappers");
+      if (capperHandle) revalidatePath(`/cappers/${capperHandle}`);
     }
     return { ok: true, capper_handle: capperHandle };
   } catch (err: unknown) {
@@ -110,18 +110,13 @@ function patchRequest(pickId: number, patch: PickPatchInput): { path: string; in
   };
 }
 
-export async function patchPickAction(pickId: number, patch: PickPatchInput): Promise<ActionResult> {
-  const req = patchRequest(pickId, patch);
-  if (typeof req === "string") return { ok: false, error: req };
-  return call(req.path, req.init);
-}
-
-/** Same PATCH for the audit editors, but leaves /admin/audit alone so the
- * pick being edited stays in the queue. Terminal actions revalidate it. */
+/** PATCH for the audit editors. It revalidates nothing: any revalidation
+ * re-renders the audit route and the edited pick could vanish from the queue.
+ * Terminal actions revalidate. */
 export async function patchPickFieldAction(pickId: number, patch: PickPatchInput): Promise<ActionResult> {
   const req = patchRequest(pickId, patch);
   if (typeof req === "string") return { ok: false, error: req };
-  return call(req.path, req.init, { revalidateAudit: false });
+  return call(req.path, req.init, { revalidate: false });
 }
 
 export async function manualGradeAction(
@@ -207,7 +202,7 @@ export type AckResult =
 
 /** Acknowledge (triage-dismiss) audit rows. Either explicit pickIds, or
  * bulk by capper (clears that capper's settled book-rules-correct voids
- * in one shot -- the post-onboard/backfill action). */
+ * in one shot, the post-onboard/backfill action). */
 export async function ackAuditAction(input: {
   pickIds?: number[];
   capper?: string;
@@ -375,6 +370,9 @@ export interface GameSearchResult {
   game_pk: number;
   away_team: string | null;
   home_team: string | null;
+  /** NCAAB only, when the platform sends them. */
+  away_team_id?: string | number | null;
+  home_team_id?: string | number | null;
   game_date: string | null;
   commence_time: string | null;
   /** Canonical doubleheader index from MLB Stats API. 1 for single games and

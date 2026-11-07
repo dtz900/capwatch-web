@@ -10,7 +10,6 @@ import { BucketList, type BucketData, type BucketKind } from "./BucketList";
 import { effectiveStates, isStrayNcaabProp, primaryLabel } from "./fieldState";
 import { useAuditKeys } from "./useAuditKeys";
 import { useTerminalActions } from "./useTerminalActions";
-import { siblingIdsFor } from "./siblings";
 import { AddBetDrawer } from "./AddBetDrawer";
 import { ADD_BET_EVENT } from "./AddBetButton";
 import { Queue, type FooterCounts } from "./Queue";
@@ -34,7 +33,7 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
   const [applyOverride, setApplyOverride] = useState<{ id: number | null; value: boolean }>({ id: null, value: true });
   const applyToSiblings = applyOverride.id === selectedId ? applyOverride.value : true;
   const setApplyToSiblings = (value: boolean) => setApplyOverride({ id: selectedId, value });
-  const flow = usePatchFlow(problems, applyToSiblings);
+  const flow = usePatchFlow(problems, applyToSiblings, selectedId);
   const rows = flow.rows;
   const selected = rows.find((p) => p.pick_id === selectedId) ?? rows[0] ?? null;
   const [marketsBySport, setMarketsBySport] = useState<Record<string, MarketDef[] | "error">>({});
@@ -72,14 +71,19 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
 
   const loaded = sport ? marketsBySport[sport] : undefined;
   const markets = !sport ? "Unknown sport" : loaded === undefined ? null : loaded === "error" ? marketsError[sport as string] ?? "unknown error" : loaded;
-  const siblingIds = selected ? siblingIdsFor(rows, selected) : [];
-  const siblingRows = rows.filter((r) => siblingIds.includes(r.pick_id));
+  const marketsFailed = typeof markets === "string" && !!sport;
+  const retryMarkets = () => {
+    if (!sport) return;
+    setMarketsBySport((m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== sport)));
+  };
 
   const marketList = Array.isArray(markets) ? markets : null;
   const fixedKeys = selected ? flow.fixed[selected.pick_id] ?? [] : [];
   const primary = selected
     ? primaryLabel(
-        effectiveStates(selected, marketList, fixedKeys, flow.marketRecheck[selected.pick_id] ?? null),
+        effectiveStates(selected, marketList, fixedKeys, flow.marketRecheck[selected.pick_id] ?? null, {
+          marketsError: marketsFailed,
+        }),
         fixedKeys.length > 0,
       )
     : { label: "Regrade" as const, enabled: false, remaining: 0 };
@@ -90,8 +94,10 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
     selectedId: selected?.pick_id ?? null,
     setSelectedId,
     applyToSiblings,
+    patchedSiblings: flow.patchedSiblings,
     showAcked: buckets.showAcked,
     markets: marketList,
+    marketsError: marketsFailed,
     fixed: flow.fixed,
     marketRecheck: flow.marketRecheck,
     setPending: flow.setPending,
@@ -145,18 +151,19 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
             index={rows.findIndex((r) => r.pick_id === selected.pick_id)}
             total={rows.length}
             markets={markets}
-            siblingIds={siblingIds}
-            siblingRows={siblingRows}
+            rows={rows}
             applyToSiblings={applyToSiblings}
             setApplyToSiblings={setApplyToSiblings}
             fixedKeys={fixedKeys}
             marketRecheck={flow.marketRecheck[selected.pick_id] ?? null}
+            onRetryMarkets={retryMarkets}
             hint={flow.hints[selected.pick_id]}
             pending={flow.pending}
             onPatch={(patch, msg, propagate) => flow.handlePatch(selected.pick_id, patch, msg, propagate)}
           />
         ) : (
-          <div className="px-8 py-[60px] text-[var(--color-text-muted)]">{emptyQueueCopy(sportLabel)}</div>
+          <div className="px-8 py-[60px] text-[var(--color-text-muted)]">{pickIdValue !== undefined ? `No pick #${pickIdValue} found.` : emptyQueueCopy(sportLabel)}
+          </div>
         )}
         {selected && (
           <ActionStrip

@@ -5,13 +5,15 @@ import type { MarketDef, PickPatchInput } from "./actions";
 import { GameEditor } from "./editors/GameEditor";
 import { MarketEditor } from "./editors/MarketEditor";
 import { PlayerEditor } from "./editors/PlayerEditor";
-import { needsSide, SideEditor, useBoundGame } from "./editors/SideEditor";
+import { SideEditor, useBoundGame } from "./editors/SideEditor";
 import { SportEditor } from "./editors/SportEditor";
 import { TextEditor } from "./editors/TextEditor";
 import type { PickHint } from "./usePatchFlow";
 import { FieldRow, LABEL_CLASS, ROW_CLASS } from "./FieldRow";
 import { effectiveStates, isStrayNcaabProp, type FieldKey } from "./fieldState";
 import { REASON_LABEL, formatOdds, type QueueRow } from "./labels";
+import { candidateSiblings, siblingCopy } from "./siblings";
+import { gameLabelFor, sideRowVisible, type GameTeams } from "./teamMatch";
 import { TweetBlock } from "./TweetBlock";
 
 export interface PickDetailProps {
@@ -20,9 +22,8 @@ export interface PickDetailProps {
   total: number;
   /** Array when loaded, null while loading, or the error string. */
   markets: MarketDef[] | null | string;
-  siblingIds: number[];
-  /** The sibling rows themselves, for the checkbox copy. */
-  siblingRows: QueueRow[];
+  /** The whole queue, to find the siblings a player or game patch would reach. */
+  rows: QueueRow[];
   applyToSiblings: boolean;
   setApplyToSiblings: (v: boolean) => void;
   /** Fields fixed this session (shown as Fixed, no longer red). */
@@ -31,38 +32,39 @@ export interface PickDetailProps {
   marketRecheck: string | null;
   hint: PickHint | undefined;
   pending: boolean;
+  onRetryMarkets: () => void;
   onPatch: (patch: PickPatchInput, okMessage: string, propagate?: boolean) => Promise<void>;
 }
 
 const KBD = "border border-[var(--color-border)] rounded px-[5px] text-[10px] font-bold text-[var(--color-text-soft)]";
-
-function siblingCopy(ids: number[], rows: QueueRow[]): string {
-  const first = rows[0];
-  if (ids.length === 1 && first) {
-    const what = `${first.selection ?? first.market ?? "pick"} ${formatOdds(first.odds_taken)}`.trim();
-    return `Same tweet also made pick #${first.pick_id} (${what}). Apply player and game to both.`;
-  }
-  return `Same tweet also made picks ${ids.map((id) => `#${id}`).join(", ")}. Apply player and game to all.`;
-}
 
 export function PickDetail({
   p,
   index,
   total,
   markets,
-  siblingIds,
-  siblingRows,
+  rows,
   applyToSiblings,
   setApplyToSiblings,
   fixedKeys,
   marketRecheck,
   hint,
   pending,
+  onRetryMarkets,
   onPatch,
 }: PickDetailProps) {
   const [open, setOpen] = useState<Partial<Record<FieldKey, boolean>>>({});
   const { game: boundGame, error: sideError } = useBoundGame(p);
-  const states = effectiveStates(p, Array.isArray(markets) ? markets : null, fixedKeys, marketRecheck);
+  const marketsError = typeof markets === "string";
+  const known: GameTeams | null = p.game_id == null ? null : (hint?.game ?? boundGame);
+  const knownDate = hint?.gameDate ?? boundGame?.game_date ?? p.game_date;
+  const gameLabel = known ? gameLabelFor(known, p.sport, knownDate ?? null) : null;
+  const states = effectiveStates(p, Array.isArray(markets) ? markets : null, fixedKeys, marketRecheck, {
+    gameLabel,
+    marketsError,
+  });
+  const siblingRows = candidateSiblings(rows, p, known);
+  const showSide = sideRowVisible(p, known);
   const ed = { p, disabled: pending, onPatch };
   const editorFor = (k: FieldKey) => {
     switch (k) {
@@ -116,7 +118,7 @@ export function PickDetail({
 
       <TweetBlock p={p} />
 
-      {siblingIds.length > 0 && (
+      {siblingRows.length > 0 && (
         <label className="mt-3 flex gap-[9px] items-center text-[12.5px] font-semibold text-[var(--color-text-soft)]">
           <input
             type="checkbox"
@@ -124,7 +126,7 @@ export function PickDetail({
             checked={applyToSiblings}
             onChange={(e) => setApplyToSiblings(e.target.checked)}
           />
-          {siblingCopy(siblingIds, siblingRows)}
+          {siblingCopy(siblingRows)}
         </label>
       )}
 
@@ -151,7 +153,19 @@ export function PickDetail({
                 <FieldRow state={s} open={!!open[s.key]} onToggle={() => toggle(s.key)}>
                   {editorFor(s.key)}
                 </FieldRow>
-                {s.key === "game" && (sideError || needsSide(p.selection, boundGame)) && (
+                {s.key === "market" && typeof markets === "string" && (
+                  <div className="flex items-center gap-3 pb-2 text-[12px] font-semibold text-[var(--color-neg)]">
+                    <span>Markets failed to load: {markets}</span>
+                    <button
+                      type="button"
+                      onClick={onRetryMarkets}
+                      className="border border-[var(--color-border)] rounded-md px-2.5 py-[3px] text-[11.5px] font-extrabold text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+                {s.key === "game" && p.bet_kind !== "player" && (sideError || showSide) && (
                   <div className={ROW_CLASS}>
                     <div className={LABEL_CLASS}>Side</div>
                     <div className="min-w-0 col-span-2">
@@ -160,7 +174,7 @@ export function PickDetail({
                           Side check failed: {sideError}
                         </div>
                       ) : (
-                        needsSide(p.selection, boundGame) && <SideEditor {...ed} game={boundGame} />
+                        showSide && boundGame && <SideEditor {...ed} game={boundGame} />
                       )}
                     </div>
                   </div>

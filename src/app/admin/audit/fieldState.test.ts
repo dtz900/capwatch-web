@@ -160,3 +160,28 @@ describe("primaryLabel", () => {
     });
   });
 });
+
+describe("fieldStates game label and markets error", () => {
+  it("shows the label instead of the raw id", () => {
+    const g = fieldStates(problem(), null, { gameLabel: "San Antonio Spurs @ Sacramento Kings" }).find((s) => s.key === "game");
+    expect(g?.value).toBe("San Antonio Spurs @ Sacramento Kings");
+  });
+  it("falls back to the row game_label then the id", () => {
+    const withRow = fieldStates({ ...problem(), game_label: "SA @ SAC" } as AuditProblem, null).find((s) => s.key === "game");
+    expect(withRow?.value).toBe("SA @ SAC");
+    expect(fieldStates(problem(), null).find((s) => s.key === "game")?.value).toBe("g1");
+  });
+  it("a failed markets load does not red the line", () => {
+    const line = fieldStates(problem({ line: null, reason: "no_grade_row" }), null, { marketsError: true }).find(
+      (s) => s.key === "line",
+    );
+    expect(line?.red).toBe(false);
+    expect(line?.note).toBe("Markets unavailable");
+  });
+  it("missing_line is still red on a markets error", () => {
+    const line = fieldStates(problem({ line: null, reason: "missing_line" }), null, { marketsError: true }).find(
+      (s) => s.key === "line",
+    );
+    expect(line?.red).toBe(true);
+  });
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { leadingToken } from "../teamMatch";
 import { searchPlayersAction, type PlayerSearchResult } from "../actions";
 import { ErrorLine, HINT_CLASS, INPUT_CLASS, OPTS_CLASS, OPT_CLASS, useEditorError, type EditorProps } from "./types";
 
@@ -15,7 +16,7 @@ export function PlayerEditor({
   onPatch,
 }: EditorProps) {
   const sport = p.sport ?? "MLB";
-  const [q, setQ] = useState(p.player_name ?? p.selection ?? "");
+  const [q, setQ] = useState(p.player_name ?? (leadingToken(p.selection) || (p.selection ?? "")));
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const { error, run } = useEditorError(onPatch);
 
