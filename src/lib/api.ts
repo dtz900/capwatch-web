@@ -662,6 +662,8 @@ export interface ReviewQueueItem {
    * could not be bound by hand at all (David 2026-09-10: searching
    * "hunter" for Hunter Henry returned six MLB pitchers). */
   sport: string | null;
+  /** Id of the bound game (text in the API), null when unbound. */
+  game_id: string | null;
   /** ISO start time of the bound game, null when unbound. */
   game_commence_time: string | null;
   /** "AWY @ HOM" for the bound game, null when unbound. */

@@ -64,18 +64,17 @@ export function toReviewRow(item: ReviewQueueItem, siblings: RawSibling[], now: 
     odds_taken: item.odds_taken,
     units: item.units,
     player_id: null,
-    // The queue item carries no game id; a game label means a game is bound.
-    game_id: item.game_label ? "bound" : null,
+    game_id: item.game_id == null ? null : String(item.game_id),
     game_date: null,
     parlay_id: item.parlay_id,
     posted_at: item.posted_at,
     raw_id: item.raw_id,
-    tweet_text: item.tweet_text,
+    tweet_text: item.tweet_text ?? item.tweet_excerpt ?? null,
     tweet_url: item.tweet_url,
     bet_kind: item.bet_kind,
     stat_name: item.stat_name,
     player_name: item.player_name,
-    media_urls: item.media_urls,
+    media_urls: item.media_urls ?? [],
     review_reason: item.review_reason,
     reason_label: why.text,
     reason_soft: why.soft,
@@ -100,4 +99,12 @@ export function groupSizes(rows: ReviewRow[]): Map<number, number> {
     m.set(r.raw_id, (m.get(r.raw_id) ?? 0) + 1);
   }
   return m;
+}
+
+/** The one red flag a row carries, by precedence: started, no game, then a real hold reason. */
+export function rowFlag(r: ReviewRow): string | null {
+  if (r.started_minutes != null) return "Started before the tweet";
+  if (r.game_id == null && r.parlay_id == null) return "No game";
+  if (!r.reason_soft) return r.reason_label;
+  return null;
 }

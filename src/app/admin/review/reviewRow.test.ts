@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { ReviewQueueItem } from "@/lib/api";
-import { groupSizes, toReviewRow, type ReviewRow } from "./reviewRow";
+import { groupSizes, rowFlag, toReviewRow, type ReviewRow } from "./reviewRow";
 
 const NOW = new Date("2026-11-07T03:00:00Z");
 
@@ -30,6 +30,7 @@ function item(overrides: Partial<ReviewQueueItem> = {}): ReviewQueueItem {
     was_image_parsed: false,
     parlay_id: null,
     sport: "NBA",
+    game_id: "401234",
     game_commence_time: "2026-11-07T00:00:00Z",
     game_label: "WSH @ ATL",
     game_started_minutes_before_post: null,
@@ -83,5 +84,32 @@ describe("groupSizes", () => {
     const m = groupSizes([row({ raw_id: 1 }), row({ raw_id: 1 }), row({ raw_id: null }), row({ raw_id: null })]);
     expect(m.get(1)).toBe(2);
     expect(m.size).toBe(1);
+  });
+});
+
+describe("real game id and fallbacks", () => {
+  it("passes the real game_id through, even with no game label", () => {
+    const r = toReviewRow(item({ game_id: "401234", game_label: null }), [], NOW);
+    expect(r.game_id).toBe("401234");
+    expect(rowFlag(r)).not.toBe("No game");
+  });
+  it("null game_id stays null", () => {
+    expect(toReviewRow(item({ game_id: null }), [], NOW).game_id).toBeNull();
+  });
+  it("falls back to the excerpt and an empty media list", () => {
+    const old = item({ tweet_text: undefined as unknown as null, media_urls: undefined as unknown as string[] });
+    const r = toReviewRow(old, [], NOW);
+    expect(r.tweet_text).toBe("excerpt");
+    expect(r.media_urls).toEqual([]);
+  });
+});
+
+describe("rowFlag precedence", () => {
+  it("started beats no game beats reason, else null", () => {
+    const base = { game_id: null, parlay_id: null, reason_soft: false, reason_label: "Looks like a board grid" };
+    expect(rowFlag(row({ ...base, started_minutes: 12 }))).toBe("Started before the tweet");
+    expect(rowFlag(row({ ...base, started_minutes: null }))).toBe("No game");
+    expect(rowFlag(row({ ...base, game_id: "1", started_minutes: null }))).toBe("Looks like a board grid");
+    expect(rowFlag(row({ ...base, game_id: "1", started_minutes: null, reason_soft: true }))).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { emptyQueueCopy } from "../audit/labels";
 import { formatOdds } from "./reviewLabels";
-import type { ReviewRow } from "./reviewRow";
+import { rowFlag, type ReviewRow } from "./reviewRow";
 
 interface Props {
   rows: ReviewRow[];
@@ -21,14 +21,6 @@ interface Props {
   residueCount: number;
   onOpenResidue: () => void;
   sportLabel: string;
-}
-
-/** The one red flag a row carries, by precedence: started, no game, then a real hold reason. */
-function rowFlag(r: ReviewRow): string | null {
-  if (r.started_minutes != null) return "Started before the tweet";
-  if (r.game_id == null && r.parlay_id == null) return "No game";
-  if (!r.reason_soft) return r.reason_label;
-  return null;
 }
 
 export function ReviewQueue({
