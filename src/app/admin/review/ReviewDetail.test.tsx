@@ -97,4 +97,12 @@ describe("ReviewDetail", () => {
     render(<ReviewDetail {...props(row({ selection: "Anthony Davis 8+ rebounds", tweet_text: "x\nAnthony Davis 8+ rebounds\ny" }))} />);
     expect(screen.getByText("Anthony Davis 8+ rebounds", { selector: "mark" })).toBeInTheDocument();
   });
+  it("opens the Game editor by itself when the pick is unbound", () => {
+    render(<ReviewDetail {...props(row({ game_id: null, parlay_id: null, posted_at: "2026-11-05T20:00:00Z" }), { markets: [] })} />);
+    expect(screen.getByLabelText("Filter games by team")).toBeInTheDocument();
+  });
+  it("keeps the Game editor closed when a game is bound", () => {
+    render(<ReviewDetail {...props(row({ game_id: "1", game_label: "NE @ BUF" }), { markets: [] })} />);
+    expect(screen.queryByLabelText("Filter games by team")).toBeNull();
+  });
 });

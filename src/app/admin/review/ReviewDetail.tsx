@@ -100,7 +100,9 @@ export function ReviewDetail(props: ReviewDetailProps) {
         return <TextEditor {...ed} field="units" />;
     }
   };
-  const toggle = (k: FieldKey) => setOpen((o) => ({ ...o, [k]: !o[k] }));
+  // open[k] is undefined until the user toggles; the Game editor then defaults to open while red.
+  const isOpen = (k: FieldKey, red: boolean) => open[k] ?? (k === "game" && red);
+  const toggle = (k: FieldKey, red: boolean) => setOpen((o) => ({ ...o, [k]: !isOpen(k, red) }));
 
   return (
     <div className="max-w-[900px] w-full px-8 pt-[22px] pb-10">
@@ -161,7 +163,7 @@ export function ReviewDetail(props: ReviewDetailProps) {
         ) : (
           states.map((s) => (
             <div key={s.key}>
-              <FieldRow state={s} open={!!open[s.key]} onToggle={() => toggle(s.key)}>
+              <FieldRow state={s} open={isOpen(s.key, s.red)} onToggle={() => toggle(s.key, s.red)}>
                 {editorFor(s.key)}
               </FieldRow>
               {s.key === "market" && marketsError && (

@@ -65,6 +65,7 @@ export function ReviewWorkbench({ rows, counts, paging, newerHref, olderHref, sp
         <div className="min-h-0 overflow-y-auto p-6">
           {current && (
             <ReviewDetail
+              key={current.pick_id}
               p={current}
               index={rows.findIndex((r) => r.pick_id === current.pick_id)}
               total={rows.length}
