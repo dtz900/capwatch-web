@@ -85,7 +85,7 @@ export default async function AdminCapperPicksPage({ params, searchParams }: Pag
             </Link>
           </div>
           <p className="text-[12px] text-[var(--color-text-soft)] font-medium mt-2">
-            Every pick with its pick_id and a one-click link to edit it in the audit FixPanel.
+            Every pick with its pick_id and a one-click link to edit it in the audit workbench.
           </p>
           <ClvStrip agg={profile.aggregates["all_time"]} />
         </header>

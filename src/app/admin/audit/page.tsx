@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { fetchAudit } from "@/lib/api";
-import { AddBetPanel } from "./AddBetPanel";
-import { PickShapedQueue } from "./PickShapedQueue";
+import { parseAdminSport } from "@/lib/admin-sports";
 import { fetchPickShapedFlags } from "./actions";
-import { AuditTable } from "./AuditTable";
-import { BulkCapperAck } from "./BulkCapperAck";
+import { HeaderStrip } from "./HeaderStrip";
+import { SportTabs } from "./SportTabs";
+import { Workbench } from "./Workbench";
+import type { BucketRow, QueueRow, UngradedFinalView } from "./labels";
+import { REASON_LABEL } from "./labels";
 
 interface PageProps {
   searchParams: Promise<{
@@ -13,8 +14,8 @@ interface PageProps {
     kind?: "void" | "ungraded";
     pick_id?: string;
     offset?: string;
-    sort?: "oldest" | "newest" | "sport";
-    sport?: "MLB" | "NFL" | "NBA";
+    sort?: "oldest" | "newest";
+    sport?: string;
     show_acked?: string;
   }>;
 }
@@ -56,27 +57,6 @@ function formatAgo(iso: string): string {
   return `${day}d ago`;
 }
 
-const REASON_LABEL: Record<string, string> = {
-  market_unhandled: "Market not in grader",
-  missing_player_id: "Player not resolved",
-  missing_line: "Line missing",
-  missing_game_id: "Game not resolved",
-  game_pending: "Game pending",
-  no_grade_row: "Grader hasn't run",
-  player_did_not_play: "Player didn't play",
-  data_gap: "Game data gap",
-  ungradeable: "Grader gave up",
-};
-
-// Reasons for the ungraded-on-a-final-game backlog (platform PR #357),
-// distinct from the actionable-queue reasons above.
-const UNGRADED_FINAL_REASON_LABEL: Record<string, string> = {
-  unresolved_player: "Player not resolved",
-  unknown_stat_name: "Unknown stat name",
-  unsupported_period_market: "Period market unsupported",
-  unknown: "Unknown",
-};
-
 export default async function AdminAuditPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const offset = Math.max(0, parseInt(sp.offset ?? "0", 10) || 0);
@@ -87,9 +67,8 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
   const pickIdLookup = Number.isFinite(pickIdParsed) && pickIdParsed > 0 ? pickIdParsed : undefined;
   // Newest-first by default: in the ack model the queue is the un-acked
   // set, so the freshest un-triaged problems are what matter.
-  const sort: "oldest" | "newest" | "sport" =
-    sp.sort === "oldest" || sp.sort === "sport" ? sp.sort : "newest";
-  const sport = sp.sport === "MLB" || sp.sport === "NFL" || sp.sport === "NBA" ? sp.sport : undefined;
+  const sort: "oldest" | "newest" = sp.sort === "oldest" ? "oldest" : "newest";
+  const sport = parseAdminSport(sp.sport);
   const showAcked = sp.show_acked === "true";
 
   const pickShapedFlags = await fetchPickShapedFlags();
@@ -106,17 +85,10 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     offset,
   });
 
-  const showingFrom = offset + 1;
-  const showingTo = Math.min(offset + data.problems.length, data.total_problems);
-
   const recapDiff = data.recap_diff_last_run ?? null;
   const recapDiffLabel = recapDiff
     ? `Recap diff last ran ${formatAgo(recapDiff.ran_at)} (${recapDiff.recaps_examined} recaps, ${recapDiff.flagged_count} flagged)`
     : "Recap diff has not run yet";
-
-  // Absent on older API builds (pre PR #357); treat as optional.
-  const ungradedFinal = data.ungraded_final ?? null;
-  const ungradedFinalRows = ungradedFinal?.rows ?? [];
 
   const buildHref = (
     overrides: Partial<{
@@ -134,8 +106,8 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     const c = overrides.capper ?? capper ?? "";
     const k = overrides.kind ?? kind ?? "";
     const o = overrides.offset ?? "";
-    // Newest is the default now, so only encode "oldest" / "sport".
-    const s = overrides.sort ?? (sort !== "newest" ? sort : "");
+    // Newest is the default now, so only encode "oldest".
+    const s = overrides.sort ?? (sort === "oldest" ? "oldest" : "");
     const spo = overrides.sport ?? sport ?? "";
     const sa = overrides.show_acked ?? (showAcked ? "true" : "");
     if (r) params.set("reason", r);
@@ -149,444 +121,95 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     return qs ? `/admin/audit?${qs}` : "/admin/audit";
   };
 
+  const fmtDay = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" });
+  const rows: QueueRow[] = data.problems.map((p) => ({
+    ...p,
+    posted_label: p.posted_at ? fmtDay(p.posted_at) : null,
+    game_label: p.game_date
+      ? new Date(p.game_date + "T12:00:00Z").toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        })
+      : null,
+  }));
+
+  const toBucketRow = (p: (typeof data.problems)[number]): BucketRow => ({
+    pick_id: p.pick_id,
+    date: p.posted_at ? fmtDay(p.posted_at) : null,
+    capper: p.capper_display_name ?? p.capper_handle ?? "Unknown",
+    selection: p.selection ?? p.market ?? "Untitled pick",
+    reason: REASON_LABEL[p.reason] ?? p.reason,
+  });
+  const ungradedFinalViews: UngradedFinalView[] = (data.ungraded_final?.rows ?? []).map((r) => ({
+    pick_id: r.pick_id,
+    capper_handle: r.capper_handle,
+    selection: r.selection,
+    stat_name: r.stat_name,
+    sport: r.sport,
+    game_id: r.game_id,
+    finalSince: formatAgo(r.final_at),
+    reason: r.reason,
+  }));
+
+  const hasNewer = offset > 0;
+  const hasOlder = offset + data.problems.length < data.total_problems;
+
   return (
-    <>
-      <main className="max-w-[1240px] mx-auto px-7 pb-16">
-        <header className="pt-10 pb-7">
-          <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2">
-            Admin · pipeline audit
-          </div>
-          <h1 className="text-[32px] font-extrabold tracking-[-0.02em] leading-none">
-            Picks needing review
-          </h1>
-          <p className="text-[13px] text-[var(--color-text-soft)] font-medium mt-2">
-            Real-time. <span className="text-[var(--color-text)] font-bold">{data.total_problems}</span> pick
-            {data.total_problems === 1 ? "" : "s"} need a decision. Settled
-            book-rules voids and self-resolving pending picks are tucked into
-            their own sections below.
-          </p>
-          <p className="text-[11px] text-[var(--color-text-muted)] font-medium mt-2">
-            {recapDiffLabel}
-          </p>
-        </header>
-
-        <AddBetPanel />
-
-        <section className="mb-6">
-          <PickShapedQueue flags={pickShapedFlags} />
-        </section>
-
-        {data.error && (
-          <section className="mb-6 rounded-2xl border border-[rgba(248,113,113,0.40)] bg-[rgba(248,113,113,0.05)] px-5 py-4">
-            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#f87171] mb-2">
-              Audit endpoint error
-            </div>
-            <div className="text-[12px] text-[#f87171] font-mono tabular-nums">
-              <span className="font-extrabold">{data.error.class}:</span> {data.error.message}
-            </div>
-            <div className="text-[11px] text-[var(--color-text-muted)] font-medium mt-2">
-              The backend caught this exception and returned an empty result so the page still renders. Reload to retry. If it persists, this is the real cause to dig into.
-            </div>
-          </section>
-        )}
-
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <Stat
-            label="Needs you"
-            value={data.summary.needs_you ?? data.total_problems}
-            tone="neg"
-          />
-          <Stat
-            label="Settled · 1-click clear"
-            value={data.settled_total ?? 0}
-            tone="neutral"
-          />
-          <Stat
-            label="Pending · self-resolving"
-            value={data.pending_total ?? 0}
-            tone="neutral"
-          />
-          <Stat label="Graded W/L/P" value={data.summary.graded} tone="pos" />
-        </section>
-
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4 mb-6">
-          <form action="/admin/audit" method="GET" className="flex items-center gap-3 flex-wrap">
-            <label className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold" htmlFor="pick_id">
-              Find pick by ID
-            </label>
-            <input
-              id="pick_id"
-              name="pick_id"
-              type="number"
-              min={1}
-              defaultValue={pickIdLookup ?? ""}
-              placeholder="e.g. 5416"
-              className="rounded-md border border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.25)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none w-32 tabular-nums"
-            />
-            <button
-              type="submit"
-              className="px-3 py-1.5 rounded-md bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.14)] text-[12px] font-bold text-[var(--color-text)]"
-            >
-              Find
-            </button>
-            {pickIdLookup !== undefined && (
-              <Link
-                href="/admin/audit"
-                className="px-3 py-1.5 rounded-md text-[12px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              >
-                Clear
-              </Link>
-            )}
-            <span className="text-[11px] text-[var(--color-text-muted)] font-medium ml-auto">
-              Bypasses kind/reason filters. Works for graded picks too — fix accidental manual grades or delete duplicates.
-            </span>
-          </form>
-        </section>
-
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4 mb-6">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-3">
-            Failure reasons
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={buildHref({ reason: "" })}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${
-                !reason
-                  ? "bg-[rgba(255,255,255,0.08)] border-[rgba(255,255,255,0.15)] text-[var(--color-text)]"
-                  : "border-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
-              }`}
-            >
-              All (
-              {Object.entries(data.by_reason)
-                .filter(([r]) => !HIDDEN_REASON_CHIPS.has(r))
-                .reduce((a, [, b]) => a + b, 0)}
-              )
-            </Link>
-            {Object.entries(data.by_reason)
-              .filter(([r]) => !HIDDEN_REASON_CHIPS.has(r))
-              .sort((a, b) => b[1] - a[1])
-              .map(([r, n]) => (
-                <Link
-                  key={r}
-                  href={buildHref({ reason: r })}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${
-                    reason === r
-                      ? "bg-[rgba(255,255,255,0.08)] border-[rgba(255,255,255,0.15)] text-[var(--color-text)]"
-                      : "border-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)] hover:text-[var(--color-text)]"
-                  }`}
-                >
-                  {REASON_LABEL[r] ?? r} ({n})
-                </Link>
-              ))}
-          </div>
-          <div className="mt-3 flex items-center gap-3 flex-wrap">
-            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold">
-              Sport
-            </span>
-            {(["", "MLB", "NFL", "NBA"] as const).map((s) => {
-              const n = s ? (data.by_sport?.[s] ?? 0) : null;
-              return (
-                <Link
-                  key={s || "all"}
-                  href={buildHref({ sport: s, offset: "" })}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
-                    (sport ?? "") === s
-                      ? "bg-[rgba(255,255,255,0.08)] text-[var(--color-text)]"
-                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                  }`}
-                >
-                  {s || "All"}
-                  {n !== null && <span className="ml-1 font-medium">({n})</span>}
-                </Link>
-              );
-            })}
-            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
-              Kind
-            </span>
-            {(["", "void", "ungraded"] as const).map((k) => (
-              <Link
-                key={k || "all"}
-                href={buildHref({ kind: k })}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
-                  (kind ?? "") === k
-                    ? "bg-[rgba(255,255,255,0.08)] text-[var(--color-text)]"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                }`}
-              >
-                {k || "All"}
-              </Link>
-            ))}
-            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
-              Sort
-            </span>
-            {(["newest", "oldest", "sport"] as const).map((s) => (
-              <Link
-                key={s}
-                href={buildHref({ sort: s })}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
-                  sort === s
-                    ? "bg-[rgba(255,255,255,0.08)] text-[var(--color-text)]"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                }`}
-              >
-                {s === "oldest" ? "Oldest first" : s === "sport" ? "By sport" : "Newest first"}
-              </Link>
-            ))}
-            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold ml-3">
-              Triaged
-            </span>
-            <Link
-              href={buildHref({ show_acked: showAcked ? "" : "true", offset: "" })}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
-                showAcked
-                  ? "bg-[rgba(255,255,255,0.08)] text-[var(--color-text)]"
-                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              }`}
-            >
-              {showAcked ? "Showing acked" : "Hidden"}
-              {!showAcked && (data.summary.acked ?? 0) > 0 && (
-                <span className="ml-1 text-[var(--color-text-muted)]">
-                  ({data.summary.acked})
-                </span>
-              )}
-            </Link>
-          </div>
-          {capper && (
-            <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
-              <BulkCapperAck capper={capper} />
-            </div>
-          )}
-        </section>
-
-        <AuditTable
-          key={`${reason ?? ""}|${capper ?? ""}|${kind ?? ""}|${sort}|${sport ?? ""}|${offset}|${showAcked}`}
-          problems={data.problems}
-          showAcked={showAcked}
-        />
-
-        <div
-          className="flex items-center justify-between px-4 py-3 mt-4 border-t border-[var(--color-border)]
-                          text-[11px] text-[var(--color-text-muted)] font-medium"
-        >
-          <div>
-            Showing {showingFrom}-{showingTo} of {data.total_problems}
-          </div>
-          <div className="flex items-center gap-2">
-            {offset > 0 && (
-              <Link
-                href={buildHref({ offset: String(Math.max(0, offset - PAGE_SIZE)) })}
-                className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
-                             text-[var(--color-text-soft)] text-[11px] font-bold"
-              >
-                ← Newer
-              </Link>
-            )}
-            {offset + data.problems.length < data.total_problems && (
-              <Link
-                href={buildHref({ offset: String(offset + PAGE_SIZE) })}
-                className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)]
-                             text-[var(--color-text-soft)] text-[11px] font-bold"
-              >
-                Older →
-              </Link>
-            )}
-          </div>
+    <main className="h-[calc(100vh-65px)] flex flex-col overflow-hidden">
+      {data.error && (
+        <div className="flex-none border-b border-[var(--color-border)] px-6 py-2 text-[12px] font-semibold text-[var(--color-neg)]">
+          Audit endpoint error, {data.error.class}: {data.error.message}. Reload to retry.
         </div>
-
-        {(data.settled_total ?? 0) > 0 && (
-          <details className="mt-8 rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.01)]">
-            <summary className="cursor-pointer select-none px-5 py-4 text-[12px] font-bold text-[var(--color-text-soft)]">
-              Settled — no action needed ({data.settled_total})
-              <span className="ml-2 font-medium text-[var(--color-text-muted)]">
-                book-rules-correct voids (player didn&apos;t play / data gap).
-                {capper
-                  ? " Use “Ack all settled voids for @" + capper + "” above to clear."
-                  : " Filter to a capper, then “Ack all settled voids” to clear after a backfill."}
-              </span>
-            </summary>
-            <div className="border-t border-[var(--color-border)] divide-y divide-[rgba(255,255,255,0.03)]">
-              {(data.settled ?? []).map((p) => (
-                <div
-                  key={p.pick_id}
-                  className="grid grid-cols-[110px_150px_1fr_120px_70px] gap-3 items-center px-5 py-2.5 text-[12px]"
-                >
-                  <span className="text-[var(--color-text-muted)] tabular-nums">
-                    {p.game_date
-                      ? new Date(p.game_date + "T12:00:00Z").toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "—"}
-                  </span>
-                  <span className="truncate text-[var(--color-text-soft)] font-semibold">
-                    {p.capper_display_name ?? p.capper_handle ?? "—"}
-                  </span>
-                  <span className="truncate text-[var(--color-text)]">
-                    {p.selection ?? p.market ?? "—"}
-                  </span>
-                  <span className="text-[10px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
-                    {REASON_LABEL[p.reason] ?? p.reason}
-                  </span>
-                  <span className="text-right text-[var(--color-text-muted)] tabular-nums">
-                    pid={p.pick_id}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-
-        {(data.pending_total ?? 0) > 0 && (
-          <details className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.01)]">
-            <summary className="cursor-pointer select-none px-5 py-4 text-[12px] font-bold text-[var(--color-text-soft)]">
-              Pending — self-resolving ({data.pending_total})
-              <span className="ml-2 font-medium text-[var(--color-text-muted)]">
-                ungraded only because the game hasn&apos;t finished. No action needed; grades automatically once final.
-              </span>
-            </summary>
-            <div className="border-t border-[var(--color-border)] divide-y divide-[rgba(255,255,255,0.03)]">
-              {(data.pending ?? []).map((p) => (
-                <div
-                  key={p.pick_id}
-                  className="grid grid-cols-[110px_150px_1fr_70px] gap-3 items-center px-5 py-2.5 text-[12px]"
-                >
-                  <span className="text-[var(--color-text-muted)] tabular-nums">
-                    {p.game_date
-                      ? new Date(p.game_date + "T12:00:00Z").toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "—"}
-                  </span>
-                  <span className="truncate text-[var(--color-text-soft)] font-semibold">
-                    {p.capper_display_name ?? p.capper_handle ?? "—"}
-                  </span>
-                  <span className="truncate text-[var(--color-text)]">
-                    {p.selection ?? p.market ?? "—"}
-                  </span>
-                  <span className="text-right text-[var(--color-text-muted)] tabular-nums">
-                    pid={p.pick_id}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-
-        <section className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-5 py-4">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] font-bold mb-3">
-            Ungraded on a final game
-          </div>
-          {!ungradedFinal ? (
-            <div className="text-[12px] font-medium text-[var(--color-text-soft)]">
-              Ungraded check not available on this API build.
-            </div>
-          ) : ungradedFinal.total === 0 ? (
-            <div className="text-[12px] font-medium text-[var(--color-text-soft)]">
-              Nothing stuck.
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="px-2.5 py-1 rounded-md text-[11px] font-bold border bg-[rgba(255,255,255,0.08)] border-[rgba(255,255,255,0.15)] text-[var(--color-text)]">
-                  Total ({ungradedFinal.total})
-                </span>
-                {Object.entries(ungradedFinal.by_reason)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([r, n]) => (
-                    <span
-                      key={r}
-                      className="px-2.5 py-1 rounded-md text-[11px] font-bold border border-[rgba(255,255,255,0.06)] text-[var(--color-text-soft)]"
-                    >
-                      {UNGRADED_FINAL_REASON_LABEL[r] ?? r} ({n})
-                    </span>
-                  ))}
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[12px] border-collapse">
-                  <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-bold border-b border-[var(--color-border)]">
-                      <th className="py-2 pr-3 font-bold">Capper</th>
-                      <th className="py-2 pr-3 font-bold">Selection</th>
-                      <th className="py-2 pr-3 font-bold">Stat</th>
-                      <th className="py-2 pr-3 font-bold">Sport</th>
-                      <th className="py-2 pr-3 font-bold">Game</th>
-                      <th className="py-2 pr-3 font-bold">Final since</th>
-                      <th className="py-2 pr-3 font-bold">Reason</th>
-                      <th className="py-2 pr-3 font-bold text-right">Pick</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[rgba(255,255,255,0.03)]">
-                    {ungradedFinalRows.map((row) => (
-                      <tr key={row.pick_id}>
-                        <td className="py-2 pr-3">
-                          <Link
-                            href={row.capper_handle ? `/cappers/${row.capper_handle}` : "#"}
-                            className="font-semibold text-[var(--color-text)] hover:underline"
-                          >
-                            @{row.capper_handle ?? "—"}
-                          </Link>
-                        </td>
-                        <td className="py-2 pr-3 text-[var(--color-text)] truncate max-w-[280px]">
-                          {row.selection ?? "—"}
-                        </td>
-                        <td className="py-2 pr-3 text-[var(--color-text-soft)]">
-                          {row.stat_name ?? "—"}
-                        </td>
-                        <td className="py-2 pr-3 text-[var(--color-text-muted)]">{row.sport}</td>
-                        <td className="py-2 pr-3 text-[var(--color-text-muted)] tabular-nums">
-                          {row.game_id ?? "—"}
-                        </td>
-                        <td className="py-2 pr-3 text-[var(--color-text-muted)] tabular-nums">
-                          {formatAgo(row.final_at)}
-                        </td>
-                        <td className="py-2 pr-3 text-[10px] uppercase tracking-[0.10em] text-[var(--color-text-muted)] font-bold">
-                          {UNGRADED_FINAL_REASON_LABEL[row.reason] ?? row.reason}
-                        </td>
-                        <td className="py-2 pr-3 text-right text-[var(--color-text-muted)] tabular-nums">
-                          pid={row.pick_id}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </section>
-
-        <footer className="flex items-center justify-between py-7 pb-2 mt-6 text-xs text-[var(--color-text-muted)] font-medium">
-          <div>Live data. No cache. Every refresh hits the audit endpoint.</div>
-        </footer>
-      </main>
-    </>
+      )}
+      <HeaderStrip
+        needsYou={data.summary.needs_you ?? data.total_problems}
+        settled={data.settled_total ?? 0}
+        pending={data.pending_total ?? 0}
+        graded={data.summary.graded}
+        pickIdValue={pickIdLookup}
+      />
+      <SportTabs
+        sport={sport}
+        by_sport={data.by_sport}
+        by_reason={data.by_reason}
+        total={data.summary.needs_you ?? data.total_problems}
+        reason={reason}
+        sort={sort}
+        hiddenReasons={HIDDEN_REASON_CHIPS}
+        buildHref={buildHref}
+      />
+      <Workbench
+        problems={rows}
+        footer={{
+          settled: data.settled_total ?? 0,
+          pending: data.pending_total ?? 0,
+          triaged: data.summary.acked ?? 0,
+          ungradedFinal: data.ungraded_final?.total ?? 0,
+          pickShaped: pickShapedFlags.length,
+        }}
+        buckets={{
+          settled: (data.settled ?? []).map(toBucketRow),
+          pending: (data.pending ?? []).map(toBucketRow),
+          ungradedFinal: ungradedFinalViews,
+          flags: pickShapedFlags,
+          capper: capper ?? null,
+          showAcked,
+          triagedHref: buildHref({ show_acked: "true" }),
+          counts: {
+            settled: data.settled_total ?? 0,
+            pending: data.pending_total ?? 0,
+            ungradedFinal: data.ungraded_final?.total ?? 0,
+          },
+        }}
+        pickIdValue={pickIdLookup}
+        recapDiffLabel={recapDiffLabel}
+        sportLabel={sport ?? "any sport"}
+        paging={{ offset, pageSize: PAGE_SIZE, total: data.total_problems }}
+        newerHref={hasNewer ? buildHref({ offset: String(Math.max(0, offset - PAGE_SIZE)) }) : null}
+        olderHref={hasOlder ? buildHref({ offset: String(offset + PAGE_SIZE) }) : null}
+      />
+    </main>
   );
 }
-
-function Stat({
-  label,
-  value,
-  tone = "neutral",
-}: {
-  label: string;
-  value: number;
-  tone?: "pos" | "neg" | "neutral";
-}) {
-  const color =
-    tone === "pos"
-      ? "text-[var(--color-pos)]"
-      : tone === "neg"
-        ? "text-[var(--color-neg)]"
-        : "text-[var(--color-text)]";
-  return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-4 py-3">
-      <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold mb-1.5">
-        {label}
-      </div>
-      <div className={`font-extrabold tabular-nums leading-none tracking-[-0.02em] text-[22px] ${color}`}>
-        {value}
-      </div>
-    </div>
-  );
-}
-

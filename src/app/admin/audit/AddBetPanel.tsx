@@ -6,6 +6,7 @@
 // with ticket odds + units on leg 0. Everything lands admin_locked.
 
 import { useRef, useState, useTransition } from "react";
+import { ADMIN_SPORTS, type AdminSport } from "@/lib/admin-sports";
 import {
   addManualBetAction,
   searchGamesAction,
@@ -33,8 +34,9 @@ const labelCls =
 // 2026-09-08). Same fix the audit panel's MarketSelect uses.
 const optionCls = "bg-[#0e0e12] text-[var(--color-text)]";
 
-export function AddBetPanel() {
-  const [open, setOpen] = useState(false);
+/** `embedded`: rendered inside the add-bet drawer, which supplies the chrome, so start open with no card or Close row. */
+export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
+  const [open, setOpen] = useState(embedded);
   const [capper, setCapper] = useState("");
   const [tweetUrl, setTweetUrl] = useState("");
   const [units, setUnits] = useState("1");
@@ -42,7 +44,7 @@ export function AddBetPanel() {
   const [isLive, setIsLive] = useState(false);
   const [legs, setLegs] = useState<LegDraft[]>([{ ...EMPTY_LEG }]);
   const [gameDate, setGameDate] = useState(todayEt());
-  const [sport, setSport] = useState<"MLB" | "NFL" | "NBA">("MLB");
+  const [sport, setSport] = useState<AdminSport>("MLB");
   // Guards the in-flight game search against a sport toggle racing it
   // (Codex P2, PR #110): a lookup resolves only if its sport still matches.
   const sportRef = useRef(sport);
@@ -50,6 +52,9 @@ export function AddBetPanel() {
   const [gameTargetIdx, setGameTargetIdx] = useState(0);
   const [playerQuery, setPlayerQuery] = useState("");
   const [players, setPlayers] = useState<PlayerSearchResult[]>([]);
+  const [playerError, setPlayerError] = useState<string | null>(null);
+  const [gameError, setGameError] = useState<string | null>(null);
+  const [missingTeams, setMissingTeams] = useState<string[]>([]);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -60,8 +65,11 @@ export function AddBetPanel() {
   const loadGames = () =>
     startTransition(async () => {
       const requested = sport;
-      const results = await searchGamesAction(gameDate, undefined, requested);
-      if (sportRef.current === requested) setGames(results);
+      const r = await searchGamesAction(gameDate, undefined, requested);
+      if (sportRef.current !== requested) return;
+      setGames(r.ok ? r.results : []);
+      setGameError(r.ok ? null : r.error);
+      setMissingTeams(r.ok ? r.missingTeams : []);
     });
 
   // Search the roster of the sport toggle; without it every NFL name
@@ -70,8 +78,11 @@ export function AddBetPanel() {
   const loadPlayers = () =>
     startTransition(async () => {
       const requested = sport;
-      const results = await searchPlayersAction(playerQuery, requested);
-      if (sportRef.current === requested) setPlayers(results);
+      const r = await searchPlayersAction(playerQuery, requested);
+      if (sportRef.current !== requested) return;
+      setPlayers(r.ok ? r.results : []);
+      setPlayerError(r.ok ? null : r.error);
+      setMissingTeams(r.ok ? r.missingTeams : []);
     });
 
   const isParlay = legs.length > 1;
@@ -123,13 +134,21 @@ export function AddBetPanel() {
   }
 
   return (
-    <section className="mb-6 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.02)] p-5 flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className={labelCls}>Add bet manually · lands admin-locked, graded next tick</div>
-        <button type="button" onClick={() => setOpen(false)} className={btnCls}>
-          Close
-        </button>
-      </div>
+    <section
+      className={
+        embedded
+          ? "flex flex-col gap-4"
+          : "mb-6 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.02)] p-5 flex flex-col gap-4"
+      }
+    >
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <div className={labelCls}>Add bet manually · lands admin-locked, graded next tick</div>
+          <button type="button" onClick={() => setOpen(false)} className={btnCls}>
+            Close
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 items-center">
         <input
@@ -158,7 +177,7 @@ export function AddBetPanel() {
 
       <div className="flex flex-wrap gap-2 items-center border-t border-[rgba(255,255,255,0.06)] pt-3">
         <span className={labelCls}>Games</span>
-        {(["MLB", "NFL", "NBA"] as const).map((sp) => (
+        {ADMIN_SPORTS.map((sp) => (
           <button
             key={sp}
             type="button"
@@ -166,9 +185,14 @@ export function AddBetPanel() {
               setSport(sp);
               sportRef.current = sp;
               setGames([]);
+              setGameError(null);
+              setPlayerError(null);
+              setMissingTeams([]);
               // A bound game from the other sport would submit an MLB
               // game_id under sport NFL (Codex P1, PR #110); unbind all.
-              setLegs((ls) => ls.map((l) => ({ ...l, game: null })));
+              setLegs((ls) =>
+                ls.map((l) => ({ ...l, game: null, ...(sp === "NCAAB" && l.type === "player" ? { type: "custom" as const, player: null } : {}) })),
+              );
             }}
             className={`px-2.5 py-1.5 rounded text-[10px] font-bold ${
               sport === sp
@@ -194,6 +218,9 @@ export function AddBetPanel() {
           </span>
         )}
       </div>
+      {gameError && (
+        <p className="text-[11px] text-[var(--color-neg)]">Game search failed: {gameError}</p>
+      )}
       {games.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {games.map((g) => (
@@ -227,7 +254,9 @@ export function AddBetPanel() {
               value={leg.type}
               onChange={(e) => setLeg(idx, { type: e.target.value as LegType })}
             >
-              {Object.entries(LEG_TYPE_LABEL).map(([v, label]) => (
+              {Object.entries(LEG_TYPE_LABEL)
+                .filter(([v]) => !(sport === "NCAAB" && v === "player"))
+                .map(([v, label]) => (
                 <option key={v} value={v} className={optionCls}>
                   {label}
                 </option>
@@ -312,6 +341,16 @@ export function AddBetPanel() {
                 </>
               )}
             </div>
+          )}
+          {leg.type === "player" && playerError && (
+            <p className="text-[11px] text-[var(--color-neg)]">
+              Player search failed: {playerError}
+            </p>
+          )}
+          {leg.type === "player" && missingTeams.length > 0 && (
+            <p className="text-[11px] text-[var(--color-text-muted)]">
+              Rosters for {missingTeams.join(", ")} did not load
+            </p>
           )}
           {leg.type === "player" && players.length > 0 && (
             <div className="flex flex-wrap gap-2">

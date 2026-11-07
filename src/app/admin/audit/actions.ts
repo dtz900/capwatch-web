@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { API_BASE } from "@/lib/config";
+import type { AdminSport } from "@/lib/admin-sports";
 
 function adminHeaders(): HeadersInit {
   const secret = process.env.CRON_SECRET;
@@ -20,13 +21,19 @@ export interface PickPatchInput {
   units?: number | null;
   player_id?: number | null;
   game_id?: string | null;
+  sport?: string;
+  stat_name?: string;
 }
 
 export type ActionResult =
   | { ok: true; capper_handle?: string | null }
   | { ok: false; error: string };
 
-async function call(path: string, init: RequestInit): Promise<ActionResult> {
+async function call(
+  path: string,
+  init: RequestInit,
+  opts: { revalidate?: boolean } = {},
+): Promise<ActionResult> {
   try {
     const res = await fetch(`${API_BASE}${path}`, init);
     if (!res.ok) {
@@ -40,11 +47,11 @@ async function call(path: string, init: RequestInit): Promise<ActionResult> {
     } catch {
       // Some endpoints may return non-JSON or empty bodies; not an error.
     }
-    revalidatePath("/admin/audit");
-    revalidatePath("/");
-    revalidatePath("/cappers");
-    if (capperHandle) {
-      revalidatePath(`/cappers/${capperHandle}`);
+    if (opts.revalidate !== false) {
+      revalidatePath("/admin/audit");
+      revalidatePath("/");
+      revalidatePath("/cappers");
+      if (capperHandle) revalidatePath(`/cappers/${capperHandle}`);
     }
     return { ok: true, capper_handle: capperHandle };
   } catch (err: unknown) {
@@ -91,19 +98,25 @@ export async function resolvePickShapedFlagAction(
   });
 }
 
-export async function patchPickAction(pickId: number, patch: PickPatchInput): Promise<ActionResult> {
+function patchRequest(pickId: number, patch: PickPatchInput): { path: string; init: RequestInit } | string {
   const cleaned: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(patch)) {
     if (v !== null && v !== undefined && v !== "") cleaned[k] = v;
   }
-  if (Object.keys(cleaned).length === 0) {
-    return { ok: false, error: "No fields to update" };
-  }
-  return call(`/api/admin/picks/${pickId}`, {
-    method: "PATCH",
-    headers: adminHeaders(),
-    body: JSON.stringify(cleaned),
-  });
+  if (Object.keys(cleaned).length === 0) return "No fields to update";
+  return {
+    path: `/api/admin/picks/${pickId}`,
+    init: { method: "PATCH", headers: adminHeaders(), body: JSON.stringify(cleaned) },
+  };
+}
+
+/** PATCH for the audit editors. It revalidates nothing: any revalidation
+ * re-renders the audit route and the edited pick could vanish from the queue.
+ * Terminal actions revalidate. */
+export async function patchPickFieldAction(pickId: number, patch: PickPatchInput): Promise<ActionResult> {
+  const req = patchRequest(pickId, patch);
+  if (typeof req === "string") return { ok: false, error: req };
+  return call(req.path, req.init, { revalidate: false });
 }
 
 export async function manualGradeAction(
@@ -189,7 +202,7 @@ export type AckResult =
 
 /** Acknowledge (triage-dismiss) audit rows. Either explicit pickIds, or
  * bulk by capper (clears that capper's settled book-rules-correct voids
- * in one shot -- the post-onboard/backfill action). */
+ * in one shot, the post-onboard/backfill action). */
 export async function ackAuditAction(input: {
   pickIds?: number[];
   capper?: string;
@@ -309,9 +322,32 @@ export interface PlayerSearchResult {
   position?: string | null;
 }
 
-/** sport=NFL searches nfl_rosters (ESPN athlete ids); anything else, mlb_players. */
-export async function searchPlayersAction(q: string, sport?: string): Promise<PlayerSearchResult[]> {
-  if (!q.trim()) return [];
+export type SearchOutcome<T> =
+  | { ok: true; results: T[]; missingTeams: string[] }
+  | { ok: false; error: string };
+
+/** The API `detail` when present, else `HTTP <status>`. */
+async function errorFromResponse(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+    if (typeof body.detail === "string" && body.detail) return body.detail;
+  } catch {
+    // body was not JSON; fall through to the status code
+  }
+  return `HTTP ${res.status}`;
+}
+
+function errorFromThrown(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/** sport=NFL searches nfl_rosters (ESPN athlete ids); anything else, mlb_players.
+ * Errors are returned, never swallowed into an empty list. */
+export async function searchPlayersAction(
+  q: string,
+  sport?: string,
+): Promise<SearchOutcome<PlayerSearchResult>> {
+  if (!q.trim()) return { ok: true, results: [], missingTeams: [] };
   try {
     const params = new URLSearchParams({ q: q.trim() });
     if (sport) params.set("sport", sport);
@@ -319,11 +355,14 @@ export async function searchPlayersAction(q: string, sport?: string): Promise<Pl
       `${API_BASE}/api/admin/players/search?${params.toString()}`,
       { headers: adminHeaders(), cache: "no-store" },
     );
-    if (!res.ok) return [];
-    const body = (await res.json()) as { results: PlayerSearchResult[] };
-    return body.results ?? [];
-  } catch {
-    return [];
+    if (!res.ok) return { ok: false, error: await errorFromResponse(res) };
+    const body = (await res.json()) as {
+      results?: PlayerSearchResult[];
+      missing_teams?: string[];
+    };
+    return { ok: true, results: body.results ?? [], missingTeams: body.missing_teams ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: errorFromThrown(err) };
   }
 }
 
@@ -331,6 +370,9 @@ export interface GameSearchResult {
   game_pk: number;
   away_team: string | null;
   home_team: string | null;
+  /** NCAAB only, when the platform sends them. */
+  away_team_id?: string | number | null;
+  home_team_id?: string | number | null;
   game_date: string | null;
   commence_time: string | null;
   /** Canonical doubleheader index from MLB Stats API. 1 for single games and
@@ -343,7 +385,7 @@ export async function searchGamesAction(
   date: string,
   team?: string,
   sport?: string,
-): Promise<GameSearchResult[]> {
+): Promise<SearchOutcome<GameSearchResult>> {
   try {
     const params = new URLSearchParams({ date });
     if (team) params.set("team", team);
@@ -352,10 +394,37 @@ export async function searchGamesAction(
       headers: adminHeaders(),
       cache: "no-store",
     });
-    if (!res.ok) return [];
-    const body = (await res.json()) as { results: GameSearchResult[] };
-    return body.results ?? [];
-  } catch {
-    return [];
+    if (!res.ok) return { ok: false, error: await errorFromResponse(res) };
+    const body = (await res.json()) as {
+      results?: GameSearchResult[];
+      missing_teams?: string[];
+    };
+    return { ok: true, results: body.results ?? [], missingTeams: body.missing_teams ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: errorFromThrown(err) };
+  }
+}
+
+export interface MarketDef {
+  stat_name: string;
+  role_required: string;
+  aliases: string[];
+  default_line: number | null;
+  takes_line: boolean;
+}
+
+export async function fetchMarketsAction(
+  sport: AdminSport,
+): Promise<{ ok: true; results: MarketDef[] } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/admin/markets?${new URLSearchParams({ sport })}`,
+      { headers: adminHeaders(), cache: "no-store" },
+    );
+    if (!res.ok) return { ok: false, error: await errorFromResponse(res) };
+    const body = (await res.json()) as { results?: MarketDef[] };
+    return { ok: true, results: body.results ?? [] };
+  } catch (err: unknown) {
+    return { ok: false, error: errorFromThrown(err) };
   }
 }

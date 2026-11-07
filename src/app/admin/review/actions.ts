@@ -155,7 +155,7 @@ export interface GameSearchResult {
 
 /**
  * Game-search helper for the review queue's inline picker. Hits the same
- * /api/admin/games/search endpoint the audit FixPanel uses; date is
+ * /api/admin/games/search endpoint the audit workbench uses; date is
  * required, team is an optional filter on the day's slate.
  */
 export async function searchGamesForReviewAction(
