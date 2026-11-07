@@ -1,14 +1,15 @@
+import type { ReactNode } from "react";
 import type { QueueRow } from "./labels";
 
 const isHttps = (u: string | null | undefined): u is string => !!u && u.startsWith("https://");
 
-export function TweetBlock({ p }: { p: QueueRow }) {
+export function TweetBlock({ p, renderText }: { p: QueueRow; renderText?: (text: string) => ReactNode }) {
   const media = (p.media_urls ?? []).filter(isHttps).slice(0, 4);
   return (
     <div className="mt-[18px] pl-4 py-3.5 border-l-2 border-[rgba(255,255,255,0.13)]">
       {p.tweet_text ? (
         <p className="text-[15.5px] font-semibold leading-[1.5] text-[var(--color-text)] whitespace-pre-wrap">
-          {p.tweet_text}
+          {renderText ? renderText(p.tweet_text) : p.tweet_text}
         </p>
       ) : (
         <p className="text-[13px] font-semibold text-[var(--color-text-muted)]">No tweet text on this pick.</p>

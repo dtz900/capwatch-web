@@ -14,6 +14,7 @@ export interface FieldState {
 }
 
 const NOT_BOUND = "Not bound";
+const REVIEW_NOT_BOUND = "Not bound. Approve needs a game. Pick it here or reject.";
 const NONE_ATTACHED = "None attached";
 const NO_NUMBER = "No number in the tweet";
 const NEXT_DAY = "Player was not in this game's box. Usually the tweet was for the next day.";
@@ -65,6 +66,10 @@ export interface StateOpts {
   gameLabel?: string | null;
   /** Markets failed to load: whether the pick takes a line is unknown, so it cannot be red. */
   marketsError?: boolean;
+  /** "review" relaxes the Game (parlay legs), Player and Line rules for the review queue. Default "audit". */
+  mode?: "audit" | "review";
+  /** Review mode: why the resolved player does not fit this game; makes Player red. */
+  playerMismatch?: string | null;
 }
 
 export function fieldStates(
@@ -72,16 +77,21 @@ export function fieldStates(
   markets: MarketDef[] | null,
   opts: StateOpts = {},
 ): FieldState[] {
-  const gameRed =
-    p.reason === "missing_game_id" || p.reason === "player_did_not_play" || p.game_id == null;
-  const gameNote = p.reason === "player_did_not_play" ? NEXT_DAY : NOT_BOUND;
+  const review = opts.mode === "review";
+  const gameRed = review
+    ? p.game_id == null && p.parlay_id == null
+    : p.reason === "missing_game_id" || p.reason === "player_did_not_play" || p.game_id == null;
+  const gameNote = review ? REVIEW_NOT_BOUND : p.reason === "player_did_not_play" ? NEXT_DAY : NOT_BOUND;
 
-  const playerRed =
-    p.reason === "missing_player_id" || (p.bet_kind === "player" && p.player_id == null);
+  const playerMismatch = review ? (opts.playerMismatch ?? null) : null;
+  const playerRed = review
+    ? playerMismatch != null
+    : p.reason === "missing_player_id" || (p.bet_kind === "player" && p.player_id == null);
   const marketRed = p.reason === "market_unhandled";
   const lineUnknown = !!opts.marketsError && p.line == null;
   const noLine = p.line == null ? lineNotNeeded(p, markets) : null;
   const lineRed =
+    !review &&
     noLine == null &&
     (p.reason === "missing_line" || (p.line == null && !opts.marketsError && takesLine(p, markets)));
 
@@ -93,7 +103,7 @@ export function fieldStates(
       label: "Player",
       value: p.player_name ?? (p.player_id != null ? `id ${p.player_id}` : null),
       red: playerRed,
-      note: playerRed ? NONE_ATTACHED : null,
+      note: playerRed ? (playerMismatch ?? NONE_ATTACHED) : null,
     });
   }
 
@@ -117,7 +127,7 @@ export function fieldStates(
     {
       key: "line",
       label: "Line",
-      value: p.line == null ? null : String(p.line),
+      value: p.line == null ? (review ? "Not stated" : null) : String(p.line),
       red: lineRed,
       note: lineRed ? NO_NUMBER : noLine ?? (lineUnknown ? "Markets unavailable" : null),
     },
