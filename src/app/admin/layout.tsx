@@ -9,7 +9,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <AdminNav />
-      {children}
+      <div className="admin-scroll">{children}</div>
     </>
   );
 }

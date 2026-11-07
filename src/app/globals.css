@@ -126,6 +126,31 @@ html, body {
   background: rgba(255, 255, 255, 0.16);
 }
 
+/* Admin pages: thin dark scrollbars on every scroll container below the layout. */
+.admin-scroll,
+.admin-scroll * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+.admin-scroll::-webkit-scrollbar,
+.admin-scroll *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.admin-scroll::-webkit-scrollbar-track,
+.admin-scroll *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-scroll::-webkit-scrollbar-thumb,
+.admin-scroll *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+.admin-scroll::-webkit-scrollbar-thumb:hover,
+.admin-scroll *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
 /* Tail or Fade: the hero lands collapsed to its title. The title bobs every
    few seconds as the "tap me" cue, and the table slides open beneath it. */
 @keyframes tof-bob {

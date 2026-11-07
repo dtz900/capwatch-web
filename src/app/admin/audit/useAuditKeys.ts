@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { keyToAction as genericKeyToAction, useAdminKeys, type KeyLike } from "../useAdminKeys";
+
+export type { KeyLike };
 
 export type AuditKeyAction =
   | "next"
@@ -14,14 +16,6 @@ export type AuditKeyAction =
   | "escape";
 
 export type GradeOutcome = "win" | "loss" | "push" | "void";
-
-interface KeyLike {
-  key: string;
-  ctrlKey?: boolean;
-  metaKey?: boolean;
-  altKey?: boolean;
-  target?: { tagName?: string; isContentEditable?: boolean; closest?: (sel: string) => unknown } | null;
-}
 
 const MAP: Record<string, AuditKeyAction> = {
   j: "next",
@@ -38,20 +32,9 @@ const MAP: Record<string, AuditKeyAction> = {
 /** Actions that keep firing while the key is held. */
 export const REPEATABLE: ReadonlySet<AuditKeyAction> = new Set(["next", "prev"]);
 
-const TYPING = new Set(["INPUT", "TEXTAREA", "SELECT"]);
-
 /** Pure mapping so the key table is testable without a DOM. */
 export function keyToAction(e: KeyLike): AuditKeyAction | null {
-  if (e.ctrlKey || e.metaKey || e.altKey) return null;
-  const t = e.target;
-  if (t && (TYPING.has((t.tagName ?? "").toUpperCase()) || t.isContentEditable)) return null;
-  const action = MAP[e.key.toLowerCase()] ?? null;
-  // Enter on a link or button belongs to that control.
-  if (action === "enter" && t) {
-    const tag = (t.tagName ?? "").toUpperCase();
-    if (tag === "A" || tag === "BUTTON" || t.closest?.("a,button")) return null;
-  }
-  return action;
+  return genericKeyToAction(e, MAP, "enter");
 }
 
 interface Handlers {
@@ -66,33 +49,18 @@ interface Handlers {
 }
 
 export function useAuditKeys(h: Handlers) {
-  const ref = useRef(h);
-  useEffect(() => {
-    ref.current = h;
+  useAdminKeys<AuditKeyAction>({
+    map: MAP,
+    repeatable: REPEATABLE,
+    enterAction: "enter",
+    enabled: h.enabled,
+    onAction: (action) => {
+      if (action === "enter") return h.onEnter();
+      if (action === "next") h.onNext();
+      else if (action === "prev") h.onPrev();
+      else if (action === "skip") h.onSkip();
+      else if (action === "escape") h.onEscape();
+      else h.onGrade(action.slice(6) as GradeOutcome);
+    },
   });
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const cur = ref.current;
-      if (!cur.enabled) return;
-      const action = keyToAction({
-        key: e.key,
-        ctrlKey: e.ctrlKey,
-        metaKey: e.metaKey,
-        altKey: e.altKey,
-        target: e.target as HTMLElement | null,
-      });
-      if (!action) return;
-      // Held J/K scrolls the queue; every other action fires once per press.
-      if (e.repeat && !REPEATABLE.has(action)) return;
-      if (action === "enter") {
-        if (cur.onEnter()) e.preventDefault();
-      } else if (action === "next") cur.onNext();
-      else if (action === "prev") cur.onPrev();
-      else if (action === "skip") cur.onSkip();
-      else if (action === "escape") cur.onEscape();
-      else cur.onGrade(action.slice(6) as GradeOutcome);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 }

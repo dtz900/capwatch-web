@@ -662,6 +662,8 @@ export interface ReviewQueueItem {
    * could not be bound by hand at all (David 2026-09-10: searching
    * "hunter" for Hunter Henry returned six MLB pitchers). */
   sport: string | null;
+  /** Id of the bound game (text in the API), null when unbound. */
+  game_id: string | null;
   /** ISO start time of the bound game, null when unbound. */
   game_commence_time: string | null;
   /** "AWY @ HOM" for the bound game, null when unbound. */
@@ -669,6 +671,30 @@ export interface ReviewQueueItem {
   /** Minutes the game had been RUNNING when the tweet posted (positive
    * int); null when pregame, unbound, or timestamps were unparsable. */
   game_started_minutes_before_post: number | null;
+  /** Full tweet text (the excerpt is truncated). */
+  tweet_text: string | null;
+  media_urls: string[];
+  player_team: string | null;
+  game_teams: { away: string; home: string } | null;
+}
+
+export interface RawSibling {
+  id: number;
+  selection: string | null;
+  odds_taken: number | null;
+  review_status: string;
+  parlay_id: number | null;
+}
+
+export interface RejectedPickShaped {
+  raw_id: number;
+  extraction_id: number;
+  capper_handle: string | null;
+  attempted_at: string | null;
+  rejection_reason: string | null;
+  has_media: boolean;
+  tweet_excerpt: string;
+  tweet_url: string | null;
 }
 
 export interface ReviewQueueResponse {
@@ -676,17 +702,36 @@ export interface ReviewQueueResponse {
   limit: number;
   offset: number;
   items: ReviewQueueItem[];
+  by_sport: Record<string, number>;
+  by_reason: Record<string, number>;
+  decided_today: number;
+  raw_siblings: Record<string, RawSibling[]>;
+  rejected_pick_shaped: RejectedPickShaped[];
+  blocked_protected_lookup: number | null;
+}
+
+export interface ReviewQueueParams {
+  limit: number;
+  offset: number;
+  sport?: string;
+  reason?: string;
+  sort: "newest" | "oldest";
 }
 
 /** Server-only. Lists picks parked in needs_review for admin approval. */
 export async function fetchReviewQueue(
-  limit: number = 100,
-  offset: number = 0,
+  params: ReviewQueueParams,
 ): Promise<ReviewQueueResponse> {
   const secret = process.env.CRON_SECRET;
   if (!secret) throw new Error("CRON_SECRET not set on server");
-  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-  const url = `${API_BASE}/api/admin/review-queue?${params}`;
+  const qs = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+    sort: params.sort,
+  });
+  if (params.sport) qs.set("sport", params.sport);
+  if (params.reason) qs.set("reason", params.reason);
+  const url = `${API_BASE}/api/admin/review-queue?${qs}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${secret}` },
     cache: "no-store",

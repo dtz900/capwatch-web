@@ -179,6 +179,8 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
         sort={sort}
         hiddenReasons={HIDDEN_REASON_CHIPS}
         buildHref={buildHref}
+        reasonLabel={REASON_LABEL}
+        reasonTitle="Reason"
       />
       <Workbench
         problems={rows}
