@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ADMIN_SPORTS, type AdminSport } from "@/lib/admin-sports";
-import { REASON_LABEL } from "./labels";
 
 export type BuildHref = (
   overrides: Partial<{
@@ -30,11 +29,13 @@ interface Props {
   sort: "newest" | "oldest";
   hiddenReasons: Set<string>;
   buildHref: BuildHref;
+  reasonLabel: Record<string, string>;
+  reasonTitle: string;
 }
 
 const chipBase = "rounded-full border px-[11px] py-1 text-[11.5px] font-bold whitespace-nowrap";
 
-export function SportTabs({ sport, by_sport, by_reason, total, reason, sort, hiddenReasons, buildHref }: Props) {
+export function SportTabs({ sport, by_sport, by_reason, total, reason, sort, hiddenReasons, buildHref, reasonLabel, reasonTitle }: Props) {
   const tabs = orderSportTabs(by_sport);
   const reasons = Object.entries(by_reason)
     .filter(([r]) => !hiddenReasons.has(r))
@@ -63,7 +64,7 @@ export function SportTabs({ sport, by_sport, by_reason, total, reason, sort, hid
       </div>
       <div className="ml-auto flex items-center gap-2">
         <span className="text-[10.5px] font-extrabold tracking-[0.14em] uppercase text-[var(--color-text-muted)] mr-1">
-          Reason
+          {reasonTitle}
         </span>
         <Link
           href={buildHref({ reason: "", offset: "" })}
@@ -85,7 +86,7 @@ export function SportTabs({ sport, by_sport, by_reason, total, reason, sort, hid
                 : "border-[var(--color-border)] text-[var(--color-text-soft)]"
             }`}
           >
-            {REASON_LABEL[r] ?? r}
+            {reasonLabel[r] ?? r}
             <b className="ml-1 font-extrabold text-[var(--color-text-muted)] tabular-nums">{n}</b>
           </Link>
         ))}

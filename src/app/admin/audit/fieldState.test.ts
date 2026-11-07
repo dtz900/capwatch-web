@@ -230,3 +230,28 @@ describe("line not needed", () => {
     expect(line.red).toBe(true);
   });
 });
+
+describe("fieldStates review mode", () => {
+  const base = problem();
+  it("unbound parlay leg is not red", () => {
+    const s = fieldStates({ ...base, game_id: null, parlay_id: 7 }, null, { mode: "review" });
+    expect(s.find((f) => f.key === "game")?.red).toBe(false);
+  });
+  it("unbound straight is red with the approve note", () => {
+    const s = fieldStates({ ...base, game_id: null, parlay_id: null }, null, { mode: "review" });
+    expect(s.find((f) => f.key === "game")?.note).toBe("Not bound. Approve needs a game. Pick it here or reject.");
+  });
+  it("player with no id is not red; mismatch note makes it red", () => {
+    const p = { ...base, bet_kind: "player", player_id: null, player_name: "P.J. Washington" };
+    expect(fieldStates(p, null, { mode: "review" }).find((f) => f.key === "player")?.red).toBe(false);
+    const s = fieldStates(p, null, { mode: "review", playerMismatch: "plays for DAL, not in Wizards @ Hawks. Wrong game?" });
+    expect(s.find((f) => f.key === "player")).toMatchObject({ red: true, note: "plays for DAL, not in Wizards @ Hawks. Wrong game?" });
+  });
+  it("NCAAB has no player row", () => {
+    expect(fieldStates({ ...base, sport: "NCAAB", bet_kind: "player" }, null, { mode: "review" }).some((f) => f.key === "player")).toBe(false);
+  });
+  it("line with no number reads Not stated and is never red", () => {
+    const l = fieldStates({ ...base, line: null }, null, { mode: "review" }).find((f) => f.key === "line");
+    expect(l).toMatchObject({ red: false, value: "Not stated" });
+  });
+});
