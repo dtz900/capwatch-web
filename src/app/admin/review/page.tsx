@@ -71,7 +71,9 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
 
   return (
     <main className="h-[calc(100vh-65px)] flex flex-col">
+      {/* Keyed by the query context so tab or page navigation remounts; a same-URL refresh keeps state. */}
       <ReviewWorkbench
+        key={`${sport ?? ""}|${reason ?? ""}|${sort}|${offset}`}
         rows={rows}
         counts={{
           held: allTotal,

@@ -40,10 +40,13 @@ export interface ReviewDetailProps {
 const KBD = "border border-[var(--color-border)] rounded px-[5px] text-[10px] font-bold text-[var(--color-text-soft)]";
 const START_VERB: Record<string, string> = { NBA: "tips", NCAAB: "tips", NFL: "kicks", MLB: "first pitch" };
 
-function TimingLine({ p, gameLabel }: { p: ReviewRow; gameLabel: string | null }) {
+function TimingLine({ p, gameLabel, rebound }: { p: ReviewRow; gameLabel: string | null; rebound: boolean }) {
   // Green "Pregame" needs evidence: a bound game and a loaded start time.
-  const verdict =
-    p.started_minutes != null ? (
+  // After a bind this session the loaded timing belongs to the old game, so it is unknown until refresh.
+  const stale = rebound && p.game_id != null;
+  const verdict = stale ? (
+    <span className="font-extrabold text-[var(--color-text-muted)]">Start time not loaded</span>
+  ) : p.started_minutes != null ? (
       <span className="font-extrabold text-[var(--color-neg)]">{`Started ${p.started_minutes} min before the tweet`}</span>
     ) : p.game_id == null ? (
       <span className="font-extrabold text-[var(--color-neg)]">No game bound</span>
@@ -56,7 +59,7 @@ function TimingLine({ p, gameLabel }: { p: ReviewRow; gameLabel: string | null }
   return (
     <div className="mt-3 text-[12.5px] font-semibold text-[var(--color-text-muted)]">
       {verdict}
-      {gameLabel && ` · ${gameLabel}${p.tip_label ? ` ${verb} ${p.tip_label} PT` : ""}`}
+      {gameLabel && ` · ${gameLabel}${p.tip_label && !stale ? ` ${verb} ${p.tip_label} PT` : ""}`}
       {p.posted_label && ` · tweeted ${p.posted_label} PT`}
     </div>
   );
@@ -144,7 +147,7 @@ export function ReviewDetail(props: ReviewDetailProps) {
         </div>
       </div>
 
-      <TimingLine p={p} gameLabel={gameLabel} />
+      <TimingLine p={p} gameLabel={gameLabel} rebound={hint?.game != null} />
       <TweetBlock p={p} renderText={markedTweet(p.selection)} />
       <FromThisTweet
         current={p}

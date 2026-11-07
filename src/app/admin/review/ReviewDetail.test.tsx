@@ -105,6 +105,18 @@ describe("ReviewDetail", () => {
     expect(screen.queryByText("77123")).toBeNull();
     expect(screen.getAllByText(/Celtics|BOS|Boston/i).length).toBeGreaterThan(0);
   });
+  it("treats timing as unknown after a rebind", () => {
+    render(
+      <ReviewDetail
+        {...props(row({ game_id: "9", tip_label: "10:00 AM", started_minutes: 42 }), {
+          hint: { game: { away_team: "Boston Celtics", home_team: "Miami Heat" } },
+        })}
+      />,
+    );
+    expect(screen.getByText("Start time not loaded")).toBeInTheDocument();
+    expect(screen.queryByText(/Started 42 min/)).toBeNull();
+    expect(screen.queryByText("Pregame")).toBeNull();
+  });
   it("lists held siblings with their own buttons and the tracked ones greyed", () => {
     const cur = row({ pick_id: 1, raw_id: 9 });
     const sib = row({ pick_id: 2, raw_id: 9, selection: "Moussa Diabate 6+ rebounds" });

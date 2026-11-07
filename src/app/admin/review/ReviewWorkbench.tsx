@@ -184,7 +184,7 @@ export function ReviewWorkbench({ rows: initial, counts, paging, newerHref, olde
               />
               <ReviewActionStrip
                 canApprove={actions.canApprove(current)}
-                started={current.started_minutes != null}
+                started={current.started_minutes != null && !flow.hints[current.pick_id]?.game}
                 pending={busy}
                 selected={selection.has(current.pick_id)}
                 onApprove={() => void actions.approve(current.pick_id)}
