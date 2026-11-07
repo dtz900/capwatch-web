@@ -20,7 +20,7 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const offset = Math.max(0, parseInt(sp.offset ?? "0", 10) || 0);
 
-  const data = await fetchReviewQueue(PAGE_SIZE, offset);
+  const data = await fetchReviewQueue({ limit: PAGE_SIZE, offset, sort: "newest" });
 
   const showingFrom = data.items.length === 0 ? 0 : offset + 1;
   const showingTo = Math.min(offset + data.items.length, data.total);
