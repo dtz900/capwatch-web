@@ -32,12 +32,32 @@ function signedOdds(odds: number | null): string | null {
   return odds > 0 ? `+${odds}` : String(odds);
 }
 
+/** The pick's market definition, when the sport's markets are loaded and match. */
+function marketDef(p: AuditProblem, markets: MarketDef[] | null): MarketDef | null {
+  if (!markets) return null;
+  const name = p.stat_name ?? p.market;
+  return markets.find((m) => m.stat_name === name) ?? null;
+}
+
 /** Unknown market list or no match: assume a line is needed. */
 function takesLine(p: AuditProblem, markets: MarketDef[] | null): boolean {
-  if (!markets) return true;
-  const name = p.stat_name ?? p.market;
-  const hit = markets.find((m) => m.stat_name === name);
+  const hit = marketDef(p, markets);
   return hit ? hit.takes_line : true;
+}
+
+/**
+ * A market the grader settles without a number: a moneyline (takes_line
+ * false) or a yes/no prop seeded with a default_line (triple_double at
+ * 0.5). The backend's "missing_line" reason is overridden for these; F5 ML
+ * picks sat under "Line missing" for months because it was not
+ * (David 2026-11-06: "first 5 ml doesnt have a line").
+ */
+export function lineNotNeeded(p: AuditProblem, markets: MarketDef[] | null): string | null {
+  const hit = marketDef(p, markets);
+  if (!hit) return null;
+  if (!hit.takes_line) return "No line for this market";
+  if (hit.default_line != null) return `Defaults to ${hit.default_line}`;
+  return null;
 }
 
 export interface StateOpts {
@@ -60,7 +80,10 @@ export function fieldStates(
     p.reason === "missing_player_id" || (p.bet_kind === "player" && p.player_id == null);
   const marketRed = p.reason === "market_unhandled";
   const lineUnknown = !!opts.marketsError && p.line == null;
-  const lineRed = p.reason === "missing_line" || (p.line == null && !opts.marketsError && takesLine(p, markets));
+  const noLine = p.line == null ? lineNotNeeded(p, markets) : null;
+  const lineRed =
+    noLine == null &&
+    (p.reason === "missing_line" || (p.line == null && !opts.marketsError && takesLine(p, markets)));
 
   const states: FieldState[] = [];
 
@@ -96,7 +119,7 @@ export function fieldStates(
       label: "Line",
       value: p.line == null ? null : String(p.line),
       red: lineRed,
-      note: lineRed ? NO_NUMBER : lineUnknown ? "Markets unavailable" : null,
+      note: lineRed ? NO_NUMBER : noLine ?? (lineUnknown ? "Markets unavailable" : null),
     },
   );
 
