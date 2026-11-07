@@ -41,7 +41,7 @@ interface Opts<A extends string> {
   repeatable: ReadonlySet<A>;
   enterAction: A | null;
   enabled: boolean;
-  /** For the enter action, returning true suppresses the browser default. */
+  /** Returning true suppresses the browser default (Enter, or Space scrolling). */
   onAction: (a: A) => boolean | void;
 }
 
@@ -69,7 +69,7 @@ export function useAdminKeys<A extends string>(opts: Opts<A>) {
       if (!action) return;
       if (e.repeat && !cur.repeatable.has(action)) return;
       const acted = cur.onAction(action);
-      if (action === cur.enterAction && acted === true) e.preventDefault();
+      if (acted === true) e.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

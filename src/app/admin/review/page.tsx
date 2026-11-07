@@ -97,6 +97,7 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
         newerHref={hasNewer ? buildHref({ offset: String(Math.max(0, offset - PAGE_SIZE)) }) : null}
         olderHref={hasOlder ? buildHref({ offset: String(offset + PAGE_SIZE) }) : null}
         sportLabel={sport ?? "any sport"}
+        residue={data.rejected_pick_shaped ?? []}
       />
     </main>
   );
