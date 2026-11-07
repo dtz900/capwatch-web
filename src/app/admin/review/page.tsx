@@ -1,9 +1,17 @@
-import Link from "next/link";
 import { fetchReviewQueue } from "@/lib/api";
-import { ReviewQueueTable } from "./ReviewQueueTable";
+import { parseAdminSport } from "@/lib/admin-sports";
+import { SportTabs } from "../audit/SportTabs";
+import { REVIEW_REASON_LABEL } from "./reviewLabels";
+import { toReviewRow } from "./reviewRow";
+import { ReviewWorkbench } from "./ReviewWorkbench";
 
 interface PageProps {
-  searchParams: Promise<{ offset?: string }>;
+  searchParams: Promise<{
+    sport?: string;
+    reason?: string;
+    sort?: string;
+    offset?: string;
+  }>;
 }
 
 export const metadata = {
@@ -15,100 +23,81 @@ export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
+const NO_HIDDEN_REASONS = new Set<string>();
 
 export default async function AdminReviewPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const offset = Math.max(0, parseInt(sp.offset ?? "0", 10) || 0);
+  const reason = (sp.reason ?? "").trim() || undefined;
+  const sort: "oldest" | "newest" = sp.sort === "oldest" ? "oldest" : "newest";
+  const sport = parseAdminSport(sp.sport);
 
-  const data = await fetchReviewQueue({ limit: PAGE_SIZE, offset, sort: "newest" });
+  const raw = await fetchReviewQueue({ limit: PAGE_SIZE, offset, sport, reason, sort });
+  // Tolerate an API that predates the workbench fields (deploy order): empty maps and zero counts.
+  const data = {
+    ...raw,
+    by_sport: raw.by_sport ?? {},
+    by_reason: raw.by_reason ?? {},
+    raw_siblings: raw.raw_siblings ?? {},
+    decided_today: raw.decided_today ?? 0,
+  };
 
-  const showingFrom = data.items.length === 0 ? 0 : offset + 1;
-  const showingTo = Math.min(offset + data.items.length, data.total);
-
-  return (
-    <>
-      <main className="max-w-[1240px] mx-auto px-7 pb-16">
-        <header className="pt-10 pb-7">
-          <div className="text-[10px] uppercase tracking-[0.20em] text-[var(--color-text-muted)] font-bold mb-2">
-            Admin · review queue
-          </div>
-          <h1 className="text-[32px] font-extrabold tracking-[-0.02em] leading-none">
-            Picks awaiting review
-          </h1>
-          <p className="text-[13px] text-[var(--color-text-soft)] font-medium mt-2 max-w-[68ch]">
-            Parsed picks the system flagged as suspicious shape (info-dump
-            tweets, probability sheets, sims output). They are stored but not
-            published to the public leaderboard until you approve. Reject if
-            the tweet wasn&apos;t actually a bet declaration.
-          </p>
-        </header>
-
-        <section className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-          <Stat label="In queue" value={data.total} tone={data.total > 0 ? "neg" : "neutral"} />
-          <Stat label="Showing" value={data.items.length} tone="neutral" />
-          <Stat label="Page size" value={PAGE_SIZE} tone="neutral" />
-        </section>
-
-        <ReviewQueueTable items={data.items} />
-
-        <div className="flex items-center justify-between px-4 py-3 mt-4 border-t border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] font-medium">
-          <div>
-            Showing {showingFrom}-{showingTo} of {data.total}
-          </div>
-          <div className="flex items-center gap-2">
-            {offset > 0 && (
-              <Link
-                href={`/admin/review?offset=${Math.max(0, offset - PAGE_SIZE)}`}
-                className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] text-[var(--color-text-soft)] text-[11px] font-bold"
-              >
-                ← Newer
-              </Link>
-            )}
-            {offset + data.items.length < data.total && (
-              <Link
-                href={`/admin/review?offset=${offset + PAGE_SIZE}`}
-                className="px-3 py-1 rounded-md bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] text-[var(--color-text-soft)] text-[11px] font-bold"
-              >
-                Older →
-              </Link>
-            )}
-          </div>
-        </div>
-
-        <footer className="flex items-center justify-between py-7 pb-2 mt-6 text-xs text-[var(--color-text-muted)] font-medium">
-          <div>
-            Live data. Approve promotes to auto_approved + refreshes capper aggregates. Reject
-            marks rejected, drops any existing grade, and refreshes aggregates.
-          </div>
-        </footer>
-      </main>
-    </>
+  const now = new Date();
+  const rows = data.items.map((it) =>
+    toReviewRow(it, it.raw_id != null ? (data.raw_siblings[String(it.raw_id)] ?? []) : [], now),
   );
-}
 
-function Stat({
-  label,
-  value,
-  tone = "neutral",
-}: {
-  label: string;
-  value: number;
-  tone?: "pos" | "neg" | "neutral";
-}) {
-  const color =
-    tone === "pos"
-      ? "text-[var(--color-pos)]"
-      : tone === "neg"
-        ? "text-[var(--color-neg)]"
-        : "text-[var(--color-text)]";
+  const buildHref = (
+    overrides: Partial<{ reason: string; offset: string; sort: string; sport: string }>,
+  ) => {
+    const params = new URLSearchParams();
+    const r = overrides.reason ?? reason ?? "";
+    const o = overrides.offset ?? "";
+    // Newest is the default, so only encode "oldest".
+    const s = overrides.sort ?? (sort === "oldest" ? "oldest" : "");
+    const spo = overrides.sport ?? sport ?? "";
+    if (r) params.set("reason", r);
+    if (o) params.set("offset", o);
+    if (s) params.set("sort", s);
+    if (spo) params.set("sport", spo);
+    const qs = params.toString();
+    return qs ? `/admin/review?${qs}` : "/admin/review";
+  };
+
+  const bySportTotal = Object.values(data.by_sport).reduce((a, b) => a + b, 0);
+  const allTotal = bySportTotal || data.total;
+  const hasNewer = offset > 0;
+  const hasOlder = offset + data.items.length < data.total;
+
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.015)] px-4 py-3">
-      <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)] font-bold mb-1.5">
-        {label}
-      </div>
-      <div className={`font-extrabold tabular-nums leading-none tracking-[-0.02em] text-[22px] ${color}`}>
-        {value}
-      </div>
-    </div>
+    <main className="h-[calc(100vh-65px)] flex flex-col">
+      <ReviewWorkbench
+        rows={rows}
+        counts={{
+          held: allTotal,
+          pickShaped: (data.rejected_pick_shaped ?? []).length,
+          blocked: data.blocked_protected_lookup,
+          decided: data.decided_today,
+        }}
+        tabs={
+          <SportTabs
+            sport={sport}
+            by_sport={data.by_sport}
+            by_reason={data.by_reason}
+            total={allTotal}
+            reason={reason}
+            sort={sort}
+            hiddenReasons={NO_HIDDEN_REASONS}
+            buildHref={buildHref}
+            reasonLabel={REVIEW_REASON_LABEL}
+            reasonTitle="Held because"
+          />
+        }
+        paging={{ offset, pageSize: PAGE_SIZE, total: data.total }}
+        newerHref={hasNewer ? buildHref({ offset: String(Math.max(0, offset - PAGE_SIZE)) }) : null}
+        olderHref={hasOlder ? buildHref({ offset: String(offset + PAGE_SIZE) }) : null}
+        sportLabel={sport ?? "any sport"}
+      />
+    </main>
   );
 }
