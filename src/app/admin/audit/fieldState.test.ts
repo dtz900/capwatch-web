@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AuditProblem } from "@/lib/api";
 import type { MarketDef } from "./actions";
-import { fieldStates, isStrayNcaabProp, primaryLabel } from "./fieldState";
+import { effectiveStates, fieldStates, isStrayNcaabProp, primaryLabel } from "./fieldState";
 
 function problem(over: Partial<AuditProblem> = {}): AuditProblem {
   return {
@@ -183,5 +183,16 @@ describe("fieldStates game label and markets error", () => {
       (s) => s.key === "line",
     );
     expect(line?.red).toBe(true);
+  });
+});
+
+describe("effectiveStates fixed notes", () => {
+  it("a fixed field drops its red-state note but keeps data notes", () => {
+    const p = problem({ reason: "missing_game_id", game_id: "5", odds_taken: null });
+    const states = effectiveStates({ ...p, game_id: null }, null, ["game", "odds"], null);
+    const game = states.find((s) => s.key === "game");
+    expect(game?.fixed).toBe(true);
+    expect(game?.note).toBeNull();
+    expect(states.find((s) => s.key === "odds")?.note).toBe("Not stated");
   });
 });

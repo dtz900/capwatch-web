@@ -142,6 +142,7 @@ export function effectiveStates(
     if (s.key === "market" && marketRecheck) {
       return { ...s, red: true, fixed: false, note: `Check for ${marketRecheck}` };
     }
-    return fixedKeys.includes(s.key) ? { ...s, red: false, fixed: true } : s;
+    // The note explained the red state; a data note ("Not stated") stays.
+    return fixedKeys.includes(s.key) ? { ...s, red: false, fixed: true, note: s.red ? null : s.note } : s;
   });
 }
