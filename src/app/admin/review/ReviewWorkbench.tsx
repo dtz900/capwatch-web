@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { ReviewDetail } from "./ReviewDetail";
 import { ReviewHeader } from "./ReviewHeader";
 import { ReviewQueue } from "./ReviewQueue";
 import { groupSizes, type ReviewRow } from "./reviewRow";
@@ -24,6 +25,11 @@ const EMPTY: ReadonlySet<number> = new Set<number>();
 export function ReviewWorkbench({ rows, counts, paging, newerHref, olderHref, sportLabel, tabs, bucket = null }: Props) {
   const [selectedId, setSelectedId] = useState<number | null>(rows[0]?.pick_id ?? null);
   const current = rows.find((r) => r.pick_id === selectedId) ?? null;
+  const heldSiblings = current
+    ? [current, ...rows.filter((r) => r.raw_id != null && r.raw_id === current.raw_id && r.pick_id !== current.pick_id)]
+    : [];
+  const heldIds = new Set(rows.map((r) => r.pick_id));
+  const tracked = current ? current.raw_siblings.filter((s) => !heldIds.has(s.id)) : [];
   return (
     <>
       <ReviewHeader
@@ -58,11 +64,25 @@ export function ReviewWorkbench({ rows, counts, paging, newerHref, olderHref, sp
         />
         <div className="min-h-0 overflow-y-auto p-6">
           {current && (
-            <pre className="whitespace-pre-wrap text-[13px] text-[var(--color-text-soft)]">
-              {current.selection}
-              {"\n\n"}
-              {current.tweet_text}
-            </pre>
+            <ReviewDetail
+              p={current}
+              index={rows.findIndex((r) => r.pick_id === current.pick_id)}
+              total={rows.length}
+              markets={null}
+              hint={undefined}
+              pending={false}
+              fixedKeys={[]}
+              onPatch={async () => {}}
+              onRetryMarkets={noop}
+              heldSiblings={heldSiblings}
+              tracked={tracked}
+              groupSelected={false}
+              onApprove={noop}
+              onReject={noop}
+              onApproveAll={noop}
+              onRejectAll={noop}
+              onSelectGroup={noop}
+            />
           )}
         </div>
       </div>
