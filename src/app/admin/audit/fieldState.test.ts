@@ -196,3 +196,37 @@ describe("effectiveStates fixed notes", () => {
     expect(states.find((s) => s.key === "odds")?.note).toBe("Not stated");
   });
 });
+
+describe("line not needed", () => {
+  const mk = (over: Partial<MarketDef>): MarketDef => ({
+    stat_name: "x", role_required: "game", aliases: [], default_line: null, takes_line: true, ...over,
+  });
+  const lineOf = (p: AuditProblem, markets: MarketDef[]) =>
+    fieldStates(p, markets).find((f) => f.key === "line")!;
+
+  it("missing_line on a moneyline is not red", () => {
+    const line = lineOf(
+      problem({ reason: "missing_line", line: null, stat_name: "first_5_win", market: "f5_ml" }),
+      [mk({ stat_name: "first_5_win", takes_line: false })],
+    );
+    expect(line.red).toBe(false);
+    expect(line.note).toBe("No line for this market");
+  });
+
+  it("missing_line on a default-line prop is not red and says the default", () => {
+    const line = lineOf(
+      problem({ reason: "missing_line", line: null, stat_name: "triple_double", bet_kind: "player", player_id: 1 }),
+      [mk({ stat_name: "triple_double", role_required: "player", default_line: 0.5 })],
+    );
+    expect(line.red).toBe(false);
+    expect(line.note).toBe("Defaults to 0.5");
+  });
+
+  it("missing_line on a market that takes a line stays red", () => {
+    const line = lineOf(
+      problem({ reason: "missing_line", line: null, stat_name: "total", market: "total" }),
+      [mk({ stat_name: "total" })],
+    );
+    expect(line.red).toBe(true);
+  });
+});
