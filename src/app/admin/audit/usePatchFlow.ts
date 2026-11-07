@@ -67,7 +67,7 @@ export function usePatchFlow(problems: QueueRow[], applyToSiblings: boolean, sel
   const [seen, setSeen] = useState(problems);
   if (seen !== problems) {
     setSeen(problems);
-    const idKey = (rs: QueueRow[]) => rs.map((r) => r.pick_id).sort((x, y) => x - y).join(",");
+    const idKey = (rs: QueueRow[]) => rs.map((r) => r.pick_id).join(",");
     if (idKey(problems) !== idKey(rows)) {
       const local = new Map(rows.map((r) => [r.pick_id, r]));
       const next = problems.map((r) => local.get(r.pick_id) ?? r);

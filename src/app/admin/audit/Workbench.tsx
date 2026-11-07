@@ -159,7 +159,7 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
             onRetryMarkets={retryMarkets}
             hint={flow.hints[selected.pick_id]}
             pending={flow.pending}
-            onPatch={(patch, msg, propagate) => flow.handlePatch(selected.pick_id, patch, msg, propagate)}
+            onPatch={(patch, msg, propagate, hint) => flow.handlePatch(selected.pick_id, patch, msg, propagate, hint)}
           />
         ) : (
           <div className="px-8 py-[60px] text-[var(--color-text-muted)]">{pickIdValue !== undefined ? `No pick #${pickIdValue} found.` : emptyQueueCopy(sportLabel)}

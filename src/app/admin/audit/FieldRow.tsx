@@ -44,7 +44,14 @@ export function FieldRow({ state, open, onToggle, children }: Props) {
       {state.red ? (
         <span className="text-[11.5px] font-extrabold text-[var(--color-neg)]">Needs fixing</span>
       ) : state.fixed ? (
-        <span className="text-[11.5px] font-extrabold text-[var(--color-pos)]">Fixed</span>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="text-[11.5px] font-extrabold text-[var(--color-pos)] hover:opacity-80"
+        >
+          Fixed
+        </button>
       ) : (
         <button
           type="button"

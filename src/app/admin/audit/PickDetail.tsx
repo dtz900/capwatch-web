@@ -33,7 +33,7 @@ export interface PickDetailProps {
   hint: PickHint | undefined;
   pending: boolean;
   onRetryMarkets: () => void;
-  onPatch: (patch: PickPatchInput, okMessage: string, propagate?: boolean) => Promise<void>;
+  onPatch: (patch: PickPatchInput, okMessage: string, propagate?: boolean, hint?: PickHint) => Promise<void>;
 }
 
 const KBD = "border border-[var(--color-border)] rounded px-[5px] text-[10px] font-bold text-[var(--color-text-soft)]";

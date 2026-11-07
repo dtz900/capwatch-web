@@ -168,4 +168,15 @@ describe("usePatchFlow", () => {
     rerender({ problems: [row(2)] });
     expect(result.current.rows.map((r) => r.pick_id)).toEqual([2]);
   });
+
+  it("adopts a new order of the same ids and keeps local edits", async () => {
+    patchMock.mockResolvedValue({ ok: true });
+    const { result, rerender } = setup([row(1), row(2), row(3)]);
+    await act(async () => {
+      await result.current.handlePatch(1, { line: 4.5 }, "Line set");
+    });
+    rerender({ problems: [row(3), row(2), row(1)] });
+    expect(result.current.rows.map((r) => r.pick_id)).toEqual([3, 2, 1]);
+    expect(result.current.rows[2].line).toBe(4.5);
+  });
 });
