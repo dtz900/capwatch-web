@@ -6,7 +6,7 @@
  */
 import { formatPickText, inferMarketBucket, isFirstHalf, pickTeamSide } from "./bet-format";
 import { ncaabLogoUrlForId, ncaabTeam, ncaabTeamLogoUrl, legibleTeamColor } from "./ncaab-teams";
-import type { SlateGame, SlatePick } from "./types";
+import type { Outcome, SlateGame, SlatePick } from "./types";
 
 export type NcaabGroup =
   | "SPREAD"
@@ -126,10 +126,41 @@ export type SideLabel = SideCount & {
   note?: string;
 };
 
+/** Which side of a market the final score settled: left (away / over), right (home / under), or a push. */
+export type MarketResult = "left" | "right" | "push";
+
 export interface MarketRow {
   label: "SPREAD" | "TOTAL";
   left: SideLabel;
   right: SideLabel;
+  /** Settled from the final score and the line on the card; null until the game is final or when there is no line. */
+  result: MarketResult | null;
+}
+
+/**
+ * Spread result for the away side at `spreadLeft` (the away line as the card
+ * shows it: away -2 is -2). Away covers when its margin beats the line.
+ */
+export function spreadResult(awayScore: number, homeScore: number, spreadLeft: number): MarketResult {
+  const adj = awayScore - homeScore + spreadLeft;
+  if (adj === 0) return "push";
+  return adj > 0 ? "left" : "right";
+}
+
+/** Total result: left is Over, right is Under. */
+export function totalResult(awayScore: number, homeScore: number, totalLine: number): MarketResult {
+  const sum = awayScore + homeScore;
+  if (sum === totalLine) return "push";
+  return sum > totalLine ? "left" : "right";
+}
+
+export type Winner = "away" | "home" | "tie";
+
+/** Winner of a final game with both scores in; null otherwise. */
+export function gameWinner(game: SlateGame): Winner | null {
+  if (game.game_state !== "final" || game.away_score == null || game.home_score == null) return null;
+  if (game.away_score === game.home_score) return "tie";
+  return game.away_score > game.home_score ? "away" : "home";
 }
 
 /** Most common value; the first one seen wins a tie. Null when empty. */
@@ -186,12 +217,18 @@ export interface BackRow {
   /** "-110 · 1u", "NO PRICE", or "PARLAY". */
   price: string;
   parlay: boolean;
+  /** Graded result, null while pending. */
+  outcome: Outcome | null;
+  profit: number | null;
 }
 
 export interface BiggestBet {
   units: string;
   bet: string;
   who: string;
+  /** Graded result, null while pending. */
+  outcome: Outcome | null;
+  profit: number | null;
 }
 
 export interface NcaabCard {
@@ -205,6 +242,11 @@ export interface NcaabCard {
   homeLogo: string | null;
   awayColor: string;
   homeColor: string;
+  /** Scores are shown once the game has tipped; null before. */
+  awayScore: number | null;
+  homeScore: number | null;
+  /** Set once the game is final with both scores in. */
+  winner: Winner | null;
   /** Distinct cappers with any pick on the game. */
   cappers: number;
   /** Pick rows on the card back. */
@@ -259,15 +301,21 @@ export function buildCard(game: SlateGame): NcaabCard {
     value == null
       ? { ...tally, text: name, note: "no line" }
       : { ...tally, text: `${name} ${signed ? fmtLine(value) : value}` };
+  // Results settle from the final score against the line the card shows, so
+  // the check mark always agrees with the number beside it.
+  const winner = gameWinner(game);
+  const scored = winner != null && game.away_score != null && game.home_score != null;
   const spread: MarketRow = {
     label: "SPREAD",
     left: label(spreadTally.left, away, spreadLeft, true),
     right: label(spreadTally.right, home, spreadLeft == null ? null : -spreadLeft, true),
+    result: scored && spreadLeft != null ? spreadResult(game.away_score as number, game.home_score as number, spreadLeft) : null,
   };
   const totalRow: MarketRow = {
     label: "TOTAL",
     left: label(totalTally.left, "Over", totalLine, false),
     right: label(totalTally.right, "Under", totalLine, false),
+    result: scored && totalLine != null ? totalResult(game.away_score as number, game.home_score as number, totalLine) : null,
   };
 
   const textCtx = { awayTeam: game.away_team, homeTeam: game.home_team, sport: "NCAAB" as const, awayName: game.away_name, homeName: game.home_name };
@@ -293,7 +341,9 @@ export function buildCard(game: SlateGame): NcaabCard {
       top = p;
     }
   }
-  const biggest: BiggestBet | null = top ? { units: fmtUnits(top.stake_units), bet: betText(top), who: handleOf(top) } : null;
+  const biggest: BiggestBet | null = top
+    ? { units: fmtUnits(top.stake_units), bet: betText(top), who: handleOf(top), outcome: top.outcome, profit: top.profit_units }
+    : null;
 
   const count = (pred: (c: ClassifiedPick) => boolean) => classified.filter(pred).length;
   const chips: string[] = [];
@@ -319,6 +369,8 @@ export function buildCard(game: SlateGame): NcaabCard {
         bet: betText(c.pick),
         price: parlay ? "PARLAY" : `${fmtPrice(c.pick.odds_taken)}${units}`,
         parlay,
+        outcome: c.pick.outcome,
+        profit: c.pick.profit_units,
       });
     });
   }
@@ -337,6 +389,9 @@ export function buildCard(game: SlateGame): NcaabCard {
     homeLogo: ncaabLogoUrlForId(game.home_team_id) ?? ncaabTeamLogoUrl(home),
     awayColor: legibleTeamColor(game.away_color ?? awayRow?.color),
     homeColor: legibleTeamColor(game.home_color ?? homeRow?.color),
+    awayScore: game.game_state && game.game_state !== "scheduled" ? game.away_score : null,
+    homeScore: game.game_state && game.game_state !== "scheduled" ? game.home_score : null,
+    winner,
     cappers: new Set(game.picks.map((p) => p.capper_id)).size,
     pickCount: game.picks.length,
     spread,
