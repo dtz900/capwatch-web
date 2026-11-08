@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import "./ncaab-teams-register";
 import { NCAAB_FIXTURE_GAMES } from "@/app/dev/ncaab-slate/fixture";
-import { buildCard, classifyPick, fmtLine, orderGames, splitBoard, tallySides } from "./ncaab-slate";
+import { buildCard, classifyPick, fmtLine, gameWinner, orderGames, splitBoard, spreadResult, tallySides, totalResult } from "./ncaab-slate";
 import { formatPickText } from "./bet-format";
 import type { SlateGame, SlatePick } from "./types";
 
@@ -138,5 +138,44 @@ describe("line fallback when the market is missing", () => {
     expect(c.spread.left.text).toBe("PUR -4");
     expect(c.spread.right.text).toBe("ILL +4");
     expect(c.total.left).toMatchObject({ text: "Over", note: "no line" });
+  });
+});
+
+describe("final score settles the card", () => {
+  it("spread and total results follow the line the card shows", () => {
+    expect(spreadResult(88, 89, -2)).toBe("right"); // VCU -2 lost by 1: MEM +2 covers
+    expect(spreadResult(90, 56, -29)).toBe("left");
+    expect(spreadResult(70, 68, -2)).toBe("push");
+    expect(totalResult(88, 89, 160)).toBe("left");
+    expect(totalResult(56, 90, 153.5)).toBe("right");
+    expect(totalResult(70, 70, 140)).toBe("push");
+  });
+
+  it("a final game carries scores, a winner and settled markets; a scheduled game carries none", () => {
+    const final = buildCard(game(
+      [base({ capper_id: 1, outcome: "W", profit_units: 0.91, stake_units: 2 })],
+      { game_state: "final", away_score: 80, home_score: 70 },
+    ));
+    expect(final).toMatchObject({ awayScore: 80, homeScore: 70, winner: "away" });
+    expect(final.spread.result).toBe("left"); // MCN -2 wins by 10
+    expect(final.total.result).toBe("left"); // 150 over 139
+    expect(final.biggest).toMatchObject({ outcome: "W", profit: 0.91 });
+    expect(final.rows[0]).toMatchObject({ outcome: "W", profit: 0.91 });
+
+    const pre = buildCard(game([base({})]));
+    expect(pre).toMatchObject({ awayScore: null, homeScore: null, winner: null });
+    expect(pre.spread.result).toBeNull();
+    expect(pre.total.result).toBeNull();
+  });
+
+  it("a live game shows scores but settles nothing; a final with no line settles nothing", () => {
+    const live = buildCard(game([], { game_state: "in_progress", away_score: 18, home_score: 22 }));
+    expect(live).toMatchObject({ awayScore: 18, homeScore: 22, winner: null });
+    expect(live.spread.result).toBeNull();
+    const noLine = buildCard(game([], { game_state: "final", away_score: 80, home_score: 70, market: { spread_home: null, total: null, source: null } }));
+    expect(noLine.winner).toBe("away");
+    expect(noLine.spread.result).toBeNull();
+    expect(noLine.total.result).toBeNull();
+    expect(gameWinner(game([], { game_state: "final", away_score: 70, home_score: 70 }))).toBe("tie");
   });
 });
