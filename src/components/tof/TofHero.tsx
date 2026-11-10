@@ -515,7 +515,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
 
       <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
       <div>
-      <div className="tof-fold-inner mx-auto grid max-w-[1240px] grid-cols-1 gap-8 pt-6 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start" inert={!unfolded}>
+      <div className="tof-fold-inner mx-auto grid max-w-[1240px] grid-cols-1 gap-8 pt-6 lg:grid-cols-[280px_minmax(0,1fr)_340px] lg:items-start xl:max-w-[1340px] xl:grid-cols-[280px_minmax(0,1fr)_400px]" inert={!unfolded}>
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
           <div className="rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-4">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">The game</div>
