@@ -96,6 +96,26 @@ export default function Methodology() {
           <li>Futures, season-long, and award bets that don&apos;t resolve on a single game</li>
         </ul>
 
+        <h2 id="coverage" className="text-[20px] font-bold mt-9 mb-3 scroll-mt-24">What we cover by sport</h2>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          Coverage is not the same in every league. We only track a market when we can grade it
+          the same way for every capper.
+        </p>
+        <ul className="list-disc list-inside text-[var(--color-text-soft)] space-y-2 leading-relaxed mb-4">
+          <li>
+            <span className="font-semibold text-[var(--color-text)]">MLB, NFL and NBA:</span> moneylines,
+            spreads and run lines, totals, team totals, player props and parlays
+          </li>
+          <li>
+            <span className="font-semibold text-[var(--color-text)]">College basketball:</span> main
+            markets only. Spreads, moneylines, totals and team totals, for the full game or a half
+          </li>
+        </ul>
+        <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
+          College basketball player props are not tracked. A college parlay that includes a player
+          prop is left off the record entirely instead of being graded on its remaining legs.
+        </p>
+
         <h2 className="text-[20px] font-bold mt-9 mb-3">How grading works</h2>
         <p className="text-[var(--color-text-soft)] leading-relaxed mb-4">
           Once a game finalizes, every pick tied to it is graded against the box score. A win pays

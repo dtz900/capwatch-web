@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { TopNav } from "@/components/nav/TopNav";
 import { SlateSkeleton } from "@/components/slate/SlateSkeleton";
@@ -464,6 +465,16 @@ async function SlateBoard({ p }: { p: SlateParams }) {
                     ? "Games are ranked by how many sharps are on them. Lines are Pinnacle's main line; the numbers are sharps on each side. Tap a game to see every pick."
                     : `${rankCopy} Parlay legs route to the team they back but do not count toward the season rank.`}
                 </p>
+                {isNcaab && (
+                  <p className="text-[12px] text-[var(--color-text-muted)] font-medium mt-2 max-w-[640px]">
+                    <span className="font-bold text-[var(--color-text-soft)]">Main markets only.</span>{" "}
+                    We track college basketball spreads, moneylines, totals and team totals. Player props are
+                    not tracked.{" "}
+                    <Link href="/methodology#coverage" className="underline underline-offset-2 hover:text-[var(--color-text-soft)]">
+                      What we cover
+                    </Link>
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {!isNfl && <DateToggle current={dateParam} />}
