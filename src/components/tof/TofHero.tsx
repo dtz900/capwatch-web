@@ -510,12 +510,12 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const state: "loading" | "no-hand" | "playable" | "spectator" = data === null ? "loading" : !hand ? "no-hand" : open.length > 0 ? "playable" : "spectator";
 
   return (
-    <section className="w-full border-b border-[var(--color-border)] px-[max(16px,calc(50%-620px))] pb-3 pt-3 transition-[padding] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
+    <section className="w-full border-b border-[var(--color-border)] px-[max(16px,calc(50%-620px))] pb-3 pt-3 transition-[padding] xl:px-[max(16px,calc(50%-640px))] 2xl:px-[max(16px,calc(50%-670px))] duration-500 data-[open=true]:pb-10 data-[open=true]:pt-6 data-[open=true]:sm:pb-12 data-[open=true]:sm:pt-7" style={{ background: FELT }} data-open={unfolded}>
       <TofTitle open={unfolded} onToggle={toggleFold} prize={prize} />
 
       <div className="tof-fold" data-open={unfolded} data-settled={settled} id="tof-table">
       <div>
-      <div className="tof-fold-inner mx-auto grid max-w-[1240px] grid-cols-1 gap-8 pt-6 lg:grid-cols-[280px_minmax(0,1fr)_340px] lg:items-start xl:max-w-[1340px] xl:grid-cols-[280px_minmax(0,1fr)_400px]" inert={!unfolded}>
+      <div className="tof-fold-inner mx-auto grid max-w-[1240px] grid-cols-1 gap-8 pt-6 lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-start xl:max-w-[1280px] xl:grid-cols-[280px_minmax(0,1fr)_340px] 2xl:max-w-[1340px] 2xl:grid-cols-[280px_minmax(0,1fr)_400px]" inert={!unfolded}>
         <aside className="order-3 flex flex-col gap-2 lg:order-1">
           <div className="rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(9,11,12,0.72)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] px-4 py-4">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">The game</div>
