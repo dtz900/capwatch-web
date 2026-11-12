@@ -783,6 +783,9 @@ export async function fetchCapperProfileAdmin(
   const secret = process.env.CRON_SECRET;
   if (!secret) throw new Error("CRON_SECRET not set on server");
   const params = new URLSearchParams();
+  // The API defaults to MLB; the admin list is every pick the capper has,
+  // so a capper with no MLB picks must not come back empty.
+  params.set("sport", filters.sport ?? "all");
   if (filters.history_limit != null) params.set("history_limit", String(filters.history_limit));
   if (filters.history_offset != null) params.set("history_offset", String(filters.history_offset));
   const qs = params.toString();
