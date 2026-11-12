@@ -87,18 +87,17 @@ export interface SummaryTicket {
 }
 
 /** Anonymous viewers get the platform's locked_summary (pick_id, sport,
- *  reveal_at, posted_at) with no parlay_id. A parlay's legs are inserted in
- *  one call, so they share reveal_at and a posted_at within the same second;
- *  rows matching on (sport, reveal_at, posted_at to the second) count as one
- *  ticket. Two straights would only merge if posted in the same second with
- *  the same reveal time, which one-pick-per-submit posting rules out in
- *  practice. */
+ *  reveal_at, posted_at) with no parlay_id. The platform stamps one posted_at
+ *  per ticket and writes it to every leg (insert_manual_bet), so rows with the
+ *  exact same posted_at string are one ticket. Do not round it: the slip
+ *  builder submits several straights back to back, and they land inside the
+ *  same second with the same reveal time (two straights 94 ms apart showed as
+ *  "1 locked" on 2026-11-11). */
 export function groupSummaryTickets(rows: VipLockedSummary[]): SummaryTicket[] {
   const order: string[] = [];
   const byKey = new Map<string, SummaryTicket>();
   for (const r of rows) {
-    const sec = Math.floor(new Date(r.posted_at).getTime() / 1000);
-    const k = `${r.sport}|${new Date(r.reveal_at).getTime()}|${sec}`;
+    const k = `${r.sport}|${new Date(r.reveal_at).getTime()}|${r.posted_at}`;
     const hit = byKey.get(k);
     if (hit) {
       byKey.set(k, { ...hit, legs: hit.legs + 1 });

@@ -115,16 +115,31 @@ describe("LockedPicks", () => {
   });
 
   it("anonymous header counts tickets not legs", () => {
-    const posted = "2026-10-27T18:00:00.120Z";
-    const sameSecond = "2026-10-27T18:00:00.870Z";
+    // A parlay's legs carry the ticket's one posted_at, to the microsecond.
+    const posted = "2026-10-27T18:00:00.120000+00:00";
     render(
       <LockedPicks
         status={base({
           locked: [
             { pick_id: 1, sport: "MLB", reveal_at: REVEAL, posted_at: posted },
-            { pick_id: 2, sport: "MLB", reveal_at: REVEAL, posted_at: sameSecond },
+            { pick_id: 2, sport: "MLB", reveal_at: REVEAL, posted_at: posted },
             { pick_id: 3, sport: "MLB", reveal_at: REVEAL, posted_at: posted },
-            { pick_id: 4, sport: "MLB", reveal_at: REVEAL, posted_at: "2026-10-27T18:05:00Z" },
+            { pick_id: 4, sport: "MLB", reveal_at: REVEAL, posted_at: "2026-10-27T18:05:00+00:00" },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "VIP · 2 locked" })).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Locked")).toHaveLength(2);
+  });
+
+  it("anonymous: two straights posted in the same second are two tickets", () => {
+    render(
+      <LockedPicks
+        status={base({
+          locked: [
+            { pick_id: 121999, sport: "NBA", reveal_at: REVEAL, posted_at: "2026-11-11T22:55:05.837834-08:00" },
+            { pick_id: 122000, sport: "NBA", reveal_at: REVEAL, posted_at: "2026-11-11T22:55:05.931777-08:00" },
           ],
         })}
       />,
