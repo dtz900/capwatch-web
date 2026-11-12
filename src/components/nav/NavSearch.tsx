@@ -16,6 +16,9 @@ interface SearchOption {
 }
 
 const MAX_RESULTS = 8;
+const SM_BREAKPOINT_PX = 640;
+// Matches the popover's w-[calc(100vw-2rem)]: 1rem of gutter each side.
+const GUTTER_PX = 16;
 
 /**
  * Nav-bar search: click the icon, popover opens with an input that fuzzy-
@@ -29,6 +32,7 @@ export function NavSearch() {
   const [options, setOptions] = useState<SearchOption[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [rightShift, setRightShift] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -60,12 +64,33 @@ export function NavSearch() {
     }
   }
 
+  // The popover is anchored to the icon's right edge, but on a phone it is
+  // nearly viewport-wide and the icon sits left of the Sign in button, so a
+  // plain right-0 pushed it off the left edge. Shift it right by the gap
+  // between the icon and the viewport gutter. Zero from sm up.
+  function measureRightShift(): number {
+    const el = containerRef.current;
+    if (!el || window.innerWidth >= SM_BREAKPOINT_PX) return 0;
+    const gap = window.innerWidth - el.getBoundingClientRect().right - GUTTER_PX;
+    return Math.max(0, gap);
+  }
+
   function toggleOpen() {
     const next = !open;
+    if (next) setRightShift(measureRightShift());
     setOpen(next);
     setActiveIndex(0);
     if (next) loadOptionsIfNeeded();
   }
+
+  useEffect(() => {
+    if (!open) return;
+    function onResize() {
+      setRightShift(measureRightShift());
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -146,6 +171,7 @@ export function NavSearch() {
                      bg-[#0e0e12] border border-[rgba(255,255,255,0.10)]
                      rounded-xl shadow-2xl shadow-black/40 overflow-hidden
                      z-40"
+          style={{ right: -rightShift }}
           role="dialog"
           aria-label="Search cappers"
         >
