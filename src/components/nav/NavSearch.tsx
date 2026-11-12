@@ -187,7 +187,9 @@ export function NavSearch() {
               }}
               onKeyDown={handleInputKey}
               placeholder="Search cappers by handle or name"
-              className="flex-1 bg-transparent text-[14px] text-[var(--color-text)]
+              // 16px on phones: iOS Safari zooms the page on focus for any
+              // input under 16px.
+              className="flex-1 min-w-0 bg-transparent text-[16px] sm:text-[14px] text-[var(--color-text)]
                          placeholder:text-[var(--color-text-muted)] outline-none"
               autoComplete="off"
               spellCheck={false}
