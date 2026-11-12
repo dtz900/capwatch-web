@@ -28,6 +28,8 @@ export interface UserRow {
   lastSlipLabel: string | null;
   /** ISO, for sorting and the stale check only. */
   lastSeenAt: string | null;
+  /** Never seen, or not seen in 30 days. Decided on the server with one clock. */
+  staleSeen: boolean;
   lastSeenLabel: string;
   lastSignInLabel: string;
   /** Distinct Pacific days with a pageview in the last 30. Null when PostHog is unavailable. */
@@ -46,15 +48,6 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "stable", label: "Biggest stable" },
   { key: "units", label: "Units" },
 ];
-
-const STALE_MS = 30 * 24 * 60 * 60 * 1000;
-
-/* Never seen, or not seen in 30 days. Compares an ISO to a fixed window ago;
-   it renders no date, so server and client cannot disagree on formatting. */
-function isStale(lastSeenAt: string | null): boolean {
-  if (!lastSeenAt) return true;
-  return Date.now() - new Date(lastSeenAt).getTime() > STALE_MS;
-}
 
 /* Lifetime work: tails, logged bets, hands played. One number, so
    the accounts that signed up and never came back sink and the people
@@ -194,7 +187,7 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
                   <span className="hidden w-[120px] shrink-0 text-right tabular-nums sm:block">
                     <span
                       className={
-                        isStale(u.lastSeenAt)
+                        u.staleSeen
                           ? "block text-[13px] font-extrabold text-[var(--color-neg)]"
                           : "block text-[13px] font-extrabold text-[var(--color-text)]"
                       }

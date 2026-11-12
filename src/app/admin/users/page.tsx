@@ -171,6 +171,7 @@ export default async function AdminUsersPage() {
       slip,
       lastSlipLabel: dayLabel(lastSlipAt),
       lastSeenAt: act?.lastSeenAt ?? null,
+      staleSeen: !act?.lastSeenAt || now.getTime() - new Date(act.lastSeenAt).getTime() > 30 * 86_400_000,
       lastSeenLabel: relativeLabel(act?.lastSeenAt ?? null, now),
       lastSignInLabel: relativeLabel(act?.lastSignInAt ?? null, now),
       activeDays30: ph ? ph.activeDays : null,
@@ -197,7 +198,6 @@ export default async function AdminUsersPage() {
   const days = buildTrend(profiles.map((p) => p.created_at), todayKey, TREND_DAYS);
   const newThisWeek = days.slice(-7).reduce((n, d) => n + d.count, 0);
   const joinedToday = days[days.length - 1]?.count ?? 0;
-  const withUsername = rows.filter((u) => u.username).length;
   const verified = rows.filter((u) => u.capperHandle).length;
   const withStable = rows.filter((u) => u.stable.length > 0).length;
   const withSlip = rows.filter((u) => u.slip.total > 0).length;
@@ -206,7 +206,9 @@ export default async function AdminUsersPage() {
     rows.filter((u) => u.lastSeenAt && now.getTime() - new Date(u.lastSeenAt).getTime() <= days * DAY_MS).length;
   const seen7 = seenWithin(7);
   const seen30 = seenWithin(30);
-  const neverSignedIn = rows.filter((u) => !activityByUser.get(u.userId)?.lastSignInAt).length;
+  // Over every auth user, not just the roster: an account that never signed
+  // in has no profile row, so it is invisible in the list below.
+  const neverSignedIn = [...activityByUser.values()].filter((a) => !a.lastSignInAt).length;
   const playedTof = rows.filter((u) => (u.tof?.plays ?? 0) > 0).length;
 
   return (
@@ -225,15 +227,12 @@ export default async function AdminUsersPage() {
       <div className="grid gap-3 lg:grid-cols-[1fr_360px]">
         <StatStrip
           stats={[
-            { label: "Accounts", value: rows.length, note: `${joinedToday} today` },
+            { label: "Accounts", value: rows.length, note: `${joinedToday} today · ${newThisWeek} this week` },
             { label: "Seen 7d", value: seen7, note: `of ${rows.length}` },
             { label: "Seen 30d", value: seen30, note: `of ${rows.length}` },
-            { label: "Never signed in", value: neverSignedIn, note: `of ${rows.length}` },
-            { label: "New · 7d", value: newThisWeek },
-            { label: "Username", value: withUsername },
-            { label: "Verified", value: verified },
-            { label: "Has stable", value: withStable },
-            { label: "Played ToF", value: playedTof, note: `${withSlip} logged a bet` },
+            { label: "Never signed in", value: neverSignedIn, note: `of ${activityByUser.size} auth users` },
+            { label: "Has stable", value: withStable, note: `${withSlip} logged a bet` },
+            { label: "Played ToF", value: playedTof, note: `${verified} verified cappers` },
           ]}
         />
         <SignupTrend days={days} />
