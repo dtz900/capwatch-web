@@ -5,6 +5,7 @@ import { MARKET_LABELS } from "@/lib/edges";
 import { UsersTable, type UserRow } from "@/components/admin/UsersTable";
 import { StatStrip, SignupTrend } from "@/components/admin/UsersOverview";
 import { buildTrend, dayLabel, ptDayKey } from "@/lib/admin/signup-trend";
+import { fetchPosthogActivity, fetchUserActivity, relativeLabel } from "@/lib/admin/user-activity";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Users | TailSlips Admin" };
@@ -63,7 +64,7 @@ export default async function AdminUsersPage() {
     );
   }
 
-  const [profilesRes, followsRes, slipsRes, tofRes, claimedRes] = await Promise.all([
+  const [profilesRes, followsRes, slipsRes, tofRes, claimedRes, activityByUser] = await Promise.all([
     db.from("ts_profiles").select("user_id, email, tier, created_at, username").order("created_at", { ascending: false }),
     db.from("capper_follows").select("user_id, capper_id, market"),
     db.from("user_bet_slips").select("user_id, pick_id, parlay_id, stake, odds, selection, capper_handle, created_at"),
@@ -72,6 +73,7 @@ export default async function AdminUsersPage() {
       .select("user_id, plays, wins, losses, pushes, units, day_streak, last_played_date")
       .eq("time_window", "season"),
     db.from("cappers").select("handle, claimed_by_user_id").not("claimed_by_user_id", "is", null),
+    fetchUserActivity(db),
   ]);
 
   const profiles = (profilesRes.data ?? []) as ProfileRow[];
@@ -107,6 +109,8 @@ export default async function AdminUsersPage() {
       ...slips.map((s) => s.user_id),
     ]),
   ];
+  const posthog = await fetchPosthogActivity(userIds);
+  const now = new Date();
   const profileById = new Map(profiles.map((p) => [p.user_id, p]));
   const tofByUser = new Map(tofStats.map((t) => [t.user_id, t]));
   const capperByUser = new Map(claimed.map((c) => [c.claimed_by_user_id, c.handle]));
@@ -146,6 +150,8 @@ export default async function AdminUsersPage() {
 
     const profile = profileById.get(userId) ?? null;
     const t = tofByUser.get(userId) ?? null;
+    const act = activityByUser.get(userId) ?? null;
+    const ph = posthog ? posthog.get(userId) ?? { activeDays: 0, pageviews: 0, lastEventAt: null } : null;
 
     return {
       userId,
@@ -164,6 +170,11 @@ export default async function AdminUsersPage() {
       ],
       slip,
       lastSlipLabel: dayLabel(lastSlipAt),
+      lastSeenAt: act?.lastSeenAt ?? null,
+      lastSeenLabel: relativeLabel(act?.lastSeenAt ?? null, now),
+      lastSignInLabel: relativeLabel(act?.lastSignInAt ?? null, now),
+      activeDays30: ph ? ph.activeDays : null,
+      pageviews30: ph ? ph.pageviews : null,
       tof: t
         ? {
             plays: t.plays,
@@ -190,6 +201,12 @@ export default async function AdminUsersPage() {
   const verified = rows.filter((u) => u.capperHandle).length;
   const withStable = rows.filter((u) => u.stable.length > 0).length;
   const withSlip = rows.filter((u) => u.slip.total > 0).length;
+  const DAY_MS = 86_400_000;
+  const seenWithin = (days: number) =>
+    rows.filter((u) => u.lastSeenAt && now.getTime() - new Date(u.lastSeenAt).getTime() <= days * DAY_MS).length;
+  const seen7 = seenWithin(7);
+  const seen30 = seenWithin(30);
+  const neverSignedIn = rows.filter((u) => !activityByUser.get(u.userId)?.lastSignInAt).length;
   const playedTof = rows.filter((u) => (u.tof?.plays ?? 0) > 0).length;
 
   return (
@@ -209,6 +226,9 @@ export default async function AdminUsersPage() {
         <StatStrip
           stats={[
             { label: "Accounts", value: rows.length, note: `${joinedToday} today` },
+            { label: "Seen 7d", value: seen7, note: `of ${rows.length}` },
+            { label: "Seen 30d", value: seen30, note: `of ${rows.length}` },
+            { label: "Never signed in", value: neverSignedIn, note: `of ${rows.length}` },
             { label: "New · 7d", value: newThisWeek },
             { label: "Username", value: withUsername },
             { label: "Verified", value: verified },
@@ -218,6 +238,11 @@ export default async function AdminUsersPage() {
         />
         <SignupTrend days={days} />
       </div>
+      {posthog === null && (
+        <p className="mt-2 text-[11px] font-semibold text-[var(--color-text-muted)]">
+          Active days need POSTHOG_PERSONAL_API_KEY on the server; sorting by Last seen instead.
+        </p>
+      )}
 
       <div className="mt-6">
         <UsersTable rows={rows} />

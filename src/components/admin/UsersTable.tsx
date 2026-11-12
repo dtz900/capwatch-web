@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatUnits } from "@/lib/formatters";
+import { activityRank } from "@/lib/admin/user-activity";
 
 export interface StableRef {
   handle: string;
@@ -25,19 +26,37 @@ export interface UserRow {
   stable: StableRef[];
   slip: { total: number; wins: number; losses: number; pushes: number; pending: number; units: number };
   lastSlipLabel: string | null;
+  /** ISO, for sorting and the stale check only. */
+  lastSeenAt: string | null;
+  lastSeenLabel: string;
+  lastSignInLabel: string;
+  /** Distinct Pacific days with a pageview in the last 30. Null when PostHog is unavailable. */
+  activeDays30: number | null;
+  pageviews30: number | null;
   tof: { plays: number; wins: number; losses: number; pushes: number; units: number; streak: number; lastPlayedLabel: string | null } | null;
 }
 
-type SortKey = "joined" | "active" | "stable" | "units";
+type SortKey = "joined" | "active" | "seen" | "engaged" | "stable" | "units";
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "joined", label: "Newest" },
   { key: "active", label: "Most active" },
+  { key: "seen", label: "Last seen" },
+  { key: "engaged", label: "Most engaged" },
   { key: "stable", label: "Biggest stable" },
   { key: "units", label: "Units" },
 ];
 
-/* Everything a row has done: tails, logged bets, hands played. One number, so
+const STALE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/* Never seen, or not seen in 30 days. Compares an ISO to a fixed window ago;
+   it renders no date, so server and client cannot disagree on formatting. */
+function isStale(lastSeenAt: string | null): boolean {
+  if (!lastSeenAt) return true;
+  return Date.now() - new Date(lastSeenAt).getTime() > STALE_MS;
+}
+
+/* Lifetime work: tails, logged bets, hands played. One number, so
    the accounts that signed up and never came back sink and the people
    actually using the site float. */
 function activity(u: UserRow): number {
@@ -76,7 +95,14 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
       : rows;
     const sorted = [...filtered];
     if (sort === "joined") sorted.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-    if (sort === "active") sorted.sort((a, b) => activity(b) - activity(a));
+    if (sort === "active") sorted.sort(activityRank);
+    if (sort === "seen") {
+      sorted.sort((a, b) => {
+        if (!a.lastSeenAt || !b.lastSeenAt) return (a.lastSeenAt ? 0 : 1) - (b.lastSeenAt ? 0 : 1);
+        return b.lastSeenAt.localeCompare(a.lastSeenAt);
+      });
+    }
+    if (sort === "engaged") sorted.sort((a, b) => activity(b) - activity(a));
     if (sort === "stable") sorted.sort((a, b) => b.stable.length - a.stable.length);
     if (sort === "units") {
       sorted.sort((a, b) => b.slip.units + (b.tof?.units ?? 0) - (a.slip.units + (a.tof?.units ?? 0)));
@@ -118,6 +144,8 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
       <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-border)]">
         <div className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[rgba(255,255,255,0.03)] px-4 py-2">
           <span className={`flex-1 ${LABEL}`}>Account</span>
+          <span className={`hidden w-[120px] shrink-0 text-right sm:block ${LABEL}`}>Last seen</span>
+          <span className={`hidden w-[100px] shrink-0 text-right md:block ${LABEL}`}>Active days</span>
           <span className={`hidden w-[70px] shrink-0 text-right sm:block ${LABEL}`}>Stable</span>
           <span className={`hidden w-[150px] shrink-0 text-right md:block ${LABEL}`}>Bet slip</span>
           <span className={`w-[150px] shrink-0 text-right ${LABEL}`}>Tail or Fade</span>
@@ -160,6 +188,36 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
                       <span className="mt-0.5 block truncate text-[11px] font-semibold text-[var(--color-text-muted)]">
                         {u.email}
                       </span>
+                    )}
+                  </span>
+
+                  <span className="hidden w-[120px] shrink-0 text-right tabular-nums sm:block">
+                    <span
+                      className={
+                        isStale(u.lastSeenAt)
+                          ? "block text-[13px] font-extrabold text-[var(--color-neg)]"
+                          : "block text-[13px] font-extrabold text-[var(--color-text)]"
+                      }
+                    >
+                      {u.lastSeenLabel}
+                    </span>
+                    <span className="block text-[11px] font-semibold text-[var(--color-text-muted)]">
+                      signed in {u.lastSignInLabel}
+                    </span>
+                  </span>
+
+                  <span className="hidden w-[100px] shrink-0 text-right tabular-nums md:block">
+                    {u.activeDays30 === null ? (
+                      <span className="text-[11px] font-semibold text-[var(--color-text-muted)]">no data</span>
+                    ) : (
+                      <>
+                        <span className="block text-[13px] font-extrabold text-[var(--color-text)]">
+                          {u.activeDays30} of 30
+                        </span>
+                        <span className="block text-[11px] font-semibold text-[var(--color-text-muted)]">
+                          {u.pageviews30 ?? 0} views
+                        </span>
+                      </>
                     )}
                   </span>
 
