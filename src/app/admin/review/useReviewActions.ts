@@ -1,7 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { entryFromDetail, entryFromRefused, parseDuplicateDetail, type DuplicateEntry } from "@/lib/liveTwin";
+import {
+  entryFromDetail,
+  entryFromRefused,
+  identityFingerprint,
+  parseDuplicateDetail,
+  type DuplicateEntry,
+} from "@/lib/liveTwin";
 import { nextSelection } from "../audit/selection";
 import {
   approvePickAction,
@@ -29,7 +35,11 @@ interface Args {
 type Outcome = { ok: true; removed: number[]; toast: string | null } | { ok: false; error: string };
 
 /** A refused duplicate waiting in the notice. `error` is a failed "second bet" approve. */
-export type NoticeEntry = DuplicateEntry & { error?: string };
+export type NoticeEntry = DuplicateEntry & {
+  error?: string;
+  /** Identity of the pick (game, line, selection...) at the moment it was refused. */
+  fp: string;
+};
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -46,12 +56,21 @@ export function useReviewActions(a: Args) {
 
   // Refused duplicates stay on screen until dismissed (the toast clears after 1.8 seconds).
   const [entries, setEntries] = useState<NoticeEntry[]>([]);
-  const addEntries = (list: DuplicateEntry[]) =>
-    setEntries((prev) => [...prev.filter((p) => !list.some((n) => n.pickId === p.pickId)), ...list]);
+  // A refusal belongs to the bet as it was when refused. `at` is the rows as they were then.
+  const addEntries = (list: DuplicateEntry[], at: ReviewRow[]) => {
+    const stamped = list.map((e) => ({ ...e, fp: identityFingerprint(at.find((r) => r.pick_id === e.pickId) ?? {}) }));
+    setEntries((prev) => [...prev.filter((p) => !stamped.some((n) => n.pickId === p.pickId)), ...stamped]);
+  };
   const entryError = (pickId: number, error: string | undefined) =>
     setEntries((prev) => prev.map((e) => (e.pickId === pickId ? { ...e, error } : e)));
-  // A pick that left the queue (rejected, approved some other way) drops out of the notice.
-  const notice = entries.filter((e) => a.rows.some((r) => r.pick_id === e.pickId));
+  // An entry survives only while its pick is still in the queue AND still the bet that was refused:
+  // a pick that left, or whose game, line, selection, player, stat or sport changed, drops out for good
+  // (editing it back does not revive it). Odds and units edits keep it.
+  const notice = entries.filter((e) => {
+    const r = a.rows.find((x) => x.pick_id === e.pickId);
+    return r != null && identityFingerprint(r) === e.fp;
+  });
+  if (notice.length !== entries.length) setEntries(notice);
   const dismissNotice = () => setEntries([]);
 
   const settle = (ids: number[], toast: string | null) => {
@@ -104,17 +123,24 @@ export function useReviewActions(a: Args) {
       const parsed = entryFromDetail(id, detail);
       const twin = row.live_twin;
       const now = new Date();
-      addEntries([
-        twin && twin.pick_id === parsed.existingPickId
-          ? entryFromRefused({ pick_id: id, reason: detail, same_batch: false, live_twin: twin }, (iso) => ptLabel(iso, now))
-          : parsed,
-      ]);
+      addEntries(
+        [
+          twin && twin.pick_id === parsed.existingPickId
+            ? entryFromRefused({ pick_id: id, reason: detail, same_batch: false, live_twin: twin }, (iso) => ptLabel(iso, now))
+            : parsed,
+        ],
+        [row],
+      );
       return { ok: true, removed: [], toast: null };
     }, `#${id}: `);
   };
 
   /** The deliberate second bet: only ever called from its own button, never from Enter or a batch. */
   const approveAnyway = (id: number) => {
+    // An override needs a current reason to exist: a current notice entry, or the loaded live_twin the
+    // detail block shows (identity edits clear it). Anything else was refused for a different bet.
+    const row = a.rows.find((r) => r.pick_id === id);
+    if (!notice.some((e) => e.pickId === id) && row?.live_twin == null) return Promise.resolve();
     entryError(id, undefined);
     return run(
       async () => {
@@ -133,8 +159,9 @@ export function useReviewActions(a: Args) {
       return res.ok ? { ok: true, removed: [id], toast: `Rejected #${id}` } : res;
     }, `#${id}: `);
 
-  const approveMany = (ids: number[], label?: string) =>
-    ids.length === 0
+  const approveMany = (ids: number[], label?: string) => {
+    const rowsAtCall = a.rows;
+    return ids.length === 0
       ? Promise.resolve()
       : run(async () => {
           const res = await batchApprovePicksAction(ids);
@@ -147,11 +174,13 @@ export function useReviewActions(a: Args) {
           if (others.length) toast += `, skipped ${others.map((s) => `#${s.pick_id} (${s.reason})`).join(", ")}`;
           if (refused.size) {
             const now = new Date();
-            addEntries(refusedList.map((r) => entryFromRefused(r, (iso) => ptLabel(iso, now))));
+            addEntries(refusedList.map((r) => entryFromRefused(r, (iso) => ptLabel(iso, now))), rowsAtCall);
             toast += `, ${refused.size} already live (see the notice)`;
           }
           return { ok: true, removed: ids.filter((id) => !skipped.has(id)), toast };
         });
+
+  };
 
   const rejectMany = (ids: number[], label?: string) =>
     ids.length === 0

@@ -111,6 +111,8 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
   });
   const formKey = JSON.stringify(buildInput());
   const duplicate = refusal && refusal.key === formKey ? refusal : null;
+  // Any edit ends the offer for good: editing back to the refused form does not revive it.
+  if (refusal && !duplicate) setRefusal(null);
 
   const send = (input: ManualBetInput, allowDuplicate: boolean) =>
     startTransition(async () => {

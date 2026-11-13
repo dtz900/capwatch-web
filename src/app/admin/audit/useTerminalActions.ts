@@ -73,6 +73,8 @@ export function useTerminalActions(a: Args) {
   // The refusal was for the pick as it was then. If a field was edited since, it must pass the normal check again.
   const current = a.rows.find((r) => r.pick_id === a.selectedId);
   const duplicate = dup && dup.id === a.selectedId && current && dup.fp === fingerprint(current) ? dup : null;
+  // Selecting another pick or editing this one ends the offer for good (coming back does not revive it).
+  if (dup && !duplicate) setDup(null);
 
   const settle = (ids: number[], toast: string) => {
     const index = a.rows.findIndex((r) => r.pick_id === ids[0]);

@@ -130,7 +130,7 @@ describe("useReviewActions duplicates", () => {
 
   it("a failed second-bet click on a pick with no notice entry shows on the message line", async () => {
     m.approve.mockResolvedValue({ ok: false, error: "400: pick is auto_approved, not needs_review" });
-    const { hook } = setup([row(1)], 1, []);
+    const { hook } = setup([row(1, { live_twin: { pick_id: 9 } as ReviewRow["live_twin"] })], 1, []);
     await act(async () => {
       await hook.result.current.approveAnyway(1);
     });
@@ -182,5 +182,117 @@ describe("useReviewActions duplicates", () => {
     expect(e.existingPickId).toBe(9);
     expect(e.tweetUrl).toBe("https://x.com/h/status/5");
     expect(e.existing).not.toContain("Old Twin");
+  });
+});
+
+function setupEditable(initial: ReviewRow[], selectedId: number) {
+  let rows = initial;
+  const a = {
+    get rows() {
+      return rows;
+    },
+    selectedId,
+    setSelectedId: vi.fn(),
+    selection: new Set<number>(),
+    setSelection: vi.fn(),
+    setPending: vi.fn(),
+    show: vi.fn(),
+    removeRows: vi.fn(),
+    refresh: vi.fn(),
+  };
+  const hook = renderHook(() => useReviewActions(a));
+  return {
+    a,
+    hook,
+    edit: (id: number, over: Partial<ReviewRow>) => {
+      rows = rows.map((r) => (r.pick_id === id ? ({ ...r, ...over } as ReviewRow) : r));
+      hook.rerender();
+    },
+  };
+}
+
+describe("a refusal only lives while the bet is the one that was refused", () => {
+  beforeEach(() => {
+    Object.values(m).forEach((f) => f.mockReset());
+  });
+  const base = () => row(1, { selection: "A +1", line: 1, game_id: "g1", odds_taken: -110, units: 1 });
+
+  it.each([
+    ["game", { game_id: "g2" }],
+    ["line", { line: 2 }],
+    ["selection", { selection: "B +1" }],
+    ["sport", { sport: "NBA" }],
+  ])("an edit to the %s removes the entry and no override can be sent", async (_n, over) => {
+    m.approve.mockResolvedValue(refusal);
+    const { hook, edit } = setupEditable([base()], 1);
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    expect(hook.result.current.notice).toHaveLength(1);
+    edit(1, over as Partial<ReviewRow>);
+    expect(hook.result.current.notice).toEqual([]);
+    m.approve.mockClear();
+    await act(async () => {
+      await hook.result.current.approveAnyway(1);
+    });
+    expect(m.approve.mock.calls.filter((c) => c[1]?.allowDuplicate)).toEqual([]);
+  });
+
+  it("editing it back does not revive the entry", async () => {
+    m.approve.mockResolvedValue(refusal);
+    const { hook, edit } = setupEditable([base()], 1);
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    edit(1, { line: 2 });
+    expect(hook.result.current.notice).toEqual([]);
+    edit(1, { line: 1 });
+    expect(hook.result.current.notice).toEqual([]);
+  });
+
+  it.each([
+    ["odds", { odds_taken: -125 }],
+    ["units", { units: 3 }],
+  ])("an edit to the %s keeps the entry", async (_n, over) => {
+    m.approve.mockResolvedValue(refusal);
+    const { hook, edit } = setupEditable([base()], 1);
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    edit(1, over as Partial<ReviewRow>);
+    expect(hook.result.current.notice).toHaveLength(1);
+  });
+
+  it("a second refusal for the same pick replaces the first", async () => {
+    const other = (id: number) => ({
+      ok: false,
+      error: `409: ${JSON.stringify({ detail: DETAIL.replace("pick 9", `pick ${id}`) })}`,
+    });
+    m.approve.mockResolvedValueOnce(refusal).mockResolvedValueOnce(other(12));
+    const { hook, edit } = setupEditable([base()], 1);
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    edit(1, { line: 2 });
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    expect(hook.result.current.notice.map((e) => e.existingPickId)).toEqual([12]);
+  });
+
+  it("a batch refusal entry is dropped by a later identity edit", async () => {
+    m.batchApprove.mockResolvedValue({
+      ok: true,
+      approved: 0,
+      skipped: [{ pick_id: 1, reason: DETAIL }],
+      refused: [{ pick_id: 1, reason: DETAIL, same_batch: false, live_twin: null }],
+    });
+    const { hook, edit } = setupEditable([base()], 1);
+    await act(async () => {
+      await hook.result.current.approveMany([1]);
+    });
+    expect(hook.result.current.notice).toHaveLength(1);
+    edit(1, { game_id: "g9" });
+    expect(hook.result.current.notice).toEqual([]);
   });
 });

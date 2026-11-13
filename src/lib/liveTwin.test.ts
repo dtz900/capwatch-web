@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   absoluteTweetUrl,
+  IDENTITY_PATCH_KEYS,
+  touchesIdentity,
   entryFromDetail,
   entryFromRefused,
   parseDuplicateDetail,
@@ -202,5 +204,14 @@ describe("absoluteTweetUrl hosts", () => {
     expect(absoluteTweetUrl("evil.example/a/status/1")).toBeNull();
     expect(absoluteTweetUrl("https://x.com.evil.example/a")).toBeNull();
     expect(absoluteTweetUrl("ftp://x.com/a")).toBeNull();
+  });
+});
+
+describe("identity fields", () => {
+  it("lists what defines a duplicate and leaves odds and units out", () => {
+    expect([...IDENTITY_PATCH_KEYS].sort()).toEqual(["game_id", "line", "player_id", "selection", "sport", "stat_name"]);
+    expect(touchesIdentity({ line: 1 })).toBe(true);
+    expect(touchesIdentity({ odds_taken: -110, units: 2 })).toBe(false);
+    expect(touchesIdentity({})).toBe(false);
   });
 });

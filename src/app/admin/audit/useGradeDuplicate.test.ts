@@ -97,4 +97,16 @@ describe("grade anyway", () => {
     });
     expect(m.grade).toHaveBeenCalledTimes(1);
   });
+
+  it("editing and then restoring the pick does not bring the offer back", async () => {
+    m.grade.mockResolvedValue(refusal);
+    const { hook, edit } = setup(row());
+    await act(async () => {
+      await hook.result.current.grade("win");
+    });
+    edit({ units: 2 });
+    expect(hook.result.current.duplicate).toBeNull();
+    edit({ units: 1 });
+    expect(hook.result.current.duplicate).toBeNull();
+  });
 });

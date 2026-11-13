@@ -61,4 +61,11 @@ describe("AddBetPanel duplicate refusal", () => {
     expect(add.mock.calls[1][1]).toBeUndefined();
     expect(add.mock.calls[1][0].units).toBe(2);
   });
+
+  it("editing the form and restoring it does not bring the refusal back", async () => {
+    await refusedForm();
+    fireEvent.change(screen.getByPlaceholderText("units"), { target: { value: "2" } });
+    fireEvent.change(screen.getByPlaceholderText("units"), { target: { value: "1" } });
+    expect(screen.queryByRole("button", { name: "Enter anyway" })).toBeNull();
+  });
 });

@@ -22,6 +22,19 @@ export interface LiveTwin {
   this_odds?: number | null;
 }
 
+/** The pick fields that define what a duplicate IS (same game, side and line). An edit to any of
+ * them makes a loaded live_twin or a refusal stale. Odds and units are deliberately not here. */
+export const IDENTITY_PATCH_KEYS = ["sport", "game_id", "player_id", "stat_name", "selection", "line"] as const;
+
+export const touchesIdentity = (patch: object): boolean =>
+  IDENTITY_PATCH_KEYS.some((k) => (patch as Record<string, unknown>)[k] !== undefined);
+
+/** The identity fields of a row as one comparable string. */
+export const identityFingerprint = (r: object): string => {
+  const x = r as Record<string, unknown>;
+  return JSON.stringify([...IDENTITY_PATCH_KEYS.map((k) => x[k] ?? null), x.market ?? null, x.player_name ?? null]);
+};
+
 /** One entry of the batch approve `refused_duplicates` list. */
 export interface RefusedDuplicate {
   pick_id: number;
