@@ -58,6 +58,16 @@ export function ReviewQueue({
             const flag = rowFlag(r);
             const rawId = r.raw_id;
             const grp = rawId != null ? (groupSizes.get(rawId) ?? 1) : 1;
+            const title = (
+              <span className="block truncate text-[14px] leading-[19px] font-extrabold">
+                {r.selection ?? r.market ?? "Untitled pick"}
+                {r.odds_taken != null && (
+                  <span className="ml-[6px] font-bold text-[var(--color-text-soft)] tabular-nums">
+                    {formatOdds(r.odds_taken)}
+                  </span>
+                )}
+              </span>
+            );
             return (
               <button
                 key={r.pick_id}
@@ -76,14 +86,16 @@ export function ReviewQueue({
                   {r.sport ?? "?"}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-[14px] leading-[19px] font-extrabold">
-                    {r.selection ?? r.market ?? "Untitled pick"}
-                    {r.odds_taken != null && (
-                      <span className="ml-[6px] font-bold text-[var(--color-text-soft)] tabular-nums">
-                        {formatOdds(r.odds_taken)}
+                  {r.live_twin ? (
+                    <span className="flex items-center gap-2 min-w-0">
+                      {title}
+                      <span className="flex-none rounded-[4px] border border-[rgba(239,68,68,0.45)] px-[5px] py-px text-[9.5px] leading-[14px] font-extrabold tracking-[0.06em] uppercase text-[var(--color-neg)]">
+                        Already live
                       </span>
-                    )}
-                  </span>
+                    </span>
+                  ) : (
+                    title
+                  )}
                   <span className="block mt-[3px] text-[11.5px] leading-[16px] font-semibold text-[var(--color-text-muted)] truncate">
                     {flag && <span className="font-extrabold text-[var(--color-neg)]">{flag} · </span>}@
                     {r.capper_handle ?? "unknown"}

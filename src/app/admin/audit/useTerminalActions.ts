@@ -12,6 +12,7 @@ import {
   type ActionResult,
   type MarketDef,
 } from "./actions";
+import { entryFromDetail, parseDuplicateDetail, type DuplicateEntry } from "@/lib/liveTwin";
 import { effectiveStates, type FieldKey } from "./fieldState";
 import type { QueueRow } from "./labels";
 import { nextSelection } from "./selection";
@@ -22,6 +23,16 @@ import type { GradeOutcome } from "./useAuditKeys";
 const MANUAL_GRADE_ERROR = /^409:|manual grade/i;
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+/** A hand grade the API refused because the capper already has this pick live. */
+export interface GradeDuplicate {
+  outcome: GradeOutcome;
+  entry: DuplicateEntry;
+}
+
+/** The fields a duplicate check looks at, as one comparable string. */
+const fingerprint = (r: QueueRow) =>
+  JSON.stringify([r.selection, r.market, r.line, r.odds_taken, r.units, r.game_id, r.player_id, r.stat_name]);
 
 export const MANUAL_GRADE_COPY = "This pick has a manual grade. Use Win / Loss / Push / Void to change it.";
 
@@ -58,6 +69,12 @@ export function useTerminalActions(a: Args) {
   const [msg, setMsg] = useState<{ id: number; text: string } | null>(null);
   // An error belongs to the pick it happened on and disappears when another is selected.
   const message = msg && msg.id === a.selectedId ? msg.text : null;
+  const [dup, setDup] = useState<(GradeDuplicate & { id: number; fp: string }) | null>(null);
+  // The refusal was for the pick as it was then. If a field was edited since, it must pass the normal check again.
+  const current = a.rows.find((r) => r.pick_id === a.selectedId);
+  const duplicate = dup && dup.id === a.selectedId && current && dup.fp === fingerprint(current) ? dup : null;
+  // Selecting another pick or editing this one ends the offer for good (coming back does not revive it).
+  if (dup && !duplicate) setDup(null);
 
   const settle = (ids: number[], toast: string) => {
     const index = a.rows.findIndex((r) => r.pick_id === ids[0]);
@@ -69,15 +86,23 @@ export function useTerminalActions(a: Args) {
     router.refresh();
   };
 
-  const run = async (id: number, call: () => Promise<ActionResult | AckResult>, toast: string) => {
+  const run = async (
+    id: number,
+    call: () => Promise<ActionResult | AckResult>,
+    toast: string,
+    onDuplicate?: (entry: DuplicateEntry) => void,
+  ) => {
     if (inFlight.current) return;
     inFlight.current = true;
     a.setPending(true);
     setMsg(null);
+    setDup(null);
     try {
       const res = await call();
       if (!res.ok) {
-        setMsg({ id, text: res.error });
+        const detail = onDuplicate ? parseDuplicateDetail(res.error) : null;
+        if (detail != null) onDuplicate?.(entryFromDetail(id, detail));
+        else setMsg({ id, text: res.error });
         return;
       }
       settle([id], toast);
@@ -139,7 +164,20 @@ export function useTerminalActions(a: Args) {
   const grade = (outcome: GradeOutcome) => {
     const id = a.selectedId;
     if (id == null) return Promise.resolve();
-    return run(id, () => manualGradeAction(id, outcome), `${GRADE_TOAST[outcome]}: #${id}`);
+    return run(id, () => manualGradeAction(id, outcome), `${GRADE_TOAST[outcome]}: #${id}`, (entry) =>
+      setDup({ id, outcome, entry, fp: fingerprint(a.rows.find((r) => r.pick_id === id) ?? ({} as QueueRow)) }),
+    );
+  };
+
+  /** Only the explicit "Grade anyway" click sends the override. */
+  const gradeAnyway = () => {
+    if (!duplicate) return Promise.resolve();
+    const { id, outcome } = duplicate;
+    return run(
+      id,
+      () => manualGradeAction(id, outcome, { allowDuplicate: true }),
+      `${GRADE_TOAST[outcome]}: #${id}`,
+    );
   };
 
   const skip = () => {
@@ -162,5 +200,5 @@ export function useTerminalActions(a: Args) {
     return run(id, () => deletePickAction(id), `Deleted: #${id}`);
   };
 
-  return { message, regrade, grade, skip, remove };
+  return { message, duplicate, regrade, grade, gradeAnyway, skip, remove };
 }

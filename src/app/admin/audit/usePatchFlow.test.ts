@@ -180,3 +180,37 @@ describe("usePatchFlow", () => {
     expect(result.current.rows[2].line).toBe(4.5);
   });
 });
+
+describe("live_twin after a local edit", () => {
+  const twin = { pick_id: 9, selection: "A +1" };
+  const held = () => row(1, { live_twin: twin } as unknown as Partial<QueueRow>);
+  const twinOf = (h: ReturnType<typeof setup>) => (h.result.current.rows[0] as unknown as { live_twin: unknown }).live_twin;
+
+  beforeEach(() => patchMock.mockResolvedValue({ ok: true }));
+
+  it.each([
+    ["game", { game_id: "123" }],
+    ["line", { line: 7.5 }],
+    ["selection", { selection: "B -2" }],
+    ["player", { player_id: 8 }],
+    ["stat", { stat_name: "runs" }],
+    ["sport", { sport: "NBA" }],
+  ])("an edit to the %s clears it", async (_n, patch) => {
+    const h = setup([held()], false, 1);
+    await act(async () => {
+      await h.result.current.handlePatch(1, patch, "ok");
+    });
+    expect(twinOf(h)).toBeNull();
+  });
+
+  it.each([
+    ["odds", { odds_taken: -120 }],
+    ["units", { units: 2 }],
+  ])("an edit to the %s keeps it", async (_n, patch) => {
+    const h = setup([held()], false, 1);
+    await act(async () => {
+      await h.result.current.handlePatch(1, patch, "ok");
+    });
+    expect(twinOf(h)).toEqual(twin);
+  });
+});

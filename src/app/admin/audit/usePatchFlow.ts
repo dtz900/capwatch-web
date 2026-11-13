@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { touchesIdentity } from "@/lib/liveTwin";
 import { patchPickFieldAction, type PickPatchInput } from "./actions";
 import type { FieldKey } from "./fieldState";
 import type { QueueRow } from "./labels";
@@ -50,6 +51,12 @@ function applyLocal(row: QueueRow, patch: PickPatchInput, hint: PickHint | undef
   if (patch.line !== undefined) next.line = patch.line;
   if (patch.odds_taken !== undefined) next.odds_taken = patch.odds_taken;
   if (patch.units !== undefined) next.units = patch.units;
+  // An edit to what defines a duplicate (sport, game, player, market, selection, line) makes the
+  // loaded live_twin stale, and neither the PATCH nor this page refetches it. A missing marker is
+  // acceptable until the queue reloads; a wrong one is not. Odds and units do not change identity.
+  if (touchesIdentity(patch) && (next as { live_twin?: unknown }).live_twin != null) {
+    (next as { live_twin?: unknown }).live_twin = null;
+  }
   return next;
 }
 

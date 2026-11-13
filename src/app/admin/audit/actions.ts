@@ -119,11 +119,14 @@ export async function patchPickFieldAction(pickId: number, patch: PickPatchInput
   return call(req.path, req.init, { revalidate: false });
 }
 
+/** `allowDuplicate` is only passed by the explicit "Grade anyway" click. */
 export async function manualGradeAction(
   pickId: number,
   outcome: "win" | "loss" | "push" | "void",
+  opts: { allowDuplicate?: boolean } = {},
 ): Promise<ActionResult> {
-  return call(`/api/admin/picks/${pickId}/manual-grade`, {
+  const qs = opts.allowDuplicate === true ? "?allow_duplicate=true" : "";
+  return call(`/api/admin/picks/${pickId}/manual-grade${qs}`, {
     method: "POST",
     headers: adminHeaders(),
     body: JSON.stringify({ outcome }),
@@ -282,9 +285,13 @@ export type ManualBetResult =
  * two+ legs = parlay (combined odds + units on leg 0). Rows land
  * admin_locked + provenance manual_admin so re-binders and parser re-runs
  * never fight the entry. */
-export async function addManualBetAction(input: ManualBetInput): Promise<ManualBetResult> {
+export async function addManualBetAction(
+  input: ManualBetInput,
+  opts: { allowDuplicate?: boolean } = {},
+): Promise<ManualBetResult> {
+  const qs = opts.allowDuplicate === true ? "?allow_duplicate=true" : "";
   try {
-    const res = await fetch(`${API_BASE}/api/admin/picks/manual`, {
+    const res = await fetch(`${API_BASE}/api/admin/picks/manual${qs}`, {
       method: "POST",
       headers: adminHeaders(),
       body: JSON.stringify(input),

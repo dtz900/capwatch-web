@@ -1,6 +1,8 @@
 "use client";
 
+import { absoluteTweetUrl, existingLine } from "@/lib/liveTwin";
 import type { GradeOutcome } from "./useAuditKeys";
+import type { GradeDuplicate } from "./useTerminalActions";
 
 export interface PrimaryState {
   label: "Save and regrade" | "Regrade";
@@ -19,6 +21,9 @@ interface Props {
   onSkip: () => void;
   onDelete: () => void;
   message: string | null;
+  /** The hand grade was refused because the capper already has this pick live. */
+  duplicate?: GradeDuplicate | null;
+  onGradeAnyway?: () => void;
 }
 
 const KBD =
@@ -43,6 +48,8 @@ export function ActionStrip({
   onSkip,
   onDelete,
   message,
+  duplicate = null,
+  onGradeAnyway,
 }: Props) {
   const status = strayProp
     ? "NCAAB props are not tracked."
@@ -74,6 +81,24 @@ export function ActionStrip({
       {message && (
         <span role="alert" className="text-[12px] font-bold text-[var(--color-neg)]">
           {message}
+        </span>
+      )}
+      {duplicate && (
+        <span role="alert" className="flex items-center gap-2 text-[12px] font-bold text-[var(--color-neg)]">
+          {`Not graded. ${existingLine(duplicate.entry)}`}
+          {absoluteTweetUrl(duplicate.entry.tweetUrl) && (
+            <a
+              href={absoluteTweetUrl(duplicate.entry.tweetUrl) ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--color-text-soft)] underline decoration-[rgba(255,255,255,0.13)] underline-offset-[3px] hover:text-[var(--color-text)]"
+            >
+              View tweet
+            </a>
+          )}
+          <button type="button" disabled={pending} onClick={(e) => { e.currentTarget.blur(); onGradeAnyway?.(); }} className={`${BTN} hover:text-[var(--color-text)]`}>
+            Grade anyway
+          </button>
         </span>
       )}
       <div className="ml-auto flex items-center gap-2">
