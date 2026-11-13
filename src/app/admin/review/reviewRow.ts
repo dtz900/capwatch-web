@@ -1,4 +1,5 @@
 import type { RawSibling, ReviewQueueItem } from "@/lib/api";
+import type { LiveTwin } from "@/lib/liveTwin";
 import type { QueueRow } from "../audit/labels";
 import { reasonLabel } from "./reviewLabels";
 
@@ -16,6 +17,8 @@ export type ReviewRow = Omit<QueueRow, "posted_label" | "game_label"> & {
   raw_siblings: RawSibling[];
   capper_profile_image_url: string | null;
   tweet_excerpt: string;
+  /** The capper's pick that is already live on the same game, side and line. */
+  live_twin: (LiveTwin & { posted_label: string }) | null;
 };
 
 const PT = "America/Los_Angeles";
@@ -30,7 +33,7 @@ const dateTime = new Intl.DateTimeFormat("en-US", {
 });
 
 /** Pacific-time label: time only on the same PT calendar day as `now`, else "Mon D, h:mm AM". */
-function ptLabel(iso: string, now: Date): string {
+export function ptLabel(iso: string, now: Date): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   if (dayKey.format(d) === dayKey.format(now)) return timeOnly.format(d);
@@ -88,6 +91,9 @@ export function toReviewRow(item: ReviewQueueItem, siblings: RawSibling[], now: 
     raw_siblings: siblings,
     capper_profile_image_url: item.capper_profile_image_url,
     tweet_excerpt: item.tweet_excerpt,
+    live_twin: item.live_twin
+      ? { ...item.live_twin, posted_label: item.live_twin.posted_at ? ptLabel(item.live_twin.posted_at, now) : "" }
+      : null,
   };
 }
 

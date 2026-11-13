@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { API_BASE } from "@/lib/config";
+import type { RefusedDuplicate } from "@/lib/liveTwin";
 
 function adminHeaders(): HeadersInit {
   const secret = process.env.CRON_SECRET;
@@ -33,8 +34,14 @@ async function postNoBody(path: string): Promise<ReviewActionResult> {
   }
 }
 
-export async function approvePickAction(pickId: number): Promise<ReviewActionResult> {
-  return postNoBody(`/api/admin/picks/${pickId}/approve`);
+/** Approve one pick. The duplicate override is a separate, explicit option: the
+ * normal Approve button and the Enter key never pass it. */
+export async function approvePickAction(
+  pickId: number,
+  opts: { allowDuplicate?: boolean } = {},
+): Promise<ReviewActionResult> {
+  const qs = opts.allowDuplicate === true ? "?allow_duplicate=true" : "";
+  return postNoBody(`/api/admin/picks/${pickId}/approve${qs}`);
 }
 
 export async function rejectPickAction(pickId: number): Promise<ReviewActionResult> {
@@ -72,14 +79,21 @@ export async function batchRejectPicksAction(pickIds: number[]): Promise<BatchRe
 }
 
 export type BatchApproveResult =
-  | { ok: true; approved: number; skipped: { pick_id: number; reason: string }[] }
+  | {
+      ok: true;
+      approved: number;
+      /** Everything not approved, refused duplicates included. */
+      skipped: { pick_id: number; reason: string }[];
+      /** The subset of `skipped` refused because the capper already has it live. */
+      refused: RefusedDuplicate[];
+    }
   | { ok: false; error: string };
 
 /** Bulk approve-as-is from the review queue. Same per-pick rules as the
  * single Approve (needs_review only; unbound straights refused), but the
  * batch approves what it can and reports the rest with reasons. */
 export async function batchApprovePicksAction(pickIds: number[]): Promise<BatchApproveResult> {
-  if (pickIds.length === 0) return { ok: true, approved: 0, skipped: [] };
+  if (pickIds.length === 0) return { ok: true, approved: 0, skipped: [], refused: [] };
   try {
     const res = await fetch(`${API_BASE}/api/admin/picks/batch-approve`, {
       method: "POST",
@@ -93,12 +107,19 @@ export async function batchApprovePicksAction(pickIds: number[]): Promise<BatchA
     const data = (await res.json()) as {
       approved: number;
       skipped: { pick_id: number; reason: string }[];
+      refused_duplicates?: RefusedDuplicate[];
     };
     revalidatePath("/admin/review");
     revalidatePath("/admin/audit");
     revalidatePath("/");
     revalidatePath("/cappers");
-    return { ok: true, approved: data.approved ?? 0, skipped: data.skipped ?? [] };
+    // This call never sends allow_duplicate: it approves what it can and reports the rest.
+    return {
+      ok: true,
+      approved: data.approved ?? 0,
+      skipped: data.skipped ?? [],
+      refused: (data.refused_duplicates ?? []).map((r) => ({ ...r, live_twin: r.live_twin ?? null })),
+    };
   } catch (err: unknown) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }

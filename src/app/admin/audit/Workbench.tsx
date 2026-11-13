@@ -176,6 +176,8 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
             onSkip={() => void terminal.skip()}
             onDelete={() => void terminal.remove()}
             message={terminal.message}
+            duplicate={terminal.duplicate}
+            onGradeAnyway={() => void terminal.gradeAnyway()}
           />
         )}
       </div>

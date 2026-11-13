@@ -6,6 +6,7 @@ import type { RejectedPickShaped } from "@/lib/api";
 import { parseAdminSport } from "@/lib/admin-sports";
 import { fetchMarketsAction, type MarketDef } from "../audit/actions";
 import { usePatchFlow } from "../audit/usePatchFlow";
+import { DuplicateNotice } from "./DuplicateNotice";
 import { ResidueList } from "./ResidueList";
 import { ReviewActionStrip } from "./ReviewActionStrip";
 import { ReviewDetail } from "./ReviewDetail";
@@ -143,6 +144,13 @@ export function ReviewWorkbench({ rows: initial, counts, paging, newerHref, olde
         onSelectAll={() => setSelection(new Set(rows.map((r) => r.pick_id)))}
       />
       {tabs}
+      <DuplicateNotice
+        entries={actions.notice}
+        rows={rows}
+        pending={busy}
+        onApproveAnyway={(id) => void actions.approveAnyway(id)}
+        onDismiss={actions.dismissNotice}
+      />
       <div className="flex-1 min-h-0 grid grid-cols-[470px_1fr]">
         <ReviewQueue
           rows={rows}
@@ -177,6 +185,8 @@ export function ReviewWorkbench({ rows: initial, counts, paging, newerHref, olde
                 tracked={tracked}
                 groupSelected={groupSelected}
                 onApprove={(id) => void actions.approve(id)}
+                canApprove={actions.canApprove(current)}
+                onApproveAnyway={(id) => void actions.approveAnyway(id)}
                 onReject={(id) => void actions.reject(id)}
                 onApproveAll={() => void actions.approveMany(heldIdList, "from one tweet")}
                 onRejectAll={() => void actions.rejectMany(heldIdList, "from one tweet")}

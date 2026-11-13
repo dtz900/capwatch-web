@@ -1,4 +1,5 @@
 import { API_BASE, REVALIDATE_SECONDS } from "./config";
+import type { LiveTwin } from "./liveTwin";
 import { warnFailed, warnIfSlow } from "./upstream-log";
 import type { SportFilter } from "./types";
 import type { AdminSport } from "./admin-sports";
@@ -676,6 +677,9 @@ export interface ReviewQueueItem {
   media_urls: string[];
   player_team: string | null;
   game_teams: { away: string; home: string } | null;
+  /** The capper's pick that is already live on this game, side and line.
+   * Absent until the API ships the duplicate check; treat absent as null. */
+  live_twin?: LiveTwin | null;
 }
 
 export interface RawSibling {

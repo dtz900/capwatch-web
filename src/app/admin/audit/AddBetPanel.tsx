@@ -7,11 +7,13 @@
 
 import { useRef, useState, useTransition } from "react";
 import { ADMIN_SPORTS, type AdminSport } from "@/lib/admin-sports";
+import { absoluteTweetUrl, entryFromDetail, parseDuplicateDetail, type DuplicateEntry } from "@/lib/liveTwin";
 import {
   addManualBetAction,
   searchGamesAction,
   searchPlayersAction,
   type GameSearchResult,
+  type ManualBetInput,
   type PlayerSearchResult,
 } from "./actions";
 import {
@@ -57,6 +59,8 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const [missingTeams, setMissingTeams] = useState<string[]>([]);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The entry the API refused as a duplicate, with the exact input to resend on "Enter anyway".
+  const [duplicate, setDuplicate] = useState<{ entry: DuplicateEntry; input: ManualBetInput } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const setLeg = (idx: number, patch: Partial<LegDraft>) =>
@@ -95,21 +99,16 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
     !oddsConflict &&
     !pending;
 
-  const submit = () =>
+  const send = (input: ManualBetInput, allowDuplicate: boolean) =>
     startTransition(async () => {
       setError(null);
       setResult(null);
-      const res = await addManualBetAction({
-        capper: capper.trim(),
-        legs: legs.map((l) => legToInput(l)),
-        units: units.trim() === "" ? null : Number(units),
-        combined_odds: combinedOdds.trim() === "" ? null : Number(combinedOdds),
-        tweet_url: tweetUrl.trim() || null,
-        is_live: isLive,
-        sport,
-      });
+      setDuplicate(null);
+      const res = await addManualBetAction(input, allowDuplicate ? { allowDuplicate: true } : undefined);
       if (!res.ok) {
-        setError(res.error);
+        const detail = allowDuplicate ? null : parseDuplicateDetail(res.error);
+        if (detail != null) setDuplicate({ entry: entryFromDetail(0, detail), input });
+        else setError(res.error);
         return;
       }
       setResult(
@@ -121,6 +120,20 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
       setCombinedOdds("");
       setTweetUrl("");
     });
+
+  const submit = () =>
+    send(
+      {
+        capper: capper.trim(),
+        legs: legs.map((l) => legToInput(l)),
+        units: units.trim() === "" ? null : Number(units),
+        combined_odds: combinedOdds.trim() === "" ? null : Number(combinedOdds),
+        tweet_url: tweetUrl.trim() || null,
+        is_live: isLive,
+        sport,
+      },
+      false,
+    );
 
   if (!open) {
     return (
@@ -413,6 +426,27 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
           </button>
         </div>
       </div>
+      {duplicate && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-[#f87171]">
+          <span>
+            {`Not added. Already live as #${duplicate.entry.existingPickId ?? "?"}: ${duplicate.entry.existing || duplicate.entry.reason}.`}
+            {duplicate.entry.differs ? ` ${duplicate.entry.differs}` : ""}
+          </span>
+          {absoluteTweetUrl(duplicate.entry.tweetUrl) && (
+            <a
+              href={absoluteTweetUrl(duplicate.entry.tweetUrl) ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-[var(--color-text-soft)]"
+            >
+              View tweet
+            </a>
+          )}
+          <button type="button" disabled={pending} onClick={() => send(duplicate.input, true)} className={btnCls}>
+            Enter anyway
+          </button>
+        </div>
+      )}
     </section>
   );
 }

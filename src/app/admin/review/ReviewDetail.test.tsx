@@ -47,6 +47,7 @@ function row(o: Partial<ReviewRow> = {}): ReviewRow {
     raw_siblings: [],
     capper_profile_image_url: null,
     tweet_excerpt: "",
+    live_twin: null,
     ...o,
   } as ReviewRow;
 }
@@ -66,6 +67,8 @@ function props(p: ReviewRow, o: Partial<React.ComponentProps<typeof ReviewDetail
     tracked: [],
     groupSelected: false,
     onApprove: () => {},
+    canApprove: true,
+    onApproveAnyway: () => {},
     onReject: () => {},
     onApproveAll: () => {},
     onRejectAll: () => {},

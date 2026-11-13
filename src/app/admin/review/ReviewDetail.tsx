@@ -13,6 +13,7 @@ import { effectiveStates, type FieldKey } from "../audit/fieldState";
 import type { PickHint } from "../audit/usePatchFlow";
 import { gameLabelFor } from "../audit/teamMatch";
 import { TweetBlock } from "../audit/TweetBlock";
+import { AlreadyLive } from "./AlreadyLive";
 import { FromThisTweet } from "./FromThisTweet";
 import { formatOdds, markTweetLine } from "./reviewLabels";
 import type { ReviewRow } from "./reviewRow";
@@ -31,6 +32,8 @@ export interface ReviewDetailProps {
   tracked: RawSibling[];
   groupSelected: boolean;
   onApprove: (id: number) => void;
+  canApprove: boolean;
+  onApproveAnyway: (id: number) => void;
   onReject: (id: number) => void;
   onApproveAll: () => void;
   onRejectAll: () => void;
@@ -148,6 +151,7 @@ export function ReviewDetail(props: ReviewDetailProps) {
       </div>
 
       <TimingLine p={p} gameLabel={gameLabel} rebound={hint?.game != null} />
+      <AlreadyLive p={p} canApprove={props.canApprove} pending={pending} onApproveAnyway={props.onApproveAnyway} />
       <TweetBlock p={p} renderText={markedTweet(p.selection)} />
       <FromThisTweet
         current={p}
