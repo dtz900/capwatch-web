@@ -66,10 +66,16 @@ export function DuplicateNotice({ entries, rows, pending, onApproveAnyway, onDis
                   </span>
                 </div>
                 <div className="mt-[2px] text-[12px] leading-[17px] font-semibold text-[var(--color-text-muted)]">
-                  {e.sameBatch ? "Another copy in this same approval was kept" : "Already live"}
-                  {e.existingPickId != null && ` as #${e.existingPickId}`}
-                  {": "}
-                  {e.existing || e.reason}
+                  {e.existing ? (
+                    <>
+                      {e.sameBatch ? "Another copy in this same approval was kept" : "Already live"}
+                      {e.existingPickId != null && ` as #${e.existingPickId}`}
+                      {": "}
+                      {e.existing}
+                    </>
+                  ) : (
+                    e.reason
+                  )}
                   {link && <> · {link}</>}
                 </div>
                 {e.differs && (

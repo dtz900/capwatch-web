@@ -7,7 +7,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { ADMIN_SPORTS, type AdminSport } from "@/lib/admin-sports";
-import { absoluteTweetUrl, entryFromDetail, parseDuplicateDetail, type DuplicateEntry } from "@/lib/liveTwin";
+import { absoluteTweetUrl, entryFromDetail, existingLine, parseDuplicateDetail, type DuplicateEntry } from "@/lib/liveTwin";
 import {
   addManualBetAction,
   searchGamesAction,
@@ -59,8 +59,9 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const [missingTeams, setMissingTeams] = useState<string[]>([]);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // The entry the API refused as a duplicate, with the exact input to resend on "Enter anyway".
-  const [duplicate, setDuplicate] = useState<{ entry: DuplicateEntry; input: ManualBetInput } | null>(null);
+  // The refusal and the form it was for. The block shows only while the form still matches `key`,
+  // so an edited entry goes through the normal check again and never straight to the override.
+  const [refusal, setRefusal] = useState<{ entry: DuplicateEntry; key: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const setLeg = (idx: number, patch: Partial<LegDraft>) =>
@@ -99,15 +100,27 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
     !oddsConflict &&
     !pending;
 
+  const buildInput = (): ManualBetInput => ({
+    capper: capper.trim(),
+    legs: legs.map((l) => legToInput(l)),
+    units: units.trim() === "" ? null : Number(units),
+    combined_odds: combinedOdds.trim() === "" ? null : Number(combinedOdds),
+    tweet_url: tweetUrl.trim() || null,
+    is_live: isLive,
+    sport,
+  });
+  const formKey = JSON.stringify(buildInput());
+  const duplicate = refusal && refusal.key === formKey ? refusal : null;
+
   const send = (input: ManualBetInput, allowDuplicate: boolean) =>
     startTransition(async () => {
       setError(null);
       setResult(null);
-      setDuplicate(null);
+      setRefusal(null);
       const res = await addManualBetAction(input, allowDuplicate ? { allowDuplicate: true } : undefined);
       if (!res.ok) {
         const detail = allowDuplicate ? null : parseDuplicateDetail(res.error);
-        if (detail != null) setDuplicate({ entry: entryFromDetail(0, detail), input });
+        if (detail != null) setRefusal({ entry: entryFromDetail(0, detail), key: JSON.stringify(input) });
         else setError(res.error);
         return;
       }
@@ -121,19 +134,7 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
       setTweetUrl("");
     });
 
-  const submit = () =>
-    send(
-      {
-        capper: capper.trim(),
-        legs: legs.map((l) => legToInput(l)),
-        units: units.trim() === "" ? null : Number(units),
-        combined_odds: combinedOdds.trim() === "" ? null : Number(combinedOdds),
-        tweet_url: tweetUrl.trim() || null,
-        is_live: isLive,
-        sport,
-      },
-      false,
-    );
+  const submit = () => send(buildInput(), false);
 
   if (!open) {
     return (
@@ -429,7 +430,7 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
       {duplicate && (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-[#f87171]">
           <span>
-            {`Not added. Already live as #${duplicate.entry.existingPickId ?? "?"}: ${duplicate.entry.existing || duplicate.entry.reason}.`}
+            {`Not added. ${existingLine(duplicate.entry)}${duplicate.entry.existing ? "." : ""}`}
             {duplicate.entry.differs ? ` ${duplicate.entry.differs}` : ""}
           </span>
           {absoluteTweetUrl(duplicate.entry.tweetUrl) && (
@@ -442,7 +443,7 @@ export function AddBetPanel({ embedded = false }: { embedded?: boolean } = {}) {
               View tweet
             </a>
           )}
-          <button type="button" disabled={pending} onClick={() => send(duplicate.input, true)} className={btnCls}>
+          <button type="button" disabled={pending} onClick={() => send(buildInput(), true)} className={btnCls}>
             Enter anyway
           </button>
         </div>

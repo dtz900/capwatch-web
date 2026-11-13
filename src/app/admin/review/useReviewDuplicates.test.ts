@@ -127,4 +127,36 @@ describe("useReviewActions duplicates", () => {
     expect(hook.result.current.notice[0].error).toBe("500: boom");
     expect(hook.result.current.message).toBeNull();
   });
+
+  it("a failed second-bet click on a pick with no notice entry shows on the message line", async () => {
+    m.approve.mockResolvedValue({ ok: false, error: "400: pick is auto_approved, not needs_review" });
+    const { hook } = setup([row(1)], 1, []);
+    await act(async () => {
+      await hook.result.current.approveAnyway(1);
+    });
+    expect(m.approve).toHaveBeenCalledWith(1, { allowDuplicate: true });
+    expect(hook.result.current.message).toBe("#1: 400: pick is auto_approved, not needs_review");
+    expect(hook.result.current.notice).toEqual([]);
+  });
+
+  it("prefers the queue item's live_twin over parsing the sentence", async () => {
+    m.approve.mockResolvedValue(refusal);
+    const twin = {
+      pick_id: 77,
+      raw_id: 2,
+      selection: "Structured +1",
+      line: 1,
+      odds_taken: -105,
+      units: 2,
+      posted_at: "2026-11-11T19:48:40+00:00",
+      tweet_id: "5",
+      tweet_url: "https://x.com/h/status/5",
+    };
+    const { hook } = setup([row(1, { live_twin: { ...twin, posted_label: "" } as ReviewRow["live_twin"] })], 1, []);
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    expect(hook.result.current.notice[0]).toMatchObject({ existingPickId: 77, tweetUrl: "https://x.com/h/status/5" });
+    expect(hook.result.current.notice[0].existing).toContain("Structured +1, -105, 2u");
+  });
 });

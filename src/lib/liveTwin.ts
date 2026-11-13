@@ -45,7 +45,7 @@ export interface DuplicateEntry {
   reason: string;
 }
 
-export const DUPLICATE_DETAIL_START = /^Already live as pick (\d+)/;
+export const DUPLICATE_DETAIL_START = /^(?:Already live as pick|Duplicate of pick) (\d+)/;
 
 /** Pulls the `detail` text out of a failed call. The server actions report
  * "<status>: <body>" where body is the API's JSON; a bare detail string is
@@ -70,12 +70,21 @@ export function parseDuplicateDetail(error: string): string | null {
   return DUPLICATE_DETAIL_START.test(detail) ? detail : null;
 }
 
-/** "x.com/handle/status/1" -> "https://x.com/handle/status/1". */
+const TWEET_HOSTS = new Set(["x.com", "www.x.com", "twitter.com", "www.twitter.com"]);
+
+/** "x.com/handle/status/1" -> "https://x.com/handle/status/1". Only x.com and
+ * twitter.com links are links; any other host (or scheme) is not. */
 export function absoluteTweetUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const t = raw.trim();
-  if (/^https?:\/\//i.test(t)) return t;
-  return /^(x|twitter)\.com\//i.test(t) ? `https://${t}` : null;
+  const full = /^https?:\/\//i.test(t) ? t : /^[a-z0-9.-]+\//i.test(t) ? `https://${t}` : null;
+  if (!full) return null;
+  try {
+    const u = new URL(full);
+    return TWEET_HOSTS.has(u.hostname.toLowerCase()) ? u.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 const fmtUnits = (u: number | null | undefined) => (u == null ? "no stake" : `${u}u`);
@@ -83,35 +92,74 @@ const fmtOdds = (o: number | null | undefined) => (o == null ? "no odds" : o > 0
 
 export const SECOND_BET_SENTENCE = "This may be a deliberate second bet.";
 
-/** Builds the entry for a single-call refusal from the API's detail sentence. */
+const fmtOddsText = (t: string) => (/^\d/.test(t) ? `+${t}` : t);
+
+/** Builds the entry for a refusal from the API's sentence (`refusal_text` in
+ * the platform's core/live_twin.py). Every part after the selection is optional:
+ *   Already live as pick N ('SEL'[ line L][ odds O][ units U][, posted MM-DD HH:MM UTC][, x.com/h/status/ID]).
+ *   [ Price or stake differs: this one ODDS, UNITS vs ODDS, UNITS. May be a deliberate second bet.]
+ * The lead is "Duplicate of pick N in this batch" for a same-batch copy.
+ * A string that does not fit stays a plain sentence (`reason`, no JSON, no status). */
 export function entryFromDetail(pickId: number, detail: string): DuplicateEntry {
-  const head = /^Already live as pick (\d+) \(([\s\S]*)\)\.\s*([\s\S]*)$/.exec(detail);
+  const plain: DuplicateEntry = {
+    pickId,
+    sameBatch: false,
+    existingPickId: null,
+    existing: "",
+    tweetUrl: null,
+    differs: null,
+    reason: detail,
+  };
+  const head = /^(Already live as pick|Duplicate of pick) (\d+)(?: in this batch)? \(([\s\S]*)\)\.(?:\s+([\s\S]*))?$/.exec(detail);
   if (!head) {
     const id = DUPLICATE_DETAIL_START.exec(detail);
-    return {
-      pickId,
-      sameBatch: false,
-      existingPickId: id ? Number(id[1]) : null,
-      existing: "",
-      tweetUrl: null,
-      differs: null,
-      reason: detail,
-    };
+    return { ...plain, existingPickId: id ? Number(id[1]) : null };
   }
-  const [, id, inner, tail] = head;
-  const urlMatch = /,\s*((?:x|twitter)\.com\/[^\s,)]+)\s*$/i.exec(inner);
-  const tweetUrl = urlMatch ? absoluteTweetUrl(urlMatch[1]) : null;
-  const rest = urlMatch ? inner.slice(0, urlMatch.index) : inner;
-  const parts = /^'([\s\S]*)' line (\S+) units (\S+), posted (.+)$/.exec(rest);
-  const existing = parts
-    ? `${parts[1]}, ${parts[3] === "None" ? "no stake" : `${parts[3]}u`}, posted ${parts[4]}`
-    : rest;
-  // "Price or stake differs: this one -112, 1.12u vs no odds, 1u. May be a deliberate second bet."
-  const diff = /^Price or stake differs: this one ([\s\S]+?) vs ([\s\S]+?)\.(?:\s|$)/.exec(tail);
-  const differs = diff
-    ? `Price or stake differs: this one is ${diff[1]}, the live one is ${diff[2]}. ${SECOND_BET_SENTENCE}`
-    : null;
-  return { pickId, sameBatch: false, existingPickId: Number(id), existing, tweetUrl, differs, reason: detail };
+  const [, lead, id, inner, tail = ""] = head;
+  let rest = inner;
+  let tweetUrl: string | null = null;
+  const url = /,\s*((?:x|twitter)\.com\/[^\s,]+)$/i.exec(rest);
+  if (url) {
+    tweetUrl = absoluteTweetUrl(url[1]);
+    rest = rest.slice(0, url.index);
+  }
+  let posted = "";
+  const when = /,\s*posted (\d\d-\d\d \d\d:\d\d UTC)$/.exec(rest);
+  if (when) {
+    posted = when[1];
+    rest = rest.slice(0, when.index);
+  }
+  const parts = /^'([\s\S]*)'(?: line (\S+))?(?: odds (\S+))?(?: units (\S+))?$/.exec(rest);
+  let existing = "";
+  if (parts) {
+    const bits = [parts[1]];
+    if (parts[3]) bits.push(fmtOddsText(parts[3]));
+    if (parts[4]) bits.push(`${parts[4]}u`);
+    existing = bits.join(", ") + (posted ? `, posted ${posted}` : "");
+  }
+  let differs: string | null = null;
+  if (tail) {
+    const diff = /^Price or stake differs: this one (no odds|\S+), (no units|\S+) vs (no odds|\S+), (no units|\S+)\./.exec(tail);
+    if (diff) {
+      const mine = `${fmtOddsText(diff[1])}, ${diff[2]}`;
+      const live = `${fmtOddsText(diff[3])}, ${diff[4]}`;
+      differs = `Price or stake differs: this one is ${mine}, the live one is ${live}. ${SECOND_BET_SENTENCE}`;
+    }
+  }
+  return {
+    pickId,
+    sameBatch: lead === "Duplicate of pick",
+    existingPickId: Number(id),
+    existing,
+    tweetUrl,
+    differs,
+    reason: detail,
+  };
+}
+
+/** One line naming the existing pick: the parsed description, else the API's own sentence. */
+export function existingLine(e: DuplicateEntry): string {
+  return e.existing ? `Already live as #${e.existingPickId ?? "?"}: ${e.existing}` : e.reason;
 }
 
 /** Differences between the held pick and its live twin as display strings. */

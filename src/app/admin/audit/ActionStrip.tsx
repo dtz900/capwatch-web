@@ -1,6 +1,6 @@
 "use client";
 
-import { absoluteTweetUrl } from "@/lib/liveTwin";
+import { absoluteTweetUrl, existingLine } from "@/lib/liveTwin";
 import type { GradeOutcome } from "./useAuditKeys";
 import type { GradeDuplicate } from "./useTerminalActions";
 
@@ -85,7 +85,7 @@ export function ActionStrip({
       )}
       {duplicate && (
         <span role="alert" className="flex items-center gap-2 text-[12px] font-bold text-[var(--color-neg)]">
-          {`Not graded. Already live as #${duplicate.entry.existingPickId ?? "?"}: ${duplicate.entry.existing || duplicate.entry.reason}`}
+          {`Not graded. ${existingLine(duplicate.entry)}`}
           {absoluteTweetUrl(duplicate.entry.tweetUrl) && (
             <a
               href={absoluteTweetUrl(duplicate.entry.tweetUrl) ?? undefined}

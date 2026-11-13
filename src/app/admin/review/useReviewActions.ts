@@ -99,7 +99,14 @@ export function useReviewActions(a: Args) {
       if (res.ok) return { ok: true, removed: [id], toast: `Approved #${id}` };
       const detail = parseDuplicateDetail(res.error);
       if (detail == null) return res;
-      addEntries([entryFromDetail(id, detail)]);
+      // The queue item's own live_twin is structured data; prefer it over parsing the sentence.
+      const twin = row.live_twin;
+      const now = new Date();
+      addEntries([
+        twin
+          ? entryFromRefused({ pick_id: id, reason: detail, same_batch: false, live_twin: twin }, (iso) => ptLabel(iso, now))
+          : entryFromDetail(id, detail),
+      ]);
       return { ok: true, removed: [], toast: null };
     }, `#${id}: `);
   };
@@ -113,7 +120,8 @@ export function useReviewActions(a: Args) {
         return res.ok ? { ok: true, removed: [id], toast: `Approved #${id} as a second bet` } : res;
       },
       "",
-      (text) => entryError(id, text),
+      // A pick that loaded with a live copy has no notice entry yet: show the failure on the message line.
+      (text) => (entries.some((e) => e.pickId === id) ? entryError(id, text) : setMessage(`#${id}: ${text}`)),
     );
   };
 

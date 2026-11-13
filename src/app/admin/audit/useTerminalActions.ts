@@ -30,6 +30,10 @@ export interface GradeDuplicate {
   entry: DuplicateEntry;
 }
 
+/** The fields a duplicate check looks at, as one comparable string. */
+const fingerprint = (r: QueueRow) =>
+  JSON.stringify([r.selection, r.market, r.line, r.odds_taken, r.units, r.game_id, r.player_id, r.stat_name]);
+
 export const MANUAL_GRADE_COPY = "This pick has a manual grade. Use Win / Loss / Push / Void to change it.";
 
 const GRADE_TOAST: Record<GradeOutcome, string> = {
@@ -65,8 +69,10 @@ export function useTerminalActions(a: Args) {
   const [msg, setMsg] = useState<{ id: number; text: string } | null>(null);
   // An error belongs to the pick it happened on and disappears when another is selected.
   const message = msg && msg.id === a.selectedId ? msg.text : null;
-  const [dup, setDup] = useState<(GradeDuplicate & { id: number }) | null>(null);
-  const duplicate = dup && dup.id === a.selectedId ? dup : null;
+  const [dup, setDup] = useState<(GradeDuplicate & { id: number; fp: string }) | null>(null);
+  // The refusal was for the pick as it was then. If a field was edited since, it must pass the normal check again.
+  const current = a.rows.find((r) => r.pick_id === a.selectedId);
+  const duplicate = dup && dup.id === a.selectedId && current && dup.fp === fingerprint(current) ? dup : null;
 
   const settle = (ids: number[], toast: string) => {
     const index = a.rows.findIndex((r) => r.pick_id === ids[0]);
@@ -157,7 +163,7 @@ export function useTerminalActions(a: Args) {
     const id = a.selectedId;
     if (id == null) return Promise.resolve();
     return run(id, () => manualGradeAction(id, outcome), `${GRADE_TOAST[outcome]}: #${id}`, (entry) =>
-      setDup({ id, outcome, entry }),
+      setDup({ id, outcome, entry, fp: fingerprint(a.rows.find((r) => r.pick_id === id) ?? ({} as QueueRow)) }),
     );
   };
 
