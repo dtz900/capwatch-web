@@ -11,6 +11,7 @@ vi.mock("./actions", () => ({
   batchRejectPicksAction: (...a: unknown[]) => m.batchReject(...a),
 }));
 
+import { entryDiffers } from "@/lib/liveTwin";
 import { useReviewActions } from "./useReviewActions";
 
 const row = (id: number, over: Partial<ReviewRow> = {}) =>
@@ -294,5 +295,38 @@ describe("a refusal only lives while the bet is the one that was refused", () =>
     expect(hook.result.current.notice).toHaveLength(1);
     edit(1, { game_id: "g9" });
     expect(hook.result.current.notice).toEqual([]);
+  });
+
+  it("a structured entry's difference line follows odds and units edits", async () => {
+    const twin = {
+      pick_id: 9, raw_id: 2, selection: "A +1", line: 1, odds_taken: -110, units: 1,
+      posted_at: "2026-11-11T19:48:40+00:00", tweet_id: "5", tweet_url: "https://x.com/h/status/5",
+      differs_in_price: true, differs_in_units: true, this_odds: -112, this_units: 2, posted_label: "",
+    };
+    m.approve.mockResolvedValue(refusal);
+    const { hook, edit } = setupEditable([row(1, { odds_taken: -112, units: 2, live_twin: twin as ReviewRow["live_twin"] })], 1);
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    const e = hook.result.current.notice[0];
+    expect(entryDiffers(e, { odds_taken: -112, units: 2 })).toContain("price -112 vs -110, stake 2u vs 1u");
+    expect(entryDiffers(e, { odds_taken: -112, units: 1.0 })).toContain("price -112 vs -110");
+    expect(entryDiffers(e, { odds_taken: -112, units: 1.0 })).not.toContain("stake");
+    expect(entryDiffers(e, { odds_taken: -110, units: 1 })).toBeNull();
+    edit(1, { units: 1 });
+    expect(hook.result.current.notice).toHaveLength(1);
+  });
+
+  it("a parsed entry's difference line is dropped once odds or units were edited since the refusal", async () => {
+    m.approve.mockResolvedValue(refusal);
+    const { hook } = setupEditable([row(1, { odds_taken: -112, units: 1.12 })], 1);
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    const e = hook.result.current.notice[0];
+    expect(e.differs).toContain("Price or stake differs");
+    expect(entryDiffers(e, { odds_taken: -112, units: 1.12 })).toBe(e.differs);
+    expect(entryDiffers(e, { odds_taken: -112, units: 1 })).toBeNull();
+    expect(entryDiffers(e, { odds_taken: -120, units: 1.12 })).toBeNull();
   });
 });

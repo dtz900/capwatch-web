@@ -58,7 +58,10 @@ export function useReviewActions(a: Args) {
   const [entries, setEntries] = useState<NoticeEntry[]>([]);
   // A refusal belongs to the bet as it was when refused. `at` is the rows as they were then.
   const addEntries = (list: DuplicateEntry[], at: ReviewRow[]) => {
-    const stamped = list.map((e) => ({ ...e, fp: identityFingerprint(at.find((r) => r.pick_id === e.pickId) ?? {}) }));
+    const stamped = list.map((e) => {
+      const r = at.find((x) => x.pick_id === e.pickId);
+      return { ...e, fp: identityFingerprint(r ?? {}), stampOdds: r?.odds_taken ?? null, stampUnits: r?.units ?? null };
+    });
     setEntries((prev) => [...prev.filter((p) => !stamped.some((n) => n.pickId === p.pickId)), ...stamped]);
   };
   const entryError = (pickId: number, error: string | undefined) =>

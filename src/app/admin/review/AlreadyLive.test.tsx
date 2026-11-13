@@ -48,12 +48,32 @@ describe("AlreadyLive", () => {
   it("omits the comparison when nothing differs", () => {
     render(
       <AlreadyLive
-        p={pick({ ...twin, differs_in_units: false, differs_in_price: false })}
+        p={pick({ ...twin, odds_taken: -112, units: 1.12, differs_in_units: false, differs_in_price: false })}
         canApprove
         pending={false}
         onApproveAnyway={() => {}}
       />,
     );
     expect(screen.queryByText(/deliberate second bet/)).toBeNull();
+  });
+
+  it("editing units to match the live pick removes the stake row and the sentence about it", () => {
+    const t = { ...twin, odds_taken: -112, units: 1, differs_in_price: false, differs_in_units: true };
+    const { rerender } = render(<AlreadyLive p={pick(t)} canApprove pending={false} onApproveAnyway={() => {}} />);
+    expect(screen.getByText("Stake")).toBeInTheDocument();
+    expect(screen.getByText(/The stake differs/)).toBeInTheDocument();
+    const edited = { ...pick(t), units: 1.0, odds_taken: -112 } as ReviewRow;
+    rerender(<AlreadyLive p={edited} canApprove pending={false} onApproveAnyway={() => {}} />);
+    expect(screen.queryByText("Stake")).toBeNull();
+    expect(screen.queryByText(/deliberate second bet/)).toBeNull();
+  });
+  it("editing odds to differ adds the price row", () => {
+    const t = { ...twin, odds_taken: -110, units: 1.12, differs_in_price: false, differs_in_units: false };
+    const { rerender } = render(<AlreadyLive p={{ ...pick(t), odds_taken: -110, units: 1.12 } as ReviewRow} canApprove pending={false} onApproveAnyway={() => {}} />);
+    expect(screen.queryByText("Price")).toBeNull();
+    rerender(<AlreadyLive p={{ ...pick(t), odds_taken: -125, units: 1.12 } as ReviewRow} canApprove pending={false} onApproveAnyway={() => {}} />);
+    expect(screen.getByText("Price")).toBeInTheDocument();
+    expect(screen.getByText("-125")).toBeInTheDocument();
+    expect(screen.getByText(/The price differs/)).toBeInTheDocument();
   });
 });

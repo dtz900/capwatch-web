@@ -1,5 +1,6 @@
 "use client";
 
+import { entryDiffers } from "@/lib/liveTwin";
 import { formatOdds } from "./reviewLabels";
 import type { NoticeEntry } from "./useReviewActions";
 import type { ReviewRow } from "./reviewRow";
@@ -78,9 +79,9 @@ export function DuplicateNotice({ entries, rows, pending, onApproveAnyway, onDis
                   )}
                   {link && <> · {link}</>}
                 </div>
-                {e.differs && (
+                {entryDiffers(e, row) && (
                   <div className="mt-[2px] text-[12px] leading-[17px] font-semibold text-[var(--color-text-soft)]">
-                    {e.differs}
+                    {entryDiffers(e, row)}
                   </div>
                 )}
                 {e.error && (

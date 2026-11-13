@@ -215,3 +215,11 @@ describe("identity fields", () => {
     expect(touchesIdentity({})).toBe(false);
   });
 });
+
+describe("twinDifferences follows the current values", () => {
+  it("1 and 1.0 are equal, and current values beat load-time flags", () => {
+    const t = { ...TWIN, odds_taken: -110, units: 1, differs_in_price: true, differs_in_units: true };
+    expect(twinDifferences(t, { odds: -110, units: 1.0 })).toEqual({ price: null, stake: null });
+    expect(twinDifferences(t, { odds: -120, units: 2 }).price).toEqual({ mine: "-120", live: "-110" });
+  });
+});

@@ -56,6 +56,11 @@ export interface DuplicateEntry {
   differs: string | null;
   /** The API's own sentence, used when nothing better could be built. */
   reason: string;
+  /** The structured live pick, when the entry came from one (lets the comparison be recomputed). */
+  twin?: LiveTwin;
+  /** The held pick's odds and units when it was refused (to tell whether they were edited since). */
+  stampOdds?: number | null;
+  stampUnits?: number | null;
 }
 
 export const DUPLICATE_DETAIL_START = /^(?:Already live as pick|Duplicate of pick) (\d+)/;
@@ -175,19 +180,41 @@ export function existingLine(e: DuplicateEntry): string {
   return e.existing ? `Already live as #${e.existingPickId ?? "?"}: ${e.existing}` : e.reason;
 }
 
-/** Differences between the held pick and its live twin as display strings. */
+/** Odds and units are equal when they are the same number (1 and 1.0 are the same). */
+export const sameNumber = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+
+const differ = (mine: number | null | undefined, live: number | null | undefined, flag: boolean) =>
+  mine != null && live != null ? !sameNumber(mine, live) : flag;
+
+/** Differences between the held pick and its live twin as display strings. The comparison uses the
+ * held pick's CURRENT odds and units; the load-time this_* values and differs_in_* flags are only a
+ * fallback when a side has no value (the backend also only compares values both copies state). */
 export function twinDifferences(
   t: LiveTwin,
   mine: { odds: number | null; units: number | null },
 ): { price: { mine: string; live: string } | null; stake: { mine: string; live: string } | null } {
-  const price = t.differs_in_price === true;
-  const stake = t.differs_in_units === true || t.units_differ === true;
-  const myOdds = t.this_odds !== undefined ? t.this_odds : mine.odds;
-  const myUnits = t.this_units !== undefined ? t.this_units : mine.units;
+  const myOdds = mine.odds ?? t.this_odds ?? null;
+  const myUnits = mine.units ?? t.this_units ?? null;
+  const price = differ(mine.odds, t.odds_taken, t.differs_in_price === true);
+  const stake = differ(mine.units, t.units, t.differs_in_units === true || t.units_differ === true);
   return {
     price: price ? { mine: fmtOdds(myOdds), live: fmtOdds(t.odds_taken) } : null,
     stake: stake ? { mine: fmtUnits(myUnits), live: fmtUnits(t.units) } : null,
   };
+}
+
+/** The "differs" sentence for a notice entry, following the held pick's current odds and units.
+ * From a structured twin it is recomputed; from a parsed sentence it is kept while odds and units are
+ * as they were at the refusal and dropped once either was edited. */
+export function entryDiffers(e: DuplicateEntry, row: { odds_taken: number | null; units: number | null } | undefined): string | null {
+  if (!row) return e.differs;
+  if (e.twin) {
+    const d = twinDifferences(e.twin, { odds: row.odds_taken, units: row.units });
+    const bits = [d.price && `price ${d.price.mine} vs ${d.price.live}`, d.stake && `stake ${d.stake.mine} vs ${d.stake.live}`].filter(Boolean);
+    return bits.length ? `This one and the live one differ: ${bits.join(", ")}. ${SECOND_BET_SENTENCE}` : null;
+  }
+  const same = (a: number | null | undefined, b: number | null) => (a == null || b == null ? (a ?? null) === b : sameNumber(a, b));
+  return same(e.stampOdds, row.odds_taken) && same(e.stampUnits, row.units) ? e.differs : null;
 }
 
 /** Builds the entry for one batch refusal. `label` formats a posted time. */
@@ -199,7 +226,7 @@ export function entryFromRefused(r: RefusedDuplicate, label: (iso: string) => st
   if (t.units != null) bits.push(`${t.units}u`);
   const when = t.posted_at ? label(t.posted_at) : "";
   const existing = bits.join(", ") + (when ? `, posted ${when}` : "");
-  const d = twinDifferences(t, { odds: null, units: null });
+  const d = twinDifferences(t, { odds: t.this_odds ?? null, units: t.this_units ?? null });
   const diffs = [
     d.price && `price ${d.price.mine} vs ${d.price.live}`,
     d.stake && `stake ${d.stake.mine} vs ${d.stake.live}`,
@@ -212,5 +239,6 @@ export function entryFromRefused(r: RefusedDuplicate, label: (iso: string) => st
     tweetUrl: absoluteTweetUrl(t.tweet_url),
     differs: diffs.length ? `This one and the live one differ: ${diffs.join(", ")}. ${SECOND_BET_SENTENCE}` : null,
     reason: r.reason,
+    twin: t,
   };
 }
