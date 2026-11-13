@@ -99,13 +99,15 @@ export function useReviewActions(a: Args) {
       if (res.ok) return { ok: true, removed: [id], toast: `Approved #${id}` };
       const detail = parseDuplicateDetail(res.error);
       if (detail == null) return res;
-      // The queue item's own live_twin is structured data; prefer it over parsing the sentence.
+      // The fresh refusal is the source of truth. The queue item's structured live_twin is used only
+      // when it is the very pick the backend just named; after an edit it may be about a different pick.
+      const parsed = entryFromDetail(id, detail);
       const twin = row.live_twin;
       const now = new Date();
       addEntries([
-        twin
+        twin && twin.pick_id === parsed.existingPickId
           ? entryFromRefused({ pick_id: id, reason: detail, same_batch: false, live_twin: twin }, (iso) => ptLabel(iso, now))
-          : entryFromDetail(id, detail),
+          : parsed,
       ]);
       return { ok: true, removed: [], toast: null };
     }, `#${id}: `);

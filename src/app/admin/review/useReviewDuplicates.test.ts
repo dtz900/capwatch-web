@@ -139,10 +139,10 @@ describe("useReviewActions duplicates", () => {
     expect(hook.result.current.notice).toEqual([]);
   });
 
-  it("prefers the queue item's live_twin over parsing the sentence", async () => {
+  it("uses the queue item's live_twin when it is the pick the refusal names", async () => {
     m.approve.mockResolvedValue(refusal);
     const twin = {
-      pick_id: 77,
+      pick_id: 9,
       raw_id: 2,
       selection: "Structured +1",
       line: 1,
@@ -156,7 +156,31 @@ describe("useReviewActions duplicates", () => {
     await act(async () => {
       await hook.result.current.approve(1);
     });
-    expect(hook.result.current.notice[0]).toMatchObject({ existingPickId: 77, tweetUrl: "https://x.com/h/status/5" });
+    expect(hook.result.current.notice[0]).toMatchObject({ existingPickId: 9, tweetUrl: "https://x.com/h/status/5" });
     expect(hook.result.current.notice[0].existing).toContain("Structured +1, -105, 2u");
+  });
+
+  it("an edited pick refused against a different live pick shows the new pick, not the stale twin", async () => {
+    m.approve.mockResolvedValue(refusal); // names pick 9 with link x.com/h/status/5
+    const stale = {
+      pick_id: 77,
+      raw_id: 2,
+      selection: "Old Twin -3",
+      line: -3,
+      odds_taken: -105,
+      units: 2,
+      posted_at: "2026-11-11T19:48:40+00:00",
+      tweet_id: "8",
+      tweet_url: "https://x.com/old/status/8",
+      posted_label: "",
+    };
+    const { hook } = setup([row(1, { live_twin: stale as ReviewRow["live_twin"] })], 1, []);
+    await act(async () => {
+      await hook.result.current.approve(1);
+    });
+    const e = hook.result.current.notice[0];
+    expect(e.existingPickId).toBe(9);
+    expect(e.tweetUrl).toBe("https://x.com/h/status/5");
+    expect(e.existing).not.toContain("Old Twin");
   });
 });
