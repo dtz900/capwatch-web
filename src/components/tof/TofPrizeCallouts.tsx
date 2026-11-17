@@ -1,5 +1,5 @@
 import type React from "react";
-import { sponsorDisplay, WEEK_MIN_PLAYS, type TofPrize } from "@/lib/tof/prize";
+import { sponsorDisplay, slateDate, WEEK_MIN_PLAYS, type TofPrize } from "@/lib/tof/prize";
 
 type Active = { prize: TofPrize; live: boolean };
 
@@ -9,6 +9,7 @@ const START_LABEL = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday:
     their name in text when no logo is configured. */
 function SponsorMark({ prize, height, textClass, full = false }: { prize: TofPrize; height: number; textClass: string; full?: boolean }) {
   const s = sponsorDisplay(prize);
+  if (!s) return null;
   const src = full ? s.logoFull : s.logo;
   if (!src) return <span className={textClass}>{s.name}</span>;
   // Logos ship on black; screen blending drops the black so only the mark shows.
@@ -43,10 +44,12 @@ export function TofPrizeStickers({ active }: { active: Active }) {
       <span aria-hidden="true" className="absolute right-full top-1/2 mr-4 hidden -translate-y-1/2 xl:block">
         <span className={AMOUNT_TAG} style={{ textShadow: "0 2px 0 #6b4e10" }}>{active.prize.amount}</span>
       </span>
-      <span aria-hidden="true" className="absolute left-full top-1/2 ml-4 hidden -translate-y-1/2 xl:block">
-        <span className={SPONSOR_TAG} style={{ textShadow: "none" }}><SponsorBody prize={active.prize} logo={13} /></span>
-      </span>
-      <span className="sr-only">{`${active.prize.amount} weekly prize, sponsored by ${s.name}`}</span>
+      {s && (
+        <span aria-hidden="true" className="absolute left-full top-1/2 ml-4 hidden -translate-y-1/2 xl:block">
+          <span className={SPONSOR_TAG} style={{ textShadow: "none" }}><SponsorBody prize={active.prize} logo={13} /></span>
+        </span>
+      )}
+      <span className="sr-only">{s ? `${active.prize.amount} weekly prize, sponsored by ${s.name}` : `${active.prize.amount} weekly prize`}</span>
     </>
   );
 }
@@ -59,7 +62,9 @@ export function TofPrizeHintRow({ active, className = "", children }: { active: 
     <span className={`flex items-center justify-center gap-2.5 ${className}`}>
       <span aria-hidden="true" className={`${AMOUNT_CHIP} -my-0.5 xl:hidden`}>{active.prize.amount}</span>
       {children}
-      <span aria-hidden="true" className={`${SPONSOR_CHIP} -my-0.5 xl:hidden`}><SponsorBody prize={active.prize} logo={9} /></span>
+      {sponsorDisplay(active.prize) && (
+        <span aria-hidden="true" className={`${SPONSOR_CHIP} -my-0.5 xl:hidden`}><SponsorBody prize={active.prize} logo={9} /></span>
+      )}
     </span>
   );
 }
@@ -69,6 +74,8 @@ export function TofPrizeDetails({ active }: { active: Active }) {
   const { prize, live } = active;
   const s = sponsorDisplay(prize);
   const starts = START_LABEL.format(new Date(`${prize.starts}T12:00:00Z`));
+  // A prize with an end date inside the next seven days is on its last week.
+  const lastWeek = !!prize.ends && (Date.parse(`${prize.ends}T12:00:00Z`) - Date.parse(`${slateDate(new Date())}T12:00:00Z`)) < 7 * 86_400_000;
   const rules = [
     "Most units Tuesday through Monday wins",
     `Min ${WEEK_MIN_PLAYS} graded plays to qualify`,
@@ -78,7 +85,7 @@ export function TofPrizeDetails({ active }: { active: Active }) {
     <div className="mt-3 rounded-lg border border-[rgba(245,197,74,0.35)] bg-[rgba(245,197,74,0.07)] px-3 py-3">
       <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--color-gold)]">Weekly contest</div>
       <div className="mt-1 font-[family-name:var(--font-display)] text-[17px] leading-tight text-[var(--color-text)]">
-        {live ? `Win ${prize.amount} every week` : `Win ${prize.amount} weekly, starts ${starts}`}
+        {live ? (lastWeek ? `Win ${prize.amount} this week` : `Win ${prize.amount} every week`) : `Win ${prize.amount} weekly, starts ${starts}`}
       </div>
       <ul className="mt-2 flex flex-col gap-1">
         {rules.map((r) => (
@@ -88,11 +95,13 @@ export function TofPrizeDetails({ active }: { active: Active }) {
           </li>
         ))}
       </ul>
-      <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[rgba(255,255,255,0.07)] pt-2.5 hover:underline">
-        <span className="whitespace-nowrap text-[11px] font-bold text-[var(--color-text-muted)]">Sponsored by</span>
-        <SponsorMark prize={prize} height={34} full textClass="text-[11px] font-bold text-[var(--color-text)]" />
-        <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-muted)]">@{prize.sponsor_handle}</span>
-      </a>
+      {s && (
+        <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[rgba(255,255,255,0.07)] pt-2.5 hover:underline">
+          <span className="whitespace-nowrap text-[11px] font-bold text-[var(--color-text-muted)]">Sponsored by</span>
+          <SponsorMark prize={prize} height={34} full textClass="text-[11px] font-bold text-[var(--color-text)]" />
+          <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-muted)]">@{s.handle}</span>
+        </a>
+      )}
     </div>
   );
 }

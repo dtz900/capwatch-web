@@ -111,7 +111,7 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
   const [board, setBoard] = useState<{ window: "week" | "month"; rows: TofBoardRow[]; minPlays: number }>({ window: "month", rows: [], minPlays: 10 });
   const [toast, setToast] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
-  // The sponsored weekly prize. While it is live the rail ranks the week.
+  // The weekly prize. While it is live the rail ranks the week.
   // Client-only: the page is ISR, so HTML baked before a start or end date
   // must not hydrate against a different answer.
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);

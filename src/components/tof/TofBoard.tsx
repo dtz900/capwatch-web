@@ -17,7 +17,7 @@ export interface TofBoardMe {
 
 const START_LABEL = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
 
-/** The sponsored weekly prize, on top of the board it is decided by. */
+/** The weekly prize, on top of the board it is decided by. */
 function PrizeBanner({ prize, live, minPlays }: { prize: TofPrize; live: boolean; minPlays: number }) {
   const starts = START_LABEL.format(new Date(`${prize.starts}T12:00:00Z`));
   return (
@@ -28,10 +28,12 @@ function PrizeBanner({ prize, live, minPlays }: { prize: TofPrize; live: boolean
       <div className="mt-0.5 text-[11px] leading-snug text-[var(--color-text-soft)]">
         Most units wins. Min {minPlays} plays, Tuesday through Monday. Free to play.
       </div>
-      <div className="mt-1 text-[10px] font-bold text-[var(--color-text-muted)]">
-        Sponsored by{" "}
-        <a href={`https://x.com/${prize.sponsor_handle}`} target="_blank" rel="noopener noreferrer" className="text-[var(--color-text)] hover:underline">@{prize.sponsor_handle}</a>
-      </div>
+      {prize.sponsor_handle && (
+        <div className="mt-1 text-[10px] font-bold text-[var(--color-text-muted)]">
+          Sponsored by{" "}
+          <a href={`https://x.com/${prize.sponsor_handle}`} target="_blank" rel="noopener noreferrer" className="text-[var(--color-text)] hover:underline">@{prize.sponsor_handle}</a>
+        </div>
+      )}
     </div>
   );
 }

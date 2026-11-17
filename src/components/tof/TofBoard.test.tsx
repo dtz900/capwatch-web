@@ -23,18 +23,25 @@ describe("TofBoard avatars", () => {
   });
 
   it("shows the sponsored prize and the week label when the prize is live", () => {
-    const prize = { enabled: true, amount: "$25", sponsor_handle: "doctorsportshq", starts: "2026-11-10", ends: null };
+    const prize = { enabled: true, amount: "$25", sponsor_handle: "acmepicks", starts: "2026-11-10", ends: null };
     render(<TofBoard rows={[]} me={null} minPlays={10} period="week" prize={{ prize, live: true }} />);
     expect(screen.getByText("$25 to this week's top player")).toBeInTheDocument();
     expect(screen.getByText("Tailers · this week")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "@doctorsportshq" })).toHaveAttribute("href", "https://x.com/doctorsportshq");
+    expect(screen.getByRole("link", { name: "@acmepicks" })).toHaveAttribute("href", "https://x.com/acmepicks");
   });
 
   it("announces an upcoming prize by its start date", () => {
-    const prize = { enabled: true, amount: "$25", sponsor_handle: "doctorsportshq", starts: "2026-11-10", ends: null };
+    const prize = { enabled: true, amount: "$25", sponsor_handle: "acmepicks", starts: "2026-11-10", ends: null };
     render(<TofBoard rows={[]} me={null} minPlays={10} prize={{ prize, live: false }} />);
     expect(screen.getByText("$25 weekly prize starts Tue, Nov 10")).toBeInTheDocument();
     expect(screen.getByText("Tailers · this month")).toBeInTheDocument();
+  });
+
+  it("shows an unsponsored prize with no sponsor line", () => {
+    const prize = { enabled: true, amount: "$25", starts: "2026-11-10", ends: null };
+    render(<TofBoard rows={[]} me={null} minPlays={10} period="week" prize={{ prize, live: true }} />);
+    expect(screen.getByText("$25 to this week's top player")).toBeInTheDocument();
+    expect(screen.queryByText(/Sponsored by/)).toBeNull();
   });
 
   it("has no sponsor line without a prize", () => {
