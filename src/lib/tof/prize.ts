@@ -1,7 +1,12 @@
-/* The sponsored weekly Tail or Fade prize (first sponsor: @doctorsportshq,
-   $25 a week from 2026-11). Lives in public/tof-prize.json, which the
+/* The weekly Tail or Fade prize. Lives in public/tof-prize.json, which the
    platform's deal-drop email also fetches, so turning it on is a JSON edit
    and a deploy, never a code change.
+
+   The prize runs with or without a sponsor. To add one, set `sponsor_handle`
+   (X handle, no @) and optionally `sponsor_name`, `sponsor_logo` and
+   `sponsor_logo_full` (files dropped in public/sponsors/). Every "Sponsored
+   by" mention on the site and in the deal email appears from those fields
+   alone; remove them and the prize shows on its own.
 
    Rules: most units on the week board wins, minimum WEEK_MIN_PLAYS graded
    plays, week runs Tuesday through Monday (slate dates) so Monday Night
@@ -12,9 +17,9 @@ export type TofPrize = {
   enabled: boolean;
   /** Display string, e.g. "$25". */
   amount: string;
-  /** X handle without the @. */
-  sponsor_handle: string;
-  /** Short display name ("DSHQ"); falls back to @handle. */
+  /** X handle without the @. Leave out to run the prize with no sponsor. */
+  sponsor_handle?: string;
+  /** Short display name; falls back to @handle. */
   sponsor_name?: string;
   /** Site-relative logo path under /sponsors/; anything else is ignored. */
   sponsor_logo?: string;
@@ -43,18 +48,20 @@ export function slateDate(now: Date): string {
     files under /sponsors/, so a bad JSON edit cannot hotlink anything. */
 const SPONSOR_ASSET = /^\/sponsors\/[a-z0-9_-]+\.(png|jpe?g|webp)$/i;
 
-export function sponsorDisplay(prize: TofPrize): { name: string; logo: string | null; logoFull: string | null; url: string } {
+export function sponsorDisplay(prize: TofPrize): { name: string; handle: string; logo: string | null; logoFull: string | null; url: string } | null {
+  if (!prize.sponsor_handle) return null;
   const name = prize.sponsor_name?.trim() || `@${prize.sponsor_handle}`;
   const logo = prize.sponsor_logo && SPONSOR_ASSET.test(prize.sponsor_logo) ? prize.sponsor_logo : null;
   const logoFull = prize.sponsor_logo_full && SPONSOR_ASSET.test(prize.sponsor_logo_full) ? prize.sponsor_logo_full : logo;
-  return { name, logo, logoFull, url: `https://x.com/${prize.sponsor_handle}` };
+  return { name, handle: prize.sponsor_handle, logo, logoFull, url: `https://x.com/${prize.sponsor_handle}` };
 }
 
 /** The prize to show, or null. `live` is false while announced but not yet
     started; the board stays on the month until it goes live. */
 export function activePrize(cfg: TofPrize | null | undefined, now = new Date()): { prize: TofPrize; live: boolean } | null {
   if (!cfg || !cfg.enabled || !cfg.amount || !cfg.starts) return null;
-  if (!X_HANDLE.test(cfg.sponsor_handle ?? "")) return null;
+  // No sponsor is fine; a sponsor handle that is not a real X handle is not.
+  if (cfg.sponsor_handle != null && cfg.sponsor_handle !== "" && !X_HANDLE.test(cfg.sponsor_handle)) return null;
   const today = slateDate(now);
   if (cfg.ends && today > cfg.ends) return null;
   return { prize: cfg, live: today >= cfg.starts };

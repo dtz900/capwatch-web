@@ -165,7 +165,7 @@ html, body {
   50% { transform: translateY(4px); opacity: 1; }
 }
 .tof-hint { animation: tof-hint 1.3s ease-in-out infinite; }
-/* Sponsored weekly prize badge next to the Tail or Fade title. */
+/* Weekly prize badge next to the Tail or Fade title. */
 @keyframes tof-prize-glow {
   0%, 100% { box-shadow: 0 0 18px rgba(245, 197, 74, 0.35), 0 0 46px rgba(245, 197, 74, 0.16); }
   50% { box-shadow: 0 0 28px rgba(245, 197, 74, 0.6), 0 0 70px rgba(245, 197, 74, 0.28); }
