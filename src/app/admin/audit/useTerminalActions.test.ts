@@ -99,12 +99,64 @@ describe("useTerminalActions", () => {
   });
 
   it("maps a 409 to the manual-grade copy and keeps the selection", async () => {
-    m.regrade.mockResolvedValue({ ok: false, error: "409: pick already graded" });
+    m.regrade.mockResolvedValue({ ok: false, error: `409: ${JSON.stringify({ detail: "This pick has a manual grade." })}` });
     const { a, hook } = setup([row(1), row(2, { raw_id: 9 })], 1);
     await act(() => hook.result.current.regrade());
     expect(hook.result.current.message).toBe(MANUAL_GRADE_COPY);
     expect(a.setSelectedId).not.toHaveBeenCalled();
     expect(a.removeRows).not.toHaveBeenCalled();
+  });
+
+  it("asks for approval only on the acted-on pick, never on siblings", async () => {
+    m.regrade.mockResolvedValue({ ok: true, approved: true });
+    const rows = [row(1, { review_status: "needs_review", regrade_approves: true }), row(2, { regrade_approves: true })];
+    const { a, hook } = setup(rows, 1);
+    await act(() => hook.result.current.regrade());
+    expect(m.regrade.mock.calls).toEqual([[1, { approve: true }], [2]]);
+    expect(a.show).toHaveBeenCalledWith("Saved, regraded and approved: #1; regrading: #2");
+  });
+
+  it("sends a plain regrade when the row does not say regrade approves", async () => {
+    const { hook } = setup([row(1, { review_status: "needs_review" })], 1);
+    await act(() => hook.result.current.regrade());
+    expect(m.regrade).toHaveBeenCalledWith(1, {});
+  });
+
+  it("says still held, with the reason, when the server kept it held", async () => {
+    m.regrade.mockResolvedValue({ ok: true, still_held: true, held_reason: "ncaab_unbound" });
+    const { a, hook } = setup([row(1, { review_status: "needs_review" })], 1);
+    await act(() => hook.result.current.regrade());
+    expect(a.show).toHaveBeenCalledWith("Regraded #1, still held (ncaab unbound). Approve it in the review queue.");
+  });
+
+  it("treats a manual payout detail as the manual-grade case", async () => {
+    m.regrade.mockResolvedValue({ ok: false, error: `409: ${JSON.stringify({ detail: "Pick has a manual payout." })}` });
+    const { hook } = setup([row(1)], 1);
+    await act(() => hook.result.current.regrade());
+    expect(hook.result.current.message).toBe(MANUAL_GRADE_COPY);
+  });
+
+  it("keeps the plain saved copy when approved is absent or false", async () => {
+    m.regrade.mockResolvedValue({ ok: true, approved: false });
+    const { a, hook } = setup([row(1)], 1);
+    await act(() => hook.result.current.regrade());
+    expect(a.show).toHaveBeenCalledWith("Saved, regrading: #1");
+  });
+
+  it("shows the server detail when a held straight is refused with a 409", async () => {
+    const detail = "Already live as pick 77 (Acuff o4.5 -110).";
+    m.regrade.mockResolvedValue({ ok: false, error: `409: ${JSON.stringify({ detail })}` });
+    const { hook } = setup([row(1, { review_status: "needs_review" })], 1);
+    await act(() => hook.result.current.regrade());
+    expect(hook.result.current.message).toBe(detail);
+  });
+
+  it("shows the server detail for a 400", async () => {
+    const detail = "No game is bound to this pick.";
+    m.regrade.mockResolvedValue({ ok: false, error: `400: ${JSON.stringify({ detail })}` });
+    const { hook } = setup([row(1)], 1);
+    await act(() => hook.result.current.regrade());
+    expect(hook.result.current.message).toBe(detail);
   });
 
   it("does not treat a pick id containing 409 as a conflict", async () => {

@@ -14,13 +14,19 @@ import {
 } from "./actions";
 import { entryFromDetail, parseDuplicateDetail, type DuplicateEntry } from "@/lib/liveTwin";
 import { effectiveStates, type FieldKey } from "./fieldState";
-import type { QueueRow } from "./labels";
+import { heldReasonText } from "./HeldChip";
+import { errorDetail, type QueueRow } from "./labels";
 import { nextSelection } from "./selection";
 import { siblingIdsFor } from "./siblings";
 import type { GradeOutcome } from "./useAuditKeys";
 
-/** The API reports a failed call as "<status>: <body>". */
-const MANUAL_GRADE_ERROR = /^409:|manual grade/i;
+/** What the operator reads for a failed regrade: the server's plain-language `detail` as sent. Only a
+ * detail that talks about a manual grade or manual payout gets the Win / Loss / Push / Void wording. */
+const regradeErrorText = (error: string) => {
+  const detail = errorDetail(error);
+  if (detail && /manual (grade|payout)/i.test(detail)) return MANUAL_GRADE_COPY;
+  return detail ?? error;
+};
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -129,9 +135,9 @@ export function useTerminalActions(a: Args) {
     a.setPending(true);
     setMsg(null);
     try {
-      const res = await regradeAction(id);
+      const res = await regradeAction(id, row.regrade_approves === true ? { approve: true } : {});
       if (!res.ok) {
-        setMsg({ id, text: MANUAL_GRADE_ERROR.test(res.error) ? MANUAL_GRADE_COPY : res.error });
+        setMsg({ id, text: regradeErrorText(res.error) });
         return;
       }
       const done = [id];
@@ -147,10 +153,19 @@ export function useTerminalActions(a: Args) {
           }
           const r = await regradeAction(sib);
           if (r.ok) done.push(sib);
-          else failed.push(`#${sib}: ${r.error}`);
+          else failed.push(`#${sib}: ${errorDetail(r.error) ?? r.error}`);
         }
       }
-      let saved = `Saved, regrading: ${done.map((d) => `#${d}`).join(" and ")}`;
+      const ids = (xs: number[]) => xs.map((d) => `#${d}`).join(" and ");
+      let saved = `Saved, regrading: ${ids(done)}`;
+      if (res.approved === true) {
+        saved = `Saved, regraded and approved: #${id}`;
+        if (done.length > 1) saved += `; regrading: ${ids(done.slice(1))}`;
+      } else if (res.still_held === true) {
+        const why = heldReasonText(res.held_reason);
+        saved = `Regraded #${id}, still held${why ? ` (${why})` : ""}. Approve it in the review queue.`;
+        if (done.length > 1) saved += ` Regrading: ${ids(done.slice(1))}`;
+      }
       if (skipped.length) saved += `; ${skipped.map((d) => `#${d}`).join(", ")} still needs fixing`;
       settle(done, failed.length ? `${saved}. Regrade failed on ${failed.join("; ")}` : saved);
     } catch (err) {
