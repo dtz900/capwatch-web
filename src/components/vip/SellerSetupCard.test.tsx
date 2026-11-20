@@ -108,6 +108,16 @@ describe("SellerSetupCard", () => {
     }
   });
 
+  it("an X-only or password session is told to sign back in by email", async () => {
+    client.postVipSeller.mockRejectedValue(new client.VipApiError(403, "email_signin_required"));
+    render(<SellerSetupCard me={me} onDone={() => {}} />);
+    fillValid();
+    fireEvent.click(screen.getByRole("button", { name: "Start selling" }));
+    expect(await screen.findByText(/sign back in by email/)).toBeInTheDocument();
+    expect(screen.queryByText("Could not start selling. Try again.")).toBeNull();
+    expect(client.startVipOnboarding).not.toHaveBeenCalled();
+  });
+
   it("cannot confirm without agreeing", () => {
     render(<SellerSetupCard me={me} onDone={() => {}} />);
     fireEvent.change(screen.getByLabelText("Monthly price (USD)"), { target: { value: "25" } });

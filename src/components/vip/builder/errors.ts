@@ -29,7 +29,7 @@ const TEXT: Record<string, string> = {
    (api/user_auth.py get_seller_user_id). It sends its own copy with the code. */
 const EMAIL_SIGNIN =
   "For your protection, selling tools only work after you sign in with the emailed link or code. Sign out, then sign back in by email.";
-const emailSigninCopy = (err: unknown): string | null =>
+export const emailSigninCopy = (err: unknown): string | null =>
   err instanceof VipApiError && err.status === 403 && err.detail === "email_signin_required"
     ? (err.message_text ?? EMAIL_SIGNIN)
     : null;
