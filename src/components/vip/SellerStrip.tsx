@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { VipApiError, getVipSellerSubscribers, patchVipSeller, stopVipSelling } from "@/lib/vip/client";
 import type { VipCapperStatus, VipEligibility, VipSeller, VipSellerSubscriber } from "@/lib/vip/types";
 import { BOOKS, OTHER_BOOK, bookName, defaultBook } from "./builder/books";
+import { emailSigninCopy } from "./builder/errors";
 import { PriceInput, SELLER_SHARE, parsePriceDollars } from "./SellerSetupCard";
 import { EligibilityBadges } from "./EligibilityBadges";
 import { SellerStatusBanner } from "./SellerStatusBanner";
@@ -166,7 +167,7 @@ export function SellerStrip({
       onSaved();
     } catch (err) {
       console.error("VIP seller update failed", err);
-      setError("Could not save. Try again.");
+      setError(emailSigninCopy(err) ?? "Could not save. Try again.");
     } finally {
       setPending(false);
     }
@@ -188,9 +189,10 @@ export function SellerStrip({
     } catch (err) {
       console.error("VIP stop selling failed", err);
       setStopError(
-        err instanceof VipApiError && err.detail === "stop_incomplete"
-          ? "Some subscriptions didn't cancel yet. Try again."
-          : "Could not stop selling. Try again.",
+        emailSigninCopy(err) ??
+          (err instanceof VipApiError && err.detail === "stop_incomplete"
+            ? "Some subscriptions didn't cancel yet. Try again."
+            : "Could not stop selling. Try again."),
       );
     } finally {
       setPending(false);

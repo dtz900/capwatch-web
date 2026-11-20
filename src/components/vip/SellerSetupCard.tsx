@@ -6,6 +6,7 @@ import { VipApiError, postVipSeller, startVipOnboarding } from "@/lib/vip/client
 import { SELLER_AGREEMENT_VERSION } from "@/lib/vip/terms";
 import type { VipMe } from "@/lib/vip/types";
 import { BOOKS, OTHER_BOOK } from "./builder/books";
+import { emailSigninCopy } from "./builder/errors";
 import { VipBand, VipGlassCard } from "./VipBand";
 import { joinSports } from "./format";
 import { ERROR_TEXT, VIP_PRIMARY_BTN } from "./styles";
@@ -89,7 +90,12 @@ export function SellerSetupCard({ me, onDone }: { me: VipMe; onDone: () => void 
       const { url } = await startVipOnboarding(token);
       window.location.assign(url);
     } catch (err) {
-      if (err instanceof VipApiError && err.status === 409) {
+      // Verifying with X leaves an X-only session, which the seller routes
+      // refuse: say how to get past it instead of "try again".
+      const signin = emailSigninCopy(err);
+      if (signin) {
+        setError(signin);
+      } else if (err instanceof VipApiError && err.status === 409) {
         setError("You need an eligible sport first: 30+ graded picks, 5+ wins and +3% ROI over the last 30 days.");
       } else if (err instanceof VipApiError && err.status === 403 && err.detail === "seller_denylisted") {
         setError("This account cannot sell VIP picks.");
