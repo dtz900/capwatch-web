@@ -112,7 +112,8 @@ export function slipInsertFromPick(
       market: "parlay",
       selection: pick.selection,
       line: null,
-      game_date: gameDate,
+      // An upcoming pick files under ITS game day, not the day it was tailed.
+      game_date: pick.game_date ?? gameDate,
     };
   }
   if (pick.pick_id == null) return null;
@@ -128,7 +129,7 @@ export function slipInsertFromPick(
     market: pick.market,
     selection: pick.selection,
     line: pick.line,
-    game_date: gameDate,
+    game_date: pick.game_date ?? gameDate,
   };
 }
 

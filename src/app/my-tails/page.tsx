@@ -246,6 +246,7 @@ export default async function MyTailsPage({
               <StableGrid
                 initial={stable}
                 todayByCapper={todayByCapper}
+                todayDate={today.date || null}
                 scopesByCapper={scopesByCapper}
                 statsByCapper={statsByCapper}
                 vipByCapper={vipByCapper}
