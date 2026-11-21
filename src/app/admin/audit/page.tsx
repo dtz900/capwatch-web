@@ -4,7 +4,7 @@ import { fetchPickShapedFlags } from "./actions";
 import { HeaderStrip } from "./HeaderStrip";
 import { SportTabs } from "./SportTabs";
 import { Workbench } from "./Workbench";
-import type { BucketRow, QueueRow, UngradedFinalView } from "./labels";
+import { parseReview, type BucketRow, type QueueRow, type UngradedFinalView } from "./labels";
 import { REASON_LABEL } from "./labels";
 
 interface PageProps {
@@ -125,6 +125,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" });
   const rows: QueueRow[] = data.problems.map((p) => ({
     ...p,
+    ...parseReview(p),
     posted_label: p.posted_at ? fmtDay(p.posted_at) : null,
     game_label: p.game_date
       ? new Date(p.game_date + "T12:00:00Z").toLocaleDateString("en-US", {

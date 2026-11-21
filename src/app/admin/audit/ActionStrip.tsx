@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { absoluteTweetUrl, existingLine } from "@/lib/liveTwin";
+import type { HeldKind } from "./labels";
 import type { GradeOutcome } from "./useAuditKeys";
 import type { GradeDuplicate } from "./useTerminalActions";
 
@@ -16,6 +18,8 @@ interface Props {
   /** NCAAB prop that should not exist: only Skip and Delete apply. */
   strayProp?: boolean;
   skipLabel?: "Skip" | "Unskip";
+  /** The pick is held off the public site: what Regrade will (or will not) do about it. */
+  held?: HeldKind | null;
   onRegrade: () => void;
   onGrade: (outcome: GradeOutcome) => void;
   onSkip: () => void;
@@ -43,6 +47,7 @@ export function ActionStrip({
   pending,
   strayProp = false,
   skipLabel = "Skip",
+  held = null,
   onRegrade,
   onGrade,
   onSkip,
@@ -78,6 +83,25 @@ export function ActionStrip({
         </button>
       )}
       <span className="text-[12px] font-bold text-[var(--color-text-muted)]">{status}</span>
+      {!strayProp && held === "approves" && (
+        <span className="text-[12px] font-bold text-[var(--color-text-soft)]">
+          This pick is held. Regrade also approves it and puts it on the public record.
+        </span>
+      )}
+      {!strayProp && (held === "straight" || held === "parlay") && (
+        <span className="text-[12px] font-bold text-[var(--color-text-soft)]">
+          {held === "parlay"
+            ? "This parlay leg is held and stays held after a regrade because of the hold reason. Decide it in the "
+            : "This pick is held and stays held after a regrade because of the hold reason. Decide it in the "}
+          <Link
+            href="/admin/review"
+            className="underline decoration-[rgba(255,255,255,0.13)] underline-offset-[3px] hover:text-[var(--color-text)]"
+          >
+            review queue
+          </Link>
+          .
+        </span>
+      )}
       {message && (
         <span role="alert" className="text-[12px] font-bold text-[var(--color-neg)]">
           {message}

@@ -535,6 +535,12 @@ export interface AuditProblem {
   stat_name?: string | null;
   player_name?: string | null;
   media_urls?: string[] | null;
+  /** Newer API builds. `needs_review` means the pick is held off the public
+   * site until approved (or, for a straight, regraded). Both optional. */
+  review_status?: "auto_approved" | "needs_review" | "rejected";
+  review_reason?: string | null;
+  /** True when Regrade with approve=true can also publish this held pick. Missing means false. */
+  regrade_approves?: boolean;
 }
 
 /** Outcome of the nightly recap-diff job, or null when it has never run. */

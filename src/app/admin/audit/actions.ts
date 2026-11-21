@@ -26,7 +26,7 @@ export interface PickPatchInput {
 }
 
 export type ActionResult =
-  | { ok: true; capper_handle?: string | null }
+  | { ok: true; capper_handle?: string | null; approved?: boolean; still_held?: boolean; held_reason?: string | null; note?: string }
   | { ok: false; error: string };
 
 async function call(
@@ -41,9 +41,20 @@ async function call(
       return { ok: false, error: `${res.status}: ${body || res.statusText}` };
     }
     let capperHandle: string | null = null;
+    const extra: { approved?: boolean; still_held?: boolean; held_reason?: string | null; note?: string } = {};
     try {
-      const body = (await res.json()) as { capper_handle?: string | null };
+      const body = (await res.json()) as {
+        capper_handle?: string | null;
+        approved?: unknown;
+        still_held?: unknown;
+        held_reason?: unknown;
+        note?: unknown;
+      };
       capperHandle = body.capper_handle ?? null;
+      if (typeof body.approved === "boolean") extra.approved = body.approved;
+      if (typeof body.still_held === "boolean") extra.still_held = body.still_held;
+      if (typeof body.held_reason === "string") extra.held_reason = body.held_reason;
+      if (typeof body.note === "string") extra.note = body.note;
     } catch {
       // Some endpoints may return non-JSON or empty bodies; not an error.
     }
@@ -53,7 +64,7 @@ async function call(
       revalidatePath("/cappers");
       if (capperHandle) revalidatePath(`/cappers/${capperHandle}`);
     }
-    return { ok: true, capper_handle: capperHandle };
+    return { ok: true, capper_handle: capperHandle, ...extra };
   } catch (err: unknown) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
@@ -133,8 +144,10 @@ export async function manualGradeAction(
   });
 }
 
-export async function regradeAction(pickId: number): Promise<ActionResult> {
-  return call(`/api/admin/picks/${pickId}/regrade`, {
+/** `approve` asks the server to also publish a held pick; only the pick the operator is acting on sends it. */
+export async function regradeAction(pickId: number, opts: { approve?: boolean } = {}): Promise<ActionResult> {
+  const qs = opts.approve === true ? "?approve=true" : "";
+  return call(`/api/admin/picks/${pickId}/regrade${qs}`, {
     method: "POST",
     headers: adminHeaders(),
   });

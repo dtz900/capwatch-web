@@ -13,7 +13,7 @@ import { useTerminalActions } from "./useTerminalActions";
 import { AddBetDrawer } from "./AddBetDrawer";
 import { ADD_BET_EVENT } from "./AddBetButton";
 import { Queue, type FooterCounts } from "./Queue";
-import { emptyQueueCopy, type QueueRow } from "./labels";
+import { emptyQueueCopy, heldKind, type QueueRow } from "./labels";
 
 interface Props {
   problems: QueueRow[];
@@ -171,6 +171,7 @@ export function Workbench({ problems, footer, recapDiffLabel, sportLabel, paging
             pending={flow.pending}
             strayProp={stray}
             skipLabel={buckets.showAcked ? "Unskip" : "Skip"}
+            held={heldKind(selected)}
             onRegrade={() => void terminal.regrade()}
             onGrade={(o) => void terminal.grade(o)}
             onSkip={() => void terminal.skip()}

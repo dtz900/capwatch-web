@@ -11,7 +11,8 @@ import { TextEditor } from "./editors/TextEditor";
 import type { PickHint } from "./usePatchFlow";
 import { FieldRow, LABEL_CLASS, ROW_CLASS } from "./FieldRow";
 import { effectiveStates, isStrayNcaabProp, type FieldKey } from "./fieldState";
-import { REASON_LABEL, formatOdds, type QueueRow } from "./labels";
+import { HeldChip, heldReasonText } from "./HeldChip";
+import { REASON_LABEL, formatOdds, isHeld, type QueueRow } from "./labels";
 import { candidateSiblings, siblingCopy } from "./siblings";
 import { gameLabelFor, sideRowVisible, type GameTeams } from "./teamMatch";
 import { TweetBlock } from "./TweetBlock";
@@ -99,6 +100,14 @@ export function PickDetail({
               </span>
             )}
           </div>
+          {isHeld(p) && (
+            <div className="mt-[6px] flex items-center gap-2 text-[12.5px] font-semibold text-[var(--color-text-muted)]">
+              <HeldChip />
+              {heldReasonText(p.review_reason) && (
+                <span className="font-extrabold text-[var(--color-text-soft)]">{heldReasonText(p.review_reason)}</span>
+              )}
+            </div>
+          )}
           <div className="mt-[5px] text-[12.5px] font-semibold text-[var(--color-text-muted)]">
             <span className="font-extrabold text-[var(--color-neg)]">{REASON_LABEL[p.reason] ?? p.reason}</span>
             {" · "}

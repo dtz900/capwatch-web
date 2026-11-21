@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { BucketKind } from "./BucketList";
-import { REASON_LABEL, emptyQueueCopy, formatOdds, type QueueRow } from "./labels";
+import { HeldChip } from "./HeldChip";
+import { REASON_LABEL, emptyQueueCopy, formatOdds, isHeld, type QueueRow } from "./labels";
 
 export interface FooterCounts {
   settled: number;
@@ -93,13 +94,16 @@ export function Queue({
                 {r.sport ?? "?"}
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[14px] leading-[19px] font-extrabold">
-                  {r.selection ?? r.market ?? "Untitled pick"}
-                  {r.odds_taken != null && (
-                    <span className="ml-[6px] font-bold text-[var(--color-text-soft)] tabular-nums">
-                      {formatOdds(r.odds_taken)}
-                    </span>
-                  )}
+                <span className="flex items-center gap-2 min-w-0 text-[14px] leading-[19px] font-extrabold">
+                  <span className="truncate">
+                    {r.selection ?? r.market ?? "Untitled pick"}
+                    {r.odds_taken != null && (
+                      <span className="ml-[6px] font-bold text-[var(--color-text-soft)] tabular-nums">
+                        {formatOdds(r.odds_taken)}
+                      </span>
+                    )}
+                  </span>
+                  {isHeld(r) && <HeldChip />}
                 </span>
                 <span className="block mt-[3px] text-[11.5px] leading-[16px] font-semibold text-[var(--color-text-muted)] truncate">
                   <span className="font-extrabold text-[var(--color-neg)]">{REASON_LABEL[r.reason] ?? r.reason}</span>
