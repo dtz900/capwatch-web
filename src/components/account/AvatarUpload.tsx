@@ -111,7 +111,7 @@ export function AvatarUpload() {
           )}
         </div>
         <p className="mt-1.5 text-[11px] text-[var(--color-text-muted)]">
-          {capper ? "The board shows your X photo. This one shows everywhere else." : "Shows next to your name on the Tail or Fade board. JPG, PNG or WebP."}
+          {"Shows next to your name on your account. JPG, PNG or WebP."}
         </p>
         {error && <p className="mt-1 text-[11px] text-[var(--color-neg)]">{error}</p>}
       </div>
