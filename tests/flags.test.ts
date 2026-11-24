@@ -19,12 +19,14 @@ describe("vipEnabled", () => {
 });
 
 describe("tofEnabled", () => {
-  it("is off by default and requires the accounts flag too", () => {
+  // Paused 2026-11-23 (TOF_PAUSED in flags.ts): the game stays dark whatever
+  // the env says. When it comes back, restore the middle expectation to true.
+  it("stays off while the game is paused, even with both flags on", () => {
     vi.stubEnv("NEXT_PUBLIC_TOF_ENABLED", "true");
     vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "false");
     expect(tofEnabled()).toBe(false);
     vi.stubEnv("NEXT_PUBLIC_VIP_ENABLED", "true");
-    expect(tofEnabled()).toBe(true);
+    expect(tofEnabled()).toBe(false);
     vi.stubEnv("NEXT_PUBLIC_TOF_ENABLED", "false");
     expect(tofEnabled()).toBe(false);
     vi.unstubAllEnvs();

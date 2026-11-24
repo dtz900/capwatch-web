@@ -223,15 +223,13 @@ export default function AccountPage() {
                   Member since {since}
                 </div>
               )}
-              {tofEnabled() && (
-                <button
-                  type="button"
-                  onClick={() => (profile?.username ? openChange() : void requireUsername())}
-                  className="mt-2 text-xs font-semibold text-[#2fd9c0] hover:underline"
-                >
-                  {profile?.username ? "Change username" : "Pick a username"}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => (profile?.username ? openChange() : void requireUsername())}
+                className="mt-2 text-xs font-semibold text-[#2fd9c0] hover:underline"
+              >
+                {profile?.username ? "Change username" : "Pick a username"}
+              </button>
             </div>
           </div>
           <button
@@ -249,14 +247,12 @@ export default function AccountPage() {
         </p>
       )}
 
-      {tofEnabled() && (
-        <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-            Photo
-          </h2>
-          <AvatarUpload />
-        </div>
-      )}
+      <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">
+        <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+          Photo
+        </h2>
+        <AvatarUpload />
+      </div>
 
       {xAuthEnabled() && (
         <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#15151a] via-[#0f0f14] to-[#0a0a0d] border border-[var(--color-border)] px-6 py-5">

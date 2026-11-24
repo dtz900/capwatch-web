@@ -16,7 +16,7 @@ export function XVerificationCard() {
         <div className="text-[15px] font-bold text-[var(--color-text)]">
           Verified as <Link href={`/cappers/${capper.handle}`} className="text-[#2fd9c0] hover:underline">@{capper.handle}</Link>
         </div>
-        <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">Your handle is your name on the Tail or Fade board and your X photo shows next to it.</p>
+        <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">Your account is linked to your capper profile.</p>
       </div>
     );
   }

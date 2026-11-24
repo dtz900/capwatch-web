@@ -13,7 +13,15 @@ export function vipTierEnabled(): boolean {
 /* Tail or Fade, the daily swipe game on the landing page. Needs accounts
    (vipEnabled) because a play is a row under the user's id. Off by default;
    David flips it after a full local run (decisions/log.md 2026-09-22). */
+/* PAUSED 2026-11-23 (David: "kill tail or fade for now, hide it completely
+   from the site and we will bring it back later"). While this is true the
+   game is dark everywhere regardless of NEXT_PUBLIC_TOF_ENABLED. To bring it
+   back: set this to false, then re-enable the cron-job.org tof-deal job and
+   restore the Tail or Fade paragraph in the platform welcome DM. */
+const TOF_PAUSED = true;
+
 export function tofEnabled(): boolean {
+  if (TOF_PAUSED) return false;
   return vipEnabled() && process.env.NEXT_PUBLIC_TOF_ENABLED === "true";
 }
 

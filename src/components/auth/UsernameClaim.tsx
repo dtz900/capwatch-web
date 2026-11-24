@@ -294,7 +294,7 @@ function UsernameModal({
           {mode === "change" ? "Change your username" : "Pick a username"}
         </h2>
         <p className="mt-2 text-[13px] leading-relaxed text-[#a1a1aa]">
-          This is what shows on the Tail or Fade board and your streak callouts. Your email never does.
+          This is the name on your TailSlips account. Your email is never shown.
         </p>
 
         <label htmlFor="tof-username" className="mt-5 block text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
