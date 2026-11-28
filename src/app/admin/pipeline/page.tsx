@@ -1,4 +1,5 @@
 import { PipelineTicker } from "./PipelineTicker";
+import { StreamHealthStrip } from "./StreamHealthStrip";
 import { StreamUptimeStrip } from "./StreamUptimeStrip";
 
 export const metadata = {
@@ -29,6 +30,8 @@ export default async function AdminPipelinePage({ searchParams }: PageProps) {
             Tweets captured, parsed, picks inserted, and grades written, ordered newest first. Polls every 15 seconds.
           </p>
         </header>
+
+        <StreamHealthStrip />
 
         <StreamUptimeStrip />
 
