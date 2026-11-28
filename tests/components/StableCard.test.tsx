@@ -128,6 +128,31 @@ describe("StableCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /untail hits \+ runs \+ rbis/i }));
     expect(spy).toHaveBeenCalledWith("HRR");
   });
+
+  it("no-data branch: a scoped market with no stats shows 'no data yet' and still untails", () => {
+    const spy = vi.fn();
+    render(
+      <StableCard capper={capper} onUntail={() => {}} scopes={["HRR"]} scopeStats={[]} onUntailMarket={spy} />
+    );
+    expect(screen.getByText("no data yet")).toBeInTheDocument();
+    expect(screen.queryByText(/ROI/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /untail hits \+ runs \+ rbis/i }));
+    expect(spy).toHaveBeenCalledWith("HRR");
+  });
+
+  it("no-data branch: only the market missing from scopeStats falls back", () => {
+    const stat = { market: "HRR", n_decided: 90, roi_pct: 13.4 };
+    render(
+      <StableCard capper={capper} onUntail={() => {}} scopes={["HRR", "ML"]} scopeStats={[stat]} onUntailMarket={() => {}} />
+    );
+    expect(screen.getAllByText("no data yet")).toHaveLength(1);
+    expect(screen.getByText("+13.4%")).toBeInTheDocument();
+  });
+
+  it("shows 'No picks yet today.' when the capper has nothing posted", () => {
+    render(<StableCard capper={capper} onUntail={() => {}} todayPicks={[]} />);
+    expect(screen.getByText("No picks yet today.")).toBeInTheDocument();
+  });
 });
 
 it("straight rows show the add-to-slip affordance inside the provider", async () => {

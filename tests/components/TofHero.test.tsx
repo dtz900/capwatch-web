@@ -199,12 +199,16 @@ describe("TofHero", () => {
     await waitFor(() => expect(selectSpy.mock.calls.filter((c) => c[0] === "tof_plays").length).toBeGreaterThan(before));
   });
 
-  it("maps an RLS rejection to That card just locked", async () => {
+  it("does not call an RLS rejection on a not-yet-started card a lock, and logs it", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     insert.mockResolvedValue({ error: { code: "42501", message: "new row violates row-level security policy" } });
     mockAuth.current = SIGNED_IN;
     render(<TofHero initial={HAND} />);
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^tail$/i })); });
-    expect(await screen.findByText("That card just locked.")).toBeInTheDocument();
+    expect(await screen.findByText(/not open for plays right now/i)).toBeInTheDocument();
+    expect(screen.queryByText("That card just locked.")).not.toBeInTheDocument();
+    expect(errSpy).toHaveBeenCalledWith("tof: play insert failed", expect.anything(), expect.anything());
+    errSpy.mockRestore();
   });
 
   it("falls back to the generic copy for any other insert error", async () => {
