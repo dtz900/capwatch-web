@@ -9,6 +9,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { fetchTofBoard, fetchTofHand, fetchTodayPicks } from "@/lib/api";
 import { clearGuestChoices, dealOrder, isLocked, orderDeck, readGuestChoices, readHandCache, unitsLabel, writeGuestChoices, writeHandCache } from "@/lib/tof/deck";
 import type { TofBoardRow, TofCard, TofChoice, TofHandResponse, TofPlay, TofStats, TodayPickEntry } from "@/lib/types";
+import { playErrorOutcome } from "@/lib/tof/play-error";
 import { TofDeck, type DeckCard, type DeckProgressItem, type StableDeckCard } from "@/components/tof/TofDeck";
 import { TofBoard } from "@/components/tof/TofBoard";
 import { TofPrizeDetails, TofPrizeHintRow, TofPrizeStickers } from "@/components/tof/TofPrizeCallouts";
@@ -404,7 +405,9 @@ export function TofHero({ initial }: { initial: TofHandResponse | null }) {
       : { user_id: userId, hand_id: hand.hand_id, card_id: null, stable_pick_id: card.pick_id, choice };
     const { error } = await supabase.from("tof_plays").insert(row);
     if (error) {
-      setToast(error.code === "23505" ? "Already played." : /policy|violates/i.test(error.message) ? "That card just locked." : "Could not save that play. Try again.");
+      const outcome = playErrorOutcome(error, card);
+      if (outcome.log) console.error("tof: play insert failed", { code: error.code, message: error.message, cardKind: card.kind, cardId: card.id }, error);
+      setToast(outcome.message);
       setTimeout(() => setToast(null), 3000);
       const { data: rows, error: reReadError } = await supabase.from("tof_plays").select("id, hand_id, card_id, stable_pick_id, choice, outcome, units")
         .eq("user_id", userId).eq("hand_id", hand.hand_id);

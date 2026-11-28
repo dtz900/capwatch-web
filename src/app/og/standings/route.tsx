@@ -48,12 +48,19 @@ export async function GET(request: Request): Promise<Response> {
   let roundLabel: string | null = null;
   let graded = 0;
   let sharps = 0;
+  // NFL only: a week is final when no pick is pending and every game is final.
+  // Anything less is a live week and must not wear the FINAL label.
+  let nflFinal = false;
   try {
     let summary: SlateCapperSummary[] = [];
     if (sport === "nfl") {
       const slate = await fetchSlate("today", "nfl", week ? nflWeek : undefined);
       summary = slate.capper_summary ?? [];
       graded = slate.day_summary?.graded_count ?? 0;
+      nflFinal =
+        (slate.day_summary?.pending_count ?? 0) === 0 &&
+        (slate.games ?? []).length > 0 &&
+        (slate.games ?? []).every((g) => g.game_state === "final");
       const n = slate.week?.week ?? (week ? nflWeek : undefined);
       dateLabel = n != null ? `NFL WEEK ${n}` : "NFL";
     } else if (week) {
@@ -99,14 +106,20 @@ export async function GET(request: Request): Promise<Response> {
   return renderStandingsCard({
     marquee:
       sport === "nfl"
-        ? `${dateLabel} · FINAL`
+        ? nflFinal
+          ? `${dateLabel} · FINAL`
+          : `LIVE STANDINGS · ${dateLabel}`
         : roundLabel
           ? dateLabel
           : week
             ? `WEEK FINAL · ${dateLabel}`
             : `FINAL STANDINGS · ${dateLabel}`,
     strip: `${graded} PICKS · ${sharps} SHARPS`,
-    heroLabel: roundLabel ? "SHARP OF THE SERIES" : week ? "SHARP OF THE WEEK" : "TONIGHT'S TOP SHARP",
+    heroLabel: roundLabel
+      ? "SHARP OF THE SERIES"
+      : sport === "nfl" && !nflFinal
+        ? "LEADER SO FAR"
+        : week ? "SHARP OF THE WEEK" : "TONIGHT'S TOP SHARP",
     footer: sport === "nba" ? "tailslips.com" : "tailslips.com/slate",
     rows: cardRows,
     // NBA gets the league's yellow (same hue as the site wash); MLB and NFL keep the plain card.

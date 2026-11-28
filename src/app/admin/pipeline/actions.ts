@@ -313,3 +313,50 @@ export async function triggerStreamBackfill(
     clearTimeout(timeoutId);
   }
 }
+
+export type StreamHealthStatus = "ok" | "quiet" | "stale" | "unknown";
+
+/** GET /api/admin/pipeline/stream-health (core/stream_health.py assess()). */
+export interface StreamHealthResponse {
+  status: StreamHealthStatus;
+  worker_alive: boolean;
+  connected_since_start: boolean;
+  capture_age_minutes: number | null;
+  heartbeat_age_minutes: number | null;
+  last_capture_at: string | null;
+  last_connected_at: string | null;
+  last_worker_starting_at: string | null;
+  last_heartbeat_at: string | null;
+  last_gap_sweep_at: string | null;
+  last_stalled_at: string | null;
+  last_watchdog_exit_at: string | null;
+  checked_at: string;
+}
+
+export type StreamHealthResult =
+  | { ok: true; data: StreamHealthResponse }
+  | { ok: false; error: string };
+
+const STREAM_HEALTH_STATUSES: readonly string[] = ["ok", "quiet", "stale", "unknown"];
+
+export async function fetchStreamHealth(): Promise<StreamHealthResult> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return { ok: false, error: "CRON_SECRET not set on server" };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/pipeline/stream-health`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${body || res.statusText}` };
+    }
+    const data = (await res.json()) as StreamHealthResponse;
+    if (!data || typeof data.status !== "string" || !STREAM_HEALTH_STATUSES.includes(data.status)) {
+      return { ok: false, error: "Unexpected response from the stream-health endpoint" };
+    }
+    return { ok: true, data };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
