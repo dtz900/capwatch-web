@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchStreamHealth, type StreamHealthResponse, type StreamHealthStatus } from "./actions";
 
 const POLL_MS = 30_000;
@@ -28,31 +28,34 @@ function formatTimestamp(iso: string | null): string {
 export function StreamHealthStrip() {
   const [data, setData] = useState<StreamHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const inFlight = useRef(false);
-
-  const refresh = useCallback(async () => {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    try {
-      const res = await fetchStreamHealth();
-      if (res.ok) {
-        setData(res.data);
-        setError(null);
-      } else {
-        setError(res.error);
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      inFlight.current = false;
-    }
-  }, []);
-
   useEffect(() => {
-    refresh();
+    let cancelled = false;
+    let inFlight = false;
+    async function refresh() {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const res = await fetchStreamHealth();
+        if (cancelled) return;
+        if (res.ok) {
+          setData(res.data);
+          setError(null);
+        } else {
+          setError(res.error);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        inFlight = false;
+      }
+    }
+    void refresh();
     const id = setInterval(refresh, POLL_MS);
-    return () => clearInterval(id);
-  }, [refresh]);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
 
   if (!data && !error) {
     return (
